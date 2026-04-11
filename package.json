@@ -1,0 +1,15 @@
+{
+  "name": "thecapital",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
