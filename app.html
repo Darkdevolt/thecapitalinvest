@@ -81,6 +81,8 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
 .btn-p:hover{background:var(--ink2)}.btn-p:disabled{opacity:.5;cursor:not-allowed}
 .btn-d{background:none;border:none;color:var(--dim);cursor:pointer;font-size:13px;padding:3px 7px;border-radius:4px;transition:color .15s}
 .btn-d:hover{color:var(--red)}
+.btn-small{display:inline-block;background:var(--ink);color:var(--cream);padding:4px 8px;border-radius:4px;text-decoration:none;font-size:10px;font-weight:500;letter-spacing:.06em;text-transform:uppercase}
+.btn-small:hover{background:var(--ink2)}
 .fh{display:flex;gap:22px;align-items:flex-start;flex-wrap:wrap;margin-bottom:20px}
 .fn h2{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:400;margin-bottom:4px}
 .fbg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px}
@@ -175,6 +177,7 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
     <button class="nav-tab active" onclick="showTab('marche',this)">Marché</button>
     <button class="nav-tab" onclick="showTab('portefeuille',this)">Portefeuille</button>
     <button class="nav-tab" onclick="showTab('fiche',this)">Fiche Entreprise</button>
+    <button class="nav-tab" onclick="showTab('boc',this)">📚 Archives BOC</button>
   </div>
   <div class="nav-right">
     <span class="nav-user" id="nav-user"></span>
@@ -274,6 +277,33 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
   <div id="fc"><div class="loading" style="padding:80px 20px">Entrez un ticker ci-dessus.</div></div>
 </div>
 
+<!-- ARCHIVES BOC -->
+<div class="tab" id="tab-boc">
+  <h1 class="page-title">Archives <em>BOC</em></h1>
+  <div class="page-sub">Bulletins Officiels de la Cote disponibles</div>
+  <div class="card">
+    <div class="toolbar">
+      <span class="card-title">Liste des PDF</span>
+      <span class="card-count" id="bocCount"></span>
+    </div>
+    <div class="tw">
+      <table>
+        <thead>
+          <tr>
+            <th>Date de séance</th>
+            <th>Nom du fichier</th>
+            <th>Ajouté le</th>
+            <th>Télécharger</th>
+          </tr>
+        </thead>
+        <tbody id="bocTbodyClient">
+          <tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
 </main>
 </div>
 
@@ -293,14 +323,12 @@ function showAuthScreen(show){
   }
 }
 
-// Initialisation : si token présent, on passe directement au dashboard
 if(TK){
   showAuthScreen(false);
 } else {
   showAuthScreen(true);
 }
 
-// Bascule onglets Connexion / Inscription
 document.getElementById('tabLogin').addEventListener('click',function(){
   document.getElementById('tabLogin').classList.add('active');
   document.getElementById('tabSignup').classList.remove('active');
@@ -322,7 +350,6 @@ function clearAuthMessages(){
   document.getElementById('signupSuccess').textContent='';
 }
 
-// Connexion
 document.getElementById('loginBtn').addEventListener('click',async function(){
   const email=document.getElementById('loginEmail').value.trim();
   const password=document.getElementById('loginPassword').value;
@@ -342,7 +369,7 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
     if(!res.ok) throw new Error(data.error||'Erreur de connexion');
     localStorage.setItem('tc_session',JSON.stringify(data.session));
     TK=data.session.access_token;
-    location.reload(); // recharge pour initialiser l'état connecté
+    location.reload();
   }catch(e){
     errEl.textContent=e.message;
     btn.disabled=false;
@@ -350,7 +377,6 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
   }
 });
 
-// Inscription
 document.getElementById('signupBtn').addEventListener('click',async function(){
   const nom=document.getElementById('signupName').value.trim();
   const email=document.getElementById('signupEmail').value.trim();
@@ -381,7 +407,6 @@ document.getElementById('signupBtn').addEventListener('click',async function(){
       document.getElementById('signupName').value='';
       document.getElementById('signupEmail').value='';
       document.getElementById('signupPassword').value='';
-      // Bascule vers onglet connexion
       document.getElementById('tabLogin').click();
     }
   }catch(e){
@@ -392,7 +417,6 @@ document.getElementById('signupBtn').addEventListener('click',async function(){
   }
 });
 
-// Déconnexion
 function doLogout(){
   localStorage.removeItem('tc_session');
   TK='';
@@ -402,8 +426,8 @@ function doLogout(){
   document.getElementById('tab-marche').classList.add('active');
 }
 
-// ---------- FONCTIONS DASHBOARD (inchangées) ----------
-const TABS={marche:lm,portefeuille:lp,fiche:()=>{}};
+// ---------- FONCTIONS DASHBOARD ----------
+const TABS={marche:lm,portefeuille:lp,fiche:()=>{},boc:loadBocArchives};
 let AT='marche';
 function showTab(n,el){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -597,6 +621,34 @@ async function lf(){
         }
       }
     });
+  }
+}
+
+// Nouvelle fonction pour charger les archives BOC publiques
+async function loadBocArchives() {
+  const tbody = document.getElementById('bocTbodyClient');
+  const countSpan = document.getElementById('bocCount');
+  tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
+  try {
+    const res = await fetch('/api/boc_public');
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    countSpan.textContent = `${data.length} document${data.length > 1 ? 's' : ''}`;
+    if (!data.length) {
+      tbody.innerHTML = '<tr><td colspan="4">Aucun BOC archivé pour le moment.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = data.map(b => `
+      <tr>
+        <td>${b.date_seance}</td>
+        <td>${b.fichier_nom}</td>
+        <td>${new Date(b.created_at).toLocaleDateString('fr-FR')}</td>
+        <td><a href="${b.fichier_url}" target="_blank" class="btn-small">📄 PDF</a></td>
+      </tr>
+    `).join('');
+  } catch (e) {
+    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
+    countSpan.textContent = '';
   }
 }
 </script>
