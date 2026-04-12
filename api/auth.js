@@ -1,3 +1,9 @@
+export default async function handler(req, res) {
+  // DEBUG - à retirer après
+  console.log('ENV CHECK:', {
+    url: process.env.SUPABASE_URL ? 'OK' : 'MISSING',
+    key: process.env.SUPABASE_SERVICE_KEY ? 'OK' : 'MISSING'
+  });
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
