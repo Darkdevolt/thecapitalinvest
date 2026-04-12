@@ -48,7 +48,6 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(file, "base64");
     const parsed = await pdfParse(buffer);
 
-    // Nettoyage du texte : supprimer les retours à la ligne et les espaces multiples
     let text = parsed.text
       .replace(/\n/g, " ")
       .replace(/\s+/g, " ")
@@ -56,7 +55,7 @@ export default async function handler(req, res) {
       .trim();
 
     // -----------------------------
-    // 1. EXTRACTION DE LA DATE DE SÉANCE
+    // 1. DATE DE SÉANCE
     // -----------------------------
     let dateStr = new Date().toISOString().split("T")[0];
     const dateRegex =
@@ -72,7 +71,7 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 2. EXTRACTION DES INDICES
+    // 2. INDICES
     // -----------------------------
     const indicesInsert = [];
     const indiceRegex =
@@ -94,7 +93,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Suppression des doublons d'indices
     const uniqueIndices = [];
     const seenIdx = new Set();
     for (const idx of indicesInsert) {
@@ -106,11 +104,12 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 3. EXTRACTION DES ACTIONS
+    // 3. ACTIONS
     // -----------------------------
     const coursInsert = [];
-    // Regex basée sur la structure réelle du tableau des actions
-    // Groupes : 1:secteur, 2:symbole, 3:nom, 4:pays(optionnel), 5:précédent, 6:ouverture, 7:clôture, 8:variation%, 9:volume, 10:valeur
+
+    // Regex basée sur la structure des lignes d'actions du PDF
+    // Exemple : "CB SAFC SAFCA CI 7 000 7 000 7 435 6,21 % 3 679 26 254 870"
     const actionRegex =
       /(CB|CD|FIN|IND|ENE|SPU|TEL)\s+([A-Z]{3,5})\s+([A-Z\s']+?)\s+(CI|SN|BF|ML|BN|TG)?\s+([\d\s]+)\s+([\d\s]+)\s+([\d\s]+)\s+([+-]?\d+,\d{2})\s*%\s+([\d\s]+)\s+([\d\s]+)/gi;
 
@@ -118,7 +117,7 @@ export default async function handler(req, res) {
       const secteur = match[1];
       const symbole = match[2];
       const nom = match[3].trim();
-      const cours = parseFloat(match[7].replace(/\s/g, "")); // clôture
+      const cours = parseFloat(match[7].replace(/\s/g, "")); // Clôture
       const variation = parseFloat(match[8].replace(",", "."));
       const volume = parseInt(match[9].replace(/\s/g, ""), 10);
       const valeur = parseInt(match[10].replace(/\s/g, ""), 10);
@@ -137,7 +136,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // Suppression des doublons par ticker et date
     const finalCours = [];
     const seenTickers = new Set();
     for (const c of coursInsert) {
@@ -149,7 +147,7 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 4. INSERTION DANS SUPABASE
+    // 4. INSERTION SUPABASE
     // -----------------------------
     let insertedCours = 0;
     let insertedIndices = 0;
@@ -173,7 +171,7 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 5. STOCKAGE DU PDF
+    // 5. UPLOAD PDF
     // -----------------------------
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath = `${dateStr}/${Date.now()}_${safeFileName}`;
@@ -197,9 +195,6 @@ export default async function handler(req, res) {
       fichier_url: publicUrl,
     });
 
-    // -----------------------------
-    // RÉPONSE FINALE
-    // -----------------------------
     return res.status(200).json({
       success: true,
       date: dateStr,
