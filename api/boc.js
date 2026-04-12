@@ -29,10 +29,10 @@ export default async function handler(req, res) {
 
     const buffer = Buffer.from(file, 'base64');
     const parsed = await pdfParse(buffer);
-    const text = parsed.text;
+    const text = parsed.text.replace(/\n/g, ' ').replace(/\s+/g, ' '); // Normaliser les espaces
 
     // --- 1. Extraction de la date de séance ---
-    // Recherche de "Vendredi 10 avril 2026" ou "vendredi 10 avril 2026"
+    // Chercher "Vendredi 10 avril 2026" ou "vendredi 10 avril 2026"
     let dateStr = new Date().toISOString().split('T')[0];
     const dateMatch = text.match(/([A-Za-z]+)\s+(\d{1,2})\s+([a-zéû]+)\s+(\d{4})/i);
     if (dateMatch) {
@@ -49,13 +49,15 @@ export default async function handler(req, res) {
     // --- 2. Extraction des indices ---
     const indicesInsert = [];
     
-    // Indices principaux : BRVM-PRESTIGE, BRVM-PRINCIPAL, BRVM - COMPOSITE TOTAL RETURN
-    const indicePattern = /(BRVM\s*-\s*[A-Z\s]+|BRVM\s+[A-Z]+)\s+(\d+)\s+([\d,\.]+)\s+([+-]?\d+[,\d]*\s*%)\s+([+-]?\d+[,\d]*\s*%)/gi;
+    // Motif pour les indices principaux (ex: "BRVM-PRESTIGE 12 158,70 -0,04 % 10,02 %")
+    const indicePrincipalPattern = /(BRVM\s*[-]?\s*[A-Z\s]+)\s+(\d+)\s+([\d\s]+[.,]\d{2})\s+([+-]?\d+[.,]\d{2})\s*%\s+([+-]?\d+[.,]\d{2})\s*%/gi;
     let match;
-    while ((match = indicePattern.exec(text)) !== null) {
+    while ((match = indicePrincipalPattern.exec(text)) !== null) {
       const nomIndice = match[1].trim().replace(/\s+/g, ' ');
-      const valeur = parseFloat(match[3].replace(/,/g, '').replace(/\s/g, ''));
-      const variation = parseFloat(match[4].replace('%', '').replace(/,/g, '').replace(/\s/g, ''));
+      const valeurStr = match[3].replace(/\s/g, '').replace(',', '.');
+      const variationStr = match[4].replace(',', '.');
+      const valeur = parseFloat(valeurStr);
+      const variation = parseFloat(variationStr);
       if (!isNaN(valeur) && !isNaN(variation)) {
         indicesInsert.push({
           indice: nomIndice,
@@ -66,13 +68,15 @@ export default async function handler(req, res) {
       }
     }
 
-    // Indices sectoriels (format spécifique avec "BRVM - TELECOMMUNICATIONS" etc.)
-    const sectorPattern = /(BRVM\s*-\s*[A-Z\s]+)\s+(\d+)\s+([\d,\.]+)\s+([+-]?\d+[,\d]*\s*%)\s+([+-]?\d+[,\d]*\s*%)/gi;
-    while ((match = sectorPattern.exec(text)) !== null) {
+    // Motif pour les indices sectoriels (ex: "BRVM - TELECOMMUNICATIONS 3 102,65 -0,27 % 8,17 %")
+    const indiceSectorielPattern = /(BRVM\s*-\s*[A-Z\s]+)\s+(\d+)\s+([\d\s]+[.,]\d{2})\s+([+-]?\d+[.,]\d{2})\s*%\s+([+-]?\d+[.,]\d{2})\s*%/gi;
+    while ((match = indiceSectorielPattern.exec(text)) !== null) {
       const nomIndice = match[1].trim().replace(/\s+/g, ' ');
-      const valeur = parseFloat(match[3].replace(/,/g, '').replace(/\s/g, ''));
-      const variation = parseFloat(match[4].replace('%', '').replace(/,/g, '').replace(/\s/g, ''));
-      if (!isNaN(valeur) && !isNaN(variation) && !indicesInsert.find(i => i.indice === nomIndice && i.date_seance === dateStr)) {
+      const valeurStr = match[3].replace(/\s/g, '').replace(',', '.');
+      const variationStr = match[4].replace(',', '.');
+      const valeur = parseFloat(valeurStr);
+      const variation = parseFloat(variationStr);
+      if (!isNaN(valeur) && !isNaN(variation)) {
         indicesInsert.push({
           indice: nomIndice,
           date_seance: dateStr,
@@ -82,24 +86,19 @@ export default async function handler(req, res) {
       }
     }
 
-    // --- 3. Extraction des cours d'actions ---
+    // --- 3. Extraction des cours d'actions (avec variation) ---
     const coursInsert = [];
     
-    // Recherche des blocs "Titres Cours Evol. Jour Evol. annuelle"
-    // Le tableau commence souvent par "TitresCoursEvol. JourEvol. annuelle"
-    const actionPattern = /([A-Z]{4})\s+(?:CI|BN|BF|ML|NG|SN|TG)?\s*\(?[A-Z]{4}\)?\s+([\d\s]+[.,]?\d*)\s+([+-]?\d+[.,]\d{1,2})\s*%/gi;
-    // Autre motif plus robuste pour les actions avec volume (dans la partie "Quantités résiduelles")
-    const actionWithVolumePattern = /([A-Z]{4})\s+[A-Z\s]+\s+[\d,]+\s+([\d\s]+[.,]\d{2})\s+\/\s+([\d\s]+[.,]\d{2})/gi;
-    
-    // Utiliser le texte complet
-    // 3a. Extraire les cours et variations depuis les tableaux de hausses/baisses
-    const simpleActionPattern = /([A-Z]{4})\s+CI\s*\([A-Z]{4}\)\s+([\d\s]+)\s+([+-]?\d+[.,]\d{2})\s*%/gi;
-    while ((match = simpleActionPattern.exec(text)) !== null) {
+    // Motif pour les lignes d'actions avec variation (ex: "SAFCA CI (SAFC) 7 435 6,21 % 124,96 %")
+    const actionVarPattern = /([A-Z]{4})\s+(?:CI|BN|BF|ML|NG|SN|TG)?\s*\([A-Z]{4}\)\s+([\d\s]+)\s+([+-]?\d+[.,]\d{1,2})\s*%/gi;
+    while ((match = actionVarPattern.exec(text)) !== null) {
       const ticker = match[1];
-      const cours = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
-      const variation = parseFloat(match[3].replace(',', '.'));
+      const coursStr = match[2].replace(/\s/g, '');
+      const variationStr = match[3].replace(',', '.');
+      const cours = parseFloat(coursStr);
+      const variation = parseFloat(variationStr);
       if (!isNaN(cours) && !isNaN(variation)) {
-        // Vérifier si le ticker existe déjà pour cette date
+        // Vérifier si déjà présent
         const exists = coursInsert.find(c => c.ticker === ticker && c.date_seance === dateStr);
         if (!exists) {
           coursInsert.push({
@@ -113,16 +112,41 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3b. Extraire depuis le tableau principal avec volumes (page 10-11 "QUANTITES RESIDUELLES")
-    const volumePattern = /([A-Z]{4})\s+[A-Z\s]+\s+[\d,]+\s+([\d\s]+[.,]\d{2})\s+\/\s+([\d\s]+[.,]\d{2})/gi;
-    while ((match = volumePattern.exec(text)) !== null) {
+    // Motif pour les lignes d'actions sans variation explicite (dans les tableaux "Titres Cours Evol. Jour Evol. annuelle")
+    // Ex: "SAFCA CI (SAFC) 7 435 6,21 % 124,96 %"
+    // La regex précédente capture déjà cela, mais vérifions aussi un motif plus large
+    const actionFullPattern = /([A-Z]{4})\s+[A-Z\s]*\s*\([A-Z]{4}\)\s+([\d\s]+)\s+([+-]?\d+[.,]\d{1,2})\s*%\s+([+-]?\d+[.,]\d{1,2})\s*%/gi;
+    while ((match = actionFullPattern.exec(text)) !== null) {
+      const ticker = match[1];
+      const coursStr = match[2].replace(/\s/g, '');
+      const variationStr = match[3].replace(',', '.');
+      const cours = parseFloat(coursStr);
+      const variation = parseFloat(variationStr);
+      if (!isNaN(cours) && !isNaN(variation)) {
+        const exists = coursInsert.find(c => c.ticker === ticker && c.date_seance === dateStr);
+        if (!exists) {
+          coursInsert.push({
+            ticker,
+            date_seance: dateStr,
+            cours,
+            variation,
+            volume: null
+          });
+        }
+      }
+    }
+
+    // Motif pour les actions dans la section "QUANTITES RESIDUELLES" (sans variation)
+    // Ex: "ABJC SERVAIR ABIDJAN CI 373,435 / 3,475 243 3 470"
+    const actionVolumePattern = /([A-Z]{4})\s+[A-Z\s]+\s+[\d,]+\s+([\d\s]+[.,]\d{2,3})\s+\/\s+([\d\s]+[.,]\d{2,3})/gi;
+    while ((match = actionVolumePattern.exec(text)) !== null) {
       const ticker = match[1];
       const coursStr = match[2].replace(/\s/g, '').replace(',', '.');
       const cours = parseFloat(coursStr);
       if (!isNaN(cours)) {
         const existing = coursInsert.find(c => c.ticker === ticker && c.date_seance === dateStr);
         if (existing) {
-          existing.cours = cours; // Mise à jour avec le cours plus précis
+          existing.cours = cours; // Mettre à jour avec le cours le plus précis
         } else {
           coursInsert.push({
             ticker,
@@ -135,33 +159,48 @@ export default async function handler(req, res) {
       }
     }
 
-    // 3c. Essayer d'extraire les volumes (dans la même section)
-    const volumeOnlyPattern = /([A-Z]{4})\s+.*?\s+(\d+(?:[.,]\d+)?)\s*$/gm;
-    // Trop imprécis, on va plutôt chercher dans les premières pages le tableau "Volumes et valeurs transigés"
-    const volumeGlobalPattern = /Volume échangé.*?(\d[\d\s]*)/i;
-    const volumeMatch = text.match(volumeGlobalPattern);
-    const volumeTotal = volumeMatch ? parseInt(volumeMatch[1].replace(/\s/g, '')) : null;
+    // Nettoyer les doublons éventuels (garder celui avec variation si possible)
+    const finalCours = [];
+    const seenTickers = new Set();
+    // Trier pour avoir d'abord ceux avec variation
+    coursInsert.sort((a, b) => (b.variation !== null ? 1 : 0) - (a.variation !== null ? 1 : 0));
+    for (const c of coursInsert) {
+      if (!seenTickers.has(c.ticker)) {
+        seenTickers.add(c.ticker);
+        finalCours.push(c);
+      }
+    }
 
     // --- 4. Insertion dans Supabase ---
     let insertedCours = 0, insertedIndices = 0;
 
-    if (coursInsert.length > 0) {
+    if (finalCours.length > 0) {
       const { error } = await supabase
         .from('cours_brvm')
-        .upsert(coursInsert, { onConflict: 'ticker,date_seance' });
-      if (!error) insertedCours = coursInsert.length;
+        .upsert(finalCours, { onConflict: 'ticker,date_seance' });
+      if (!error) insertedCours = finalCours.length;
       else console.error('Erreur insertion cours:', error);
     }
 
     if (indicesInsert.length > 0) {
+      // Nettoyer les doublons d'indices
+      const uniqueIndices = [];
+      const seenIndices = new Set();
+      for (const idx of indicesInsert) {
+        const key = `${idx.indice}_${idx.date_seance}`;
+        if (!seenIndices.has(key)) {
+          seenIndices.add(key);
+          uniqueIndices.push(idx);
+        }
+      }
       const { error } = await supabase
         .from('indices_brvm')
-        .upsert(indicesInsert, { onConflict: 'indice,date_seance' });
-      if (!error) insertedIndices = indicesInsert.length;
+        .upsert(uniqueIndices, { onConflict: 'indice,date_seance' });
+      if (!error) insertedIndices = uniqueIndices.length;
       else console.error('Erreur insertion indices:', error);
     }
 
-    // --- 5. Upload du PDF dans le storage (comme avant) ---
+    // --- 5. Upload du PDF dans le storage ---
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath = `${dateStr}/${Date.now()}_${safeFileName}`;
     
@@ -191,7 +230,7 @@ export default async function handler(req, res) {
       cours_importes: insertedCours,
       indices_importes: insertedIndices,
       pdf_url: publicUrl,
-      debug_cours_count: coursInsert.length,
+      debug_cours_count: finalCours.length,
       debug_indices_count: indicesInsert.length
     });
 
