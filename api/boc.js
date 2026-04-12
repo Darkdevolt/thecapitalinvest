@@ -7,7 +7,6 @@ const supabase = createClient(
 );
 
 const ADMIN_TOKEN = "thecapital_admin:TheCapital@BRVM2026!";
-const ADMIN_TOKEN_B64 = Buffer.from(ADMIN_TOKEN).toString('base64').replace(/=/g, "");
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -16,7 +15,7 @@ export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const token = req.headers['x-admin-token'];
-  if (token !== ADMIN_TOKEN_B64) {
+  if (token !== ADMIN_TOKEN) {
     return res.status(401).json({ error: 'Non autorisé' });
   }
 
