@@ -8,7 +8,14 @@ const supabase = createClient(
 
 const ADMIN_TOKEN = "thecapital_admin:TheCapital@BRVM2026!";
 
+// Dictionnaire des mois en français
+const moisFr = {
+  'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04', 'mai': '05', 'juin': '06',
+  'juillet': '07', 'août': '08', 'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
+};
+
 export default async function handler(req, res) {
+  // CORS et vérification token (inchangé)
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-admin-token');
@@ -29,140 +36,74 @@ export default async function handler(req, res) {
 
     const buffer = Buffer.from(file, 'base64');
     const parsed = await pdfParse(buffer);
-    const text = parsed.text.replace(/\n/g, ' ').replace(/\s+/g, ' '); // Normaliser les espaces
+    
+    // Remplacer les sauts de ligne par des espaces pour faciliter les regex
+    const text = parsed.text.replace(/\n/g, ' ').replace(/\s+/g, ' ');
 
-    // --- 1. Extraction de la date de séance ---
-    // Chercher "Vendredi 10 avril 2026" ou "vendredi 10 avril 2026"
+    // 1. DATE DE SÉANCE
     let dateStr = new Date().toISOString().split('T')[0];
+    // Recherche explicite de "Vendredi 10 avril 2026"
     const dateMatch = text.match(/([A-Za-z]+)\s+(\d{1,2})\s+([a-zéû]+)\s+(\d{4})/i);
     if (dateMatch) {
-      const moisFr = {
-        'janvier': '01', 'février': '02', 'mars': '03', 'avril': '04', 'mai': '05', 'juin': '06',
-        'juillet': '07', 'août': '08', 'septembre': '09', 'octobre': '10', 'novembre': '11', 'décembre': '12'
-      };
       const jour = dateMatch[2].padStart(2, '0');
       const mois = moisFr[dateMatch[3].toLowerCase()] || '01';
       const annee = dateMatch[4];
       dateStr = `${annee}-${mois}-${jour}`;
     }
 
-    // --- 2. Extraction des indices ---
+    // 2. INDICES
     const indicesInsert = [];
-    
-    // Motif pour les indices principaux (ex: "BRVM-PRESTIGE 12 158,70 -0,04 % 10,02 %")
-    const indicePrincipalPattern = /(BRVM\s*[-]?\s*[A-Z\s]+)\s+(\d+)\s+([\d\s]+[.,]\d{2})\s+([+-]?\d+[.,]\d{2})\s*%\s+([+-]?\d+[.,]\d{2})\s*%/gi;
+    // Motif qui capture "BRVM-PRESTIGE 12 158,70 -0,04 %" et "BRVM - TELECOMMUNICATIONS 3 102,65 -0,27 %"
+    const indiceRegex = /(BRVM[-\s]+[A-Z\s]+)\s+\d+\s+([\d\s]+[.,]\d{2})\s+([+-]?\d+[.,]\d{2})\s*%/gi;
     let match;
-    while ((match = indicePrincipalPattern.exec(text)) !== null) {
-      const nomIndice = match[1].trim().replace(/\s+/g, ' ');
-      const valeurStr = match[3].replace(/\s/g, '').replace(',', '.');
-      const variationStr = match[4].replace(',', '.');
-      const valeur = parseFloat(valeurStr);
-      const variation = parseFloat(variationStr);
+    while ((match = indiceRegex.exec(text)) !== null) {
+      const nom = match[1].trim().replace(/\s+/g, ' ');
+      const valeur = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
+      const variation = parseFloat(match[3].replace(',', '.'));
       if (!isNaN(valeur) && !isNaN(variation)) {
-        indicesInsert.push({
-          indice: nomIndice,
-          date_seance: dateStr,
-          valeur,
-          variation
-        });
+        indicesInsert.push({ indice: nom, date_seance: dateStr, valeur, variation });
+      }
+    }
+    // Nettoyage des doublons
+    const uniqueIndices = [];
+    const seenIdx = new Set();
+    for (const idx of indicesInsert) {
+      const key = `${idx.indice}_${idx.date_seance}`;
+      if (!seenIdx.has(key)) {
+        seenIdx.add(key);
+        uniqueIndices.push(idx);
       }
     }
 
-    // Motif pour les indices sectoriels (ex: "BRVM - TELECOMMUNICATIONS 3 102,65 -0,27 % 8,17 %")
-    const indiceSectorielPattern = /(BRVM\s*-\s*[A-Z\s]+)\s+(\d+)\s+([\d\s]+[.,]\d{2})\s+([+-]?\d+[.,]\d{2})\s*%\s+([+-]?\d+[.,]\d{2})\s*%/gi;
-    while ((match = indiceSectorielPattern.exec(text)) !== null) {
-      const nomIndice = match[1].trim().replace(/\s+/g, ' ');
-      const valeurStr = match[3].replace(/\s/g, '').replace(',', '.');
-      const variationStr = match[4].replace(',', '.');
-      const valeur = parseFloat(valeurStr);
-      const variation = parseFloat(variationStr);
-      if (!isNaN(valeur) && !isNaN(variation)) {
-        indicesInsert.push({
-          indice: nomIndice,
-          date_seance: dateStr,
-          valeur,
-          variation
-        });
-      }
-    }
-
-    // --- 3. Extraction des cours d'actions (avec variation) ---
+    // 3. COURS D'ACTIONS
     const coursInsert = [];
-    
-    // Motif pour les lignes d'actions avec variation (ex: "SAFCA CI (SAFC) 7 435 6,21 % 124,96 %")
-    const actionVarPattern = /([A-Z]{4})\s+(?:CI|BN|BF|ML|NG|SN|TG)?\s*\([A-Z]{4}\)\s+([\d\s]+)\s+([+-]?\d+[.,]\d{1,2})\s*%/gi;
-    while ((match = actionVarPattern.exec(text)) !== null) {
+    // Motif pour les lignes du type "SAFCA CI (SAFC) 7 435 6,21 %"
+    const actionRegex = /([A-Z]{4})\s+(?:CI|BN|BF|ML|NG|SN|TG)?\s*\([A-Z]{4}\)\s+([\d\s]+)\s+([+-]?\d+[.,]\d{1,2})\s*%/gi;
+    while ((match = actionRegex.exec(text)) !== null) {
       const ticker = match[1];
-      const coursStr = match[2].replace(/\s/g, '');
-      const variationStr = match[3].replace(',', '.');
-      const cours = parseFloat(coursStr);
-      const variation = parseFloat(variationStr);
+      const cours = parseFloat(match[2].replace(/\s/g, ''));
+      const variation = parseFloat(match[3].replace(',', '.'));
       if (!isNaN(cours) && !isNaN(variation)) {
-        // Vérifier si déjà présent
-        const exists = coursInsert.find(c => c.ticker === ticker && c.date_seance === dateStr);
-        if (!exists) {
-          coursInsert.push({
-            ticker,
-            date_seance: dateStr,
-            cours,
-            variation,
-            volume: null
-          });
-        }
+        coursInsert.push({ ticker, date_seance: dateStr, cours, variation, volume: null });
       }
     }
-
-    // Motif pour les lignes d'actions sans variation explicite (dans les tableaux "Titres Cours Evol. Jour Evol. annuelle")
-    // Ex: "SAFCA CI (SAFC) 7 435 6,21 % 124,96 %"
-    // La regex précédente capture déjà cela, mais vérifions aussi un motif plus large
-    const actionFullPattern = /([A-Z]{4})\s+[A-Z\s]*\s*\([A-Z]{4}\)\s+([\d\s]+)\s+([+-]?\d+[.,]\d{1,2})\s*%\s+([+-]?\d+[.,]\d{1,2})\s*%/gi;
-    while ((match = actionFullPattern.exec(text)) !== null) {
+    // Complément avec les cours de la section "QUANTITES RESIDUELLES" (pour les actions sans variation)
+    const residuelleRegex = /([A-Z]{4})\s+[A-Z\s]+\s+[\d,]+\s+([\d\s]+[.,]\d{2,3})\s+\//gi;
+    while ((match = residuelleRegex.exec(text)) !== null) {
       const ticker = match[1];
-      const coursStr = match[2].replace(/\s/g, '');
-      const variationStr = match[3].replace(',', '.');
-      const cours = parseFloat(coursStr);
-      const variation = parseFloat(variationStr);
-      if (!isNaN(cours) && !isNaN(variation)) {
-        const exists = coursInsert.find(c => c.ticker === ticker && c.date_seance === dateStr);
-        if (!exists) {
-          coursInsert.push({
-            ticker,
-            date_seance: dateStr,
-            cours,
-            variation,
-            volume: null
-          });
-        }
-      }
-    }
-
-    // Motif pour les actions dans la section "QUANTITES RESIDUELLES" (sans variation)
-    // Ex: "ABJC SERVAIR ABIDJAN CI 373,435 / 3,475 243 3 470"
-    const actionVolumePattern = /([A-Z]{4})\s+[A-Z\s]+\s+[\d,]+\s+([\d\s]+[.,]\d{2,3})\s+\/\s+([\d\s]+[.,]\d{2,3})/gi;
-    while ((match = actionVolumePattern.exec(text)) !== null) {
-      const ticker = match[1];
-      const coursStr = match[2].replace(/\s/g, '').replace(',', '.');
-      const cours = parseFloat(coursStr);
+      const cours = parseFloat(match[2].replace(/\s/g, '').replace(',', '.'));
       if (!isNaN(cours)) {
-        const existing = coursInsert.find(c => c.ticker === ticker && c.date_seance === dateStr);
-        if (existing) {
-          existing.cours = cours; // Mettre à jour avec le cours le plus précis
+        const existe = coursInsert.find(c => c.ticker === ticker);
+        if (existe) {
+          existe.cours = cours; // cours plus précis
         } else {
-          coursInsert.push({
-            ticker,
-            date_seance: dateStr,
-            cours,
-            variation: null,
-            volume: null
-          });
+          coursInsert.push({ ticker, date_seance: dateStr, cours, variation: null, volume: null });
         }
       }
     }
-
-    // Nettoyer les doublons éventuels (garder celui avec variation si possible)
+    // Nettoyage des doublons (privilégier ceux avec variation)
     const finalCours = [];
     const seenTickers = new Set();
-    // Trier pour avoir d'abord ceux avec variation
     coursInsert.sort((a, b) => (b.variation !== null ? 1 : 0) - (a.variation !== null ? 1 : 0));
     for (const c of coursInsert) {
       if (!seenTickers.has(c.ticker)) {
@@ -171,53 +112,26 @@ export default async function handler(req, res) {
       }
     }
 
-    // --- 4. Insertion dans Supabase ---
+    // 4. INSERTION DANS SUPABASE
     let insertedCours = 0, insertedIndices = 0;
-
-    if (finalCours.length > 0) {
-      const { error } = await supabase
-        .from('cours_brvm')
-        .upsert(finalCours, { onConflict: 'ticker,date_seance' });
+    if (finalCours.length) {
+      const { error } = await supabase.from('cours_brvm').upsert(finalCours, { onConflict: 'ticker,date_seance' });
       if (!error) insertedCours = finalCours.length;
-      else console.error('Erreur insertion cours:', error);
     }
-
-    if (indicesInsert.length > 0) {
-      // Nettoyer les doublons d'indices
-      const uniqueIndices = [];
-      const seenIndices = new Set();
-      for (const idx of indicesInsert) {
-        const key = `${idx.indice}_${idx.date_seance}`;
-        if (!seenIndices.has(key)) {
-          seenIndices.add(key);
-          uniqueIndices.push(idx);
-        }
-      }
-      const { error } = await supabase
-        .from('indices_brvm')
-        .upsert(uniqueIndices, { onConflict: 'indice,date_seance' });
+    if (uniqueIndices.length) {
+      const { error } = await supabase.from('indices_brvm').upsert(uniqueIndices, { onConflict: 'indice,date_seance' });
       if (!error) insertedIndices = uniqueIndices.length;
-      else console.error('Erreur insertion indices:', error);
     }
 
-    // --- 5. Upload du PDF dans le storage ---
+    // 5. STOCKAGE DU PDF (inchangé)
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath = `${dateStr}/${Date.now()}_${safeFileName}`;
-    
     const { error: uploadError } = await supabase.storage
       .from('boc_pdfs')
-      .upload(filePath, buffer, {
-        contentType: 'application/pdf',
-        upsert: false
-      });
-    
+      .upload(filePath, buffer, { contentType: 'application/pdf', upsert: false });
     if (uploadError) throw uploadError;
-
-    const { data: urlData } = supabase.storage
-      .from('boc_pdfs')
-      .getPublicUrl(filePath);
+    const { data: urlData } = supabase.storage.from('boc_pdfs').getPublicUrl(filePath);
     const publicUrl = urlData.publicUrl;
-
     await supabase.from('boc_imports').insert({
       date_seance: dateStr,
       fichier_nom: safeFileName,
@@ -231,11 +145,11 @@ export default async function handler(req, res) {
       indices_importes: insertedIndices,
       pdf_url: publicUrl,
       debug_cours_count: finalCours.length,
-      debug_indices_count: indicesInsert.length
+      debug_indices_count: uniqueIndices.length
     });
 
   } catch (err) {
-    console.error('BOC parsing error:', err);
+    console.error('BOC error:', err);
     return res.status(500).json({ error: err.message });
   }
 }
