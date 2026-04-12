@@ -106,11 +106,22 @@
     <!-- PANE BOC ARCHIVÉS -->
     <div class="tab-pane" id="tab-boc-list">
       <div class="card">
-        <div class="card-head"><span class="card-title">Bulletins Officiels de la Cote archivés</span></div>
+        <div class="card-head">
+          <span class="card-title">Bulletins Officiels de la Cote archivés</span>
+          <button class="btn-small btn-outline" style="margin-left:auto" id="deleteSelectedBocBtn" onclick="deleteSelectedBoc()">🗑️ Supprimer sélection</button>
+        </div>
         <div class="tw">
           <table>
-            <thead><tr><th>Date de séance</th><th>Nom du fichier</th><th>Importé le</th><th>Télécharger</th></tr></thead>
-            <tbody id="bocTbody"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+            <thead>
+              <tr>
+                <th style="width:30px"><input type="checkbox" id="selectAllBoc" onchange="toggleSelectAllBoc()"></th>
+                <th>Date de séance</th>
+                <th>Nom du fichier</th>
+                <th>Importé le</th>
+                <th>Télécharger</th>
+              </tr>
+            </thead>
+            <tbody id="bocTbody"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -131,10 +142,25 @@
     <!-- PANE COURS -->
     <div class="tab-pane" id="tab-cours">
       <div class="card">
-        <div class="card-head"><span class="card-title">Derniers cours enregistrés</span></div>
+        <div class="card-head">
+          <span class="card-title">Derniers cours enregistrés</span>
+          <button class="btn-small btn-outline" style="margin-left:auto" id="deleteSelectedCoursBtn" onclick="deleteSelectedCours()">🗑️ Supprimer sélection</button>
+          <span class="card-count" style="margin-left:8px">|</span>
+          <button class="btn-small btn-outline" onclick="deleteSeancePrompt()">🗓️ Supprimer une séance entière</button>
+        </div>
         <div class="tw">
-          <table><thead><tr><th>Date</th><th>Ticker</th><th>Cours</th><th>Variation</th><th>Volume</th></tr></thead>
-            <tbody id="coursTbody"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:30px"><input type="checkbox" id="selectAllCours" onchange="toggleSelectAllCours()"></th>
+                <th>Date</th>
+                <th>Ticker</th>
+                <th>Cours</th>
+                <th>Variation</th>
+                <th>Volume</th>
+              </tr>
+            </thead>
+            <tbody id="coursTbody"><tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
           </table>
         </div>
       </div>
@@ -165,7 +191,6 @@
           <span style="flex:1"></span>
           <button class="btn-outline" id="showAddAnalyseFormBtn">+ Nouvelle analyse</button>
         </div>
-        <!-- Formulaire d'ajout (caché par défaut) -->
         <div id="addAnalyseForm" style="display:none; padding:16px; background:var(--cream); border-bottom:1px solid var(--stone);">
           <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;">
             <div class="ff">
@@ -399,26 +424,82 @@
 
     async function loadCours() {
       const tbody = document.getElementById('coursTbody');
-      tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
         const res = await fetch('/api/admin?type=cours', { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Aucun cours.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = data.slice(0, 100).map(c => `
-          <tr>
-            <td>${c.date_seance || ''}</td>
-            <td>${c.ticker}</td>
-            <td>${c.cours || ''}</td>
-            <td>${c.variation ? parseFloat(c.variation).toFixed(2)+'%' : ''}</td>
-            <td>${c.volume || ''}</td>
-          </tr>
-        `).join('');
+        renderCoursList(data);
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
+      }
+    }
+
+    function renderCoursList(data) {
+      const tbody = document.getElementById('coursTbody');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="6">Aucun cours.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.slice(0, 100).map(c => `
+        <tr>
+          <td><input type="checkbox" class="cours-checkbox" value="${c.id}" data-ticker="${c.ticker}" data-date="${c.date_seance}"></td>
+          <td>${c.date_seance || ''}</td>
+          <td>${c.ticker}</td>
+          <td>${c.cours || ''}</td>
+          <td>${c.variation ? parseFloat(c.variation).toFixed(2)+'%' : ''}</td>
+          <td>${c.volume || ''}</td>
+        </tr>
+      `).join('');
+    }
+
+    function toggleSelectAllCours() {
+      const selectAll = document.getElementById('selectAllCours');
+      document.querySelectorAll('.cours-checkbox').forEach(cb => cb.checked = selectAll.checked);
+    }
+
+    async function deleteSelectedCours() {
+      const selected = Array.from(document.querySelectorAll('.cours-checkbox:checked'));
+      if (selected.length === 0) {
+        alert('Aucun cours sélectionné.');
+        return;
+      }
+      const ids = selected.map(cb => cb.value);
+      if (!confirm(`Supprimer définitivement ${ids.length} cours ?`)) return;
+      
+      try {
+        const res = await fetch('/api/admin?type=delete_cours', {
+          method: 'DELETE',
+          headers: adminHeaders(),
+          body: JSON.stringify({ ids })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert(`${data.deleted_count} cours supprimés.`);
+        loadCours();
+      } catch (e) {
+        alert('Erreur: ' + e.message);
+      }
+    }
+
+    async function deleteSeancePrompt() {
+      const date = prompt('Date de la séance à supprimer (YYYY-MM-DD) :');
+      if (!date) return;
+      if (!confirm(`ATTENTION : Cela supprimera TOUS les cours et indices du ${date}. Confirmer ?`)) return;
+      
+      try {
+        const res = await fetch('/api/admin?type=delete_seance', {
+          method: 'DELETE',
+          headers: adminHeaders(),
+          body: JSON.stringify({ date })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert(`Séance du ${date} supprimée (${data.cours_deleted} cours, ${data.indices_deleted} indices).`);
+        loadCours();
+        loadIndices();
+      } catch (e) {
+        alert('Erreur: ' + e.message);
       }
     }
 
@@ -472,25 +553,63 @@
 
     async function loadBocList() {
       const tbody = document.getElementById('bocTbody');
-      tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
         const res = await fetch('/api/admin?type=boc_list', { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
-        if (!data.length) {
-          tbody.innerHTML = '<tr><td colspan="4">Aucun BOC archivé.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = data.map(b => `
-          <tr>
-            <td>${b.date_seance}</td>
-            <td>${b.fichier_nom}</td>
-            <td>${new Date(b.created_at).toLocaleString()}</td>
-            <td><a href="${b.fichier_url}" target="_blank" class="btn-small">📄 PDF</a></td>
-          </tr>
-        `).join('');
+        renderBocList(data);
       } catch (e) {
-        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red)">${e.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red)">${e.message}</td></tr>`;
+      }
+    }
+
+    function renderBocList(data) {
+      const tbody = document.getElementById('bocTbody');
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="5">Aucun BOC archivé.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.map(b => `
+        <tr>
+          <td><input type="checkbox" class="boc-checkbox" value="${b.id}" data-date="${b.date_seance}" data-filename="${b.fichier_nom}"></td>
+          <td>${b.date_seance}</td>
+          <td>${b.fichier_nom}</td>
+          <td>${new Date(b.created_at).toLocaleString()}</td>
+          <td><a href="${b.fichier_url}" target="_blank" class="btn-small">📄 PDF</a></td>
+        </tr>
+      `).join('');
+    }
+
+    function toggleSelectAllBoc() {
+      const selectAll = document.getElementById('selectAllBoc');
+      document.querySelectorAll('.boc-checkbox').forEach(cb => cb.checked = selectAll.checked);
+    }
+
+    async function deleteSelectedBoc() {
+      const selected = Array.from(document.querySelectorAll('.boc-checkbox:checked'));
+      if (selected.length === 0) {
+        alert('Aucun élément sélectionné.');
+        return;
+      }
+      const ids = selected.map(cb => cb.value);
+      const dates = selected.map(cb => cb.getAttribute('data-date'));
+      const filenames = selected.map(cb => cb.getAttribute('data-filename'));
+      
+      if (!confirm(`Supprimer définitivement ${ids.length} BOC et leurs PDF ?`)) return;
+      
+      try {
+        const res = await fetch('/api/admin?type=delete_bocs', {
+          method: 'DELETE',
+          headers: adminHeaders(),
+          body: JSON.stringify({ ids, dates, filenames })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        alert(`${data.deleted_count} BOC supprimés.`);
+        loadBocList();
+      } catch (e) {
+        alert('Erreur: ' + e.message);
       }
     }
 
@@ -577,7 +696,7 @@
       const tbody = document.getElementById('analysesTbody');
       tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
-        const res = await fetch(`/api/admin?type=analyses?ticker=${ticker}`, { headers: adminHeaders() });
+        const res = await fetch(`/api/admin?type=analyses&ticker=${ticker}`, { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         if (!data.length) {
@@ -601,7 +720,7 @@
     window.deleteAnalyse = async (id) => {
       if (!confirm('Supprimer cette analyse ?')) return;
       try {
-        const res = await fetch(`/api/admin?type=analyses?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
+        const res = await fetch(`/api/admin?type=analyses&id=${id}`, { method: 'DELETE', headers: adminHeaders() });
         if (!res.ok) throw new Error('Erreur suppression');
         loadAnalysesForTicker();
       } catch (e) {
@@ -627,6 +746,14 @@
       }).catch(e => alert(e.message));
     });
 
+    // Rendre les fonctions disponibles globalement pour les onclick inline
+    window.deleteSelectedBoc = deleteSelectedBoc;
+    window.toggleSelectAllBoc = toggleSelectAllBoc;
+    window.deleteSelectedCours = deleteSelectedCours;
+    window.toggleSelectAllCours = toggleSelectAllCours;
+    window.deleteSeancePrompt = deleteSeancePrompt;
+    window.loadAnalysesForTicker = loadAnalysesForTicker;
+    window.showAddAnalyseForm = () => document.getElementById('showAddAnalyseFormBtn').click();
   })();
 </script>
 </body>
