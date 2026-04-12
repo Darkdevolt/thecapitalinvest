@@ -73,13 +73,7 @@ export default async function handler(req, res) {
         if (error) throw error;
         return res.status(200).json(data);
       }
-      if (req.method === 'DELETE') {
-        const { id } = req.query;
-        if (!id) return res.status(400).json({ error: 'id requis' });
-        const { error } = await supabase.from('cours_brvm').delete().eq('id', id);
-        if (error) throw error;
-        return res.status(200).json({ success: true });
-      }
+      // DELETE individuel (si besoin) conservé, mais la suppression groupée utilise delete_cours
     }
 
     // --- INDICES ---
@@ -143,6 +137,111 @@ export default async function handler(req, res) {
         if (error) throw error;
         return res.status(200).json(data || []);
       }
+    }
+
+    // --- SUPPRESSION GROUPÉE DE BOCS ---
+    if (type === 'delete_bocs' && req.method === 'DELETE') {
+      const { ids, dates, filenames } = req.body;
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'Liste d\'IDs requise' });
+      }
+
+      let deletedCount = 0;
+      const errors = [];
+
+      // 1. Supprimer les enregistrements dans boc_imports
+      const { error: dbError, count } = await supabase
+        .from('boc_imports')
+        .delete()
+        .in('id', ids);
+      
+      if (dbError) {
+        errors.push(`Base de données: ${dbError.message}`);
+      } else {
+        deletedCount = count || ids.length;
+      }
+
+      // 2. Supprimer les fichiers du storage
+      for (let i = 0; i < ids.length; i++) {
+        const date = dates[i];
+        const filename = filenames[i];
+        try {
+          const { data: files, error: listError } = await supabase.storage
+            .from('boc_pdfs')
+            .list(date);
+          
+          if (listError) throw listError;
+          
+          const targetFile = files?.find(f => f.name.includes(filename.replace('.pdf', '')));
+          if (targetFile) {
+            const { error: removeError } = await supabase.storage
+              .from('boc_pdfs')
+              .remove([`${date}/${targetFile.name}`]);
+            if (removeError) throw removeError;
+          }
+        } catch (e) {
+          errors.push(`Storage (${filename}): ${e.message}`);
+        }
+      }
+
+      return res.status(200).json({
+        success: errors.length === 0,
+        deleted_count: deletedCount,
+        errors: errors.length ? errors : undefined
+      });
+    }
+
+    // --- SUPPRESSION GROUPÉE DE COURS (par IDs) ---
+    if (type === 'delete_cours' && req.method === 'DELETE') {
+      const { ids } = req.body;
+      if (!ids || !Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ error: 'Liste d\'IDs requise' });
+      }
+
+      const { error, count } = await supabase
+        .from('cours_brvm')
+        .delete()
+        .in('id', ids);
+
+      if (error) {
+        return res.status(500).json({ error: error.message });
+      }
+      return res.status(200).json({ success: true, deleted_count: count || ids.length });
+    }
+
+    // --- SUPPRESSION D'UNE SÉANCE ENTIÈRE (cours + indices) ---
+    if (type === 'delete_seance' && req.method === 'DELETE') {
+      const { date } = req.body;
+      if (!date) {
+        return res.status(400).json({ error: 'Date requise' });
+      }
+
+      let coursDeleted = 0;
+      let indicesDeleted = 0;
+
+      const { error: coursError, count: coursCount } = await supabase
+        .from('cours_brvm')
+        .delete()
+        .eq('date_seance', date);
+      if (coursError) {
+        return res.status(500).json({ error: `Erreur cours: ${coursError.message}` });
+      }
+      coursDeleted = coursCount || 0;
+
+      const { error: indicesError, count: indicesCount } = await supabase
+        .from('indices_brvm')
+        .delete()
+        .eq('date_seance', date);
+      if (indicesError) {
+        return res.status(500).json({ error: `Erreur indices: ${indicesError.message}` });
+      }
+      indicesDeleted = indicesCount || 0;
+
+      return res.status(200).json({
+        success: true,
+        cours_deleted: coursDeleted,
+        indices_deleted: indicesDeleted
+      });
     }
 
     return res.status(400).json({ error: 'Type ou méthode non supporté' });
