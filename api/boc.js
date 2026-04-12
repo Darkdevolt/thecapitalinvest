@@ -24,18 +24,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { file } = req.body;
+    const { file, filename } = req.body;
     if (!file) return res.status(400).json({ error: 'Fichier base64 requis' });
 
     const buffer = Buffer.from(file, 'base64');
+    
+    // 1. Parser le PDF
     const parsed = await pdfParse(buffer);
     const text = parsed.text;
 
-    // Extraction de la date de séance
+    // Extraction de la date de séance (à adapter selon le format du BOC)
     const dateMatch = text.match(/(\d{2})\/(\d{2})\/(\d{4})/);
     const dateStr = dateMatch ? `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}` : new Date().toISOString().split('T')[0];
 
-    // --- PARSING DES INDICES (exemple basique) ---
+    // --- PARSING DES INDICES ---
     const indicesInsert = [];
     const indicesPattern = /(BRVM\s*(?:COMPOSITE|30|PRESTIGE|-\s*[A-Z\s]+))\s+([\d\s]+[.,]\d{2})\s+([+-]?\d+[.,]\d{2})%/gi;
     let match;
@@ -46,7 +48,7 @@ export default async function handler(req, res) {
       indicesInsert.push({ indice, date_seance: dateStr, valeur, variation });
     }
 
-    // --- PARSING DES COURS (exemple basique) ---
+    // --- PARSING DES COURS ---
     const coursInsert = [];
     const lignePattern = /([A-Z]{4})\s+([\d\s]+)\s+([\d\s]+)\s+([+-]?\d+[.,]\d{2})%/g;
     while ((match = lignePattern.exec(text)) !== null) {
@@ -63,7 +65,36 @@ export default async function handler(req, res) {
       });
     }
 
-    // Insertion dans Supabase
+    // 2. Upload du PDF dans Supabase Storage
+    const safeFileName = filename || `BOC_${dateStr}.pdf`;
+    const filePath = `${dateStr}/${Date.now()}_${safeFileName}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('boc_pdfs')
+      .upload(filePath, buffer, {
+        contentType: 'application/pdf',
+        upsert: false
+      });
+    
+    if (uploadError) throw uploadError;
+
+    // 3. Récupérer l'URL publique
+    const { data: urlData } = supabase.storage
+      .from('boc_pdfs')
+      .getPublicUrl(filePath);
+    const publicUrl = urlData.publicUrl;
+
+    // 4. Enregistrer dans la table boc_imports
+    const { error: dbError } = await supabase
+      .from('boc_imports')
+      .insert({
+        date_seance: dateStr,
+        fichier_nom: safeFileName,
+        fichier_url: publicUrl
+      });
+    if (dbError) throw dbError;
+
+    // 5. Upsert des cours et indices
     let insertedCours = 0, insertedIndices = 0;
     if (coursInsert.length) {
       const { error } = await supabase
@@ -83,11 +114,11 @@ export default async function handler(req, res) {
       date: dateStr,
       cours_importes: insertedCours,
       indices_importes: insertedIndices,
-      raw_sample: text.slice(0, 500)
+      pdf_url: publicUrl
     });
 
   } catch (err) {
-    console.error('BOC parsing error:', err);
+    console.error('BOC error:', err);
     return res.status(500).json({ error: err.message });
   }
 }
