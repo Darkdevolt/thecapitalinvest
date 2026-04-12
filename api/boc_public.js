@@ -6,7 +6,7 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  // Autoriser l'accès public sans token
+  // Accès public sans authentification
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -17,7 +17,6 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Lecture publique de la table boc_imports (déjà autorisée par RLS)
     const { data, error } = await supabase
       .from('boc_imports')
       .select('*')
