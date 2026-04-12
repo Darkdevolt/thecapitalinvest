@@ -97,14 +97,77 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
 .fs-form input:focus{border-color:var(--gold)}
 .fs-form button{padding:10px 18px;background:var(--ink);color:var(--cream);border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 .cw{padding:16px;height:210px}
+
+/* Styles pour le formulaire de connexion */
+.auth-container{max-width:480px;margin:60px auto 0}
+.auth-card{background:var(--white);border:1px solid var(--stone);border-radius:var(--r);box-shadow:var(--shadow);padding:32px}
+.auth-tabs{display:flex;gap:2px;margin-bottom:24px;border-bottom:1px solid var(--stone)}
+.auth-tab{flex:1;padding:10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;border-bottom:2px solid transparent}
+.auth-tab.active{color:var(--ink);border-bottom-color:var(--gold)}
+.auth-field{margin-bottom:18px}
+.auth-field label{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.auth-field input{width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--stone);border-radius:7px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:border-color .15s}
+.auth-field input:focus{border-color:var(--gold)}
+.auth-error{color:var(--red);font-size:12px;margin-bottom:16px;min-height:20px}
+.auth-success{color:var(--grn);font-size:12px;margin-bottom:16px;min-height:20px}
+.auth-btn{width:100%;padding:12px;background:var(--ink);color:var(--cream);border:none;border-radius:7px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:background .2s}
+.auth-btn:hover{background:var(--ink2)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-note{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
 </style>
 </head>
 <body>
-<div id="guard" style="display:none;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:14px">
-  <div style="font-family:'Cormorant Garamond',serif;font-size:28px">The Capital</div>
-  <p style="color:var(--muted)">Vous devez être connecté.</p>
-  <a href="/index.html" style="color:var(--gold);text-decoration:none;font-size:12px;letter-spacing:.06em;text-transform:uppercase">← Connexion</a>
+
+<!-- ÉCRAN DE CONNEXION / INSCRIPTION (affiché si non connecté) -->
+<div id="authScreen" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:14px">
+  <div class="auth-container">
+    <div style="text-align:center;margin-bottom:28px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;letter-spacing:.05em">THE <span style="color:var(--gold)">CAPITAL</span></div>
+      <p style="color:var(--muted);font-size:13px;margin-top:6px">Intelligence financière africaine</p>
+    </div>
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tabLogin">Connexion</button>
+        <button class="auth-tab" id="tabSignup">Créer un compte</button>
+      </div>
+      <div id="loginForm">
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="loginEmail" placeholder="vous@exemple.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Mot de passe</label>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
+        </div>
+        <div class="auth-error" id="loginError"></div>
+        <button class="auth-btn" id="loginBtn">Se connecter</button>
+      </div>
+      <div id="signupForm" style="display:none">
+        <div class="auth-field">
+          <label>Nom (prénom ou société)</label>
+          <input type="text" id="signupName" placeholder="Jean Dupont">
+        </div>
+        <div class="auth-field">
+          <label>Email</label>
+          <input type="email" id="signupEmail" placeholder="vous@exemple.com" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <label>Mot de passe</label>
+          <input type="password" id="signupPassword" placeholder="Minimum 6 caractères" autocomplete="new-password">
+        </div>
+        <div class="auth-error" id="signupError"></div>
+        <div class="auth-success" id="signupSuccess"></div>
+        <button class="auth-btn" id="signupBtn">Créer mon compte</button>
+      </div>
+      <div class="auth-note">Compte de démonstration — Vos données sont sécurisées.</div>
+    </div>
+    <div style="text-align:center;margin-top:20px">
+      <a href="index.html" style="color:var(--gold);text-decoration:none;font-size:12px;letter-spacing:.06em;text-transform:uppercase">← Retour à l'accueil</a>
+    </div>
+  </div>
 </div>
+
+<!-- INTERFACE PRINCIPALE DU DASHBOARD (affichée une fois connecté) -->
 <div id="app" style="display:none">
 <nav>
   <a href="/index.html" class="nav-logo">The <span>Capital</span></a>
@@ -213,18 +276,133 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
 
 </main>
 </div>
+
 <script>
+// ---------- GESTION DE L'AUTHENTIFICATION ----------
 const SN=localStorage.getItem('tc_session');
 const SE=SN?JSON.parse(SN):null;
-const TK=SE?.access_token||'';
-if(!TK){document.getElementById('guard').style.display='flex';}
-else{
-  document.getElementById('app').style.display='block';
-  document.getElementById('nav-user').textContent=SE.user?.user_metadata?.nom||SE.user?.email?.split('@')[0]||'';
-  document.getElementById('txdate').value=new Date().toISOString().split('T')[0];
-  lm();
+let TK=SE?.access_token||'';
+
+function showAuthScreen(show){
+  document.getElementById('authScreen').style.display=show?'flex':'none';
+  document.getElementById('app').style.display=show?'none':'block';
+  if(!show && TK){
+    document.getElementById('nav-user').textContent=SE.user?.user_metadata?.nom||SE.user?.email?.split('@')[0]||'';
+    document.getElementById('txdate').value=new Date().toISOString().split('T')[0];
+    lm();
+  }
 }
-function doLogout(){localStorage.removeItem('tc_session');location.href='/index.html';}
+
+// Initialisation : si token présent, on passe directement au dashboard
+if(TK){
+  showAuthScreen(false);
+} else {
+  showAuthScreen(true);
+}
+
+// Bascule onglets Connexion / Inscription
+document.getElementById('tabLogin').addEventListener('click',function(){
+  document.getElementById('tabLogin').classList.add('active');
+  document.getElementById('tabSignup').classList.remove('active');
+  document.getElementById('loginForm').style.display='block';
+  document.getElementById('signupForm').style.display='none';
+  clearAuthMessages();
+});
+document.getElementById('tabSignup').addEventListener('click',function(){
+  document.getElementById('tabSignup').classList.add('active');
+  document.getElementById('tabLogin').classList.remove('active');
+  document.getElementById('loginForm').style.display='none';
+  document.getElementById('signupForm').style.display='block';
+  clearAuthMessages();
+});
+
+function clearAuthMessages(){
+  document.getElementById('loginError').textContent='';
+  document.getElementById('signupError').textContent='';
+  document.getElementById('signupSuccess').textContent='';
+}
+
+// Connexion
+document.getElementById('loginBtn').addEventListener('click',async function(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  const errEl=document.getElementById('loginError');
+  if(!email||!password){ errEl.textContent='Email et mot de passe requis.'; return; }
+  const btn=document.getElementById('loginBtn');
+  btn.disabled=true;
+  btn.textContent='Connexion...';
+  errEl.textContent='';
+  try{
+    const res=await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'login',email,password})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erreur de connexion');
+    localStorage.setItem('tc_session',JSON.stringify(data.session));
+    TK=data.session.access_token;
+    location.reload(); // recharge pour initialiser l'état connecté
+  }catch(e){
+    errEl.textContent=e.message;
+    btn.disabled=false;
+    btn.textContent='Se connecter';
+  }
+});
+
+// Inscription
+document.getElementById('signupBtn').addEventListener('click',async function(){
+  const nom=document.getElementById('signupName').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const password=document.getElementById('signupPassword').value;
+  const errEl=document.getElementById('signupError');
+  const successEl=document.getElementById('signupSuccess');
+  if(!nom||!email||!password){ errEl.textContent='Tous les champs sont requis.'; return; }
+  if(password.length<6){ errEl.textContent='Mot de passe (min. 6 caractères).'; return; }
+  const btn=document.getElementById('signupBtn');
+  btn.disabled=true;
+  btn.textContent='Création...';
+  errEl.textContent='';
+  successEl.textContent='';
+  try{
+    const res=await fetch('/api/auth',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'signup',email,password,nom})
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erreur inscription');
+    if(data.session){
+      localStorage.setItem('tc_session',JSON.stringify(data.session));
+      TK=data.session.access_token;
+      location.reload();
+    } else {
+      successEl.textContent='Compte créé ! Vous pouvez maintenant vous connecter.';
+      document.getElementById('signupName').value='';
+      document.getElementById('signupEmail').value='';
+      document.getElementById('signupPassword').value='';
+      // Bascule vers onglet connexion
+      document.getElementById('tabLogin').click();
+    }
+  }catch(e){
+    errEl.textContent=e.message;
+  }finally{
+    btn.disabled=false;
+    btn.textContent='Créer mon compte';
+  }
+});
+
+// Déconnexion
+function doLogout(){
+  localStorage.removeItem('tc_session');
+  TK='';
+  showAuthScreen(true);
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-marche').classList.add('active');
+}
+
+// ---------- FONCTIONS DASHBOARD (inchangées) ----------
 const TABS={marche:lm,portefeuille:lp,fiche:()=>{}};
 let AT='marche';
 function showTab(n,el){
@@ -293,12 +471,12 @@ async function lp(){
     fetch('/api/portefeuille?mode=portefeuille',{headers:AH()}).then(r=>r.json()).catch(()=>({})),
     fetch('/api/portefeuille?mode=transactions',{headers:AH()}).then(r=>r.json()).catch(()=>({data:[]})),
   ]);
-  const inv=pf.total_investi||0,val=pf.total_valeur||0,pv=pf.plus_value||0;
+  const inv=pf.total_investi||0,val=pf.total_valeur||0,pv=val-inv;
   document.getElementById('pf-inv').textContent=N(inv)+' FCFA';
   document.getElementById('pf-val').textContent=N(val)+' FCFA';
   document.getElementById('pf-pv').innerHTML=(pv>=0?'+':'')+N(pv)+' FCFA';
   document.getElementById('pf-pv').className='sv '+(pv>=0?'up':'down');
-  document.getElementById('pf-ppct').innerHTML=P(pf.plus_value_pct||0);
+  document.getElementById('pf-ppct').innerHTML=P(inv?((val-inv)/inv*100):0);
   const pos=pf.data||[];
   document.getElementById('pftb').innerHTML=!pos.length?'<tr><td colspan="8"><div class="loading">Aucune position. Ajoutez une transaction ci-dessous.</div></td></tr>':pos.map(p=>`<tr>
     <td class="ttk">${p.ticker}</td><td class="tmu">${p.nom||''}</td>
