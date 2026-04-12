@@ -375,7 +375,7 @@
       const tbody = document.getElementById('entreprisesTbody');
       tbody.innerHTML = `<tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
-        const res = await fetch('/api/admin/entreprises', { headers: adminHeaders() });
+        const res = await fetch('/api/admin?type=entreprises', { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         if (!data.length) {
@@ -401,7 +401,7 @@
       const tbody = document.getElementById('coursTbody');
       tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
-        const res = await fetch('/api/admin/cours', { headers: adminHeaders() });
+        const res = await fetch('/api/admin?type=cours', { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         if (!data.length) {
@@ -426,7 +426,7 @@
       const tbody = document.getElementById('indicesTbody');
       tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
-        const res = await fetch('/api/admin/indices', { headers: adminHeaders() });
+        const res = await fetch('/api/admin?type=indices', { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         if (!data.length) {
@@ -450,7 +450,7 @@
       const tbody = document.getElementById('usersTbody');
       tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
-        const res = await fetch('/api/admin/users', { headers: adminHeaders() });
+        const res = await fetch('/api/admin?type=users', { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         if (!data.length) {
@@ -474,7 +474,7 @@
       const tbody = document.getElementById('bocTbody');
       tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
-        const res = await fetch('/api/admin/boc_list', { headers: adminHeaders() });
+        const res = await fetch('/api/admin?type=boc_list', { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         if (!data.length) {
@@ -539,7 +539,7 @@
       btn.textContent = 'Enregistrement...';
 
       try {
-        const res = await fetch('/api/admin/analyses', {
+        const res = await fetch('/api/admin?type=analyses', {
           method: 'POST',
           headers: adminHeaders(),
           body: JSON.stringify({
@@ -577,7 +577,7 @@
       const tbody = document.getElementById('analysesTbody');
       tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr>`;
       try {
-        const res = await fetch(`/api/admin/analyses?ticker=${ticker}`, { headers: adminHeaders() });
+        const res = await fetch(`/api/admin?type=analyses?ticker=${ticker}`, { headers: adminHeaders() });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error);
         if (!data.length) {
@@ -601,7 +601,7 @@
     window.deleteAnalyse = async (id) => {
       if (!confirm('Supprimer cette analyse ?')) return;
       try {
-        const res = await fetch(`/api/admin/analyses?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
+        const res = await fetch(`/api/admin?type=analyses?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
         if (!res.ok) throw new Error('Erreur suppression');
         loadAnalysesForTicker();
       } catch (e) {
@@ -618,7 +618,7 @@
       if (!ticker) return;
       const nom = prompt('Nom de la société');
       if (!nom) return;
-      fetch('/api/admin/entreprises', {
+      fetch('/api/admin?type=entreprises', {
         method: 'POST',
         headers: adminHeaders(),
         body: JSON.stringify({ ticker, nom, secteur: '', pays: 'CI', compartiment: 'PRINCIPAL' })
