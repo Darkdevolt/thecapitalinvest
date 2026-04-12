@@ -14,8 +14,6 @@ const moisFr = {
   septembre: "09", octobre: "10", novembre: "11", décembre: "12",
 };
 
-const SECTEURS = ['CB', 'CD', 'FIN', 'IND', 'ENE', 'SPU', 'TEL'];
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -41,11 +39,12 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(file, "base64");
     const parsed = await pdfParse(buffer);
 
+    // Nettoyage : normaliser les espaces mais garder les sauts de ligne
     let text = parsed.text
       .replace(/\r\n/g, "\n")
       .replace(/\r/g, "\n")
+      .replace(/[ \t]+/g, " ") // Espaces multiples -> simple
       .replace(/–/g, "-")
-      .replace(/\u00A0/g, " ")
       .trim();
 
     // -----------------------------
@@ -89,54 +88,35 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 3. ACTIONS (RECHERCHE EXPLICITE)
+    // 3. ACTIONS - Approche Regex Globale
     // -----------------------------
     const coursInsert = [];
-    const allLines = text.split('\n').map(l => l.trim()).filter(l => l.length > 5);
-    let debugLines = [];
     
-    for (let i = 0; i < allLines.length; i++) {
-      const line = allLines[i];
+    // Pattern qui capture : SECTEUR TICKER NOM(quelconque) 6 NOMBRES
+    // SECTEUR: CB|CD|FIN|IND|ENE|SPU|TEL
+    // TICKER: 2-5 lettres majuscules
+    // NOM: tout ce qui n'est pas un nombre (non-greedy)
+    // 6 NOMBRES: cours_prec cours_ouv cours_clot variation% volume valeur
+    const actionRegex = /\b(CB|CD|FIN|IND|ENE|SPU|TEL)\s+([A-Z]{2,5})\s+(.+?)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+([+-]?\d+,\d{2})\s*%\s+([\d\s]+)\s+([\d\s]+)\b/g;
+    
+    let match;
+    let matchCount = 0;
+    
+    while ((match = actionRegex.exec(text)) !== null) {
+      matchCount++;
       
-      // Vérifier si la ligne commence par un secteur valide
-      const secteurMatch = line.match(/^(CB|CD|FIN|IND|ENE|SPU|TEL)\s+/);
-      if (!secteurMatch) continue;
+      const secteur = match[1];
+      const ticker = match[2];
+      const nom = match[3].trim();
+      const coursPrec = parseFloat(match[4].replace(/\s/g, ""));
+      const coursOuv = parseFloat(match[5].replace(/\s/g, ""));
+      const coursClot = parseFloat(match[6].replace(/\s/g, ""));
+      const variation = parseFloat(match[7].replace(",", "."));
+      const volume = parseInt(match[8].replace(/\s/g, ""), 10);
+      const valeur = parseInt(match[9].replace(/\s/g, ""), 10);
       
-      const secteur = secteurMatch[1];
-      let rest = line.substring(secteurMatch[0].length).trim();
-      
-      // Extraire le ticker (2-5 lettres majuscules)
-      const tickerMatch = rest.match(/^([A-Z]{2,5})\s+/);
-      if (!tickerMatch) continue;
-      
-      const ticker = tickerMatch[1];
-      rest = rest.substring(tickerMatch[0].length).trim();
-      
-      // Chercher les 6 nombres à la fin : cours_prec cours_ouv cours_clot variation% volume valeur
-      // Format: 12 300 12 300 12 280 -0,16 % 256 3 147 800
-      const numsMatch = rest.match(/([\d\s]+)\s+([\d\s]+)\s+([\d\s]+)\s+([+-]?\d+,\d{2})\s*%\s+([\d\s]+)\s+([\d\s]+)(?:\s+\d|$)/);
-      
-      if (!numsMatch) {
-        // Essayer un format plus souple (sans espace avant %)
-        const altMatch = rest.match(/([\d\s]+)\s+([\d\s]+)\s+([\d\s]+)\s+([+-]?\d+,\d{2})%\s+([\d\s]+)\s+([\d\s]+)/);
-        if (!altMatch) {
-          if (debugLines.length < 5) debugLines.push({line: line.substring(0, 100), reason: "no_nums_match"});
-          continue;
-        }
-      }
-      
-      const m = numsMatch;
-      const coursPrec = parseFloat(m[1].replace(/\s/g, ""));
-      const coursOuv = parseFloat(m[2].replace(/\s/g, ""));
-      const coursClot = parseFloat(m[3].replace(/\s/g, ""));
-      const variation = parseFloat(m[4].replace(",", "."));
-      const volume = parseInt(m[5].replace(/\s/g, ""), 10);
-      const valeur = parseInt(m[6].replace(/\s/g, ""), 10);
-      
-      // Le nom est ce qui reste avant les nombres
-      const nom = rest.substring(0, rest.indexOf(m[0])).trim() || rest.substring(0, rest.length - m[0].length).trim();
-      
-      if (!isNaN(coursClot) && nom.length >= 2 && !nom.match(/^\d+$/)) {
+      // Validation : éviter les faux positifs (si coursClot est absurde ou nom vide)
+      if (!isNaN(coursClot) && coursClot > 0 && nom.length > 1 && !nom.match(/^\d+$/)) {
         coursInsert.push({
           ticker,
           nom,
@@ -150,9 +130,14 @@ export default async function handler(req, res) {
           valeur: isNaN(valeur) ? null : valeur,
         });
       }
+      
+      // Sécurité : éviter boucle infinie si regex vide
+      if (match.index === actionRegex.lastIndex) {
+        actionRegex.lastIndex++;
+      }
     }
 
-    // Suppression des doublons
+    // Suppression des doublons (même ticker même date)
     const seenTickers = new Set();
     const finalCours = coursInsert.filter(c => {
       const key = `${c.ticker}_${c.date_seance}`;
@@ -226,10 +211,10 @@ export default async function handler(req, res) {
       indices_importes: insertedIndices,
       pdf_url: urlData.publicUrl,
       debug: {
-        total_lignes: allLines.length,
-        actions_detectees: coursInsert.length,
-        rejected_samples: debugLines,
-        last_lines_checked: allLines.slice(-10) // Dernières lignes du fichier
+        regex_matches: matchCount,
+        actions_valides: coursInsert.length,
+        tickers_uniques: finalCours.length,
+        premiers_tickers: finalCours.slice(0, 5).map(c => c.ticker)
       }
     });
 
