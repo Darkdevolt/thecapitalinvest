@@ -44,7 +44,8 @@
     .tab-pane.active{display:block}
     .login-container{max-width:400px;margin:80px auto;background:var(--white);border:1px solid var(--stone);border-radius:var(--r);padding:32px;box-shadow:var(--shadow)}
     .status{font-size:12px;margin-left:12px;color:var(--muted)}
-    .editable{cursor:pointer;border-bottom:1px dashed var(--dim)}
+    .ff label{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:5px}
+    .ff input,.ff select{width:100%}
   </style>
 </head>
 <body>
@@ -155,18 +156,54 @@
     <div class="tab-pane" id="tab-analyses">
       <div class="card">
         <div class="card-head"><span class="card-title">Recommandations par entreprise</span></div>
-        <div style="padding:16px; display:flex; gap:12px; align-items:flex-end">
+        <div style="padding:16px; display:flex; gap:12px; align-items:flex-end; flex-wrap:wrap;">
           <div class="ff">
             <label>Ticker</label>
-            <input type="text" id="analyseTicker" placeholder="SGBC" style="width:120px">
+            <input type="text" id="analyseTicker" placeholder="SGBC" style="width:120px" value="">
           </div>
-          <button class="btn" onclick="loadAnalysesForTicker()">Charger</button>
-          <button class="btn-outline" onclick="showAddAnalyseForm()">+ Nouvelle analyse</button>
+          <button class="btn" id="loadAnalysesBtn">Charger</button>
+          <span style="flex:1"></span>
+          <button class="btn-outline" id="showAddAnalyseFormBtn">+ Nouvelle analyse</button>
+        </div>
+        <!-- Formulaire d'ajout (caché par défaut) -->
+        <div id="addAnalyseForm" style="display:none; padding:16px; background:var(--cream); border-bottom:1px solid var(--stone);">
+          <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;">
+            <div class="ff">
+              <label>Ticker</label>
+              <input type="text" id="newAnalyseTicker" placeholder="SGBC" style="text-transform:uppercase">
+            </div>
+            <div class="ff">
+              <label>Date</label>
+              <input type="date" id="newAnalyseDate">
+            </div>
+            <div class="ff">
+              <label>Recommandation</label>
+              <select id="newAnalyseReco">
+                <option value="Acheter">Acheter</option>
+                <option value="Renforcer">Renforcer</option>
+                <option value="Conserver" selected>Conserver</option>
+                <option value="Alléger">Alléger</option>
+                <option value="Vendre">Vendre</option>
+              </select>
+            </div>
+            <div class="ff">
+              <label>Objectif (FCFA)</label>
+              <input type="number" id="newAnalyseObjectif" step="any">
+            </div>
+            <div class="ff" style="grid-column:span 2;">
+              <label>Commentaire</label>
+              <input type="text" id="newAnalyseCommentaire" placeholder="Optionnel">
+            </div>
+          </div>
+          <div style="margin-top:12px; display:flex; gap:8px;">
+            <button class="btn" id="saveAnalyseBtn">Enregistrer</button>
+            <button class="btn-outline" id="cancelAnalyseBtn">Annuler</button>
+          </div>
         </div>
         <div class="tw">
           <table>
             <thead><tr><th>Date</th><th>Recommandation</th><th>Objectif</th><th>Commentaire</th><th></th></tr></thead>
-            <tbody id="analysesTbody"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+            <tbody id="analysesTbody"><tr><td colspan="5">Saisissez un ticker et cliquez sur Charger.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -236,13 +273,12 @@
     function initAdmin() {
       setupTabs();
       setupUpload();
+      initAnalyses();
       loadEntreprises();
       loadCours();
       loadIndices();
       loadUsers();
       loadBocList();
-      // Analyses chargées à la demande
-      document.getElementById('analysesTbody').innerHTML = '<tr><td colspan="5">Saisissez un ticker et cliquez sur Charger.</td></tr>';
     }
 
     function setupTabs() {
@@ -260,7 +296,10 @@
           else if (target === 'indices') loadIndices();
           else if (target === 'users') loadUsers();
           else if (target === 'boc-list') loadBocList();
-          else if (target === 'analyses' && currentAnalyseTicker) loadAnalysesForTicker();
+          else if (target === 'analyses') {
+            const ticker = document.getElementById('analyseTicker').value.trim();
+            if (ticker) loadAnalysesForTicker();
+          }
         });
       });
     }
@@ -457,6 +496,80 @@
 
     // ---------- GESTION DES ANALYSES ----------
     let currentAnalyseTicker = '';
+
+    function initAnalyses() {
+      document.getElementById('loadAnalysesBtn').addEventListener('click', loadAnalysesForTicker);
+      document.getElementById('showAddAnalyseFormBtn').addEventListener('click', () => {
+        document.getElementById('addAnalyseForm').style.display = 'block';
+        const tickerInput = document.getElementById('analyseTicker');
+        if (tickerInput.value.trim()) {
+          document.getElementById('newAnalyseTicker').value = tickerInput.value.trim().toUpperCase();
+        }
+        document.getElementById('newAnalyseDate').value = new Date().toISOString().split('T')[0];
+      });
+      document.getElementById('cancelAnalyseBtn').addEventListener('click', () => {
+        document.getElementById('addAnalyseForm').style.display = 'none';
+        clearAnalyseForm();
+      });
+      document.getElementById('saveAnalyseBtn').addEventListener('click', saveAnalyse);
+    }
+
+    function clearAnalyseForm() {
+      document.getElementById('newAnalyseTicker').value = '';
+      document.getElementById('newAnalyseDate').value = '';
+      document.getElementById('newAnalyseReco').value = 'Conserver';
+      document.getElementById('newAnalyseObjectif').value = '';
+      document.getElementById('newAnalyseCommentaire').value = '';
+    }
+
+    async function saveAnalyse() {
+      const ticker = document.getElementById('newAnalyseTicker').value.trim().toUpperCase();
+      const date = document.getElementById('newAnalyseDate').value;
+      const reco = document.getElementById('newAnalyseReco').value;
+      const objectif = document.getElementById('newAnalyseObjectif').value;
+      const commentaire = document.getElementById('newAnalyseCommentaire').value;
+
+      if (!ticker || !date || !reco) {
+        alert('Ticker, date et recommandation sont requis.');
+        return;
+      }
+
+      const btn = document.getElementById('saveAnalyseBtn');
+      btn.disabled = true;
+      btn.textContent = 'Enregistrement...';
+
+      try {
+        const res = await fetch('/api/admin/analyses', {
+          method: 'POST',
+          headers: adminHeaders(),
+          body: JSON.stringify({
+            ticker,
+            date_analyse: date,
+            recommandation: reco,
+            objectif_cours: objectif ? parseFloat(objectif) : null,
+            commentaire: commentaire || null
+          })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Erreur');
+        alert('Analyse ajoutée avec succès.');
+        document.getElementById('addAnalyseForm').style.display = 'none';
+        clearAnalyseForm();
+        if (currentAnalyseTicker === ticker) {
+          loadAnalysesForTicker();
+        } else {
+          document.getElementById('analyseTicker').value = ticker;
+          currentAnalyseTicker = ticker;
+          loadAnalysesForTicker();
+        }
+      } catch (e) {
+        alert('Erreur: ' + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Enregistrer';
+      }
+    }
+
     async function loadAnalysesForTicker() {
       const ticker = document.getElementById('analyseTicker').value.trim().toUpperCase();
       if (!ticker) return;
@@ -475,7 +588,7 @@
           <tr>
             <td>${a.date_analyse}</td>
             <td>${a.recommandation}</td>
-            <td>${a.objectif_cours ? a.objectif_cours + ' FCFA' : '-'}</td>
+            <td>${a.objectif_cours ? a.objectif_cours.toLocaleString('fr-FR') + ' FCFA' : '-'}</td>
             <td>${a.commentaire || ''}</td>
             <td><button class="btn-small btn-outline" onclick="deleteAnalyse(${a.id})">✕</button></td>
           </tr>
@@ -485,39 +598,15 @@
       }
     }
 
-    window.showAddAnalyseForm = () => {
-      const ticker = prompt('Ticker de l\'entreprise :');
-      if (!ticker) return;
-      const date = prompt('Date de l\'analyse (YYYY-MM-DD) :', new Date().toISOString().split('T')[0]);
-      if (!date) return;
-      const reco = prompt('Recommandation (Acheter/Renforcer/Conserver/Alléger/Vendre) :', 'Conserver');
-      if (!reco) return;
-      const objectif = prompt('Objectif de cours (FCFA) :');
-      const commentaire = prompt('Commentaire (optionnel) :');
-      
-      fetch('/api/admin/analyses', {
-        method: 'POST',
-        headers: adminHeaders(),
-        body: JSON.stringify({
-          ticker: ticker.toUpperCase(),
-          date_analyse: date,
-          recommandation: reco,
-          objectif_cours: objectif ? parseFloat(objectif) : null,
-          commentaire
-        })
-      }).then(r => r.json()).then(d => {
-        if (d.error) alert(d.error);
-        else {
-          alert('Analyse ajoutée');
-          if (currentAnalyseTicker === ticker.toUpperCase()) loadAnalysesForTicker();
-        }
-      });
-    };
-
     window.deleteAnalyse = async (id) => {
       if (!confirm('Supprimer cette analyse ?')) return;
-      const res = await fetch(`/api/admin/analyses?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
-      if (res.ok) loadAnalysesForTicker();
+      try {
+        const res = await fetch(`/api/admin/analyses?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
+        if (!res.ok) throw new Error('Erreur suppression');
+        loadAnalysesForTicker();
+      } catch (e) {
+        alert(e.message);
+      }
     };
 
     window.editEntreprise = (ticker) => {
