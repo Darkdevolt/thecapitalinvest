@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>The Capital — Administration</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--cream:#FAF8F4;--white:#FFFFFF;--stone:#E8E3DA;--warm:#D4C9B8;--ink:#1A1714;--ink2:#3D3630;--muted:#8C8279;--dim:#B5ADA4;--gold:#B8964E;--gold-l:#D4AE6A;--grn:#2E7D32;--red:#C62828;--bg-row:rgba(26,23,20,0.025);--shadow:0 2px 16px rgba(26,23,20,0.07);--r:10px}
+    body{background:var(--cream);font-family:'Outfit',sans-serif;color:var(--ink);min-height:100vh;margin:0}
+    body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 100% 60% at 10% 0%,rgba(212,201,184,.3) 0%,transparent 55%),radial-gradient(ellipse 60% 80% at 90% 100%,rgba(184,150,78,.05) 0%,transparent 50%)}
+    header{position:sticky;top:0;z-index:100;background:rgba(250,248,244,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--stone);padding:0 28px;display:flex;align-items:center;height:54px}
+    .logo{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;text-decoration:none}
+    .logo span{color:var(--gold)}
+    nav{display:flex;gap:2px;margin-left:32px;flex:1}
+    .nav-tab{padding:5px 14px;font-size:11px;font-weight:400;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s}
+    .nav-tab:hover{color:var(--ink);background:var(--stone)}
+    .nav-tab.active{color:var(--ink);font-weight:500;position:relative}
+    .nav-tab.active::after{content:'';position:absolute;bottom:-13px;left:20%;right:20%;height:1.5px;background:var(--gold);border-radius:2px}
+    .nav-right{margin-left:auto;display:flex;align-items:center;gap:14px}
+    .btn-logout{font-size:11px;color:var(--dim);cursor:pointer;background:none;border:none;font-family:'Outfit',sans-serif;letter-spacing:.06em;text-transform:uppercase}
+    .btn-logout:hover{color:var(--red)}
+    main{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:28px 28px 80px}
+    .card{background:var(--white);border:1px solid var(--stone);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;margin-bottom:20px}
+    .card-head{padding:12px 18px;border-bottom:1px solid var(--stone);display:flex;align-items:center;gap:8px}
+    .card-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+    .tw{overflow-x:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+    th{text-align:left;padding:9px 13px;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--stone);background:var(--cream)}
+    td{padding:9px 13px;border-bottom:1px solid rgba(26,23,20,.04)}
+    tbody tr:hover{background:var(--bg-row);cursor:pointer}
+    .btn{background:var(--ink);color:var(--cream);border:none;padding:8px 14px;border-radius:6px;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+    .btn-outline{background:transparent;border:1px solid var(--stone);color:var(--ink2)}
+    .btn-small{padding:4px 8px;font-size:10px}
+    .upload-area{border:2px dashed var(--stone);border-radius:var(--r);padding:28px;text-align:center;background:var(--cream);margin:16px}
+    .upload-area.dragover{border-color:var(--gold);background:rgba(184,150,78,0.05)}
+    input,select{background:var(--white);border:1px solid var(--stone);border-radius:6px;padding:8px 12px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--ink)}
+    .loading{text-align:center;padding:40px;color:var(--dim)}
+    .spin{width:20px;height:20px;border:2px solid var(--stone);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .tab-pane{display:none}
+    .tab-pane.active{display:block}
+    .login-container{max-width:400px;margin:80px auto;background:var(--white);border:1px solid var(--stone);border-radius:var(--r);padding:32px;box-shadow:var(--shadow)}
+    .status{font-size:12px;margin-left:12px;color:var(--muted)}
+    .editable{cursor:pointer;border-bottom:1px dashed var(--dim)}
+  </style>
+</head>
+<body>
+
+<!-- ÉCRAN DE CONNEXION ADMIN -->
+<div id="loginScreen" style="min-height:100vh;display:flex;align-items:center;justify-content:center">
+  <div class="login-container">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-family:'Cormorant Garamond',serif;font-size:28px;letter-spacing:.05em">THE <span style="color:var(--gold)">CAPITAL</span></div>
+      <p style="color:var(--muted);font-size:13px;margin-top:6px">Accès administrateur</p>
+    </div>
+    <input type="password" id="adminTokenInput" placeholder="Token administrateur" style="width:100%;margin-bottom:16px" autocomplete="off">
+    <button id="loginAdminBtn" class="btn" style="width:100%">Accéder</button>
+    <p id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;min-height:20px"></p>
+    <p style="font-size:11px;color:var(--dim);margin-top:16px;text-align:center">Token défini dans les variables d'environnement</p>
+  </div>
+</div>
+
+<!-- INTERFACE ADMIN (cachée tant que non connecté) -->
+<div id="adminApp" style="display:none">
+  <header>
+    <a href="/" class="logo">THE <span>CAPITAL</span> · ADMIN</a>
+    <nav>
+      <button class="nav-tab active" data-tab="import">📤 Import BOC</button>
+      <button class="nav-tab" data-tab="entreprises">🏢 Entreprises</button>
+      <button class="nav-tab" data-tab="cours">📈 Cours</button>
+      <button class="nav-tab" data-tab="indices">📊 Indices</button>
+      <button class="nav-tab" data-tab="users">👥 Utilisateurs</button>
+    </nav>
+    <div class="nav-right">
+      <button class="btn-logout" id="logoutAdminBtn">Déconnexion</button>
+    </div>
+  </header>
+  <main>
+    <!-- PANE IMPORT BOC -->
+    <div class="tab-pane active" id="tab-import">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Importer un Bulletin Officiel de la Cote (PDF)</span></div>
+        <div class="upload-area" id="dropZone">
+          <div style="font-size:32px;margin-bottom:8px">📄</div>
+          <p style="margin-bottom:8px">Glissez-déposez un fichier PDF ou cliquez pour sélectionner</p>
+          <input type="file" id="fileInput" accept=".pdf,application/pdf" style="display:none">
+          <button class="btn btn-outline" id="selectFileBtn">Choisir un fichier</button>
+          <p id="fileInfo" style="font-size:12px;color:var(--muted);margin-top:12px"></p>
+        </div>
+        <div style="padding:16px">
+          <button class="btn" id="uploadBtn" disabled>Importer et parser</button>
+          <span id="uploadStatus" class="status"></span>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><span class="card-title">Résultat du parsing</span></div>
+        <pre id="parseResult" style="padding:16px;font-size:12px;color:var(--ink2);white-space:pre-wrap;background:var(--cream);margin:0;min-height:80px"></pre>
+      </div>
+    </div>
+
+    <!-- PANE ENTREPRISES -->
+    <div class="tab-pane" id="tab-entreprises">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Liste des entreprises</span><button class="btn-small btn-outline" style="margin-left:auto" id="addEntrepriseBtn">+ Ajouter</button></div>
+        <div class="tw">
+          <table><thead><tr><th>Ticker</th><th>Nom</th><th>Secteur</th><th>Pays</th><th>Compartiment</th><th>Actions</th></tr></thead>
+            <tbody id="entreprisesTbody"><tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE COURS -->
+    <div class="tab-pane" id="tab-cours">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Derniers cours enregistrés</span></div>
+        <div class="tw">
+          <table><thead><tr><th>Date</th><th>Ticker</th><th>Cours</th><th>Variation</th><th>Volume</th></tr></thead>
+            <tbody id="coursTbody"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE INDICES -->
+    <div class="tab-pane" id="tab-indices">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Indices BRVM</span></div>
+        <div class="tw">
+          <table><thead><tr><th>Date</th><th>Indice</th><th>Valeur</th><th>Variation</th></tr></thead>
+            <tbody id="indicesTbody"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PANE UTILISATEURS -->
+    <div class="tab-pane" id="tab-users">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Utilisateurs inscrits</span></div>
+        <div class="tw">
+          <table><thead><tr><th>ID</th><th>Email</th><th>Nom</th><th>Créé le</th></tr></thead>
+            <tbody id="usersTbody"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  (function(){
+    // Configuration
+    const ADMIN_TOKEN = "thecapital_admin:TheCapital@BRVM2026!"; // Doit correspondre à boc.js
+    let authToken = localStorage.getItem('tc_admin_token') || '';
+
+    const loginScreen = document.getElementById('loginScreen');
+    const adminApp = document.getElementById('adminApp');
+    const loginError = document.getElementById('loginError');
+
+    // Vérifie si déjà authentifié
+    if (authToken === ADMIN_TOKEN) {
+      loginScreen.style.display = 'none';
+      adminApp.style.display = 'block';
+      initAdmin();
+    }
+
+    // Gestion login
+    document.getElementById('loginAdminBtn').addEventListener('click', () => {
+      const input = document.getElementById('adminTokenInput').value.trim();
+      if (input === ADMIN_TOKEN) {
+        localStorage.setItem('tc_admin_token', input);
+        authToken = input;
+        loginScreen.style.display = 'none';
+        adminApp.style.display = 'block';
+        initAdmin();
+      } else {
+        loginError.textContent = 'Token invalide.';
+      }
+    });
+
+    document.getElementById('adminTokenInput').addEventListener('keypress', (e) => {
+      if(e.key === 'Enter') document.getElementById('loginAdminBtn').click();
+    });
+
+    // Déconnexion
+    document.getElementById('logoutAdminBtn').addEventListener('click', () => {
+      localStorage.removeItem('tc_admin_token');
+      authToken = '';
+      adminApp.style.display = 'none';
+      loginScreen.style.display = 'flex';
+      document.getElementById('adminTokenInput').value = '';
+    });
+
+    // Headers pour les appels admin
+    function adminHeaders() {
+      return {
+        'Content-Type': 'application/json',
+        'x-admin-token': authToken
+      };
+    }
+
+    // Initialisation des onglets et chargements
+    function initAdmin() {
+      setupTabs();
+      setupUpload();
+      loadEntreprises();
+      loadCours();
+      loadIndices();
+      loadUsers();
+    }
+
+    function setupTabs() {
+      const tabs = document.querySelectorAll('.nav-tab');
+      const panes = document.querySelectorAll('.tab-pane');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const target = tab.getAttribute('data-tab');
+          tabs.forEach(t => t.classList.remove('active'));
+          panes.forEach(p => p.classList.remove('active'));
+          tab.classList.add('active');
+          document.getElementById(`tab-${target}`).classList.add('active');
+          // Recharger données si nécessaire
+          if (target === 'entreprises') loadEntreprises();
+          else if (target === 'cours') loadCours();
+          else if (target === 'indices') loadIndices();
+          else if (target === 'users') loadUsers();
+        });
+      });
+    }
+
+    // ---------- IMPORT BOC ----------
+    let selectedFile = null;
+    function setupUpload() {
+      const dropZone = document.getElementById('dropZone');
+      const fileInput = document.getElementById('fileInput');
+      const selectBtn = document.getElementById('selectFileBtn');
+      const uploadBtn = document.getElementById('uploadBtn');
+      const fileInfo = document.getElementById('fileInfo');
+      const uploadStatus = document.getElementById('uploadStatus');
+      const parseResult = document.getElementById('parseResult');
+
+      selectBtn.addEventListener('click', () => fileInput.click());
+      fileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+          selectedFile = e.target.files[0];
+          fileInfo.textContent = `Sélectionné : ${selectedFile.name} (${(selectedFile.size/1024).toFixed(1)} Ko)`;
+          uploadBtn.disabled = false;
+        }
+      });
+
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('dragover');
+      });
+      dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length && files[0].type === 'application/pdf') {
+          selectedFile = files[0];
+          fileInput.files = files;
+          fileInfo.textContent = `Sélectionné : ${selectedFile.name}`;
+          uploadBtn.disabled = false;
+        }
+      });
+
+      uploadBtn.addEventListener('click', async () => {
+        if (!selectedFile) return;
+        uploadBtn.disabled = true;
+        uploadStatus.textContent = 'Upload et parsing en cours...';
+        parseResult.textContent = '';
+        try {
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64 = e.target.result.split(',')[1];
+            const res = await fetch('/api/boc', {
+              method: 'POST',
+              headers: adminHeaders(),
+              body: JSON.stringify({ file: base64 })
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Erreur');
+            parseResult.textContent = JSON.stringify(data, null, 2);
+            uploadStatus.textContent = '✅ Import terminé.';
+            // Recharger cours/indices après import
+            loadCours(); loadIndices();
+          };
+          reader.readAsDataURL(selectedFile);
+        } catch (err) {
+          uploadStatus.textContent = '❌ Erreur: ' + err.message;
+        } finally {
+          uploadBtn.disabled = false;
+        }
+      });
+    }
+
+    // ---------- CHARGEMENT DES DONNÉES ----------
+    async function loadEntreprises() {
+      const tbody = document.getElementById('entreprisesTbody');
+      tbody.innerHTML = `<tr><td colspan="6"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      try {
+        const res = await fetch('/api/admin/entreprises', { headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Aucune entreprise.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(e => `
+          <tr>
+            <td><strong>${e.ticker}</strong></td>
+            <td>${e.nom || ''}</td>
+            <td>${e.secteur || ''}</td>
+            <td>${e.pays || ''}</td>
+            <td>${e.compartiment || ''}</td>
+            <td><button class="btn-small btn-outline" onclick="editEntreprise('${e.ticker}')">✎</button></td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="6" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
+      }
+    }
+
+    async function loadCours() {
+      const tbody = document.getElementById('coursTbody');
+      tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      try {
+        const res = await fetch('/api/admin/cours', { headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Aucun cours.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.slice(0, 100).map(c => `
+          <tr>
+            <td>${c.date_seance || ''}</td>
+            <td>${c.ticker}</td>
+            <td>${c.cours || ''}</td>
+            <td>${c.variation ? parseFloat(c.variation).toFixed(2)+'%' : ''}</td>
+            <td>${c.volume || ''}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
+      }
+    }
+
+    async function loadIndices() {
+      const tbody = document.getElementById('indicesTbody');
+      tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      try {
+        const res = await fetch('/api/admin/indices', { headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Aucun indice.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.slice(0, 50).map(i => `
+          <tr>
+            <td>${i.date_seance || ''}</td>
+            <td>${i.indice}</td>
+            <td>${i.valeur}</td>
+            <td>${i.variation ? parseFloat(i.variation).toFixed(2)+'%' : ''}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
+      }
+    }
+
+    async function loadUsers() {
+      const tbody = document.getElementById('usersTbody');
+      tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      try {
+        const res = await fetch('/api/admin/users', { headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Aucun utilisateur.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(u => `
+          <tr>
+            <td>${u.id?.slice(0,8)}</td>
+            <td>${u.email}</td>
+            <td>${u.raw_user_meta_data?.nom || ''}</td>
+            <td>${new Date(u.created_at).toLocaleDateString()}</td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
+      }
+    }
+
+    // Fonctions globales pour l'édition
+    window.editEntreprise = (ticker) => {
+      alert(`Édition de ${ticker} — fonction à implémenter (modale d'édition).`);
+      // Ici tu pourrais ouvrir une modale avec formulaire pré-rempli
+    };
+
+    document.getElementById('addEntrepriseBtn').addEventListener('click', () => {
+      const ticker = prompt('Ticker (ex: SGBC)');
+      if (!ticker) return;
+      const nom = prompt('Nom de la société');
+      if (!nom) return;
+      // Appel API POST /api/admin/entreprises
+      fetch('/api/admin/entreprises', {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({ ticker, nom, secteur: '', pays: 'CI', compartiment: 'PRINCIPAL' })
+      }).then(r => r.json()).then(d => {
+        if (d.error) alert(d.error); else { loadEntreprises(); alert('Entreprise ajoutée'); }
+      }).catch(e => alert(e.message));
+    });
+
+  })();
+</script>
+</body>
+</html>
