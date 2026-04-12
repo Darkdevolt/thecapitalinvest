@@ -39,16 +39,20 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(file, "base64");
     const parsed = await pdfParse(buffer);
 
-    // Nettoyage : normaliser les espaces mais garder les sauts de ligne
+    // 1. NETTOYAGE GLOBAL
+    // On enlève les guillemets et on normalise les espaces/virgules de structure
     let text = parsed.text
+      .replace(/"/g, "")           // Supprime les guillemets (très fréquents dans l'export pdf-parse)
+      .replace(/ ,+/g, " ")        // Nettoie les virgules suivies d'espaces
+      .replace(/, /g, " ")
       .replace(/\r\n/g, "\n")
       .replace(/\r/g, "\n")
-      .replace(/[ \t]+/g, " ") // Espaces multiples -> simple
+      .replace(/[ \t]+/g, " ")     // Espaces multiples -> simple
       .replace(/–/g, "-")
       .trim();
 
     // -----------------------------
-    // 1. DATE
+    // 2. EXTRACTION DE LA DATE
     // -----------------------------
     let dateStr = new Date().toISOString().split("T")[0];
     const dateRegex = /(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)?\s*(\d{1,2})\s*(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+(\d{4})/i;
@@ -62,7 +66,7 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 2. INDICES
+    // 3. INDICES
     // -----------------------------
     const indicesInsert = [];
     const indicePatterns = [
@@ -88,35 +92,48 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 3. ACTIONS - Approche Regex Globale
+    // 4. ACTIONS (COURS)
     // -----------------------------
     const coursInsert = [];
+    const sectors = "CB|CD|FIN|IND|ENE|SPU|TEL";
     
-    // Pattern qui capture : SECTEUR TICKER NOM(quelconque) 6 NOMBRES
-    // SECTEUR: CB|CD|FIN|IND|ENE|SPU|TEL
-    // TICKER: 2-5 lettres majuscules
-    // NOM: tout ce qui n'est pas un nombre (non-greedy)
-    // 6 NOMBRES: cours_prec cours_ouv cours_clot variation% volume valeur
-    const actionRegex = /\b(CB|CD|FIN|IND|ENE|SPU|TEL)\s+([A-Z]{2,5})\s+(.+?)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+([+-]?\d+,\d{2})\s*%\s+([\d\s]+)\s+([\d\s]+)\b/g;
-    
+    // Cette regex capture :
+    // (Secteur + Ticker) OU (Ticker + Secteur) + Nom + 6 blocs numériques
+    const actionRegex = new RegExp(
+      `\\b(?:(${sectors})\\s+([A-Z]{2,5})|([A-Z]{2,5})\\s+(${sectors}))\\s+(.+?)\\s+` +
+      `(\\d[\\d\\s\\.]*)\\s+` + // Cours Précédent
+      `(\\d[\\d\\s\\.]*)\\s+` + // Cours Ouverture
+      `(\\d[\\d\\s\\.]*)\\s+` + // Cours Clôture
+      `([+-]?\\d+,\\d{2})\\s*%\\s+` + // Variation %
+      `([\\d\\s\\.]+)\\s+` + // Volume
+      `([\\d\\s\\.]+)`, // Valeur
+      "g"
+    );
+
+    const parseBOCNumber = (str) => {
+      if (!str) return null;
+      // Enlever espaces et points (séparateurs de milliers) et remplacer virgule par point
+      return parseFloat(str.replace(/[\s\.]/g, "").replace(",", "."));
+    };
+
     let match;
     let matchCount = 0;
     
     while ((match = actionRegex.exec(text)) !== null) {
       matchCount++;
       
-      const secteur = match[1];
-      const ticker = match[2];
-      const nom = match[3].trim();
-      const coursPrec = parseFloat(match[4].replace(/\s/g, ""));
-      const coursOuv = parseFloat(match[5].replace(/\s/g, ""));
-      const coursClot = parseFloat(match[6].replace(/\s/g, ""));
-      const variation = parseFloat(match[7].replace(",", "."));
-      const volume = parseInt(match[8].replace(/\s/g, ""), 10);
-      const valeur = parseInt(match[9].replace(/\s/g, ""), 10);
+      const secteur = match[1] || match[4];
+      const ticker = match[2] || match[3];
+      const nom = match[5].trim();
       
-      // Validation : éviter les faux positifs (si coursClot est absurde ou nom vide)
-      if (!isNaN(coursClot) && coursClot > 0 && nom.length > 1 && !nom.match(/^\d+$/)) {
+      const coursPrec = parseBOCNumber(match[6]);
+      const coursOuv = parseBOCNumber(match[7]);
+      const coursClot = parseBOCNumber(match[8]);
+      const variation = parseFloat(match[9].replace(",", "."));
+      const volume = parseBOCNumber(match[10]);
+      const valeur = parseBOCNumber(match[11]);
+      
+      if (ticker && !isNaN(coursClot) && nom.length > 1) {
         coursInsert.push({
           ticker,
           nom,
@@ -130,62 +147,32 @@ export default async function handler(req, res) {
           valeur: isNaN(valeur) ? null : valeur,
         });
       }
-      
-      // Sécurité : éviter boucle infinie si regex vide
-      if (match.index === actionRegex.lastIndex) {
-        actionRegex.lastIndex++;
-      }
     }
 
-    // Suppression des doublons (même ticker même date)
-    const seenTickers = new Set();
-    const finalCours = coursInsert.filter(c => {
-      const key = `${c.ticker}_${c.date_seance}`;
-      if (seenTickers.has(key)) return false;
-      seenTickers.add(key);
-      return true;
-    });
-
-    const seenIdx = new Set();
-    const uniqueIndices = indicesInsert.filter(idx => {
-      const key = `${idx.indice}_${idx.date_seance}`;
-      if (seenIdx.has(key)) return false;
-      seenIdx.add(key);
-      return true;
-    });
+    // Déduplication
+    const finalCours = Array.from(new Map(coursInsert.map(c => [`${c.ticker}_${c.date_seance}`, c])).values());
+    const finalIndices = Array.from(new Map(indicesInsert.map(i => [`${i.indice}_${i.date_seance}`, i])).values());
 
     // -----------------------------
-    // 4. INSERTION SUPABASE
+    // 5. INSERTIONS SUPABASE
     // -----------------------------
     let insertedCours = 0;
     let insertedIndices = 0;
 
     if (finalCours.length) {
-      const { error } = await supabase
-        .from("cours_brvm")
-        .upsert(finalCours, { onConflict: "ticker,date_seance" });
-      
-      if (error) {
-        console.error("Erreur insertion cours:", error);
-      } else {
-        insertedCours = finalCours.length;
-      }
+      const { error: errC } = await supabase.from("cours_brvm").upsert(finalCours, { onConflict: "ticker,date_seance" });
+      if (!errC) insertedCours = finalCours.length;
+      else console.error("Erreur cours:", errC);
     }
 
-    if (uniqueIndices.length) {
-      const { error } = await supabase
-        .from("indices_brvm")
-        .upsert(uniqueIndices, { onConflict: "indice,date_seance" });
-      
-      if (error) {
-        console.error("Erreur insertion indices:", error);
-      } else {
-        insertedIndices = uniqueIndices.length;
-      }
+    if (finalIndices.length) {
+      const { error: errI } = await supabase.from("indices_brvm").upsert(finalIndices, { onConflict: "indice,date_seance" });
+      if (!errI) insertedIndices = finalIndices.length;
+      else console.error("Erreur indices:", errI);
     }
 
     // -----------------------------
-    // 5. UPLOAD PDF
+    // 6. STORAGE & LOG
     // -----------------------------
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath = `${dateStr}/${Date.now()}_${safeFileName}`;
@@ -211,18 +198,13 @@ export default async function handler(req, res) {
       indices_importes: insertedIndices,
       pdf_url: urlData.publicUrl,
       debug: {
-        regex_matches: matchCount,
-        actions_valides: coursInsert.length,
-        tickers_uniques: finalCours.length,
-        premiers_tickers: finalCours.slice(0, 5).map(c => c.ticker)
+        matches_detectes: matchCount,
+        tickers: finalCours.map(c => c.ticker)
       }
     });
 
   } catch (err) {
     console.error("BOC error:", err);
-    return res.status(500).json({
-      error: err.message,
-      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
-    });
+    return res.status(500).json({ error: err.message });
   }
 }
