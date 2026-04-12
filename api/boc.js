@@ -14,8 +14,6 @@ const moisFr = {
   septembre: "09", octobre: "10", novembre: "11", décembre: "12",
 };
 
-const SECTEURS = ['CB', 'CD', 'FIN', 'IND', 'ENE', 'SPU', 'TEL'];
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -89,33 +87,20 @@ export default async function handler(req, res) {
     }
 
     // -----------------------------
-    // 3. ACTIONS (PARSING STRICT SECTEUR → TICKER → NOM → DONNÉES)
+    // 3. ACTIONS (NOUVELLE APPROCHE : DE LA FIN VERS LE DÉBUT)
     // -----------------------------
     const coursInsert = [];
-    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 20);
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 30);
+    
+    // Pattern pour les 6 dernières valeurs numériques (cours_prec, cours_ouv, cours_clot, variation%, volume, valeur)
+    const dataEndPattern = /(\d[\d\s]*)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+([+-]?\d+,\d{2})\s*%\s+([\d\s]+)\s+([\d\s]+)$/;
     
     for (const line of lines) {
-      // Détecter le secteur au début de ligne
-      const secteurMatch = line.match(/^(CB|CD|FIN|IND|ENE|SPU|TEL)\s+/);
-      if (!secteurMatch) continue;
-      
-      const secteur = secteurMatch[1];
-      const afterSecteur = line.substring(secteurMatch[0].length);
-      
-      // Extraire le ticker (code symbole : 2-5 lettres majuscules)
-      const tickerMatch = afterSecteur.match(/^([A-Z]{2,5})\s+/);
-      if (!tickerMatch) continue;
-      
-      const ticker = tickerMatch[1];
-      const afterTicker = afterSecteur.substring(tickerMatch[0].length);
-      
-      // Pattern pour les 6 valeurs numériques finales :
-      // cours_prec cours_ouv cours_clot variation% volume valeur
-      const dataPattern = /(\d[\d\s]*)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+([+-]?\d+,\d{2})\s*%\s+([\d\s]+)\s+([\d\s]+)$/;
-      const dataMatch = afterTicker.match(dataPattern);
-      
+      // Vérifier d'abord si la ligne finit par les données numériques attendues
+      const dataMatch = line.match(dataEndPattern);
       if (!dataMatch) continue;
       
+      // Extraire les données numériques
       const coursPrec = parseFloat(dataMatch[1].replace(/\s/g, ""));
       const coursOuv = parseFloat(dataMatch[2].replace(/\s/g, ""));
       const coursClot = parseFloat(dataMatch[3].replace(/\s/g, ""));
@@ -123,23 +108,34 @@ export default async function handler(req, res) {
       const volume = parseInt(dataMatch[5].replace(/\s/g, ""), 10);
       const valeur = parseInt(dataMatch[6].replace(/\s/g, ""), 10);
       
-      // Le nom est tout ce qui reste avant les chiffres
-      const nom = afterTicker.substring(0, afterTicker.length - dataMatch[0].length).trim();
+      // Isoler le début de la ligne (avant les données numériques)
+      const beforeData = line.substring(0, line.length - dataMatch[0].length).trim();
       
-      // Validation basique
-      if (!isNaN(coursClot) && nom.length >= 2) {
-        coursInsert.push({
-          ticker,
-          nom,
-          secteur,
-          date_seance: dateStr,
-          cours: coursClot,
-          cours_ouverture: isNaN(coursOuv) ? null : coursOuv,
-          cours_precedent: isNaN(coursPrec) ? null : coursPrec,
-          variation: isNaN(variation) ? null : variation,
-          volume: isNaN(volume) ? null : volume,
-          valeur: isNaN(valeur) ? null : valeur,
-        });
+      // Maintenant chercher SECTEUR et TICKER dans ce début
+      // Format: SECTEUR TICKER NOM
+      const headerPattern = /^(CB|CD|FIN|IND|ENE|SPU|TEL)\s+([A-Z]{2,5})\s+(.+)$/;
+      const headerMatch = beforeData.match(headerPattern);
+      
+      if (headerMatch) {
+        const secteur = headerMatch[1];
+        const ticker = headerMatch[2];
+        const nom = headerMatch[3].trim();
+        
+        // Validation
+        if (!isNaN(coursClot) && nom.length >= 2) {
+          coursInsert.push({
+            ticker,
+            nom,
+            secteur,
+            date_seance: dateStr,
+            cours: coursClot,
+            cours_ouverture: isNaN(coursOuv) ? null : coursOuv,
+            cours_precedent: isNaN(coursPrec) ? null : coursPrec,
+            variation: isNaN(variation) ? null : variation,
+            volume: isNaN(volume) ? null : volume,
+            valeur: isNaN(valeur) ? null : valeur,
+          });
+        }
       }
     }
 
@@ -219,7 +215,8 @@ export default async function handler(req, res) {
       debug: {
         total_lignes_scannees: lines.length,
         actions_detectees: coursInsert.length,
-        tickers_uniques: finalCours.map(c => c.ticker).slice(0, 10) // Affiche les 10 premiers tickers trouvés
+        exemple_lignes: lines.slice(200, 210), // Affiche 10 lignes du milieu pour debug
+        premiers_tickers: finalCours.slice(0, 5).map(c => ({ ticker: c.ticker, nom: c.nom }))
       }
     });
 
