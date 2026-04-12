@@ -59,7 +59,6 @@
     <input type="password" id="adminTokenInput" placeholder="Token administrateur" style="width:100%;margin-bottom:16px" autocomplete="off">
     <button id="loginAdminBtn" class="btn" style="width:100%">Accéder</button>
     <p id="loginError" style="color:var(--red);font-size:12px;margin-top:12px;min-height:20px"></p>
-    <p style="font-size:11px;color:var(--dim);margin-top:16px;text-align:center">Token défini dans les variables d'environnement</p>
   </div>
 </div>
 
@@ -69,9 +68,11 @@
     <a href="/" class="logo">THE <span>CAPITAL</span> · ADMIN</a>
     <nav>
       <button class="nav-tab active" data-tab="import">📤 Import BOC</button>
+      <button class="nav-tab" data-tab="boc-list">📚 BOC archivés</button>
       <button class="nav-tab" data-tab="entreprises">🏢 Entreprises</button>
       <button class="nav-tab" data-tab="cours">📈 Cours</button>
       <button class="nav-tab" data-tab="indices">📊 Indices</button>
+      <button class="nav-tab" data-tab="analyses">📝 Analyses</button>
       <button class="nav-tab" data-tab="users">👥 Utilisateurs</button>
     </nav>
     <div class="nav-right">
@@ -98,6 +99,19 @@
       <div class="card">
         <div class="card-head"><span class="card-title">Résultat du parsing</span></div>
         <pre id="parseResult" style="padding:16px;font-size:12px;color:var(--ink2);white-space:pre-wrap;background:var(--cream);margin:0;min-height:80px"></pre>
+      </div>
+    </div>
+
+    <!-- PANE BOC ARCHIVÉS -->
+    <div class="tab-pane" id="tab-boc-list">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Bulletins Officiels de la Cote archivés</span></div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Date de séance</th><th>Nom du fichier</th><th>Importé le</th><th>Télécharger</th></tr></thead>
+            <tbody id="bocTbody"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -137,6 +151,27 @@
       </div>
     </div>
 
+    <!-- PANE ANALYSES -->
+    <div class="tab-pane" id="tab-analyses">
+      <div class="card">
+        <div class="card-head"><span class="card-title">Recommandations par entreprise</span></div>
+        <div style="padding:16px; display:flex; gap:12px; align-items:flex-end">
+          <div class="ff">
+            <label>Ticker</label>
+            <input type="text" id="analyseTicker" placeholder="SGBC" style="width:120px">
+          </div>
+          <button class="btn" onclick="loadAnalysesForTicker()">Charger</button>
+          <button class="btn-outline" onclick="showAddAnalyseForm()">+ Nouvelle analyse</button>
+        </div>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Date</th><th>Recommandation</th><th>Objectif</th><th>Commentaire</th><th></th></tr></thead>
+            <tbody id="analysesTbody"><tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- PANE UTILISATEURS -->
     <div class="tab-pane" id="tab-users">
       <div class="card">
@@ -153,22 +188,19 @@
 
 <script>
   (function(){
-    // Configuration
-    const ADMIN_TOKEN = "thecapital_admin:TheCapital@BRVM2026!"; // Doit correspondre à boc.js
+    const ADMIN_TOKEN = "thecapital_admin:TheCapital@BRVM2026!";
     let authToken = localStorage.getItem('tc_admin_token') || '';
 
     const loginScreen = document.getElementById('loginScreen');
     const adminApp = document.getElementById('adminApp');
     const loginError = document.getElementById('loginError');
 
-    // Vérifie si déjà authentifié
     if (authToken === ADMIN_TOKEN) {
       loginScreen.style.display = 'none';
       adminApp.style.display = 'block';
       initAdmin();
     }
 
-    // Gestion login
     document.getElementById('loginAdminBtn').addEventListener('click', () => {
       const input = document.getElementById('adminTokenInput').value.trim();
       if (input === ADMIN_TOKEN) {
@@ -186,7 +218,6 @@
       if(e.key === 'Enter') document.getElementById('loginAdminBtn').click();
     });
 
-    // Déconnexion
     document.getElementById('logoutAdminBtn').addEventListener('click', () => {
       localStorage.removeItem('tc_admin_token');
       authToken = '';
@@ -195,7 +226,6 @@
       document.getElementById('adminTokenInput').value = '';
     });
 
-    // Headers pour les appels admin
     function adminHeaders() {
       return {
         'Content-Type': 'application/json',
@@ -203,7 +233,6 @@
       };
     }
 
-    // Initialisation des onglets et chargements
     function initAdmin() {
       setupTabs();
       setupUpload();
@@ -211,6 +240,9 @@
       loadCours();
       loadIndices();
       loadUsers();
+      loadBocList();
+      // Analyses chargées à la demande
+      document.getElementById('analysesTbody').innerHTML = '<tr><td colspan="5">Saisissez un ticker et cliquez sur Charger.</td></tr>';
     }
 
     function setupTabs() {
@@ -223,11 +255,12 @@
           panes.forEach(p => p.classList.remove('active'));
           tab.classList.add('active');
           document.getElementById(`tab-${target}`).classList.add('active');
-          // Recharger données si nécessaire
           if (target === 'entreprises') loadEntreprises();
           else if (target === 'cours') loadCours();
           else if (target === 'indices') loadIndices();
           else if (target === 'users') loadUsers();
+          else if (target === 'boc-list') loadBocList();
+          else if (target === 'analyses' && currentAnalyseTicker) loadAnalysesForTicker();
         });
       });
     }
@@ -281,14 +314,13 @@
             const res = await fetch('/api/boc', {
               method: 'POST',
               headers: adminHeaders(),
-              body: JSON.stringify({ file: base64 })
+              body: JSON.stringify({ file: base64, filename: selectedFile.name })
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erreur');
             parseResult.textContent = JSON.stringify(data, null, 2);
             uploadStatus.textContent = '✅ Import terminé.';
-            // Recharger cours/indices après import
-            loadCours(); loadIndices();
+            loadCours(); loadIndices(); loadBocList();
           };
           reader.readAsDataURL(selectedFile);
         } catch (err) {
@@ -399,10 +431,97 @@
       }
     }
 
-    // Fonctions globales pour l'édition
+    async function loadBocList() {
+      const tbody = document.getElementById('bocTbody');
+      tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      try {
+        const res = await fetch('/api/admin/boc_list', { headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="4">Aucun BOC archivé.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(b => `
+          <tr>
+            <td>${b.date_seance}</td>
+            <td>${b.fichier_nom}</td>
+            <td>${new Date(b.created_at).toLocaleString()}</td>
+            <td><a href="${b.fichier_url}" target="_blank" class="btn-small">📄 PDF</a></td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red)">${e.message}</td></tr>`;
+      }
+    }
+
+    // ---------- GESTION DES ANALYSES ----------
+    let currentAnalyseTicker = '';
+    async function loadAnalysesForTicker() {
+      const ticker = document.getElementById('analyseTicker').value.trim().toUpperCase();
+      if (!ticker) return;
+      currentAnalyseTicker = ticker;
+      const tbody = document.getElementById('analysesTbody');
+      tbody.innerHTML = `<tr><td colspan="5"><div class="loading"><div class="spin"></div></div></td></tr>`;
+      try {
+        const res = await fetch(`/api/admin/analyses?ticker=${ticker}`, { headers: adminHeaders() });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error);
+        if (!data.length) {
+          tbody.innerHTML = '<tr><td colspan="5">Aucune analyse pour ce ticker.</td></tr>';
+          return;
+        }
+        tbody.innerHTML = data.map(a => `
+          <tr>
+            <td>${a.date_analyse}</td>
+            <td>${a.recommandation}</td>
+            <td>${a.objectif_cours ? a.objectif_cours + ' FCFA' : '-'}</td>
+            <td>${a.commentaire || ''}</td>
+            <td><button class="btn-small btn-outline" onclick="deleteAnalyse(${a.id})">✕</button></td>
+          </tr>
+        `).join('');
+      } catch (e) {
+        tbody.innerHTML = `<tr><td colspan="5" style="color:var(--red)">${e.message}</td></tr>`;
+      }
+    }
+
+    window.showAddAnalyseForm = () => {
+      const ticker = prompt('Ticker de l\'entreprise :');
+      if (!ticker) return;
+      const date = prompt('Date de l\'analyse (YYYY-MM-DD) :', new Date().toISOString().split('T')[0]);
+      if (!date) return;
+      const reco = prompt('Recommandation (Acheter/Renforcer/Conserver/Alléger/Vendre) :', 'Conserver');
+      if (!reco) return;
+      const objectif = prompt('Objectif de cours (FCFA) :');
+      const commentaire = prompt('Commentaire (optionnel) :');
+      
+      fetch('/api/admin/analyses', {
+        method: 'POST',
+        headers: adminHeaders(),
+        body: JSON.stringify({
+          ticker: ticker.toUpperCase(),
+          date_analyse: date,
+          recommandation: reco,
+          objectif_cours: objectif ? parseFloat(objectif) : null,
+          commentaire
+        })
+      }).then(r => r.json()).then(d => {
+        if (d.error) alert(d.error);
+        else {
+          alert('Analyse ajoutée');
+          if (currentAnalyseTicker === ticker.toUpperCase()) loadAnalysesForTicker();
+        }
+      });
+    };
+
+    window.deleteAnalyse = async (id) => {
+      if (!confirm('Supprimer cette analyse ?')) return;
+      const res = await fetch(`/api/admin/analyses?id=${id}`, { method: 'DELETE', headers: adminHeaders() });
+      if (res.ok) loadAnalysesForTicker();
+    };
+
     window.editEntreprise = (ticker) => {
-      alert(`Édition de ${ticker} — fonction à implémenter (modale d'édition).`);
-      // Ici tu pourrais ouvrir une modale avec formulaire pré-rempli
+      alert(`Édition de ${ticker} — fonction à implémenter.`);
     };
 
     document.getElementById('addEntrepriseBtn').addEventListener('click', () => {
@@ -410,7 +529,6 @@
       if (!ticker) return;
       const nom = prompt('Nom de la société');
       if (!nom) return;
-      // Appel API POST /api/admin/entreprises
       fetch('/api/admin/entreprises', {
         method: 'POST',
         headers: adminHeaders(),
