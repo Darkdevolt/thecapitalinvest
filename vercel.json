@@ -6,3 +6,10 @@
     { "src": "/(.*)", "dest": "/$1" }
   ]
 }
+{
+  "functions": {
+    "api/boc.js": {
+      "maxDuration": 60
+    }
+  }
+}
