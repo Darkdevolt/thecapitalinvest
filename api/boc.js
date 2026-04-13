@@ -40,20 +40,15 @@ export default async function handler(req, res) {
     const parsed = await pdfParse(buffer);
 
     // 1. NETTOYAGE GLOBAL
-    // On enlève les guillemets et on normalise les espaces/virgules de structure
     let text = parsed.text
-      .replace(/"/g, "")           // Supprime les guillemets (très fréquents dans l'export pdf-parse)
-      .replace(/ ,+/g, " ")        // Nettoie les virgules suivies d'espaces
-      .replace(/, /g, " ")
+      .replace(/"/g, "")
       .replace(/\r\n/g, "\n")
       .replace(/\r/g, "\n")
-      .replace(/[ \t]+/g, " ")     // Espaces multiples -> simple
+      .replace(/[ \t]+/g, " ")
       .replace(/–/g, "-")
       .trim();
 
-    // -----------------------------
     // 2. EXTRACTION DE LA DATE
-    // -----------------------------
     let dateStr = new Date().toISOString().split("T")[0];
     const dateRegex = /(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)?\s*(\d{1,2})\s*(janvier|février|mars|avril|mai|juin|juillet|août|septembre|octobre|novembre|décembre)\s+(\d{4})/i;
     const dateMatch = text.match(dateRegex);
@@ -65,14 +60,12 @@ export default async function handler(req, res) {
       if (mois) dateStr = `${annee}-${mois}-${jour}`;
     }
 
-    // -----------------------------
     // 3. INDICES
-    // -----------------------------
     const indicesInsert = [];
     const indicePatterns = [
-      { name: "BRVM COMPOSITE", regex: /BRVM\s+COMPOSITE[\s\S]{0,50}?(\d[\d\s]*,\d{2})[\s\S]{0,50}?Variation\s+Jour[\s\S]{0,30}?([+-]?\d+,\d{2})\s*%/i },
-      { name: "BRVM 30", regex: /BRVM\s+30[\s\S]{0,50}?(\d[\d\s]*,\d{2})[\s\S]{0,50}?Variation\s+Jour[\s\S]{0,30}?([+-]?\d+,\d{2})\s*%/i },
-      { name: "BRVM PRESTIGE", regex: /BRVM\s+PRESTIGE[\s\S]{0,50}?(\d[\d\s]*,\d{2})[\s\S]{0,50}?Variation\s+Jour[\s\S]{0,30}?([+-]?\d+,\d{2})\s*%/i }
+      { name: "BRVM COMPOSITE", regex: /BRVM\s+COMPOSITE\s+(\d[\d\s,]*)\s+Variation\s+Jour\s+([+-]?\d+,\d{2})\s*%/i },
+      { name: "BRVM 30", regex: /BRVM\s+30\s+(\d[\d\s,]*)\s+Variation\s+Jour\s+([+-]?\d+,\d{2})\s*%/i },
+      { name: "BRVM PRESTIGE", regex: /BRVM\s+PRESTIGE\s+(\d[\d\s,]*)\s+Variation\s+Jour\s+([+-]?\d+,\d{2})\s*%/i }
     ];
 
     for (const pattern of indicePatterns) {
@@ -91,61 +84,46 @@ export default async function handler(req, res) {
       }
     }
 
-    // -----------------------------
-    // 4. ACTIONS (COURS)
-    // -----------------------------
+    // 4. ACTIONS - Nouvelle regex adaptée au format réel
     const coursInsert = [];
-    const sectors = "CB|CD|FIN|IND|ENE|SPU|TEL";
     
-    // Cette regex capture :
-    // (Secteur + Ticker) OU (Ticker + Secteur) + Nom + 6 blocs numériques
-    const actionRegex = new RegExp(
-      `\\b(?:(${sectors})\\s+([A-Z]{2,5})|([A-Z]{2,5})\\s+(${sectors}))\\s+(.+?)\\s+` +
-      `(\\d[\\d\\s\\.]*)\\s+` + // Cours Précédent
-      `(\\d[\\d\\s\\.]*)\\s+` + // Cours Ouverture
-      `(\\d[\\d\\s\\.]*)\\s+` + // Cours Clôture
-      `([+-]?\\d+,\\d{2})\\s*%\\s+` + // Variation %
-      `([\\d\\s\\.]+)\\s+` + // Volume
-      `([\\d\\s\\.]+)`, // Valeur
-      "g"
-    );
-
-    const parseBOCNumber = (str) => {
-      if (!str) return null;
-      // Enlever espaces et points (séparateurs de milliers) et remplacer virgule par point
-      return parseFloat(str.replace(/[\s\.]/g, "").replace(",", "."));
-    };
-
-    let match;
-    let matchCount = 0;
+    // Extraction depuis le tableau "MARCHE DES ACTIONS"
+    const tableRegex = /COMPARTIMENT PRESTIGE.*?\n([\s\S]*?)COMPARTIMENT PRINCIPAL/;
+    const tableMatch = text.match(tableRegex);
     
-    while ((match = actionRegex.exec(text)) !== null) {
-      matchCount++;
+    if (tableMatch) {
+      const tableContent = tableMatch[1];
       
-      const secteur = match[1] || match[4];
-      const ticker = match[2] || match[3];
-      const nom = match[5].trim();
+      // Pattern pour extraire chaque ligne d'action
+      // Format: CB NTLC NESTLE CI 12 300 12 300 12 280 -0,16 % 256 3 147 800 12 280 15,31 %
+      const actionRegex = /(CB|CD|FIN|IND|ENE|SPU|TEL)\s+([A-Z]{2,5})\s+([^\d]+?)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+(\d[\d\s]*)\s+([+-]?\d+,\d{2})\s*%\s+([\d\s]+)\s+([\d\s]+)/g;
       
-      const coursPrec = parseBOCNumber(match[6]);
-      const coursOuv = parseBOCNumber(match[7]);
-      const coursClot = parseBOCNumber(match[8]);
-      const variation = parseFloat(match[9].replace(",", "."));
-      const volume = parseBOCNumber(match[10]);
-      const valeur = parseBOCNumber(match[11]);
-      
-      if (ticker && !isNaN(coursClot) && nom.length > 1) {
-        coursInsert.push({
-          ticker,
-          nom,
-          secteur,
-          date_seance: dateStr,
-          cours: coursClot,
-          cours_ouverture: isNaN(coursOuv) ? null : coursOuv,
-          cours_precedent: isNaN(coursPrec) ? null : coursPrec,
-          variation: isNaN(variation) ? null : variation,
-          volume: isNaN(volume) ? null : volume,
-          valeur: isNaN(valeur) ? null : valeur,
-        });
+      let match;
+      while ((match = actionRegex.exec(tableContent)) !== null) {
+        const secteur = match[1].trim();
+        const ticker = match[2].trim();
+        const nom = match[3].trim();
+        const coursPrec = parseFloat(match[4].replace(/\s/g, ""));
+        const coursOuv = parseFloat(match[5].replace(/\s/g, ""));
+        const coursClot = parseFloat(match[6].replace(/\s/g, ""));
+        const variation = parseFloat(match[7].replace(",", "."));
+        const volume = parseInt(match[8].replace(/\s/g, ""));
+        const valeur = parseInt(match[9].replace(/\s/g, ""));
+        
+        if (ticker && !isNaN(coursClot) && nom.length > 1) {
+          coursInsert.push({
+            ticker,
+            nom,
+            secteur,
+            date_seance: dateStr,
+            cours: coursClot,
+            cours_ouverture: isNaN(coursOuv) ? null : coursOuv,
+            cours_precedent: isNaN(coursPrec) ? null : coursPrec,
+            variation: isNaN(variation) ? null : variation,
+            volume: isNaN(volume) ? null : volume,
+            valeur: isNaN(valeur) ? null : valeur,
+          });
+        }
       }
     }
 
@@ -153,9 +131,7 @@ export default async function handler(req, res) {
     const finalCours = Array.from(new Map(coursInsert.map(c => [`${c.ticker}_${c.date_seance}`, c])).values());
     const finalIndices = Array.from(new Map(indicesInsert.map(i => [`${i.indice}_${i.date_seance}`, i])).values());
 
-    // -----------------------------
     // 5. INSERTIONS SUPABASE
-    // -----------------------------
     let insertedCours = 0;
     let insertedIndices = 0;
 
@@ -171,9 +147,7 @@ export default async function handler(req, res) {
       else console.error("Erreur indices:", errI);
     }
 
-    // -----------------------------
     // 6. STORAGE & LOG
-    // -----------------------------
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath = `${dateStr}/${Date.now()}_${safeFileName}`;
 
@@ -198,8 +172,8 @@ export default async function handler(req, res) {
       indices_importes: insertedIndices,
       pdf_url: urlData.publicUrl,
       debug: {
-        matches_detectes: matchCount,
-        tickers: finalCours.map(c => c.ticker)
+        tickers: finalCours.map(c => c.ticker),
+        indices: finalIndices.map(i => i.indice)
       }
     });
 
