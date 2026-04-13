@@ -1,13 +1,7 @@
-// ─────────────────────────────────────────────────────────────────────────────
-// boc.js  –  Import du Bulletin Officiel de la Cote BRVM
-//
-// Méthodologie : pdfjs-dist (bibliothèque officielle Mozilla PDF.js)
-// Avantage vs pdf-parse : extraction page par page avec positions X/Y réelles,
-// ce qui permet de reconstituer des lignes propres même quand le PDF a plusieurs
-// colonnes côte à côte (cas typique de la page 1 du BOC).
-// ─────────────────────────────────────────────────────────────────────────────
 import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createClient } from "@supabase/supabase-js";
+
+export const config = { maxDuration: 30 };
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
@@ -23,11 +17,8 @@ const MOIS_FR = {
 };
 
 const SECTEURS = new Set(["CB","CD","FIN","IND","ENE","SPU","TEL"]);
-
-// Nombre entier avec séparateur millier optionnel ("12 300", "3 147 800", "34")
 const NUM_RE = /\d{1,3}(?: \d{3})*/g;
 
-// ── Extraction du texte via pdfjs-dist ───────────────────────────────────────
 async function extractLines(uint8Array) {
   const pdf = await getDocument({ data: uint8Array }).promise;
   const allLines = [];
@@ -36,8 +27,6 @@ async function extractLines(uint8Array) {
     const page    = await pdf.getPage(p);
     const content = await page.getTextContent();
 
-    // Regrouper les items texte par position Y (arrondie au pixel)
-    // → reconstitue les vraies lignes du PDF quelle que soit la mise en page
     const lineMap = new Map();
     for (const item of content.items) {
       if (!item.str?.trim()) continue;
@@ -46,7 +35,6 @@ async function extractLines(uint8Array) {
       lineMap.get(y).push({ x: item.transform[4], str: item.str });
     }
 
-    // Trier : lignes de haut en bas, items de gauche à droite
     const sorted = [...lineMap.entries()].sort((a, b) => b[0] - a[0]);
     for (const [, items] of sorted) {
       items.sort((a, b) => a.x - b.x);
@@ -58,10 +46,6 @@ async function extractLines(uint8Array) {
   return allLines;
 }
 
-// ── Parser une ligne de cours d'action ───────────────────────────────────────
-// Utilise la première occurrence de "±X,XX %" comme ancre :
-//   gauche  → SYMBOLE NOM COURS_PREC COURS_OUV COURS_CLOT
-//   droite  → VOLUME VALEUR_TOTALE ...
 function parseActionLine(line) {
   const varMatch = line.match(/([+-]?\d+,\d{2})\s*%/);
   if (!varMatch) return null;
@@ -97,7 +81,6 @@ function parseActionLine(line) {
   };
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -109,18 +92,21 @@ export default async function handler(req, res) {
   if (req.method !== "POST")
     return res.status(405).json({ error: "POST requis" });
 
+  const startTime = Date.now();
+
   try {
     const { file, filename } = req.body;
     if (!file) return res.status(400).json({ error: "Fichier requis" });
 
-    const buffer    = Buffer.from(file, "base64");
-    const uint8     = new Uint8Array(buffer);
+    const buffer = Buffer.from(file, "base64");
+    const uint8  = new Uint8Array(buffer);
 
-    // ── 1. EXTRACTION DES LIGNES ──────────────────────────────────────────
+    // ── 1. EXTRACTION ────────────────────────────────────────────────────
     const lines = await extractLines(uint8);
 
-    // ── 2. DATE ───────────────────────────────────────────────────────────
+    // ── 2. DATE ──────────────────────────────────────────────────────────
     let dateStr = new Date().toISOString().split("T")[0];
+    let dateSource = "fallback (today)";
     const dateRE = /(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s*(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})/i;
 
     for (const line of lines) {
@@ -129,43 +115,53 @@ export default async function handler(req, res) {
         const jour  = m[1].padStart(2, "0");
         const mois  = MOIS_FR[m[2].toLowerCase()];
         const annee = m[3];
-        if (mois) { dateStr = `${annee}-${mois}-${jour}`; break; }
+        if (mois) {
+          dateStr    = `${annee}-${mois}-${jour}`;
+          dateSource = `"${line.trim()}"`;
+          break;
+        }
       }
     }
 
-    // ── 3. INDICES ────────────────────────────────────────────────────────
-    // Chaque indice est sur sa propre ligne : "BRVM COMPOSITE 406,38"
-    // La variation est sur la ligne suivante : "Variation Jour -0,14 % ..."
+    // ── 3. INDICES ───────────────────────────────────────────────────────
     const indicesInsert = [];
+    const indiceDebug   = {};
     const indiceTargets = [
       { name: "BRVM COMPOSITE", re: /^BRVM COMPOSITE ([\d,]+)/ },
-      { name: "BRVM 30",        re: /\bBRVM 30 ([\d,]+)/        },
-      { name: "BRVM PRESTIGE",  re: /\bBRVM PRESTIGE ([\d,]+)/  },
+      { name: "BRVM 30",        re: /\bBRVM 30 ([\d,]+)/       },
+      { name: "BRVM PRESTIGE",  re: /\bBRVM PRESTIGE ([\d,]+)/ },
     ];
 
     for (let i = 0; i < lines.length; i++) {
       for (const { name, re } of indiceTargets) {
+        if (indiceDebug[name]) continue; // already found
         const m = lines[i].match(re);
         if (!m) continue;
         const valeur = parseFloat(m[1].replace(",", "."));
         if (isNaN(valeur)) continue;
-        // Chercher la variation dans les 4 lignes suivantes
         let variation = null;
+        let varLine   = null;
         for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
           const vm = lines[j].match(/([+-]?\d+,\d{2})\s*%/);
-          if (vm) { variation = parseFloat(vm[1].replace(",", ".")); break; }
+          if (vm) {
+            variation = parseFloat(vm[1].replace(",", "."));
+            varLine   = lines[j].trim();
+            break;
+          }
         }
         indicesInsert.push({ indice: name, date_seance: dateStr, valeur, variation });
+        indiceDebug[name] = {
+          valeur, variation,
+          ligne_valeur:     lines[i].trim(),
+          ligne_variation:  varLine,
+        };
       }
     }
 
-    // ── 4. ACTIONS ────────────────────────────────────────────────────────
-    // Format dans les lignes pdfjs-dist :
-    //   "COMPARTIMENT PRESTIGE 158,70 points -0,04 %"
-    //   "NTLC NESTLE CI 12 300 12 300 12 280 -0,16 % 256 3 147 800 ..."
-    //   "CB"
-    //   "PALC PALM CI ..."
-    const coursInsert = [];
+    // ── 4. ACTIONS ───────────────────────────────────────────────────────
+    const coursInsert  = [];
+    const parseErrors  = [];   // lignes rejetées dans la section actions
+    const sectionLines = [];   // toutes les lignes de la section actions
     let inAction = false;
 
     for (let i = 0; i < lines.length; i++) {
@@ -181,11 +177,15 @@ export default async function handler(req, res) {
       if (/^TOTAL\b/i.test(line)) continue;
       if (SECTEURS.has(line.split(" ")[0]) && line.length < 15) continue;
 
+      sectionLines.push(line);
+
       const data = parseActionLine(line);
-      if (!data) continue;
+      if (!data) {
+        parseErrors.push(line);
+        continue;
+      }
       if (/^(COMPARTIMENT|TOTAL|MARCHE|INDICE)/i.test(data.ticker)) continue;
 
-      // Secteur sur les lignes adjacentes
       let secteur = null;
       for (const off of [-1, 1, -2, 2]) {
         const idx = i + off;
@@ -210,30 +210,31 @@ export default async function handler(req, res) {
       });
     }
 
-    // Déduplication
     const finalCours   = Array.from(new Map(coursInsert.map(c  => [`${c.ticker}_${c.date_seance}`,  c])).values());
     const finalIndices = Array.from(new Map(indicesInsert.map(i => [`${i.indice}_${i.date_seance}`, i])).values());
 
-    // ── 5. SUPABASE ───────────────────────────────────────────────────────
+    // ── 5. SUPABASE ──────────────────────────────────────────────────────
     let insertedCours   = 0;
     let insertedIndices = 0;
+    let erreurCours     = null;
+    let erreurIndices   = null;
 
     if (finalCours.length) {
       const { error: errC } = await supabase
         .from("cours_brvm")
         .upsert(finalCours, { onConflict: "ticker,date_seance" });
       if (!errC) insertedCours = finalCours.length;
-      else console.error("Erreur cours:", errC);
+      else erreurCours = errC.message;
     }
     if (finalIndices.length) {
       const { error: errI } = await supabase
         .from("indices_brvm")
         .upsert(finalIndices, { onConflict: "indice,date_seance" });
       if (!errI) insertedIndices = finalIndices.length;
-      else console.error("Erreur indices:", errI);
+      else erreurIndices = errI.message;
     }
 
-    // ── 6. STORAGE & LOG ──────────────────────────────────────────────────
+    // ── 6. STORAGE & LOG ─────────────────────────────────────────────────
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath     = `${dateStr}/${Date.now()}_${safeFileName}`;
 
@@ -250,20 +251,58 @@ export default async function handler(req, res) {
       fichier_url: urlData.publicUrl,
     });
 
+    // ── 7. RÉPONSE AVEC DEBUG COMPLET ─────────────────────────────────────
     return res.status(200).json({
       success:          true,
+      duree_ms:         Date.now() - startTime,
+
+      // ── Résultats
       date:             dateStr,
       cours_importes:   insertedCours,
       indices_importes: insertedIndices,
       pdf_url:          urlData.publicUrl,
+
+      // ── Debug parsing
       debug: {
-        tickers: finalCours.map(c => c.ticker),
-        indices: finalIndices.map(i => i.indice),
+        // Date
+        date_source:        dateSource,
+
+        // Indices
+        indices_trouves:    indiceDebug,
+        indices_erreur:     erreurIndices,
+
+        // Actions
+        total_lignes_pdf:         lines.length,
+        lignes_section_actions:   sectionLines.length,
+        actions_parsees:          finalCours.length,
+        actions_erreur_supabase:  erreurCours,
+
+        // Toutes les actions parsées avec détail
+        actions: finalCours.map(c => ({
+          ticker:    c.ticker,
+          nom:       c.nom,
+          secteur:   c.secteur,
+          prec:      c.cours_precedent,
+          ouv:       c.cours_ouverture,
+          clot:      c.cours,
+          var:       c.variation,
+          volume:    c.volume,
+          valeur:    c.valeur,
+        })),
+
+        // Lignes de la section actions qui n'ont pas pu être parsées
+        lignes_non_parsees: parseErrors,
+
+        // Échantillon des 10 premières lignes brutes du PDF (pour diagnostic)
+        sample_lignes_pdf: lines.slice(0, 10),
       },
     });
 
   } catch (err) {
     console.error("BOC error:", err);
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({
+      error:    err.message,
+      duree_ms: Date.now() - startTime,
+    });
   }
 }
