@@ -1,4 +1,12 @@
-import pdfParse from "pdf-parse";
+// ─────────────────────────────────────────────────────────────────────────────
+// boc.js  –  Import du Bulletin Officiel de la Cote BRVM
+//
+// Méthodologie : pdfjs-dist (bibliothèque officielle Mozilla PDF.js)
+// Avantage vs pdf-parse : extraction page par page avec positions X/Y réelles,
+// ce qui permet de reconstituer des lignes propres même quand le PDF a plusieurs
+// colonnes côte à côte (cas typique de la page 1 du BOC).
+// ─────────────────────────────────────────────────────────────────────────────
+import { getDocument } from "pdfjs-dist/legacy/build/pdf.mjs";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = createClient(
@@ -8,23 +16,52 @@ const supabase = createClient(
 
 const ADMIN_TOKEN = "thecapital_admin:TheCapital@BRVM2026!";
 
-const moisFr = {
-  janvier: "01", "f\u00e9vrier": "02", mars: "03", avril: "04",
-  mai: "05", juin: "06", juillet: "07", "ao\u00fbt": "08",
-  septembre: "09", octobre: "10", novembre: "11", "d\u00e9cembre": "12",
+const MOIS_FR = {
+  janvier:"01", "février":"02", mars:"03", avril:"04",
+  mai:"05", juin:"06", juillet:"07", "août":"08",
+  septembre:"09", octobre:"10", novembre:"11", "décembre":"12",
 };
 
-const SECTEURS = new Set(["CB", "CD", "FIN", "IND", "ENE", "SPU", "TEL"]);
+const SECTEURS = new Set(["CB","CD","FIN","IND","ENE","SPU","TEL"]);
 
-// Nombre entier avec séparateur millier optionnel : "12 300", "3 147 800", "34"
+// Nombre entier avec séparateur millier optionnel ("12 300", "3 147 800", "34")
 const NUM_RE = /\d{1,3}(?: \d{3})*/g;
 
-/**
- * Parse une ligne de cours d'action.
- * Utilise la PREMIÈRE occurrence de "±X,XX %" comme ancre :
- *   - gauche  → SYMBOLE  NOM  COURS_PREC  COURS_OUV  COURS_CLOT
- *   - droite  → VOLUME  VALEUR_TOTALE  ...
- */
+// ── Extraction du texte via pdfjs-dist ───────────────────────────────────────
+async function extractLines(uint8Array) {
+  const pdf = await getDocument({ data: uint8Array }).promise;
+  const allLines = [];
+
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const page    = await pdf.getPage(p);
+    const content = await page.getTextContent();
+
+    // Regrouper les items texte par position Y (arrondie au pixel)
+    // → reconstitue les vraies lignes du PDF quelle que soit la mise en page
+    const lineMap = new Map();
+    for (const item of content.items) {
+      if (!item.str?.trim()) continue;
+      const y = Math.round(item.transform[5]);
+      if (!lineMap.has(y)) lineMap.set(y, []);
+      lineMap.get(y).push({ x: item.transform[4], str: item.str });
+    }
+
+    // Trier : lignes de haut en bas, items de gauche à droite
+    const sorted = [...lineMap.entries()].sort((a, b) => b[0] - a[0]);
+    for (const [, items] of sorted) {
+      items.sort((a, b) => a.x - b.x);
+      const line = items.map(i => i.str).join(" ").replace(/\s+/g, " ").trim();
+      if (line) allLines.push(line);
+    }
+  }
+
+  return allLines;
+}
+
+// ── Parser une ligne de cours d'action ───────────────────────────────────────
+// Utilise la première occurrence de "±X,XX %" comme ancre :
+//   gauche  → SYMBOLE NOM COURS_PREC COURS_OUV COURS_CLOT
+//   droite  → VOLUME VALEUR_TOTALE ...
 function parseActionLine(line) {
   const varMatch = line.match(/([+-]?\d+,\d{2})\s*%/);
   if (!varMatch) return null;
@@ -37,15 +74,15 @@ function parseActionLine(line) {
   if (!symMatch) return null;
   const ticker = symMatch[1];
 
-  const rest        = before.slice(symMatch[0].length);
-  const firstNumIdx = rest.search(/\d/);
-  if (firstNumIdx < 0) return null;
-  const nom = rest.slice(0, firstNumIdx).trim();
+  const rest       = before.slice(symMatch[0].length);
+  const firstNumId = rest.search(/\d/);
+  if (firstNumId < 0) return null;
+  const nom = rest.slice(0, firstNumId).trim();
   if (!nom) return null;
 
-  // Récupérer tous les entiers de `before` ; les 3 derniers = prec, ouv, clot
   const nums = [...before.matchAll(NUM_RE)].map(m => parseInt(m[0].replace(/ /g, ""), 10));
   if (nums.length < 3) return null;
+
   const coursPrec = nums[nums.length - 3];
   const coursOuv  = nums[nums.length - 2];
   const coursClot = nums[nums.length - 1];
@@ -60,120 +97,102 @@ function parseActionLine(line) {
   };
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-admin-token");
-
   if (req.method === "OPTIONS") return res.status(200).end();
 
-  const token = req.headers["x-admin-token"];
-  if (token !== ADMIN_TOKEN) return res.status(401).json({ error: "Non autorisé" });
-  if (req.method !== "POST")  return res.status(405).json({ error: "POST requis" });
+  if (req.headers["x-admin-token"] !== ADMIN_TOKEN)
+    return res.status(401).json({ error: "Non autorisé" });
+  if (req.method !== "POST")
+    return res.status(405).json({ error: "POST requis" });
 
   try {
     const { file, filename } = req.body;
     if (!file) return res.status(400).json({ error: "Fichier requis" });
 
-    const buffer = Buffer.from(file, "base64");
-    const parsed = await pdfParse(buffer);
+    const buffer    = Buffer.from(file, "base64");
+    const uint8     = new Uint8Array(buffer);
 
-    // ── 1. NETTOYAGE ─────────────────────────────────────────────────────────
-    const text = parsed.text
-      .replace(/"/g, "")
-      .replace(/\r\n/g, "\n")
-      .replace(/\r/g, "\n")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\u2013/g, "-")
-      .trim();
+    // ── 1. EXTRACTION DES LIGNES ──────────────────────────────────────────
+    const lines = await extractLines(uint8);
 
-    // ── 2. DATE ──────────────────────────────────────────────────────────────
-    // pdf-parse peut mélanger les colonnes de la page 1. On cherche sur tout le texte.
+    // ── 2. DATE ───────────────────────────────────────────────────────────
     let dateStr = new Date().toISOString().split("T")[0];
-    const dateRegex = /(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s*(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})/i;
-    const dateMatch = text.match(dateRegex);
-    if (dateMatch) {
-      const jour  = dateMatch[1].padStart(2, "0");
-      const mois  = moisFr[dateMatch[2].toLowerCase()];
-      const annee = dateMatch[3];
-      if (mois) dateStr = `${annee}-${mois}-${jour}`;
+    const dateRE = /(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s*(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})/i;
+
+    for (const line of lines) {
+      const m = line.match(dateRE);
+      if (m) {
+        const jour  = m[1].padStart(2, "0");
+        const mois  = MOIS_FR[m[2].toLowerCase()];
+        const annee = m[3];
+        if (mois) { dateStr = `${annee}-${mois}-${jour}`; break; }
+      }
     }
 
-    // ── 3. INDICES ───────────────────────────────────────────────────────────
-    // CORRECTION : dans le texte extrait par pdf-parse, la valeur de l'indice
-    // et "Variation Jour" sont sur des LIGNES SÉPARÉES (colonnes côte à côte
-    // dans le PDF). On utilise re.DOTALL via [\s\S]*? pour passer la coupure.
-    //
-    // Format réel extrait :
-    //   "BRVM COMPOSITE 406,38 BRVM 30 191,68 BRVM PRESTIGE 158,70"
-    //   "Variation Jour -0,14 % Variation Jour -0,14 % Variation Jour -0,04 %"
+    // ── 3. INDICES ────────────────────────────────────────────────────────
+    // Chaque indice est sur sa propre ligne : "BRVM COMPOSITE 406,38"
+    // La variation est sur la ligne suivante : "Variation Jour -0,14 % ..."
     const indicesInsert = [];
-    const indicePatterns = [
-      { name: "BRVM COMPOSITE", re: /BRVM COMPOSITE ([\d,]+)(?:[\s\S]*?)Variation Jour ([+-]?\d+,\d{2})\s*%/i },
-      { name: "BRVM 30",        re: /BRVM 30 ([\d,]+)(?:[\s\S]*?)Variation Jour ([+-]?\d+,\d{2})\s*%/i },
-      { name: "BRVM PRESTIGE",  re: /BRVM PRESTIGE ([\d,]+)(?:[\s\S]*?)Variation Jour ([+-]?\d+,\d{2})\s*%/i },
+    const indiceTargets = [
+      { name: "BRVM COMPOSITE", re: /^BRVM COMPOSITE ([\d,]+)/ },
+      { name: "BRVM 30",        re: /\bBRVM 30 ([\d,]+)/        },
+      { name: "BRVM PRESTIGE",  re: /\bBRVM PRESTIGE ([\d,]+)/  },
     ];
 
-    for (const { name, re } of indicePatterns) {
-      const m = text.match(re);
-      if (!m) continue;
-      const valeur    = parseFloat(m[1].replace(",", "."));
-      const variation = parseFloat(m[2].replace(",", "."));
-      if (!isNaN(valeur)) {
-        indicesInsert.push({
-          indice: name,
-          date_seance: dateStr,
-          valeur,
-          variation: isNaN(variation) ? null : variation,
-        });
+    for (let i = 0; i < lines.length; i++) {
+      for (const { name, re } of indiceTargets) {
+        const m = lines[i].match(re);
+        if (!m) continue;
+        const valeur = parseFloat(m[1].replace(",", "."));
+        if (isNaN(valeur)) continue;
+        // Chercher la variation dans les 4 lignes suivantes
+        let variation = null;
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          const vm = lines[j].match(/([+-]?\d+,\d{2})\s*%/);
+          if (vm) { variation = parseFloat(vm[1].replace(",", ".")); break; }
+        }
+        indicesInsert.push({ indice: name, date_seance: dateStr, valeur, variation });
       }
     }
 
-    // ── 4. ACTIONS ───────────────────────────────────────────────────────────
-    // CORRECTION : dans le texte brut extrait par pdf-parse, le code secteur
-    // (CB, FIN, TEL…) est sur une LIGNE SÉPARÉE, pas en préfixe.
-    //
-    // Format réel (page "MARCHE DES ACTIONS") :
+    // ── 4. ACTIONS ────────────────────────────────────────────────────────
+    // Format dans les lignes pdfjs-dist :
+    //   "COMPARTIMENT PRESTIGE 158,70 points -0,04 %"
     //   "NTLC NESTLE CI 12 300 12 300 12 280 -0,16 % 256 3 147 800 ..."
     //   "CB"
-    //   "PALC PALM CI 8 700 8 700 8 600 -1,15 % ..."
-    //   "CB"
-    //
-    // Les cours utilisent l'espace comme séparateur de milliers (ex: "12 300").
+    //   "PALC PALM CI ..."
     const coursInsert = [];
-    const lines = text.split("\n");
-    let inActionSection = false;
+    let inAction = false;
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
+      const line = lines[i];
 
       if (/COMPARTIMENT PRESTIGE|COMPARTIMENT PRINCIPAL/i.test(line)) {
-        inActionSection = true;
-        continue;
+        inAction = true; continue;
       }
-      if (inActionSection && /TOTAL\s*-\s*MARCHE DES ACTIONS|MARCHE DES DROITS|MARCHE DES OBLIGATIONS/i.test(line)) {
-        inActionSection = false;
-        continue;
+      if (inAction && /TOTAL\s*-\s*MARCHE DES ACTIONS|MARCHE DES DROITS|MARCHE DES OBLIGATIONS/i.test(line)) {
+        inAction = false; continue;
       }
-      if (!inActionSection) continue;
+      if (!inAction) continue;
       if (/^TOTAL\b/i.test(line)) continue;
-
-      // Ignorer les lignes "secteur seul" (ex: "CB" ou "TEL 985")
       if (SECTEURS.has(line.split(" ")[0]) && line.length < 15) continue;
 
       const data = parseActionLine(line);
       if (!data) continue;
       if (/^(COMPARTIMENT|TOTAL|MARCHE|INDICE)/i.test(data.ticker)) continue;
 
-      // Secteur sur la ligne précédente ou suivante
+      // Secteur sur les lignes adjacentes
       let secteur = null;
-      for (const offset of [-1, 1, -2, 2]) {
-        const idx  = i + offset;
+      for (const off of [-1, 1, -2, 2]) {
+        const idx = i + off;
         if (idx < 0 || idx >= lines.length) continue;
         const cand = lines[idx].trim();
         if (SECTEURS.has(cand.split(" ")[0]) && cand.length < 12) {
-          secteur = cand.split(" ")[0];
-          break;
+          secteur = cand.split(" ")[0]; break;
         }
       }
 
@@ -195,7 +214,7 @@ export default async function handler(req, res) {
     const finalCours   = Array.from(new Map(coursInsert.map(c  => [`${c.ticker}_${c.date_seance}`,  c])).values());
     const finalIndices = Array.from(new Map(indicesInsert.map(i => [`${i.indice}_${i.date_seance}`, i])).values());
 
-    // ── 5. SUPABASE ──────────────────────────────────────────────────────────
+    // ── 5. SUPABASE ───────────────────────────────────────────────────────
     let insertedCours   = 0;
     let insertedIndices = 0;
 
@@ -214,7 +233,7 @@ export default async function handler(req, res) {
       else console.error("Erreur indices:", errI);
     }
 
-    // ── 6. STORAGE & LOG ─────────────────────────────────────────────────────
+    // ── 6. STORAGE & LOG ──────────────────────────────────────────────────
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath     = `${dateStr}/${Date.now()}_${safeFileName}`;
 
