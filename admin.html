@@ -99,7 +99,7 @@
       </div>
       <div class="card">
         <div class="card-head"><span class="card-title">Résultat du parsing</span></div>
-        <pre id="parseResult" style="padding:16px;font-size:12px;color:var(--ink2);white-space:pre-wrap;background:var(--cream);margin:0;min-height:80px"></pre>
+        <div id="parseResult" style="padding:16px;font-size:12px;color:var(--ink2);background:var(--cream);margin:0;min-height:80px"></div>
       </div>
     </div>
 
@@ -370,7 +370,7 @@
         if (!selectedFile) return;
         uploadBtn.disabled = true;
         uploadStatus.textContent = 'Upload et parsing en cours...';
-        parseResult.textContent = '';
+        parseResult.innerHTML = '<div style="color:var(--muted);padding:8px 0">⏳ Parsing en cours…</div>';
         try {
           const reader = new FileReader();
           reader.onload = async (e) => {
@@ -382,7 +382,7 @@
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Erreur');
-            parseResult.textContent = JSON.stringify(data, null, 2);
+            renderParseResult(data);
             uploadStatus.textContent = '✅ Import terminé.';
             loadCours(); loadIndices(); loadBocList();
           };
@@ -745,6 +745,136 @@
         if (d.error) alert(d.error); else { loadEntreprises(); alert('Entreprise ajoutée'); }
       }).catch(e => alert(e.message));
     });
+
+    // ---------- AFFICHAGE RÉSULTAT PARSING ----------
+    function renderParseResult(d) {
+      const el = document.getElementById('parseResult');
+      const dbg = d.debug || {};
+
+      const ok  = (v) => `<span style="color:var(--grn);font-weight:600">${v}</span>`;
+      const err = (v) => `<span style="color:var(--red);font-weight:600">${v}</span>`;
+      const tag = (v,c='#555') => `<span style="background:${c}18;color:${c};border:1px solid ${c}33;border-radius:4px;padding:1px 6px;font-size:11px;margin:1px 2px;display:inline-block">${v}</span>`;
+
+      // ── Résumé global
+      let html = `<div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">`;
+      html += `<div style="background:var(--white);border:1px solid var(--stone);border-radius:8px;padding:10px 16px;min-width:130px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Date séance</div>
+        <div style="font-size:16px;font-weight:600">${d.date || '—'}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${dbg.date_source || ''}</div>
+      </div>`;
+      html += `<div style="background:var(--white);border:1px solid var(--stone);border-radius:8px;padding:10px 16px;min-width:130px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Actions importées</div>
+        <div style="font-size:24px;font-weight:600;color:${d.cours_importes>0?'var(--grn)':'var(--red)'}">${d.cours_importes}</div>
+        <div style="font-size:10px;color:var(--muted)">/${dbg.actions ? dbg.actions.length : '?'} parsées</div>
+      </div>`;
+      html += `<div style="background:var(--white);border:1px solid var(--stone);border-radius:8px;padding:10px 16px;min-width:130px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Indices importés</div>
+        <div style="font-size:24px;font-weight:600;color:${d.indices_importes>0?'var(--grn)':'var(--red)'}">${d.indices_importes}</div>
+      </div>`;
+      html += `<div style="background:var(--white);border:1px solid var(--stone);border-radius:8px;padding:10px 16px;min-width:130px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Durée</div>
+        <div style="font-size:16px;font-weight:600">${d.duree_ms ? (d.duree_ms/1000).toFixed(1)+'s' : '—'}</div>
+      </div>`;
+      html += `<div style="background:var(--white);border:1px solid var(--stone);border-radius:8px;padding:10px 16px;min-width:130px">
+        <div style="font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);margin-bottom:4px">Lignes PDF</div>
+        <div style="font-size:16px;font-weight:600">${dbg.total_lignes_pdf || '—'}</div>
+        <div style="font-size:10px;color:var(--muted)">${dbg.lignes_section_actions||0} dans section actions</div>
+      </div>`;
+      html += `</div>`;
+
+      // ── Indices
+      html += `<div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px">Indices</div>`;
+      const idxObj = dbg.indices_trouves || {};
+      if (Object.keys(idxObj).length === 0) {
+        html += `<p style="color:var(--red);margin-bottom:12px">⚠️ Aucun indice trouvé${dbg.indices_erreur ? ' — Erreur Supabase: '+dbg.indices_erreur : ''}</p>`;
+      } else {
+        html += `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">`;
+        for (const [name, v] of Object.entries(idxObj)) {
+          const varColor = v.variation >= 0 ? 'var(--grn)' : 'var(--red)';
+          html += `<div style="background:var(--white);border:1px solid var(--stone);border-radius:8px;padding:8px 14px;min-width:160px">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:2px">${name}</div>
+            <div style="font-size:15px;font-weight:600">${v.valeur?.toLocaleString('fr-FR')}</div>
+            <div style="font-size:11px;color:${varColor}">${v.variation >= 0 ? '+' : ''}${v.variation?.toFixed(2)}%</div>
+            <div style="font-size:10px;color:var(--dim);margin-top:3px;font-style:italic">"${v.ligne_valeur||''}"</div>
+          </div>`;
+        }
+        html += `</div>`;
+        if (dbg.indices_erreur) html += `<p style="color:var(--red);margin-bottom:8px">❌ Erreur Supabase indices: ${dbg.indices_erreur}</p>`;
+      }
+
+      // ── Actions parsées
+      const actions = dbg.actions || [];
+      html += `<div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px">
+        Actions parsées (${actions.length})
+        ${dbg.actions_erreur_supabase ? err('❌ Erreur Supabase: '+dbg.actions_erreur_supabase) : ok('✓ Supabase OK')}
+      </div>`;
+
+      if (actions.length === 0) {
+        html += `<p style="color:var(--red);margin-bottom:12px">⚠️ Aucune action parsée — vérifier les lignes non parsées ci-dessous</p>`;
+      } else {
+        html += `<div style="overflow-x:auto;margin-bottom:12px"><table style="width:100%;border-collapse:collapse;font-size:11px;white-space:nowrap">
+          <thead><tr style="background:var(--stone)">
+            <th style="padding:5px 8px;text-align:left">Ticker</th>
+            <th style="padding:5px 8px;text-align:left">Secteur</th>
+            <th style="padding:5px 8px;text-align:left">Nom</th>
+            <th style="padding:5px 8px;text-align:right">Préc.</th>
+            <th style="padding:5px 8px;text-align:right">Ouv.</th>
+            <th style="padding:5px 8px;text-align:right">Clôt.</th>
+            <th style="padding:5px 8px;text-align:right">Var%</th>
+            <th style="padding:5px 8px;text-align:right">Volume</th>
+            <th style="padding:5px 8px;text-align:right">Valeur</th>
+          </tr></thead><tbody>`;
+        actions.forEach((a, i) => {
+          const vc = a.var >= 0 ? 'var(--grn)' : 'var(--red)';
+          const bg = i%2===0 ? '' : 'background:rgba(26,23,20,.025)';
+          html += `<tr style="${bg}">
+            <td style="padding:4px 8px;font-weight:600">${a.ticker}</td>
+            <td style="padding:4px 8px;color:var(--muted)">${a.secteur||'?'}</td>
+            <td style="padding:4px 8px">${a.nom}</td>
+            <td style="padding:4px 8px;text-align:right">${a.prec?.toLocaleString('fr-FR')}</td>
+            <td style="padding:4px 8px;text-align:right">${a.ouv?.toLocaleString('fr-FR')}</td>
+            <td style="padding:4px 8px;text-align:right;font-weight:600">${a.clot?.toLocaleString('fr-FR')}</td>
+            <td style="padding:4px 8px;text-align:right;color:${vc}">${a.var>=0?'+':''}${a.var?.toFixed(2)}%</td>
+            <td style="padding:4px 8px;text-align:right">${a.volume?.toLocaleString('fr-FR')||'—'}</td>
+            <td style="padding:4px 8px;text-align:right">${a.valeur?.toLocaleString('fr-FR')||'—'}</td>
+          </tr>`;
+        });
+        html += `</tbody></table></div>`;
+      }
+
+      // ── Lignes non parsées
+      const rejected = dbg.lignes_non_parsees || [];
+      html += `<div style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:12px 0 6px">
+        Lignes rejetées dans la section actions (${rejected.length})
+      </div>`;
+      if (rejected.length === 0) {
+        html += `<p style="color:var(--grn);margin-bottom:12px">✓ Aucune ligne rejetée</p>`;
+      } else {
+        html += `<div style="background:var(--white);border:1px solid var(--stone);border-radius:6px;padding:8px;margin-bottom:12px;max-height:150px;overflow-y:auto">`;
+        rejected.forEach(l => {
+          html += `<div style="font-family:monospace;font-size:11px;padding:2px 0;border-bottom:1px solid var(--stone);color:var(--red)">${l}</div>`;
+        });
+        html += `</div>`;
+      }
+
+      // ── Échantillon lignes brutes PDF
+      const sample = dbg.sample_lignes_pdf || [];
+      html += `<details style="margin-top:8px"><summary style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer">
+        Échantillon lignes brutes PDF (${sample.length} premières)
+      </summary>
+      <div style="background:var(--white);border:1px solid var(--stone);border-radius:6px;padding:8px;margin-top:6px">`;
+      sample.forEach((l,i) => {
+        html += `<div style="font-family:monospace;font-size:11px;padding:2px 0;border-bottom:1px solid var(--stone)"><span style="color:var(--dim);margin-right:8px">${i}</span>${l}</div>`;
+      });
+      html += `</div></details>`;
+
+      // ── JSON brut (dépliable)
+      html += `<details style="margin-top:8px"><summary style="font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);cursor:pointer">JSON brut complet</summary>
+        <pre style="font-size:11px;background:var(--white);border:1px solid var(--stone);border-radius:6px;padding:10px;margin-top:6px;overflow-x:auto;max-height:300px">${JSON.stringify(d, null, 2)}</pre>
+      </details>`;
+
+      el.innerHTML = html;
+    }
 
     // Rendre les fonctions disponibles globalement pour les onclick inline
     window.deleteSelectedBoc = deleteSelectedBoc;
