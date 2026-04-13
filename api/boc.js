@@ -16,37 +16,34 @@ const moisFr = {
 
 const SECTEURS = new Set(["CB", "CD", "FIN", "IND", "ENE", "SPU", "TEL"]);
 
-// Regex : nombre entier avec séparateur millier optionnel ("12 300", "3 147 800", "34")
+// Nombre entier avec séparateur millier optionnel : "12 300", "3 147 800", "34"
 const NUM_RE = /\d{1,3}(?: \d{3})*/g;
 
 /**
  * Parse une ligne de cours d'action.
- * Utilise la première occurrence de "±X,XX %" comme ancre :
- *  - à gauche : SYMBOLE NOM COURS_PREC COURS_OUV COURS_CLOT
- *  - à droite : VOLUME VALEUR_TOTALE ...
+ * Utilise la PREMIÈRE occurrence de "±X,XX %" comme ancre :
+ *   - gauche  → SYMBOLE  NOM  COURS_PREC  COURS_OUV  COURS_CLOT
+ *   - droite  → VOLUME  VALEUR_TOTALE  ...
  */
 function parseActionLine(line) {
   const varMatch = line.match(/([+-]?\d+,\d{2})\s*%/);
   if (!varMatch) return null;
 
   const variation = parseFloat(varMatch[1].replace(",", "."));
-  const varPos    = varMatch.index;
-  const before    = line.slice(0, varPos).trim();
-  const after     = line.slice(varPos + varMatch[0].length).trim();
+  const before    = line.slice(0, varMatch.index).trim();
+  const after     = line.slice(varMatch.index + varMatch[0].length).trim();
 
-  // Symbole = premier mot tout-majuscules, 2-5 caractères
   const symMatch = before.match(/^([A-Z]{2,5})\s+/);
   if (!symMatch) return null;
   const ticker = symMatch[1];
 
-  // Nom = texte entre le symbole et le premier chiffre
-  const rest         = before.slice(symMatch[0].length);
-  const firstNumIdx  = rest.search(/\d/);
+  const rest        = before.slice(symMatch[0].length);
+  const firstNumIdx = rest.search(/\d/);
   if (firstNumIdx < 0) return null;
   const nom = rest.slice(0, firstNumIdx).trim();
   if (!nom) return null;
 
-  // Extraire tous les entiers de `before` (les 3 derniers = prec, ouv, clot)
+  // Récupérer tous les entiers de `before` ; les 3 derniers = prec, ouv, clot
   const nums = [...before.matchAll(NUM_RE)].map(m => parseInt(m[0].replace(/ /g, ""), 10));
   if (nums.length < 3) return null;
   const coursPrec = nums[nums.length - 3];
@@ -54,12 +51,13 @@ function parseActionLine(line) {
   const coursClot = nums[nums.length - 1];
   if (coursClot <= 0) return null;
 
-  // Volume et valeur dans la partie droite
   const afterNums = [...after.matchAll(NUM_RE)].map(m => parseInt(m[0].replace(/ /g, ""), 10));
-  const volume = afterNums[0] ?? null;
-  const valeur = afterNums[1] ?? null;
 
-  return { ticker, nom, coursPrec, coursOuv, coursClot, variation, volume, valeur };
+  return {
+    ticker, nom, coursPrec, coursOuv, coursClot, variation,
+    volume: afterNums[0] ?? null,
+    valeur: afterNums[1] ?? null,
+  };
 }
 
 export default async function handler(req, res) {
@@ -90,48 +88,58 @@ export default async function handler(req, res) {
       .trim();
 
     // ── 2. DATE ──────────────────────────────────────────────────────────────
-    // CORRECTION : pdf-parse mélange parfois les colonnes de la page 1.
-    // On cherche la date sur l'ensemble du texte (le BOC inclut toujours le
-    // nom complet du jour de semaine + date en toutes lettres).
+    // pdf-parse peut mélanger les colonnes de la page 1. On cherche sur tout le texte.
     let dateStr = new Date().toISOString().split("T")[0];
     const dateRegex = /(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s*(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})/i;
     const dateMatch = text.match(dateRegex);
     if (dateMatch) {
       const jour  = dateMatch[1].padStart(2, "0");
-      const moisKey = dateMatch[2].toLowerCase()
-        .replace(/[éè]/g, "e").replace(/û/g, "u").replace(/é/g, "e"); // normalize accents for lookup
-      // Try direct lookup first, then normalized
-      const mois = moisFr[dateMatch[2].toLowerCase()] ?? moisFr[moisKey];
+      const mois  = moisFr[dateMatch[2].toLowerCase()];
       const annee = dateMatch[3];
       if (mois) dateStr = `${annee}-${mois}-${jour}`;
     }
 
     // ── 3. INDICES ───────────────────────────────────────────────────────────
+    // CORRECTION : dans le texte extrait par pdf-parse, la valeur de l'indice
+    // et "Variation Jour" sont sur des LIGNES SÉPARÉES (colonnes côte à côte
+    // dans le PDF). On utilise re.DOTALL via [\s\S]*? pour passer la coupure.
+    //
+    // Format réel extrait :
+    //   "BRVM COMPOSITE 406,38 BRVM 30 191,68 BRVM PRESTIGE 158,70"
+    //   "Variation Jour -0,14 % Variation Jour -0,14 % Variation Jour -0,04 %"
     const indicesInsert = [];
     const indicePatterns = [
-      { name: "BRVM COMPOSITE", re: /BRVM\s+COMPOSITE\s+([\d ,]+)\s+Variation\s+Jour\s+([+-]?\d+,\d{2})\s*%/i },
-      { name: "BRVM 30",        re: /BRVM\s+30\s+([\d ,]+)\s+Variation\s+Jour\s+([+-]?\d+,\d{2})\s*%/i },
-      { name: "BRVM PRESTIGE",  re: /BRVM\s+PRESTIGE\s+([\d ,]+)\s+Variation\s+Jour\s+([+-]?\d+,\d{2})\s*%/i },
+      { name: "BRVM COMPOSITE", re: /BRVM COMPOSITE ([\d,]+)(?:[\s\S]*?)Variation Jour ([+-]?\d+,\d{2})\s*%/i },
+      { name: "BRVM 30",        re: /BRVM 30 ([\d,]+)(?:[\s\S]*?)Variation Jour ([+-]?\d+,\d{2})\s*%/i },
+      { name: "BRVM PRESTIGE",  re: /BRVM PRESTIGE ([\d,]+)(?:[\s\S]*?)Variation Jour ([+-]?\d+,\d{2})\s*%/i },
     ];
+
     for (const { name, re } of indicePatterns) {
       const m = text.match(re);
       if (!m) continue;
-      const valeur    = parseFloat(m[1].replace(/\s/g, "").replace(",", "."));
+      const valeur    = parseFloat(m[1].replace(",", "."));
       const variation = parseFloat(m[2].replace(",", "."));
       if (!isNaN(valeur)) {
-        indicesInsert.push({ indice: name, date_seance: dateStr, valeur, variation: isNaN(variation) ? null : variation });
+        indicesInsert.push({
+          indice: name,
+          date_seance: dateStr,
+          valeur,
+          variation: isNaN(variation) ? null : variation,
+        });
       }
     }
 
     // ── 4. ACTIONS ───────────────────────────────────────────────────────────
-    // CORRECTION PRINCIPALE : dans le texte brut extrait par pdf-parse,
-    // le code secteur (CB, FIN, TEL…) est sur une LIGNE SÉPARÉE, pas en préfixe.
-    // Format réel (exemple page 3 du BOC) :
+    // CORRECTION : dans le texte brut extrait par pdf-parse, le code secteur
+    // (CB, FIN, TEL…) est sur une LIGNE SÉPARÉE, pas en préfixe.
+    //
+    // Format réel (page "MARCHE DES ACTIONS") :
     //   "NTLC NESTLE CI 12 300 12 300 12 280 -0,16 % 256 3 147 800 ..."
     //   "CB"
     //   "PALC PALM CI 8 700 8 700 8 600 -1,15 % ..."
     //   "CB"
-    //   ...
+    //
+    // Les cours utilisent l'espace comme séparateur de milliers (ex: "12 300").
     const coursInsert = [];
     const lines = text.split("\n");
     let inActionSection = false;
@@ -139,7 +147,6 @@ export default async function handler(req, res) {
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
 
-      // Bascule sur/hors de la section actions
       if (/COMPARTIMENT PRESTIGE|COMPARTIMENT PRINCIPAL/i.test(line)) {
         inActionSection = true;
         continue;
@@ -149,16 +156,16 @@ export default async function handler(req, res) {
         continue;
       }
       if (!inActionSection) continue;
-
-      // Sauter les lignes récapitulatives et les lignes "secteur seul"
       if (/^TOTAL\b/i.test(line)) continue;
+
+      // Ignorer les lignes "secteur seul" (ex: "CB" ou "TEL 985")
       if (SECTEURS.has(line.split(" ")[0]) && line.length < 15) continue;
 
       const data = parseActionLine(line);
       if (!data) continue;
       if (/^(COMPARTIMENT|TOTAL|MARCHE|INDICE)/i.test(data.ticker)) continue;
 
-      // Secteur : chercher sur les lignes immédiatement avant/après
+      // Secteur sur la ligne précédente ou suivante
       let secteur = null;
       for (const offset of [-1, 1, -2, 2]) {
         const idx  = i + offset;
@@ -185,8 +192,8 @@ export default async function handler(req, res) {
     }
 
     // Déduplication
-    const finalCours   = Array.from(new Map(coursInsert.map(c  => [`${c.ticker}_${c.date_seance}`, c ])).values());
-    const finalIndices = Array.from(new Map(indicesInsert.map(i => [`${i.indice}_${i.date_seance}`, i ])).values());
+    const finalCours   = Array.from(new Map(coursInsert.map(c  => [`${c.ticker}_${c.date_seance}`,  c])).values());
+    const finalIndices = Array.from(new Map(indicesInsert.map(i => [`${i.indice}_${i.date_seance}`, i])).values());
 
     // ── 5. SUPABASE ──────────────────────────────────────────────────────────
     let insertedCours   = 0;
