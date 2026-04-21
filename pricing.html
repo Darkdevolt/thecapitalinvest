@@ -4,35 +4,295 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tarifs — The Capital</title>
+<meta name="description" content="Choisissez l'offre qui correspond à vos besoins : Gratuit, Pro ou Institutionnel.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin: 60px 0 80px;
+}
+.pricing-card {
+  background: var(--deep);
+  padding: 56px 40px;
+  position: relative;
+  transition: background 0.3s;
+  display: flex;
+  flex-direction: column;
+}
+.pricing-card:hover { background: var(--surface); }
+.pricing-card.featured {
+  background: var(--surface);
+  border-left: 2px solid var(--gold);
+  border-right: 2px solid var(--gold);
+}
+.pricing-card.featured::before {
+  content: 'Recommandé';
+  position: absolute;
+  top: 20px; right: 20px;
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 5px 12px;
+  background: var(--gold);
+  color: var(--black);
+  font-weight: 500;
+  border-radius: 2px;
+}
+.plan-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+.plan-name {
+  font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 24px;
+}
+.plan-price {
+  font-family: var(--mono);
+  font-size: 48px;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.plan-price span {
+  font-size: 16px;
+  color: var(--muted);
+  font-family: var(--sans);
+}
+.plan-desc {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 40px;
+  line-height: 1.7;
+  flex-grow: 1;
+}
+.plan-features {
+  list-style: none;
+  margin-bottom: 40px;
+}
+.plan-features li {
+  font-size: 14px;
+  color: var(--muted);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.07);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.plan-features li::before {
+  content: '✓';
+  color: var(--gold);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.plan-features li.off {
+  opacity: 0.4;
+}
+.plan-features li.off::before { content: '—'; color: var(--muted); }
+
+.compare-section { margin: 80px 0; }
+.compare-section h2 {
+  font-family: var(--serif);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 40px;
+}
+.compare-table th:first-child { width: 40%; }
+.compare-table th { background: var(--deep); }
+.compare-table tr:last-child td { border-bottom: none; }
+
+.faq { margin: 80px 0; }
+.faq h2 {
+  font-family: var(--serif);
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 40px;
+}
+.faq-item {
+  border-bottom: 1px solid var(--border);
+  padding: 28px 0;
+}
+.faq-item h4 {
+  font-size: 16px;
+  color: var(--cream);
+  font-weight: 400;
+  margin-bottom: 12px;
+}
+.faq-item p { font-size: 14px; color: var(--muted); line-height: 1.8; }
+
+@media (max-width: 900px) {
+  .pricing-grid { grid-template-columns: 1fr; }
+}
+</style>
 </head>
 <body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="scroll-line" id="scrollLine"></div>
+
 <header>
-<a href="index.html" class="logo">THE <span>CAPITAL</span></a>
-<nav>
-<a href="index.html">Accueil</a>
-<a href="platform.html">Plateforme</a>
-<a href="features.html">Fonctionnalités</a>
-<a href="markets.html">Marchés</a>
-<a href="pricing.html" class="active">Tarifs</a>
-<a href="about.html">À propos</a>
-<a href="contact.html">Contact</a>
-<a href="app.html">Dashboard</a>
-</nav>
+  <a href="index.html" class="logo">THE <span class="dot">·</span> CAPITAL</a>
+  <nav>
+    <a href="index.html">Accueil</a>
+    <a href="platform.html">Plateforme</a>
+    <a href="features.html">Fonctionnalités</a>
+    <a href="markets.html">Marchés</a>
+    <a href="pricing.html" class="active">Tarifs</a>
+    <a href="about.html">À propos</a>
+    <a href="contact.html">Contact</a>
+    <a href="app.html" class="nav-cta">Dashboard</a>
+  </nav>
 </header>
 
-<div class="container">
-<h1>Offres <em>et tarifs</em></h1>
-<div class="cards">
-<div class="card"><h3>Gratuit</h3><p>Accès limité aux données de marché.<br><strong>0 FCFA</strong></p></div>
-<div class="card"><h3>Pro</h3><p>Données complètes, screener, historique.<br><strong>9 900 FCFA / mois</strong></p></div>
-<div class="card"><h3>Institutionnel</h3><p>API, rapports de recherche, support dédié.<br><strong>Sur devis</strong></p></div>
-</div>
-<p style="margin-top:20px">L'application de démonstration (dashboard) est accessible gratuitement pour tester les fonctionnalités de base.</p>
+<div class="page-hero">
+  <h1 class="anim">Offres <em>& Tarifs</em></h1>
+  <p class="anim anim-delay-1">Commencez gratuitement. Passez Pro quand vous êtes prêt. Aucun engagement.</p>
 </div>
 
-<footer>The Capital © 2026 — Dakar, Sénégal</footer>
+<div class="container">
+
+  <!-- Pricing cards -->
+  <div class="pricing-grid">
+    <div class="pricing-card anim">
+      <div class="plan-label">Débutant</div>
+      <div class="plan-name">Gratuit</div>
+      <div class="plan-price">0 <span>FCFA / mois</span></div>
+      <p class="plan-desc">Idéal pour découvrir la BRVM et tester les fonctionnalités essentielles.</p>
+      <ul class="plan-features">
+        <li>Cours en différé (J+1)</li>
+        <li>5 sociétés en watchlist</li>
+        <li>Fiches entreprises basiques</li>
+        <li>Dashboard de démonstration</li>
+        <li class="off">Screener avancé</li>
+        <li class="off">Historique complet</li>
+        <li class="off">Alertes de cours</li>
+        <li class="off">Ratios de valorisation</li>
+      </ul>
+      <a href="app.html" class="btn btn-outline">Commencer gratuitement</a>
+    </div>
+
+    <div class="pricing-card featured anim anim-delay-1">
+      <div class="plan-label">Investisseur</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">9 900 <span>FCFA / mois</span></div>
+      <p class="plan-desc">Pour les investisseurs sérieux qui veulent analyser et décider avec confiance.</p>
+      <ul class="plan-features">
+        <li>Données en temps réel</li>
+        <li>Watchlist illimitée</li>
+        <li>Screener avancé (20+ critères)</li>
+        <li>Historique complet 5 ans</li>
+        <li>Alertes de cours illimitées</li>
+        <li>Analyses fondamentales complètes</li>
+        <li>Portefeuille virtuel (frais réels)</li>
+        <li>Outils quantitatifs (Sharpe, bêta…)</li>
+      </ul>
+      <a href="contact.html" class="btn btn-primary btn-arrow">S'abonner au Pro</a>
+    </div>
+
+    <div class="pricing-card anim anim-delay-2">
+      <div class="plan-label">Professionnel</div>
+      <div class="plan-name">Institutionnel</div>
+      <div class="plan-price">Sur <span>devis</span></div>
+      <p class="plan-desc">Pour les institutions, fonds et SGI qui ont besoin de données brutes et d'une intégration API.</p>
+      <ul class="plan-features">
+        <li>Tout le plan Pro</li>
+        <li>Accès API complet</li>
+        <li>Rapports de recherche PDF</li>
+        <li>Export CSV / Excel</li>
+        <li>Données historiques 10 ans+</li>
+        <li>Support dédié prioritaire</li>
+        <li>Onboarding personnalisé</li>
+        <li>SLA garanti</li>
+      </ul>
+      <a href="contact.html" class="btn btn-outline">Nous contacter</a>
+    </div>
+  </div>
+
+  <!-- Tableau comparatif -->
+  <div class="compare-section anim">
+    <h2>Comparatif <em style="font-style:italic;color:var(--gold)">détaillé</em></h2>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Fonctionnalité</th>
+          <th>Gratuit</th>
+          <th class="gold">Pro</th>
+          <th>Institutionnel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Données de marché</td><td>Différé J+1</td><td class="check">Temps réel</td><td class="check">Temps réel + API</td></tr>
+        <tr><td>Fiches entreprises</td><td>Basiques</td><td class="check">Complètes</td><td class="check">Complètes + export</td></tr>
+        <tr><td>Watchlist</td><td>5 titres</td><td class="check">Illimitée</td><td class="check">Illimitée</td></tr>
+        <tr><td>Screener</td><td class="cross">—</td><td class="check">✓ 20+ critères</td><td class="check">✓ Personnalisé</td></tr>
+        <tr><td>Historique</td><td class="cross">—</td><td class="check">5 ans</td><td class="check">10 ans+</td></tr>
+        <tr><td>Alertes de cours</td><td class="cross">—</td><td class="check">Illimitées</td><td class="check">Illimitées</td></tr>
+        <tr><td>Portefeuille virtuel</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Outils quantitatifs</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Accès API</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr>
+        <tr><td>Rapports de recherche</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓ PDF</td></tr>
+        <tr><td>Export CSV / Excel</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr>
+        <tr><td>Support</td><td>Email</td><td class="check">Email prioritaire</td><td class="check">Dédié + SLA</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FAQ -->
+  <div class="faq anim">
+    <h2>Questions <em style="font-style:italic;color:var(--gold)">fréquentes</em></h2>
+    <div class="faq-item">
+      <h4>Puis-je annuler à tout moment ?</h4>
+      <p>Oui, sans engagement. Vous pouvez annuler votre abonnement Pro à tout moment depuis votre espace client. L'accès reste actif jusqu'à la fin de la période facturée.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Quels modes de paiement acceptez-vous ?</h4>
+      <p>Nous acceptons Orange Money, Wave, Visa/Mastercard et les virements bancaires pour les comptes institutionnels.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Les données sont-elles fiables ?</h4>
+      <p>Nos données proviennent directement de la BRVM et de sources officielles. Elles sont vérifiées et structurées par notre équipe à Dakar.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Puis-je essayer le Pro avant de m'abonner ?</h4>
+      <p>Le dashboard de démonstration est accessible gratuitement pour tester les fonctionnalités clés. Contactez-nous pour un accès Pro d'essai de 7 jours.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span class="logo-sm">THE <span>·</span> CAPITAL</span>
+  <span>Dakar, Sénégal — Intelligence financière africaine</span>
+  <span>© 2026 The Capital</span>
+</footer>
+
+<script>
+const cursor = document.getElementById('cursor'), ring = document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;cursor.style.left=mx+'px';cursor.style.top=my+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='16px';cursor.style.height='16px';ring.style.width='56px';ring.style.height='56px';});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='8px';cursor.style.height='8px';ring.style.width='36px';ring.style.height='36px';});
+});
+const header=document.querySelector('header'),scrollLine=document.getElementById('scrollLine');
+window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60);scrollLine.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
+document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
+</script>
 </body>
 </html>
