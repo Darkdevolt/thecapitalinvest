@@ -1,391 +1,322 @@
-/* ============================================================
-   THE CAPITAL — Refonte 2026
-   Esthétique : Editorial Luxury Dark / Art Deco Africain
-   ============================================================ */
+<!DOCTYPE html>
 
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
-
-:root {
-  --black: #0A0804;
-  --deep: #111009;
-  --surface: #16130D;
-  --border: rgba(184,150,78,0.15);
-  --gold: #B8964E;
-  --gold-light: #D4AF6A;
-  --gold-dim: rgba(184,150,78,0.4);
-  --cream: #F5F0E8;
-  --muted: rgba(245,240,232,0.45);
-  --faint: rgba(245,240,232,0.12);
-  --serif: 'Playfair Display', Georgia, serif;
-  --sans: 'DM Sans', sans-serif;
-  --mono: 'DM Mono', monospace;
-}
-
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-html { scroll-behavior: smooth; }
-
-body {
-  background: var(--black);
-  color: var(--cream);
-  font-family: var(--sans);
-  font-weight: 300;
-  line-height: 1.7;
-  min-height: 100vh;
-  cursor: none;
-  overflow-x: hidden;
-}
-
-/* ── Curseur custom ── */
-.cursor {
-  position: fixed;
-  width: 8px; height: 8px;
-  background: var(--gold);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%, -50%);
-  transition: transform 0.1s ease, width 0.3s ease, height 0.3s ease, background 0.3s;
-}
-.cursor-ring {
-  position: fixed;
-  width: 36px; height: 36px;
-  border: 1px solid var(--gold-dim);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9998;
-  transform: translate(-50%, -50%);
-  transition: transform 0.18s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s;
-}
-body:hover .cursor { opacity: 1; }
-
-/* ── Grain overlay ── */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 1;
-  opacity: 0.6;
-}
-
-/* ── Navigation ── */
-header {
-  position: fixed;
-  top: 0; left: 0; right: 0;
-  z-index: 100;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 28px 60px;
-  background: linear-gradient(to bottom, rgba(10,8,4,0.98) 0%, rgba(10,8,4,0) 100%);
-  backdrop-filter: blur(0px);
-  border-bottom: 1px solid transparent;
-  transition: all 0.4s ease;
-}
-header.scrolled {
-  backdrop-filter: blur(20px);
-  background: rgba(10,8,4,0.92);
-  border-bottom-color: var(--border);
-  padding: 20px 60px;
-}
-.logo {
-  font-family: var(--serif);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: 3px;
-  color: var(--cream);
-  text-decoration: none;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.logo .dot { color: var(--gold); font-size: 28px; line-height: 1; }
-
-nav {
-  display: flex;
-  gap: 0;
-  align-items: center;
-}
-nav a {
-  padding: 6px 16px;
-  font-size: 11px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-  text-decoration: none;
-  transition: color 0.2s;
-  position: relative;
-}
-nav a::after {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 16px; right: 16px;
-  height: 1px;
-  background: var(--gold);
-  transform: scaleX(0);
-  transition: transform 0.3s ease;
-}
-nav a:hover { color: var(--cream); }
-nav a:hover::after, nav a.active::after { transform: scaleX(1); }
-nav a.active { color: var(--gold); }
-
-.nav-cta {
-  margin-left: 20px;
-  padding: 10px 22px !important;
-  background: var(--gold);
-  color: var(--black) !important;
-  border-radius: 2px;
-  font-weight: 500 !important;
-  letter-spacing: 0.1em;
-  transition: background 0.2s, color 0.2s !important;
-}
-.nav-cta:hover { background: var(--gold-light) !important; }
-.nav-cta::after { display: none !important; }
-
-/* ── Container commun ── */
-.container {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 60px;
-}
-
-/* ── Titres de page ── */
-.page-hero {
-  padding: 160px 60px 80px;
-  max-width: 1280px;
-  margin: 0 auto;
-  border-bottom: 1px solid var(--border);
-}
-.page-hero h1 {
-  font-family: var(--serif);
-  font-size: clamp(48px, 7vw, 96px);
-  font-weight: 900;
-  line-height: 1.0;
-  letter-spacing: -1px;
-  color: var(--cream);
-}
-.page-hero h1 em {
-  font-style: italic;
-  color: var(--gold);
-}
-.page-hero p {
-  margin-top: 24px;
-  font-size: 17px;
-  color: var(--muted);
-  max-width: 520px;
-  line-height: 1.8;
-}
-
-/* ── Cards universelles ── */
-.cards {
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarifs — The Capital</title>
+<meta name="description" content="Choisissez l'offre qui correspond à vos besoins : Gratuit, Pro ou Institutionnel.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+.pricing-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 1px;
   background: var(--border);
   border: 1px solid var(--border);
-  margin: 60px 0;
+  margin: 60px 0 80px;
 }
-.card {
+.pricing-card {
   background: var(--deep);
-  padding: 48px 40px;
-  transition: background 0.3s;
+  padding: 56px 40px;
   position: relative;
-  overflow: hidden;
+  transition: background 0.3s;
+  display: flex;
+  flex-direction: column;
 }
-.card::before {
-  content: '';
+.pricing-card:hover { background: var(--surface); }
+.pricing-card.featured {
+  background: var(--surface);
+  border-left: 2px solid var(--gold);
+  border-right: 2px solid var(--gold);
+}
+.pricing-card.featured::before {
+  content: 'Recommandé';
   position: absolute;
-  top: 0; left: 0; right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--gold), transparent);
-  transform: scaleX(0);
-  transition: transform 0.4s ease;
-}
-.card:hover { background: var(--surface); }
-.card:hover::before { transform: scaleX(1); }
-.card h3 {
-  font-family: var(--serif);
-  font-size: 22px;
-  font-weight: 700;
-  color: var(--cream);
-  margin-bottom: 16px;
-}
-.card p {
-  font-size: 15px;
-  color: var(--muted);
-  line-height: 1.8;
-}
-.card .price {
-  font-family: var(--mono);
-  font-size: 32px;
-  color: var(--gold);
-  margin-top: 24px;
-  display: block;
-}
-.card .tag {
-  display: inline-block;
+  top: 20px; right: 20px;
   font-size: 10px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  padding: 4px 10px;
-  border: 1px solid var(--gold-dim);
-  color: var(--gold);
-  border-radius: 2px;
-  margin-bottom: 20px;
-}
-
-/* ── Séparateur doré ── */
-.divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--gold-dim), transparent);
-  margin: 80px 0;
-}
-
-/* ── Boutons ── */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 32px;
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  text-decoration: none;
-  border-radius: 2px;
-  transition: all 0.3s ease;
-  cursor: none;
-}
-.btn-primary {
+  padding: 5px 12px;
   background: var(--gold);
   color: var(--black);
+  font-weight: 500;
+  border-radius: 2px;
 }
-.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
-
-.btn-outline {
-  border: 1px solid var(--gold-dim);
-  color: var(--gold);
-}
-.btn-outline:hover { border-color: var(--gold); background: rgba(184,150,78,0.07); }
-
-.btn-arrow::after { content: '→'; font-size: 16px; }
-
-/* ── Stat blocks ── */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
-  margin: 60px 0;
-}
-.stat {
-  background: var(--deep);
-  padding: 40px 32px;
-  text-align: center;
-}
-.stat .num {
-  font-family: var(--serif);
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--gold);
-  display: block;
-  line-height: 1;
-}
-.stat .label {
-  font-size: 11px;
-  letter-spacing: 0.12em;
+.plan-label {
+  font-size: 10px;
+  letter-spacing: 0.2em;
   text-transform: uppercase;
-  color: var(--muted);
-  margin-top: 8px;
-  display: block;
+  color: var(--gold);
+  margin-bottom: 12px;
 }
-
-/* ── Footer ── */
-footer {
-  border-top: 1px solid var(--border);
-  padding: 40px 60px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 12px;
-  color: var(--muted);
-  letter-spacing: 0.08em;
-}
-footer .logo-sm {
+.plan-name {
   font-family: var(--serif);
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 24px;
+}
+.plan-price {
+  font-family: var(--mono);
+  font-size: 48px;
+  color: var(--gold);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+.plan-price span {
   font-size: 16px;
-  font-weight: 700;
-  color: var(--cream);
-  letter-spacing: 2px;
-}
-footer .logo-sm span { color: var(--gold); }
-
-/* ── Animations d'entrée ── */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-.anim { opacity: 0; }
-.anim.visible { animation: fadeUp 0.8s ease forwards; }
-.anim-delay-1 { animation-delay: 0.1s; }
-.anim-delay-2 { animation-delay: 0.2s; }
-.anim-delay-3 { animation-delay: 0.3s; }
-.anim-delay-4 { animation-delay: 0.4s; }
-
-/* ── Table comparatif ── */
-.compare-table {
-  width: 100%;
-  border-collapse: collapse;
-  margin: 40px 0;
-  font-size: 14px;
-}
-.compare-table th {
-  font-family: var(--serif);
-  font-size: 18px;
-  font-weight: 700;
-  padding: 24px 28px;
-  text-align: left;
-  border-bottom: 1px solid var(--border);
-  color: var(--cream);
-}
-.compare-table th.gold { color: var(--gold); }
-.compare-table td {
-  padding: 16px 28px;
-  border-bottom: 1px solid rgba(184,150,78,0.07);
   color: var(--muted);
+  font-family: var(--sans);
 }
-.compare-table td:first-child { color: var(--cream); }
-.compare-table tr:hover td { background: var(--faint); }
-.check { color: var(--gold); font-size: 16px; }
-.cross { color: rgba(245,240,232,0.2); }
+.plan-desc {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 40px;
+  line-height: 1.7;
+  flex-grow: 1;
+}
+.plan-features {
+  list-style: none;
+  margin-bottom: 40px;
+}
+.plan-features li {
+  font-size: 14px;
+  color: var(--muted);
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.07);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.plan-features li::before {
+  content: '✓';
+  color: var(--gold);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.plan-features li.off {
+  opacity: 0.4;
+}
+.plan-features li.off::before { content: '—'; color: var(--muted); }
 
-/* ── Responsive ── */
+.compare-section { margin: 80px 0; }
+.compare-section h2 {
+font-family: var(–serif);
+font-size: 36px;
+font-weight: 700;
+color: var(–cream);
+margin-bottom: 40px;
+}
+.compare-table th:first-child { width: 40%; }
+.compare-table th { background: var(–deep); }
+.compare-table tr:last-child td { border-bottom: none; }
+
+.faq { margin: 80px 0; }
+.faq h2 {
+font-family: var(–serif);
+font-size: 36px;
+font-weight: 700;
+color: var(–cream);
+margin-bottom: 40px;
+}
+.faq-item {
+border-bottom: 1px solid var(–border);
+padding: 28px 0;
+}
+.faq-item h4 {
+font-size: 16px;
+color: var(–cream);
+font-weight: 400;
+margin-bottom: 12px;
+}
+.faq-item p { font-size: 14px; color: var(–muted); line-height: 1.8; }
+
 @media (max-width: 900px) {
-  header { padding: 20px 24px; }
-  header.scrolled { padding: 16px 24px; }
-  nav { display: none; }
-  .page-hero { padding: 120px 24px 60px; }
-  .container { padding: 0 24px; }
-  .stats-row { grid-template-columns: repeat(2, 1fr); }
-  footer { padding: 32px 24px; flex-direction: column; gap: 12px; text-align: center; }
-  .cards { grid-template-columns: 1fr; }
+.pricing-grid { grid-template-columns: 1fr; }
 }
+</style>
 
-/* ── Scroll indicator ── */
-.scroll-line {
-  position: fixed;
-  top: 0; left: 0;
-  height: 2px;
-  background: var(--gold);
-  z-index: 200;
-  transition: width 0.1s linear;
-}
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="scroll-line" id="scrollLine"></div>
+
+<header>
+  <a href="index.html" class="logo">THE <span class="dot">·</span> CAPITAL</a>
+  <nav>
+    <a href="index.html">Accueil</a>
+    <a href="platform.html">Plateforme</a>
+    <a href="features.html">Fonctionnalités</a>
+    <a href="markets.html">Marchés</a>
+    <a href="pricing.html" class="active">Tarifs</a>
+    <a href="about.html">À propos</a>
+    <a href="contact.html">Contact</a>
+    <a href="app.html" class="nav-cta">Dashboard</a>
+  </nav>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
+</header>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html">Accueil</a>
+  <a href="platform.html">Plateforme</a>
+  <a href="features.html">Fonctionnalités</a>
+  <a href="markets.html">Marchés</a>
+  <a href="pricing.html" class="active">Tarifs</a>
+  <a href="about.html">À propos</a>
+  <a href="contact.html">Contact</a>
+  <a href="app.html" class="nav-cta">Dashboard</a>
+</div>
+
+<div class="page-hero">
+  <h1 class="anim">Offres <em>& Tarifs</em></h1>
+  <p class="anim anim-delay-1">Commencez gratuitement. Passez Pro quand vous êtes prêt. Aucun engagement.</p>
+</div>
+
+<div class="container">
+
+  <!-- Pricing cards -->
+
+  <div class="pricing-grid">
+    <div class="pricing-card anim">
+      <div class="plan-label">Débutant</div>
+      <div class="plan-name">Gratuit</div>
+      <div class="plan-price">0 <span>FCFA / mois</span></div>
+      <p class="plan-desc">Idéal pour découvrir la BRVM et tester les fonctionnalités essentielles.</p>
+      <ul class="plan-features">
+        <li>Cours en différé (J+1)</li>
+        <li>5 sociétés en watchlist</li>
+        <li>Fiches entreprises basiques</li>
+        <li>Dashboard de démonstration</li>
+        <li class="off">Screener avancé</li>
+        <li class="off">Historique complet</li>
+        <li class="off">Alertes de cours</li>
+        <li class="off">Ratios de valorisation</li>
+      </ul>
+      <a href="app.html" class="btn btn-outline">Commencer gratuitement</a>
+    </div>
+
+```
+<div class="pricing-card featured anim anim-delay-1">
+  <div class="plan-label">Investisseur</div>
+  <div class="plan-name">Pro</div>
+  <div class="plan-price">9 900 <span>FCFA / mois</span></div>
+  <p class="plan-desc">Pour les investisseurs sérieux qui veulent analyser et décider avec confiance.</p>
+  <ul class="plan-features">
+    <li>Données en temps réel</li>
+    <li>Watchlist illimitée</li>
+    <li>Screener avancé (20+ critères)</li>
+    <li>Historique complet 5 ans</li>
+    <li>Alertes de cours illimitées</li>
+    <li>Analyses fondamentales complètes</li>
+    <li>Portefeuille virtuel (frais réels)</li>
+    <li>Outils quantitatifs (Sharpe, bêta…)</li>
+  </ul>
+  <a href="contact.html" class="btn btn-primary btn-arrow">S'abonner au Pro</a>
+</div>
+
+<div class="pricing-card anim anim-delay-2">
+  <div class="plan-label">Professionnel</div>
+  <div class="plan-name">Institutionnel</div>
+  <div class="plan-price">Sur <span>devis</span></div>
+  <p class="plan-desc">Pour les institutions, fonds et SGI qui ont besoin de données brutes et d'une intégration API.</p>
+  <ul class="plan-features">
+    <li>Tout le plan Pro</li>
+    <li>Accès API complet</li>
+    <li>Rapports de recherche PDF</li>
+    <li>Export CSV / Excel</li>
+    <li>Données historiques 10 ans+</li>
+    <li>Support dédié prioritaire</li>
+    <li>Onboarding personnalisé</li>
+    <li>SLA garanti</li>
+  </ul>
+  <a href="contact.html" class="btn btn-outline">Nous contacter</a>
+</div>
+```
+
+  </div>
+
+  <!-- Tableau comparatif -->
+
+  <div class="compare-section anim">
+    <h2>Comparatif <em style="font-style:italic;color:var(--gold)">détaillé</em></h2>
+    <table class="compare-table">
+      <thead>
+        <tr>
+          <th>Fonctionnalité</th>
+          <th>Gratuit</th>
+          <th class="gold">Pro</th>
+          <th>Institutionnel</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Données de marché</td><td>Différé J+1</td><td class="check">Temps réel</td><td class="check">Temps réel + API</td></tr>
+        <tr><td>Fiches entreprises</td><td>Basiques</td><td class="check">Complètes</td><td class="check">Complètes + export</td></tr>
+        <tr><td>Watchlist</td><td>5 titres</td><td class="check">Illimitée</td><td class="check">Illimitée</td></tr>
+        <tr><td>Screener</td><td class="cross">—</td><td class="check">✓ 20+ critères</td><td class="check">✓ Personnalisé</td></tr>
+        <tr><td>Historique</td><td class="cross">—</td><td class="check">5 ans</td><td class="check">10 ans+</td></tr>
+        <tr><td>Alertes de cours</td><td class="cross">—</td><td class="check">Illimitées</td><td class="check">Illimitées</td></tr>
+        <tr><td>Portefeuille virtuel</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Outils quantitatifs</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td></tr>
+        <tr><td>Accès API</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr>
+        <tr><td>Rapports de recherche</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓ PDF</td></tr>
+        <tr><td>Export CSV / Excel</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr>
+        <tr><td>Support</td><td>Email</td><td class="check">Email prioritaire</td><td class="check">Dédié + SLA</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- FAQ -->
+
+  <div class="faq anim">
+    <h2>Questions <em style="font-style:italic;color:var(--gold)">fréquentes</em></h2>
+    <div class="faq-item">
+      <h4>Puis-je annuler à tout moment ?</h4>
+      <p>Oui, sans engagement. Vous pouvez annuler votre abonnement Pro à tout moment depuis votre espace client. L'accès reste actif jusqu'à la fin de la période facturée.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Quels modes de paiement acceptez-vous ?</h4>
+      <p>Nous acceptons Orange Money, Wave, Visa/Mastercard et les virements bancaires pour les comptes institutionnels.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Les données sont-elles fiables ?</h4>
+      <p>Nos données proviennent directement de la BRVM et de sources officielles. Elles sont vérifiées et structurées par notre équipe à Dakar.</p>
+    </div>
+    <div class="faq-item">
+      <h4>Puis-je essayer le Pro avant de m'abonner ?</h4>
+      <p>Le dashboard de démonstration est accessible gratuitement pour tester les fonctionnalités clés. Contactez-nous pour un accès Pro d'essai de 7 jours.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer>
+  <span class="logo-sm">THE <span>·</span> CAPITAL</span>
+  <span>Dakar, Sénégal — Intelligence financière africaine</span>
+  <span>© 2026 The Capital</span>
+</footer>
+
+<script>
+const cursor = document.getElementById('cursor'), ring = document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;cursor.style.left=mx+'px';cursor.style.top=my+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='16px';cursor.style.height='16px';ring.style.width='56px';ring.style.height='56px';});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='8px';cursor.style.height='8px';ring.style.width='36px';ring.style.height='36px';});
+});
+const header=document.querySelector('header'),scrollLine=document.getElementById('scrollLine');
+window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60);scrollLine.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
+document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
+</script>
+
+<script src="_nav.js"></script>
+
+</body>
+</html>
