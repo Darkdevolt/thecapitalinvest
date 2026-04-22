@@ -1,38 +1,324 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Contact — The Capital</title>
+<meta name="description" content="Contactez The Capital — Intelligence financière africaine. Dakar, Sénégal.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="style.css">
+<style>
+.contact-layout {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: 100px;
+  padding: 80px 0 100px;
+  align-items: start;
+}
+
+/* Colonne gauche */
+.contact-info h2 {
+font-family: var(–serif);
+font-size: 48px;
+font-weight: 700;
+color: var(–cream);
+line-height: 1.1;
+margin-bottom: 24px;
+}
+.contact-info h2 em { font-style: italic; color: var(–gold); display: block; }
+.contact-info p { font-size: 16px; color: var(–muted); line-height: 1.9; margin-bottom: 48px; }
+
+.contact-blocks { display: flex; flex-direction: column; gap: 1px; background: var(–border); border: 1px solid var(–border); }
+.contact-block {
+background: var(–deep);
+padding: 28px 32px;
+transition: background 0.3s;
+}
+.contact-block:hover { background: var(–surface); }
+.contact-block-label {
+font-size: 10px;
+font-weight: 500;
+letter-spacing: 0.18em;
+text-transform: uppercase;
+color: var(–gold);
+margin-bottom: 8px;
+}
+.contact-block-value {
+font-size: 15px;
+color: var(–cream);
+font-weight: 400;
+}
+.contact-block-value a { color: var(–cream); text-decoration: none; transition: color 0.2s; }
+.contact-block-value a:hover { color: var(–gold); }
+
+/* Formulaire */
+.contact-form-card {
+background: var(–surface);
+border: 1px solid var(–border);
+border-radius: 4px;
+padding: 52px 48px;
+position: sticky;
+top: 100px;
+}
+.contact-form-card h3 {
+font-family: var(–serif);
+font-size: 28px;
+font-weight: 700;
+color: var(–cream);
+margin-bottom: 8px;
+}
+.contact-form-card p { font-size: 13px; color: var(–muted); margin-bottom: 36px; }
+
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.field { margin-bottom: 24px; }
+.field label {
+display: block;
+font-size: 10px;
+font-weight: 500;
+letter-spacing: 0.14em;
+text-transform: uppercase;
+color: var(–muted);
+margin-bottom: 8px;
+}
+.field input,
+.field select,
+.field textarea {
+width: 100%;
+padding: 13px 16px;
+background: var(–card);
+border: 1px solid var(–border);
+border-radius: 4px;
+color: var(–cream);
+font-family: var(–sans);
+font-size: 14px;
+outline: none;
+transition: border-color 0.2s;
+resize: none;
+}
+.field input:focus,
+.field select:focus,
+.field textarea:focus { border-color: var(–gold); }
+.field input::placeholder,
+.field textarea::placeholder { color: rgba(245,240,232,0.25); }
+.field select option { background: var(–card); }
+
+.form-submit {
+width: 100%;
+padding: 16px;
+background: var(–gold);
+color: var(–black);
+border: none;
+border-radius: 4px;
+font-family: var(–sans);
+font-size: 12px;
+font-weight: 500;
+letter-spacing: 0.15em;
+text-transform: uppercase;
+cursor: pointer;
+transition: background 0.2s, transform 0.2s;
+}
+.form-submit:hover { background: var(–gold-light); transform: translateY(-1px); }
+.form-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+.form-msg {
+margin-top: 16px;
+font-size: 13px;
+text-align: center;
+min-height: 20px;
+}
+.form-msg.success { color: #4ADE80; }
+.form-msg.error { color: #F87171; }
+
+/* Note RGPD */
+.form-note {
+margin-top: 16px;
+font-size: 11px;
+color: rgba(245,240,232,0.25);
+line-height: 1.6;
+text-align: center;
+}
+
+@media (max-width: 900px) {
+.contact-layout { grid-template-columns: 1fr; gap: 60px; padding: 60px 0 80px; }
+.contact-form-card { position: static; padding: 36px 28px; }
+.form-row { grid-template-columns: 1fr; }
+}
+</style>
+
 </head>
 <body>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="scroll-line" id="scrollLine"></div>
+
 <header>
-<a href="index.html" class="logo">THE <span>CAPITAL</span></a>
-<nav>
-<a href="index.html">Accueil</a>
-<a href="platform.html">Plateforme</a>
-<a href="features.html">Fonctionnalités</a>
-<a href="markets.html">Marchés</a>
-<a href="pricing.html">Tarifs</a>
-<a href="about.html">À propos</a>
-<a href="contact.html" class="active">Contact</a>
-<a href="app.html">Dashboard</a>
-</nav>
+  <a href="index.html" class="logo">THE <span class="dot">·</span> CAPITAL</a>
+  <nav>
+    <a href="index.html">Accueil</a>
+    <a href="platform.html">Plateforme</a>
+    <a href="features.html">Fonctionnalités</a>
+    <a href="markets.html">Marchés</a>
+    <a href="pricing.html">Tarifs</a>
+    <a href="about.html">À propos</a>
+    <a href="contact.html" class="active">Contact</a>
+    <a href="app.html" class="nav-cta">Dashboard</a>
+  </nav>
 </header>
 
-<div class="container">
-<h1>Contactez‑<em>nous</em></h1>
-<form>
-<input type="text" placeholder="Nom complet">
-<input type="email" placeholder="Adresse email">
-<textarea rows="4" placeholder="Votre message"></textarea>
-<button type="submit" class="btn">Envoyer</button>
-</form>
+<div class="page-hero">
+  <h1 class="anim">Contactez-<em>nous</em></h1>
+  <p class="anim anim-delay-1">Une question, un partenariat, un accès institutionnel ? Nous répondons sous 24h.</p>
 </div>
 
-<footer>The Capital © 2026 — Dakar, Sénégal</footer>
+<div class="container">
+  <div class="contact-layout">
+
+```
+<!-- Info colonne gauche -->
+<div class="contact-info anim">
+  <h2>Parlons <em>investissement.</em></h2>
+  <p>Que vous soyez un investisseur particulier curieux, une SGI à la recherche de données structurées ou un institutionnel qui veut un accès API — nous sommes là.</p>
+  <div class="contact-blocks">
+    <div class="contact-block">
+      <div class="contact-block-label">Email général</div>
+      <div class="contact-block-value"><a href="mailto:contact@thecapitalinvest.com">contact@thecapitalinvest.com</a></div>
+    </div>
+    <div class="contact-block">
+      <div class="contact-block-label">Partenariats & API</div>
+      <div class="contact-block-value"><a href="mailto:pro@thecapitalinvest.com">pro@thecapitalinvest.com</a></div>
+    </div>
+    <div class="contact-block">
+      <div class="contact-block-label">Localisation</div>
+      <div class="contact-block-value">Dakar, Sénégal — Zone UEMOA</div>
+    </div>
+    <div class="contact-block">
+      <div class="contact-block-label">Délai de réponse</div>
+      <div class="contact-block-value">Sous 24h ouvrées</div>
+    </div>
+  </div>
+</div>
+
+<!-- Formulaire -->
+<div class="contact-form-card anim anim-delay-1">
+  <h3>Envoyez-nous un message</h3>
+  <p>Remplissez le formulaire ci-dessous et nous vous répondrons rapidement.</p>
+
+  <div class="form-row">
+    <div class="field">
+      <label>Prénom</label>
+      <input type="text" id="f-prenom" placeholder="Jean">
+    </div>
+    <div class="field">
+      <label>Nom</label>
+      <input type="text" id="f-nom" placeholder="Dupont">
+    </div>
+  </div>
+
+  <div class="field">
+    <label>Email</label>
+    <input type="email" id="f-email" placeholder="vous@exemple.com">
+  </div>
+
+  <div class="field">
+    <label>Objet</label>
+    <select id="f-objet">
+      <option value="">Sélectionnez un objet...</option>
+      <option value="info">Informations générales</option>
+      <option value="pro">Abonnement Pro</option>
+      <option value="institution">Accès institutionnel / API</option>
+      <option value="partenariat">Partenariat</option>
+      <option value="bug">Problème technique</option>
+      <option value="autre">Autre</option>
+    </select>
+  </div>
+
+  <div class="field">
+    <label>Message</label>
+    <textarea id="f-message" rows="5" placeholder="Décrivez votre demande..."></textarea>
+  </div>
+
+  <button class="form-submit" id="f-btn" onclick="sendContact()">Envoyer le message →</button>
+  <div class="form-msg" id="f-msg"></div>
+  <p class="form-note">Vos données sont utilisées uniquement pour répondre à votre demande. Aucune revente, aucun spam.</p>
+</div>
+```
+
+  </div>
+</div>
+
+<footer>
+  <span class="logo-sm">THE <span>·</span> CAPITAL</span>
+  <span>Dakar, Sénégal — Intelligence financière africaine</span>
+  <span>© 2026 The Capital</span>
+</footer>
+
+<script>
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;cursor.style.left=mx+'px';cursor.style.top=my+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='16px';cursor.style.height='16px';ring.style.width='56px';ring.style.height='56px';});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='8px';cursor.style.height='8px';ring.style.width='36px';ring.style.height='36px';});
+});
+const header=document.querySelector('header'),scrollLine=document.getElementById('scrollLine');
+window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60);scrollLine.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
+const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
+document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
+
+async function sendContact() {
+  const prenom = document.getElementById('f-prenom').value.trim();
+  const nom = document.getElementById('f-nom').value.trim();
+  const email = document.getElementById('f-email').value.trim();
+  const objet = document.getElementById('f-objet').value;
+  const message = document.getElementById('f-message').value.trim();
+  const msgEl = document.getElementById('f-msg');
+  const btn = document.getElementById('f-btn');
+
+  if (!prenom || !email || !objet || !message) {
+    msgEl.textContent = 'Merci de remplir tous les champs obligatoires.';
+    msgEl.className = 'form-msg error';
+    return;
+  }
+  if (!email.includes('@')) {
+    msgEl.textContent = 'Adresse email invalide.';
+    msgEl.className = 'form-msg error';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Envoi en cours...';
+  msgEl.textContent = '';
+
+  try {
+    const res = await fetch('/api/contact', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prenom, nom, email, objet, message })
+    });
+    if (res.ok) {
+      msgEl.textContent = '✓ Message envoyé ! Nous vous répondrons sous 24h.';
+      msgEl.className = 'form-msg success';
+      ['f-prenom','f-nom','f-email','f-message'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('f-objet').value = '';
+    } else {
+      throw new Error('Erreur serveur');
+    }
+  } catch(e) {
+    // Fallback : ouvre le client mail
+    const subject = encodeURIComponent(`[The Capital] ${objet}`);
+    const body = encodeURIComponent(`Nom: ${prenom} ${nom}\nEmail: ${email}\n\n${message}`);
+    window.location.href = `mailto:contact@thecapitalinvest.com?subject=${subject}&body=${body}`;
+    msgEl.textContent = 'Redirection vers votre client mail...';
+    msgEl.className = 'form-msg success';
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Envoyer le message →';
+  }
+}
+</script>
+
 </body>
 </html>
