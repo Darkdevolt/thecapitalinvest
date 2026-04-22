@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -80,85 +81,86 @@
 
 /* Section workflow */
 .workflow-section {
-  padding: 80px 0;
-  border-top: 1px solid var(--border);
+padding: 80px 0;
+border-top: 1px solid var(–border);
 }
 .workflow-section h2 {
-  font-family: var(--serif);
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--cream);
-  margin-bottom: 60px;
+font-family: var(–serif);
+font-size: 48px;
+font-weight: 700;
+color: var(–cream);
+margin-bottom: 60px;
 }
-.workflow-section h2 em { font-style: italic; color: var(--gold); }
+.workflow-section h2 em { font-style: italic; color: var(–gold); }
 .workflow-steps {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 1px;
-  background: var(--border);
-  border: 1px solid var(--border);
+display: grid;
+grid-template-columns: repeat(4, 1fr);
+gap: 1px;
+background: var(–border);
+border: 1px solid var(–border);
 }
 .workflow-step {
-  background: var(--deep);
-  padding: 40px 32px;
-  position: relative;
+background: var(–deep);
+padding: 40px 32px;
+position: relative;
 }
 .workflow-step::after {
-  content: '→';
-  position: absolute;
-  right: -12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--gold-dim);
-  font-size: 18px;
-  z-index: 1;
+content: ‘→’;
+position: absolute;
+right: -12px;
+top: 50%;
+transform: translateY(-50%);
+color: var(–gold-dim);
+font-size: 18px;
+z-index: 1;
 }
 .workflow-step:last-child::after { display: none; }
 .step-num {
-  font-family: var(--mono);
-  font-size: 36px;
-  color: var(--gold);
-  opacity: 0.3;
-  line-height: 1;
-  margin-bottom: 16px;
+font-family: var(–mono);
+font-size: 36px;
+color: var(–gold);
+opacity: 0.3;
+line-height: 1;
+margin-bottom: 16px;
 }
 .workflow-step h4 {
-  font-family: var(--serif);
-  font-size: 18px;
-  font-weight: 700;
-  color: var(--cream);
-  margin-bottom: 10px;
+font-family: var(–serif);
+font-size: 18px;
+font-weight: 700;
+color: var(–cream);
+margin-bottom: 10px;
 }
-.workflow-step p { font-size: 13px; color: var(--muted); line-height: 1.7; }
+.workflow-step p { font-size: 13px; color: var(–muted); line-height: 1.7; }
 
 /* CTA bottom */
 .cta-strip {
-  border-top: 1px solid var(--border);
-  border-bottom: 1px solid var(--border);
-  background: var(--surface);
-  padding: 80px 0;
-  text-align: center;
-  margin: 80px -60px 0;
-  padding-left: 60px;
-  padding-right: 60px;
+border-top: 1px solid var(–border);
+border-bottom: 1px solid var(–border);
+background: var(–surface);
+padding: 80px 0;
+text-align: center;
+margin: 80px -60px 0;
+padding-left: 60px;
+padding-right: 60px;
 }
 .cta-strip h2 {
-  font-family: var(--serif);
-  font-size: 48px;
-  font-weight: 700;
-  color: var(--cream);
-  margin-bottom: 20px;
+font-family: var(–serif);
+font-size: 48px;
+font-weight: 700;
+color: var(–cream);
+margin-bottom: 20px;
 }
-.cta-strip h2 em { font-style: italic; color: var(--gold); }
-.cta-strip p { font-size: 16px; color: var(--muted); margin-bottom: 40px; }
+.cta-strip h2 em { font-style: italic; color: var(–gold); }
+.cta-strip p { font-size: 16px; color: var(–muted); margin-bottom: 40px; }
 
 @media (max-width: 900px) {
-  .features-full { grid-template-columns: 1fr; }
-  .workflow-steps { grid-template-columns: 1fr 1fr; }
-  .workflow-step::after { display: none; }
-  .cta-strip { margin: 80px -24px 0; padding: 60px 24px; }
+.features-full { grid-template-columns: 1fr; }
+.workflow-steps { grid-template-columns: 1fr 1fr; }
+.workflow-step::after { display: none; }
+.cta-strip { margin: 80px -24px 0; padding: 60px 24px; }
 }
 </style>
+
 </head>
 <body>
 <div class="cursor" id="cursor"></div>
@@ -177,7 +179,20 @@
     <a href="contact.html">Contact</a>
     <a href="app.html" class="nav-cta">Dashboard</a>
   </nav>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </header>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html">Accueil</a>
+  <a href="platform.html">Plateforme</a>
+  <a href="features.html" class="active">Fonctionnalités</a>
+  <a href="markets.html">Marchés</a>
+  <a href="pricing.html">Tarifs</a>
+  <a href="about.html">À propos</a>
+  <a href="contact.html">Contact</a>
+  <a href="app.html" class="nav-cta">Dashboard</a>
+</div>
 
 <div class="page-hero">
   <h1 class="anim">Fonctionnalités <em>de la plateforme</em></h1>
@@ -253,6 +268,7 @@
   </div>
 
   <!-- Workflow -->
+
   <div class="workflow-section">
     <h2 class="anim">Comment ça <em>fonctionne</em></h2>
     <div class="workflow-steps">
@@ -310,5 +326,8 @@ window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.
 const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
 document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
 </script>
+
+<script src="_nav.js"></script>
+
 </body>
 </html>
