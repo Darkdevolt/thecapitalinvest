@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -108,53 +109,54 @@
 
 /* Section bénéfices */
 .benefit-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 100px;
-  align-items: center;
-  padding: 80px 0;
-  border-bottom: 1px solid var(--border);
+display: grid;
+grid-template-columns: 1fr 1fr;
+gap: 100px;
+align-items: center;
+padding: 80px 0;
+border-bottom: 1px solid var(–border);
 }
 .benefit-row:last-child { border-bottom: none; }
 .benefit-row.reverse { direction: rtl; }
 .benefit-row.reverse > * { direction: ltr; }
-.benefit-text .label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; }
-.benefit-text h3 { font-family: var(--serif); font-size: 40px; font-weight: 700; color: var(--cream); margin-bottom: 20px; line-height: 1.1; }
-.benefit-text h3 em { font-style: italic; color: var(--gold); }
-.benefit-text p { font-size: 16px; color: var(--muted); line-height: 1.9; margin-bottom: 32px; }
+.benefit-text .label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(–gold); margin-bottom: 16px; }
+.benefit-text h3 { font-family: var(–serif); font-size: 40px; font-weight: 700; color: var(–cream); margin-bottom: 20px; line-height: 1.1; }
+.benefit-text h3 em { font-style: italic; color: var(–gold); }
+.benefit-text p { font-size: 16px; color: var(–muted); line-height: 1.9; margin-bottom: 32px; }
 .benefit-visual {
-  background: var(--deep);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 40px;
-  min-height: 280px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
+background: var(–deep);
+border: 1px solid var(–border);
+border-radius: 4px;
+padding: 40px;
+min-height: 280px;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
 }
 .metric-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--faint);
-  font-size: 13px;
+display: flex;
+justify-content: space-between;
+align-items: center;
+padding: 14px 0;
+border-bottom: 1px solid var(–faint);
+font-size: 13px;
 }
 .metric-row:last-child { border-bottom: none; }
-.metric-row .name { color: var(--muted); }
-.metric-row .val { font-family: var(--mono); color: var(--cream); }
-.metric-row .chg { font-family: var(--mono); font-size: 11px; }
+.metric-row .name { color: var(–muted); }
+.metric-row .val { font-family: var(–mono); color: var(–cream); }
+.metric-row .chg { font-family: var(–mono); font-size: 11px; }
 .metric-row .chg.up { color: #5CB85C; }
 .metric-row .chg.dn { color: #D9534F; }
 
 @media (max-width: 900px) {
-  .benefit-row { grid-template-columns: 1fr; gap: 40px; padding: 60px 0; }
-  .benefit-row.reverse { direction: ltr; }
-  .db-content { grid-template-columns: 1fr; }
-  .db-sidebar { display: none; }
-  .db-kpi-row { grid-template-columns: repeat(2, 1fr); }
+.benefit-row { grid-template-columns: 1fr; gap: 40px; padding: 60px 0; }
+.benefit-row.reverse { direction: ltr; }
+.db-content { grid-template-columns: 1fr; }
+.db-sidebar { display: none; }
+.db-kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
 </style>
+
 </head>
 <body>
 
@@ -174,7 +176,20 @@
     <a href="contact.html">Contact</a>
     <a href="app.html" class="nav-cta">Dashboard</a>
   </nav>
+  <button class="hamburger" id="hamburger" aria-label="Menu">
+    <span></span><span></span><span></span>
+  </button>
 </header>
+<div class="mobile-menu" id="mobile-menu">
+  <a href="index.html">Accueil</a>
+  <a href="platform.html" class="active">Plateforme</a>
+  <a href="features.html">Fonctionnalités</a>
+  <a href="markets.html">Marchés</a>
+  <a href="pricing.html">Tarifs</a>
+  <a href="about.html">À propos</a>
+  <a href="contact.html">Contact</a>
+  <a href="app.html" class="nav-cta">Dashboard</a>
+</div>
 
 <div class="page-hero">
   <h1 class="anim">La plateforme<br><em>d'intelligence financière</em></h1>
@@ -188,6 +203,7 @@
 <div class="container">
 
   <!-- Mockup dashboard -->
+
   <div class="dashboard-preview anim">
     <div class="db-bar">
       <div class="db-dot"></div>
@@ -217,6 +233,7 @@
   </div>
 
   <!-- Bénéfices -->
+
   <div style="padding:0 0 60px;">
     <div class="benefit-row anim">
       <div class="benefit-text">
@@ -234,37 +251,40 @@
       </div>
     </div>
 
-    <div class="benefit-row reverse anim">
-      <div class="benefit-text">
-        <div class="label">Analyse fondamentale</div>
-        <h3>Comprenez ce que<br><em>vous achetez.</em></h3>
-        <p>Bilans, comptes de résultat, ratios de valorisation (PER, P/B, EV/EBITDA) — calculés et présentés pour chaque société cotée. Comme un analyste, en quelques clics.</p>
-        <a href="features.html" class="btn btn-outline">Toutes les fonctionnalités →</a>
-      </div>
-      <div class="benefit-visual">
-        <div class="metric-row"><span class="name">PER</span><span class="val">12.4x</span><span class="chg" style="color:var(--muted);font-size:11px">Secteur: 14.2x</span></div>
-        <div class="metric-row"><span class="name">Price / Book</span><span class="val">1.8x</span><span class="chg" style="color:var(--muted);font-size:11px">Secteur: 2.1x</span></div>
-        <div class="metric-row"><span class="name">Rendement dividende</span><span class="val">6.2%</span><span class="chg up">↑ Élevé</span></div>
-        <div class="metric-row"><span class="name">ROE</span><span class="val">18.4%</span><span class="chg up">↑ Fort</span></div>
-        <div class="metric-row"><span class="name">Ratio de Sharpe</span><span class="val">1.34</span><span class="chg" style="color:var(--muted);font-size:11px">Benchmark: 0.92</span></div>
-      </div>
-    </div>
+```
+<div class="benefit-row reverse anim">
+  <div class="benefit-text">
+    <div class="label">Analyse fondamentale</div>
+    <h3>Comprenez ce que<br><em>vous achetez.</em></h3>
+    <p>Bilans, comptes de résultat, ratios de valorisation (PER, P/B, EV/EBITDA) — calculés et présentés pour chaque société cotée. Comme un analyste, en quelques clics.</p>
+    <a href="features.html" class="btn btn-outline">Toutes les fonctionnalités →</a>
+  </div>
+  <div class="benefit-visual">
+    <div class="metric-row"><span class="name">PER</span><span class="val">12.4x</span><span class="chg" style="color:var(--muted);font-size:11px">Secteur: 14.2x</span></div>
+    <div class="metric-row"><span class="name">Price / Book</span><span class="val">1.8x</span><span class="chg" style="color:var(--muted);font-size:11px">Secteur: 2.1x</span></div>
+    <div class="metric-row"><span class="name">Rendement dividende</span><span class="val">6.2%</span><span class="chg up">↑ Élevé</span></div>
+    <div class="metric-row"><span class="name">ROE</span><span class="val">18.4%</span><span class="chg up">↑ Fort</span></div>
+    <div class="metric-row"><span class="name">Ratio de Sharpe</span><span class="val">1.34</span><span class="chg" style="color:var(--muted);font-size:11px">Benchmark: 0.92</span></div>
+  </div>
+</div>
 
-    <div class="benefit-row anim">
-      <div class="benefit-text">
-        <div class="label">Portefeuille virtuel</div>
-        <h3>Simulez avant<br><em>d'investir.</em></h3>
-        <p>Construisez un portefeuille virtuel avec les frais réels de la BRVM. Suivez votre performance, analysez vos positions et testez vos stratégies sans risque.</p>
-        <a href="app.html" class="btn btn-primary btn-arrow">Essayer gratuitement</a>
-      </div>
-      <div class="benefit-visual" style="justify-content:center;align-items:center;text-align:center;gap:16px;">
-        <div style="font-family:var(--mono);font-size:48px;color:var(--gold);">+14.2%</div>
-        <div style="font-size:13px;color:var(--muted);">Performance portefeuille simulé<br>sur 6 mois · Frais BRVM inclus</div>
-        <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;">
-          <div style="font-size:12px;color:var(--muted);">3 positions <span style="color:var(--cream)">SONATEL · BOA · CIE</span></div>
-        </div>
-      </div>
+<div class="benefit-row anim">
+  <div class="benefit-text">
+    <div class="label">Portefeuille virtuel</div>
+    <h3>Simulez avant<br><em>d'investir.</em></h3>
+    <p>Construisez un portefeuille virtuel avec les frais réels de la BRVM. Suivez votre performance, analysez vos positions et testez vos stratégies sans risque.</p>
+    <a href="app.html" class="btn btn-primary btn-arrow">Essayer gratuitement</a>
+  </div>
+  <div class="benefit-visual" style="justify-content:center;align-items:center;text-align:center;gap:16px;">
+    <div style="font-family:var(--mono);font-size:48px;color:var(--gold);">+14.2%</div>
+    <div style="font-size:13px;color:var(--muted);">Performance portefeuille simulé<br>sur 6 mois · Frais BRVM inclus</div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-top:8px;">
+      <div style="font-size:12px;color:var(--muted);">3 positions <span style="color:var(--cream)">SONATEL · BOA · CIE</span></div>
     </div>
+  </div>
+</div>
+```
+
   </div>
 
 </div>
@@ -289,5 +309,8 @@ window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.
 const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
 document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
 </script>
+
+<script src="_nav.js"></script>
+
 </body>
 </html>
