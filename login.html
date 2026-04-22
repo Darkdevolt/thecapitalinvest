@@ -1,34 +1,280 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Connexion — The Capital</title>
+<meta name="robots" content="noindex">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0A0804; --surface: #13110C; --card: #181410;
+  --border: rgba(184,150,78,0.15); --gold: #B8964E; --gold-light: #D4AF6A;
+  --cream: #F5F0E8; --muted: rgba(245,240,232,0.45);
+  --green: #4ADE80; --red: #F87171;
+  --serif: 'Playfair Display', serif; --sans: 'DM Sans', sans-serif; --mono: 'DM Mono', monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background: var(--bg); color: var(--cream); font-family: var(--sans);
+  font-weight: 300; min-height: 100vh; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 24px;
+  cursor: none;
+}
+/* Grain */
+body::before {
+  content: ''; position: fixed; inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 0; opacity: 0.5;
+}
+/* Cercle déco */
+body::after {
+  content: ''; position: fixed; right: -200px; top: 50%; transform: translateY(-50%);
+  width: 600px; height: 600px; border-radius: 50%;
+  border: 1px solid rgba(184,150,78,0.06); pointer-events: none; z-index: 0;
+}
+.cursor { position: fixed; width: 8px; height: 8px; background: var(--gold); border-radius: 50%; pointer-events: none; z-index: 9999; transform: translate(-50%,-50%); transition: width .3s, height .3s; }
+.cursor-ring { position: fixed; width: 36px; height: 36px; border: 1px solid rgba(184,150,78,0.4); border-radius: 50%; pointer-events: none; z-index: 9998; transform: translate(-50%,-50%); transition: width .3s, height .3s; }
+
+.login-wrap { position: relative; z-index: 1; width: 100%; max-width: 420px; }
+
+/* Logo */
+.login-logo { text-align: center; margin-bottom: 48px; }
+.login-logo a { text-decoration: none; }
+.login-logo h1 {
+font-family: var(–serif); font-size: 28px; font-weight: 700;
+letter-spacing: 3px; color: var(–cream);
+}
+.login-logo h1 span { color: var(–gold); }
+.login-logo p { color: var(–muted); font-size: 13px; margin-top: 8px; }
+
+/* Card */
+.login-card {
+background: var(–surface); border: 1px solid var(–border); border-radius: 6px; overflow: hidden;
+}
+
+/* Tabs */
+.login-tabs { display: flex; border-bottom: 1px solid var(–border); }
+.login-tab {
+flex: 1; padding: 16px; background: none; border: none; color: var(–muted);
+font-family: var(–sans); font-size: 11px; font-weight: 500; letter-spacing: 0.12em;
+text-transform: uppercase; cursor: none; border-bottom: 2px solid transparent;
+transition: color .2s, border-color .2s;
+}
+.login-tab.active { color: var(–gold); border-bottom-color: var(–gold); }
+
+/* Form body */
+.login-body { padding: 36px; }
+.field { margin-bottom: 22px; }
+.field label {
+display: block; font-size: 10px; font-weight: 500; letter-spacing: 0.14em;
+text-transform: uppercase; color: var(–muted); margin-bottom: 8px;
+}
+.field input {
+width: 100%; padding: 12px 16px; background: var(–card); border: 1px solid var(–border);
+border-radius: 4px; color: var(–cream); font-family: var(–sans); font-size: 14px;
+outline: none; transition: border-color .2s;
+}
+.field input:focus { border-color: var(–gold); }
+.field input::placeholder { color: rgba(245,240,232,0.25); }
+
+.error-msg { color: var(–red); font-size: 12px; margin-bottom: 16px; min-height: 18px; }
+.success-msg { color: var(–green); font-size: 12px; margin-bottom: 16px; }
+
+.submit-btn {
+width: 100%; padding: 14px; background: var(–gold); color: var(–bg);
+border: none; border-radius: 4px; font-family: var(–sans); font-size: 12px;
+font-weight: 500; letter-spacing: 0.15em; text-transform: uppercase;
+cursor: none; transition: background .2s;
+}
+.submit-btn:hover { background: var(–gold-light); }
+.submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.login-note { font-size: 11px; color: var(–muted); text-align: center; margin-top: 20px; }
+
+/* Liens bas */
+.login-links {
+display: flex; justify-content: center; gap: 24px; margin-top: 28px;
+}
+.login-links a {
+color: var(–muted); text-decoration: none; font-size: 12px;
+letter-spacing: 0.08em; transition: color .2s;
+}
+.login-links a:hover { color: var(–gold); }
+
+/* Features latérales */
+.login-features {
+margin-top: 48px; padding: 28px 32px;
+background: var(–surface); border: 1px solid var(–border); border-radius: 6px;
+}
+.login-features p {
+font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
+color: var(–muted); margin-bottom: 16px;
+}
+.features-list { display: flex; flex-direction: column; gap: 10px; }
+.feature-item {
+display: flex; align-items: center; gap: 10px;
+font-size: 13px; color: rgba(245,240,232,0.6);
+}
+.feature-item::before { content: ‘✓’; color: var(–gold); font-size: 12px; flex-shrink: 0; }
+</style>
+
 </head>
 <body>
-<header>
-<a href="index.html" class="logo">THE <span>CAPITAL</span></a>
-<nav>
-<a href="index.html">Accueil</a>
-<a href="platform.html">Plateforme</a>
-<a href="features.html">Fonctionnalités</a>
-<a href="markets.html">Marchés</a>
-<a href="pricing.html">Tarifs</a>
-<a href="about.html">À propos</a>
-<a href="contact.html">Contact</a>
-<a href="app.html">Dashboard</a>
-</nav>
-</header>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
 
-<div class="container">
-<h1>Connexion <em>à votre espace</em></h1>
-<p>La connexion s'effectue directement depuis la <a href="app.html">page dashboard</a>. Si vous n'avez pas encore de compte, vous pouvez en créer un sur place.</p>
-<a href="app.html" class="btn">Accéder au dashboard</a>
+<div class="login-wrap">
+
+  <div class="login-logo">
+    <a href="index.html">
+      <h1>THE <span>·</span> CAPITAL</h1>
+      <p>Intelligence financière africaine</p>
+    </a>
+  </div>
+
+  <div class="login-card">
+    <div class="login-tabs">
+      <button class="login-tab active" id="tab-login">Connexion</button>
+      <button class="login-tab" id="tab-signup">Créer un compte</button>
+    </div>
+
+```
+<!-- Login -->
+<div class="login-body" id="form-login">
+  <div class="field">
+    <label>Email</label>
+    <input type="email" id="login-email" placeholder="vous@exemple.com" autocomplete="email">
+  </div>
+  <div class="field">
+    <label>Mot de passe</label>
+    <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+  </div>
+  <div class="error-msg" id="login-error"></div>
+  <button class="submit-btn" id="login-btn">Se connecter</button>
+  <p class="login-note">Accès sécurisé à votre dashboard</p>
 </div>
 
-<footer>The Capital © 2026 — Dakar, Sénégal</footer>
+<!-- Signup -->
+<div class="login-body" id="form-signup" style="display:none">
+  <div class="field">
+    <label>Nom complet</label>
+    <input type="text" id="signup-name" placeholder="Jean Dupont">
+  </div>
+  <div class="field">
+    <label>Email</label>
+    <input type="email" id="signup-email" placeholder="vous@exemple.com" autocomplete="email">
+  </div>
+  <div class="field">
+    <label>Mot de passe</label>
+    <input type="password" id="signup-password" placeholder="Min. 6 caractères" autocomplete="new-password">
+  </div>
+  <div class="error-msg" id="signup-error"></div>
+  <div class="success-msg" id="signup-success"></div>
+  <button class="submit-btn" id="signup-btn">Créer mon compte gratuit</button>
+  <p class="login-note">Gratuit, sans engagement, sans carte bancaire</p>
+</div>
+```
+
+  </div>
+
+  <div class="login-links">
+    <a href="index.html">← Accueil</a>
+    <a href="pricing.html">Voir les offres</a>
+    <a href="contact.html">Aide</a>
+  </div>
+
+  <div class="login-features">
+    <p>Inclus dans le compte gratuit</p>
+    <div class="features-list">
+      <div class="feature-item">Cours différé J+1 sur toute la BRVM</div>
+      <div class="feature-item">Watchlist jusqu'à 5 titres</div>
+      <div class="feature-item">Portefeuille virtuel de démonstration</div>
+      <div class="feature-item">Calendrier des dividendes complet</div>
+      <div class="feature-item">Archives BOC téléchargeables</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');
+let mx=0,my=0,rx=0,ry=0;
+document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;});
+(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;cursor.style.left=mx+'px';cursor.style.top=my+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop);})();
+document.querySelectorAll('a,button').forEach(el=>{
+  el.addEventListener('mouseenter',()=>{cursor.style.width='16px';cursor.style.height='16px';ring.style.width='56px';ring.style.height='56px';});
+  el.addEventListener('mouseleave',()=>{cursor.style.width='8px';cursor.style.height='8px';ring.style.width='36px';ring.style.height='36px';});
+});
+
+// Si déjà connecté, rediriger vers le dashboard
+const session = localStorage.getItem('tc_session');
+if (session) { try { const s = JSON.parse(session); if (s?.access_token) window.location.href = 'app.html'; } catch(e) {} }
+
+// Tabs
+document.getElementById('tab-login').addEventListener('click', () => {
+  document.getElementById('tab-login').classList.add('active');
+  document.getElementById('tab-signup').classList.remove('active');
+  document.getElementById('form-login').style.display = 'block';
+  document.getElementById('form-signup').style.display = 'none';
+});
+document.getElementById('tab-signup').addEventListener('click', () => {
+  document.getElementById('tab-signup').classList.add('active');
+  document.getElementById('tab-login').classList.remove('active');
+  document.getElementById('form-login').style.display = 'none';
+  document.getElementById('form-signup').style.display = 'block';
+});
+
+// Login
+document.getElementById('login-btn').addEventListener('click', async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const err = document.getElementById('login-error');
+  if (!email || !password) { err.textContent = 'Email et mot de passe requis.'; return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Connexion...'; err.textContent = '';
+  try {
+    const res = await fetch('/api/auth', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'login',email,password}) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    localStorage.setItem('tc_session', JSON.stringify(data.session));
+    window.location.href = 'app.html';
+  } catch(e) {
+    err.textContent = e.message;
+    btn.disabled = false; btn.textContent = 'Se connecter';
+  }
+});
+
+// Signup
+document.getElementById('signup-btn').addEventListener('click', async () => {
+  const nom = document.getElementById('signup-name').value.trim();
+  const email = document.getElementById('signup-email').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const err = document.getElementById('signup-error');
+  const suc = document.getElementById('signup-success');
+  if (!nom || !email || !password) { err.textContent = 'Tous les champs sont requis.'; return; }
+  if (password.length < 6) { err.textContent = 'Mot de passe min. 6 caractères.'; return; }
+  const btn = document.getElementById('signup-btn');
+  btn.disabled = true; btn.textContent = 'Création...'; err.textContent = ''; suc.textContent = '';
+  try {
+    const res = await fetch('/api/auth', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({action:'signup',email,password,nom}) });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Erreur');
+    if (data.session) { localStorage.setItem('tc_session', JSON.stringify(data.session)); window.location.href = 'app.html'; }
+    else { suc.textContent = '✓ Compte créé ! Vous pouvez vous connecter.'; document.getElementById('tab-login').click(); }
+  } catch(e) {
+    err.textContent = e.message;
+  } finally {
+    btn.disabled = false; btn.textContent = 'Créer mon compte gratuit';
+  }
+});
+
+// Enter key
+['login-email','login-password'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-btn').click(); }));
+['signup-name','signup-email','signup-password'].forEach(id => document.getElementById(id).addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('signup-btn').click(); }));
+</script>
+
 </body>
 </html>
