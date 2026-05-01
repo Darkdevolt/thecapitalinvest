@@ -8,8 +8,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY
 );
 
-const ADMIN_TOKEN = "thecapital_admin:TheCapital@BRVM2026!";
-
+const ADMIN_TOKEN = process.env.ADMIN_SECRET_TOKEN;
+if (!ADMIN_TOKEN) {
+  throw new Error('ADMIN_SECRET_TOKEN manquant dans les variables d\'environnement');
+}
 const MOIS_FR = {
   janvier:"01", "février":"02", mars:"03", avril:"04",
   mai:"05", juin:"06", juillet:"07", "août":"08",
