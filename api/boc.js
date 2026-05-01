@@ -3,12 +3,13 @@ import { createClient } from "@supabase/supabase-js";
 
 export const config = { maxDuration: 30 };
 
+// ── VALIDATION DES VARIABLES D'ENVIRONNEMENT ──
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 const ADMIN_TOKEN = process.env.ADMIN_SECRET_TOKEN;
 
 if (!SUPABASE_URL || !SUPABASE_KEY || !ADMIN_TOKEN) {
-  throw new Error('Variables d'environnement SUPABASE_URL, SUPABASE_SERVICE_KEY et ADMIN_SECRET_TOKEN requises');
+  throw new Error('Variables d\'environnement SUPABASE_URL, SUPABASE_SERVICE_KEY et ADMIN_SECRET_TOKEN requises');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -104,8 +105,10 @@ export default async function handler(req, res) {
     const buffer = Buffer.from(file, "base64");
     const uint8  = new Uint8Array(buffer);
 
+    // ── 1. EXTRACTION ────────────────────────────────────────────────────
     const lines = await extractLines(uint8);
 
+    // ── 2. DATE ──────────────────────────────────────────────────────────
     let dateStr = new Date().toISOString().split("T")[0];
     let dateSource = "fallback (today)";
     const dateRE = /(?:lundi|mardi|mercredi|jeudi|vendredi|samedi|dimanche)\s+(\d{1,2})\s*(janvier|f[ée]vrier|mars|avril|mai|juin|juillet|ao[uû]t|septembre|octobre|novembre|d[ée]cembre)\s+(\d{4})/i;
@@ -124,6 +127,7 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── 3. INDICES ───────────────────────────────────────────────────────
     const indicesInsert = [];
     const indiceDebug   = {};
     const indiceTargets = [
@@ -134,7 +138,7 @@ export default async function handler(req, res) {
 
     for (let i = 0; i < lines.length; i++) {
       for (const { name, re } of indiceTargets) {
-        if (indiceDebug[name]) continue;
+        if (indiceDebug[name]) continue; // already found
         const m = lines[i].match(re);
         if (!m) continue;
         const valeur = parseFloat(m[1].replace(",", "."));
@@ -158,9 +162,10 @@ export default async function handler(req, res) {
       }
     }
 
+    // ── 4. ACTIONS ───────────────────────────────────────────────────────
     const coursInsert  = [];
-    const parseErrors  = [];
-    const sectionLines = [];
+    const parseErrors  = [];   // lignes rejetées dans la section actions
+    const sectionLines = [];   // toutes les lignes de la section actions
     let inAction = false;
 
     for (let i = 0; i < lines.length; i++) {
@@ -212,6 +217,7 @@ export default async function handler(req, res) {
     const finalCours   = Array.from(new Map(coursInsert.map(c  => [`${c.ticker}_${c.date_seance}`,  c])).values());
     const finalIndices = Array.from(new Map(indicesInsert.map(i => [`${i.indice}_${i.date_seance}`, i])).values());
 
+    // ── 5. SUPABASE ──────────────────────────────────────────────────────
     let insertedCours   = 0;
     let insertedIndices = 0;
     let erreurCours     = null;
@@ -232,6 +238,7 @@ export default async function handler(req, res) {
       else erreurIndices = errI.message;
     }
 
+    // ── 6. STORAGE & LOG ─────────────────────────────────────────────────
     const safeFileName = filename || `BOC_${dateStr}.pdf`;
     const filePath     = `${dateStr}/${Date.now()}_${safeFileName}`;
 
@@ -248,21 +255,33 @@ export default async function handler(req, res) {
       fichier_url: urlData.publicUrl,
     });
 
+    // ── 7. RÉPONSE AVEC DEBUG COMPLET ─────────────────────────────────────
     return res.status(200).json({
       success:          true,
       duree_ms:         Date.now() - startTime,
+
+      // ── Résultats
       date:             dateStr,
       cours_importes:   insertedCours,
       indices_importes: insertedIndices,
       pdf_url:          urlData.publicUrl,
+
+      // ── Debug parsing
       debug: {
+        // Date
         date_source:        dateSource,
+
+        // Indices
         indices_trouves:    indiceDebug,
         indices_erreur:     erreurIndices,
+
+        // Actions
         total_lignes_pdf:         lines.length,
         lignes_section_actions:   sectionLines.length,
         actions_parsees:          finalCours.length,
         actions_erreur_supabase:  erreurCours,
+
+        // Toutes les actions parsées avec détail
         actions: finalCours.map(c => ({
           ticker:    c.ticker,
           nom:       c.nom,
@@ -274,7 +293,11 @@ export default async function handler(req, res) {
           volume:    c.volume,
           valeur:    c.valeur,
         })),
+
+        // Lignes de la section actions qui n'ont pas pu être parsées
         lignes_non_parsees: parseErrors,
+
+        // Échantillon des 10 premières lignes brutes du PDF (pour diagnostic)
         sample_lignes_pdf: lines.slice(0, 10),
       },
     });
