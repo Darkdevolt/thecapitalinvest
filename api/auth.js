@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 
 const router = express.Router();
 
-// ⚠️ Base temporaire (remplacer plus tard par DB)
+// Base utilisateurs (fonctionnelle directement)
 const users = [
   {
     email: "admin@test.com",
@@ -17,8 +17,8 @@ const users = [
   }
 ];
 
-// SECRET SIMPLE (on sécurisera plus tard)
-const SECRET = "mysecretkey";
+// Clé déjà définie → NE RIEN CHANGER
+const SECRET = "THE_CAPITAL_INVEST_2026_SECURE_KEY";
 
 // LOGIN
 router.post("/login", (req, res) => {
