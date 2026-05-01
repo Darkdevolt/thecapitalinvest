@@ -1,10 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 
+// ── VALIDATION DES VARIABLES D'ENVIRONNEMENT ──
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  throw new Error('Variables d'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
+  throw new Error('Variables d\'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -26,6 +27,7 @@ export default async function handler(req, res) {
   const { type, id } = req.query;
 
   try {
+    // WATCHLIST
     if (type === 'watchlist') {
       if (req.method === 'GET') {
         const { data } = await supabase.from('watchlist').select('*').eq('user_id', user.id);
@@ -43,6 +45,7 @@ export default async function handler(req, res) {
       }
     }
 
+    // ALERTES
     if (type === 'alertes') {
       if (req.method === 'GET') {
         const { data } = await supabase.from('alertes_cours').select('*').eq('user_id', user.id);
@@ -57,13 +60,4 @@ export default async function handler(req, res) {
       }
       if (req.method === 'DELETE' && id) {
         await supabase.from('alertes_cours').delete().eq('id', id).eq('user_id', user.id);
-        return res.status(200).json({ success: true });
-      }
-    }
-
-    return res.status(400).json({ error: 'Type requis: watchlist|alertes' });
-
-  } catch (err) {
-    return res.status(500).json({ error: err.message });
-  }
-}
+        return res.status(200).json
