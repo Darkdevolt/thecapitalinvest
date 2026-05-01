@@ -60,4 +60,45 @@ export default async function handler(req, res) {
 
     // Vérifier que le ticker existe
     const { data: e } = await supabase
-     
+      .from('entreprises')
+      .select('ticker')
+      .eq('ticker', ticker.toUpperCase())
+      .single();
+    if (!e) return res.status(400).json({ error: `Ticker ${ticker} introuvable sur la BRVM` });
+
+    // Éviter les doublons
+    const { data: existing } = await supabase
+      .from('watchlist')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('ticker', ticker.toUpperCase())
+      .single();
+    if (existing) return res.status(400).json({ error: `${ticker} est déjà dans votre watchlist` });
+
+    const { data, error } = await supabase
+      .from('watchlist')
+      .insert({ user_id: user.id, ticker: ticker.toUpperCase(), note: note || null })
+      .select()
+      .single();
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(201).json({ data });
+  }
+
+  // DELETE — Supprimer un titre
+  if (req.method === 'DELETE') {
+    const id = req.query.id;
+    if (!id) return res.status(400).json({ error: 'ID requis' });
+
+    const { error } = await supabase
+      .from('watchlist')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', user.id);
+
+    if (error) return res.status(500).json({ error: error.message });
+    return res.status(200).json({ success: true });
+  }
+
+  return res.status(405).json({ error: 'Méthode non autorisée' });
+}
