@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 
+// ── VALIDATION DES VARIABLES D'ENVIRONNEMENT ──
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
