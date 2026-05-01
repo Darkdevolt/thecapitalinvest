@@ -1,9 +1,13 @@
 {
-  "name": "thecapital",
-  "version": "1.0.0",
+  "name": "the-capital-invest",
+  "version": "2.0.0",
   "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0",
-    "pdf-parse": "^1.1.1"
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.2"
   }
 }
