@@ -3,16 +3,96 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>THE CAPITAL — Dashboard</title>
+<title>THE CAPITAL — Plateforme</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--cream:#FAF8F4;--white:#FFFFFF;--stone:#E8E3DA;--warm:#D4C9B8;--ink:#1A1714;--ink2:#3D3630;--muted:#8C8279;--dim:#B5ADA4;--gold:#B8964E;--gold-l:#D4AE6A;--grn:#2E7D32;--red:#C62828;--bg-row:rgba(26,23,20,0.025);--shadow:0 2px 16px rgba(26,23,20,0.07);--r:10px}
+:root{
+  --cream:#FAF8F4;--white:#FFFFFF;--stone:#E8E3DA;--warm:#D4C9B8;
+  --ink:#1A1714;--ink2:#3D3630;--muted:#8C8279;--dim:#B5ADA4;
+  --gold:#B8964E;--gold-l:#D4AE6A;--gold-bg:rgba(184,150,78,.08);
+  --grn:#2E7D32;--red:#C62828;
+  --bg-row:rgba(26,23,20,0.025);--shadow:0 2px 16px rgba(26,23,20,0.07);--r:10px;
+  /* Advisory palette */
+  --adv-bg:#0E1117;--adv-card:#161C26;--adv-border:#1E2A3A;
+  --adv-blue:#4A90D9;--adv-blue-l:#6AABF5;--adv-muted:#5A7080;--adv-text:#C8D8E8;
+}
 html{font-size:14px}
 body{background:var(--cream);font-family:'Outfit',sans-serif;color:var(--ink);min-height:100vh}
-body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 100% 60% at 10% 0%,rgba(212,201,184,.3) 0%,transparent 55%),radial-gradient(ellipse 60% 80% at 90% 100%,rgba(184,150,78,.05) 0%,transparent 50%)}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 100% 60% at 10% 0%,rgba(212,201,184,.3) 0%,transparent 55%),
+             radial-gradient(ellipse 60% 80% at 90% 100%,rgba(184,150,78,.05) 0%,transparent 50%)}
+
+/* ═══════════════════════════════════════════════
+   AUTH SCREEN
+═══════════════════════════════════════════════ */
+#authScreen{display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:14px}
+.auth-container{width:100%;max-width:420px;padding:0 20px}
+.auth-logo{text-align:center;margin-bottom:32px}
+.auth-logo-title{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:300;letter-spacing:.06em;color:var(--ink)}
+.auth-logo-title span{color:var(--gold)}
+.auth-logo-sub{color:var(--muted);font-size:13px;margin-top:6px;letter-spacing:.03em}
+.auth-card{background:var(--white);border:1px solid var(--stone);border-radius:16px;box-shadow:0 8px 40px rgba(26,23,20,.10),0 1px 3px rgba(26,23,20,.06);padding:32px}
+.auth-tabs{display:flex;border-bottom:1px solid var(--stone);margin-bottom:28px}
+.auth-tab{flex:1;padding:10px 6px;font-size:11px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-bottom:2px solid transparent;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .18s;margin-bottom:-1px}
+.auth-tab.active{color:var(--ink);border-bottom-color:var(--gold)}
+.auth-field{margin-bottom:18px}
+.auth-field label{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.auth-field input{width:100%;padding:11px 14px;background:var(--cream);border:1px solid var(--stone);border-radius:8px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:border-color .15s}
+.auth-field input:focus{border-color:var(--gold);background:var(--white)}
+.auth-error{color:var(--red);font-size:12px;margin-bottom:14px;min-height:18px;line-height:1.4}
+.auth-success{color:var(--grn);font-size:12px;margin-bottom:14px;min-height:18px}
+.auth-btn{width:100%;padding:13px;background:var(--ink);color:var(--cream);border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.09em;text-transform:uppercase;cursor:pointer;transition:background .2s,transform .1s}
+.auth-btn:hover{background:var(--ink2)}
+.auth-btn:active{transform:scale(.99)}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed}
+.auth-note{font-size:12px;color:var(--dim);text-align:center;margin-top:20px;line-height:1.6}
+.auth-back{display:block;text-align:center;margin-top:18px;color:var(--gold);text-decoration:none;font-size:12px;letter-spacing:.06em;text-transform:uppercase;transition:opacity .15s}
+.auth-back:hover{opacity:.7}
+
+/* ═══════════════════════════════════════════════
+   PORTAL — Sélection de la plateforme
+═══════════════════════════════════════════════ */
+#portalScreen{display:none;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:0;position:relative;overflow:hidden}
+#portalScreen::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 80% 70% at 20% 10%,rgba(212,201,184,.35) 0%,transparent 55%),
+             radial-gradient(ellipse 60% 60% at 80% 90%,rgba(184,150,78,.06) 0%,transparent 50%)}
+.portal-header{text-align:center;margin-bottom:52px;position:relative;z-index:1}
+.portal-title{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:300;letter-spacing:.04em;color:var(--ink)}
+.portal-title span{color:var(--gold)}
+.portal-welcome{font-size:13px;color:var(--muted);margin-top:8px}
+.portal-cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;position:relative;z-index:1;padding:0 20px}
+.portal-card{width:300px;background:var(--white);border:1px solid var(--stone);border-radius:20px;box-shadow:0 4px 24px rgba(26,23,20,.08);padding:36px 32px 32px;cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1),box-shadow .25s;text-align:center;position:relative;overflow:hidden;text-decoration:none;color:inherit}
+.portal-card:hover{transform:translateY(-6px);box-shadow:0 16px 48px rgba(26,23,20,.14)}
+.portal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:20px 20px 0 0}
+.portal-card.invest::before{background:linear-gradient(90deg,var(--gold),var(--gold-l))}
+.portal-card.advisory::before{background:linear-gradient(90deg,#3A6EA5,#6AABF5)}
+.portal-orb{width:80px;height:80px;border-radius:50%;margin:0 auto 22px;display:flex;align-items:center;justify-content:center;position:relative}
+.portal-orb::after{content:'';position:absolute;inset:-6px;border-radius:50%;opacity:.18}
+.portal-card.invest .portal-orb{background:linear-gradient(135deg,var(--gold) 0%,var(--gold-l) 60%,#E8C97A 100%);box-shadow:0 6px 28px rgba(184,150,78,.35)}
+.portal-card.invest .portal-orb::after{border:1px solid var(--gold)}
+.portal-card.advisory .portal-orb{background:linear-gradient(135deg,#E8F0FA 0%,#FFFFFF 60%,#D0E4F7 100%);box-shadow:0 6px 28px rgba(100,160,220,.25);border:1px solid rgba(100,160,220,.2)}
+.portal-card.advisory .portal-orb::after{border:1px solid #4A90D9}
+.portal-orb-icon{font-size:28px;line-height:1}
+.portal-card-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;letter-spacing:.04em;margin-bottom:8px}
+.portal-card.invest .portal-card-name{color:var(--gold)}
+.portal-card.advisory .portal-card-name{color:#3A6EA5}
+.portal-card-sub{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:16px}
+.portal-card-desc{font-size:13px;color:var(--muted);line-height:1.65}
+.portal-card-cta{display:inline-flex;align-items:center;gap:6px;margin-top:22px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:9px 18px;border-radius:8px;border:none;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s}
+.portal-card.invest .portal-card-cta{background:var(--gold-bg);color:var(--gold);border:1px solid rgba(184,150,78,.25)}
+.portal-card.invest .portal-card-cta:hover{background:rgba(184,150,78,.15)}
+.portal-card.advisory .portal-card-cta{background:rgba(74,144,217,.08);color:#4A90D9;border:1px solid rgba(74,144,217,.2)}
+.portal-card.advisory .portal-card-cta:hover{background:rgba(74,144,217,.15)}
+.portal-logout{margin-top:40px;font-size:12px;color:var(--dim);cursor:pointer;background:none;border:none;font-family:'Outfit',sans-serif;letter-spacing:.06em;text-transform:uppercase;transition:color .15s}
+.portal-logout:hover{color:var(--red)}
+
+/* ═══════════════════════════════════════════════
+   INVEST APP
+═══════════════════════════════════════════════ */
+#app{display:none}
 nav{position:sticky;top:0;z-index:100;background:rgba(250,248,244,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--stone);padding:0 28px;display:flex;align-items:center;height:54px}
 .nav-logo{font-family:'Cormorant Garamond',serif;font-size:16px;font-weight:400;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;text-decoration:none;margin-right:32px;flex-shrink:0}
 .nav-logo span{color:var(--gold)}
@@ -23,6 +103,8 @@ nav{position:sticky;top:0;z-index:100;background:rgba(250,248,244,.93);backdrop-
 .nav-tab.active::after{content:'';position:absolute;bottom:-13px;left:20%;right:20%;height:1.5px;background:var(--gold);border-radius:2px}
 .nav-right{display:flex;align-items:center;gap:14px;margin-left:auto}
 .nav-user{font-size:12px;color:var(--muted)}
+.nav-portal-btn{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);cursor:pointer;background:var(--gold-bg);border:1px solid rgba(184,150,78,.2);border-radius:5px;padding:4px 10px;font-family:'Outfit',sans-serif;transition:all .15s}
+.nav-portal-btn:hover{background:rgba(184,150,78,.15)}
 .btn-logout{font-size:11px;color:var(--dim);cursor:pointer;background:none;border:none;font-family:'Outfit',sans-serif;letter-spacing:.06em;text-transform:uppercase;padding:4px 8px;border-radius:4px;transition:color .15s}
 .btn-logout:hover{color:var(--red)}
 main{position:relative;z-index:1;max-width:1300px;margin:0 auto;padding:28px 28px 80px}
@@ -100,39 +182,104 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
 .fs-form button{padding:10px 18px;background:var(--ink);color:var(--cream);border:none;border-radius:8px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
 .cw{padding:16px;height:210px}
 
-/* ── Auth Screen ── */
-.auth-container{width:100%;max-width:420px;padding:0 16px}
-.auth-card{background:var(--white);border:1px solid var(--stone);border-radius:14px;box-shadow:0 8px 40px rgba(26,23,20,.10);padding:28px 32px}
-.auth-tabs{display:flex;border-bottom:1px solid var(--stone);margin-bottom:26px;gap:0}
-.auth-tab{flex:1;padding:10px;font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'Outfit',sans-serif;transition:all .15s;border-bottom:2px solid transparent;margin-bottom:-1px}
-.auth-tab.active{color:var(--ink);border-bottom-color:var(--gold)}
-.auth-field{margin-bottom:18px}
-.auth-field label{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
-.auth-field input{width:100%;padding:10px 14px;background:var(--cream);border:1px solid var(--stone);border-radius:7px;font-family:'Outfit',sans-serif;font-size:14px;color:var(--ink);outline:none;transition:border-color .15s}
-.auth-field input:focus{border-color:var(--gold)}
-.auth-error{color:var(--red);font-size:12px;margin-bottom:16px;min-height:20px}
-.auth-success{color:var(--grn);font-size:12px;margin-bottom:16px;min-height:20px}
-.auth-btn{width:100%;padding:12px;background:var(--ink);color:var(--cream);border:none;border-radius:7px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:background .2s}
-.auth-btn:hover{background:var(--ink2)}
-.auth-btn:disabled{opacity:.5;cursor:not-allowed}
-.auth-note{font-size:12px;color:var(--muted);text-align:center;margin-top:18px}
+/* ═══════════════════════════════════════════════
+   ADVISORY APP
+═══════════════════════════════════════════════ */
+#advisory{display:none;min-height:100vh;background:var(--adv-bg)}
+#advisory nav{background:rgba(14,17,23,.95);border-bottom:1px solid var(--adv-border);backdrop-filter:blur(12px)}
+#advisory .nav-logo{color:var(--adv-text)}
+#advisory .nav-logo span{color:var(--adv-blue-l)}
+#advisory .nav-tab{color:var(--adv-muted)}
+#advisory .nav-tab:hover{color:var(--adv-text);background:rgba(255,255,255,.05)}
+#advisory .nav-tab.active{color:var(--adv-text)}
+#advisory .nav-tab.active::after{background:var(--adv-blue)}
+#advisory .nav-user{color:var(--adv-muted)}
+#advisory .nav-portal-btn{background:rgba(74,144,217,.1);color:var(--adv-blue-l);border-color:rgba(74,144,217,.25)}
+#advisory .btn-logout{color:var(--adv-muted)}
+#advisory main{max-width:1300px;margin:0 auto;padding:28px 28px 80px;position:relative;z-index:1}
+#advisory .tab{display:none}#advisory .tab.active{display:block}
+#advisory .page-title{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;color:var(--adv-text);letter-spacing:-.01em;line-height:1;margin-bottom:4px}
+#advisory .page-title em{font-style:italic;color:var(--adv-blue-l)}
+#advisory .page-sub{font-size:12px;color:var(--adv-muted);margin-bottom:22px}
+.adv-card{background:var(--adv-card);border:1px solid var(--adv-border);border-radius:var(--r);box-shadow:0 2px 16px rgba(0,0,0,.3);overflow:hidden;margin-bottom:16px}
+.adv-card-head{padding:12px 18px;border-bottom:1px solid var(--adv-border);display:flex;align-items:center;gap:8px}
+.adv-card-title{font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--adv-muted)}
+.adv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-bottom:24px}
+.adv-stat{background:var(--adv-card);border:1px solid var(--adv-border);border-radius:var(--r);padding:18px 20px}
+.adv-stat-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--adv-muted);margin-bottom:6px}
+.adv-stat-val{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:400;color:var(--adv-text);line-height:1}
+.adv-stat-sub{font-size:11px;color:var(--adv-muted);margin-top:4px}
+/* Advisory — services grid */
+.adv-services{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:24px}
+.adv-service-card{background:var(--adv-card);border:1px solid var(--adv-border);border-radius:14px;padding:24px;cursor:pointer;transition:border-color .2s,transform .2s}
+.adv-service-card:hover{border-color:var(--adv-blue);transform:translateY(-2px)}
+.adv-service-icon{width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px;background:rgba(74,144,217,.12);border:1px solid rgba(74,144,217,.2)}
+.adv-service-name{font-size:15px;font-weight:600;color:var(--adv-text);margin-bottom:6px}
+.adv-service-desc{font-size:12px;color:var(--adv-muted);line-height:1.6}
+.adv-service-cta{display:inline-flex;align-items:center;gap:5px;margin-top:14px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--adv-blue-l);background:none;border:none;cursor:pointer;font-family:'Outfit',sans-serif;padding:0;transition:gap .15s}
+.adv-service-cta:hover{gap:8px}
+/* Advisory — secteurs templates */
+.adv-sectors{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:24px}
+.adv-sector{background:var(--adv-card);border:1px solid var(--adv-border);border-radius:10px;padding:16px;cursor:pointer;transition:border-color .2s,background .2s;text-align:center}
+.adv-sector:hover{border-color:var(--adv-blue);background:rgba(74,144,217,.05)}
+.adv-sector-icon{font-size:26px;margin-bottom:8px}
+.adv-sector-name{font-size:12px;font-weight:600;color:var(--adv-text)}
+.adv-sector-sub{font-size:11px;color:var(--adv-muted);margin-top:3px}
+/* Advisory — form */
+.adv-form-group{margin-bottom:16px}
+.adv-form-group label{display:block;font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--adv-muted);margin-bottom:6px}
+.adv-form-group input,.adv-form-group select,.adv-form-group textarea{width:100%;padding:10px 13px;background:rgba(255,255,255,.04);border:1px solid var(--adv-border);border-radius:7px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--adv-text);outline:none;transition:border-color .15s}
+.adv-form-group textarea{min-height:80px;resize:vertical}
+.adv-form-group input:focus,.adv-form-group select,.adv-form-group textarea:focus{border-color:var(--adv-blue)}
+.adv-form-group select option{background:var(--adv-card);color:var(--adv-text)}
+.adv-btn{padding:10px 22px;background:var(--adv-blue);color:#fff;border:none;border-radius:7px;font-family:'Outfit',sans-serif;font-size:12px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:background .2s}
+.adv-btn:hover{background:var(--adv-blue-l)}
+.adv-btn-ghost{background:transparent;color:var(--adv-blue-l);border:1px solid rgba(74,144,217,.3);margin-left:8px}
+.adv-btn-ghost:hover{background:rgba(74,144,217,.08)}
+/* Advisory — chat conseiller IA */
+.adv-chat{display:flex;flex-direction:column;height:440px}
+.adv-chat-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.adv-msg{max-width:80%;padding:11px 15px;border-radius:12px;font-size:13px;line-height:1.6}
+.adv-msg.user{align-self:flex-end;background:var(--adv-blue);color:#fff;border-radius:12px 12px 2px 12px}
+.adv-msg.assistant{align-self:flex-start;background:rgba(255,255,255,.06);color:var(--adv-text);border:1px solid var(--adv-border);border-radius:12px 12px 12px 2px}
+.adv-msg.assistant.loading-msg{color:var(--adv-muted);font-style:italic}
+.adv-chat-input{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--adv-border)}
+.adv-chat-input input{flex:1;padding:10px 14px;background:rgba(255,255,255,.04);border:1px solid var(--adv-border);border-radius:8px;font-family:'Outfit',sans-serif;font-size:13px;color:var(--adv-text);outline:none;transition:border-color .15s}
+.adv-chat-input input:focus{border-color:var(--adv-blue)}
+.adv-chat-input input::placeholder{color:var(--adv-muted)}
+.adv-chat-send{padding:10px 18px;background:var(--adv-blue);color:#fff;border:none;border-radius:8px;cursor:pointer;font-family:'Outfit',sans-serif;font-size:12px;font-weight:600;transition:background .2s}
+.adv-chat-send:hover{background:var(--adv-blue-l)}
+.adv-chat-send:disabled{opacity:.5;cursor:not-allowed}
+/* Advisory — plan de business */
+.adv-bp-section{margin-bottom:28px}
+.adv-bp-section-title{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:400;color:var(--adv-text);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--adv-border)}
+.adv-bp-content{font-size:13px;color:var(--adv-muted);line-height:1.8;white-space:pre-wrap}
+.adv-tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+.adv-tag-blue{background:rgba(74,144,217,.15);color:var(--adv-blue-l);border:1px solid rgba(74,144,217,.2)}
+.adv-tag-green{background:rgba(46,125,50,.15);color:#66BB6A;border:1px solid rgba(46,125,50,.2)}
+.adv-tag-orange{background:rgba(230,150,50,.12);color:#F5A623;border:1px solid rgba(230,150,50,.2)}
+/* Advisory — loading overlay */
+.adv-generating{text-align:center;padding:60px 20px;color:var(--adv-muted)}
+.adv-spin{display:inline-block;width:24px;height:24px;border:2px solid var(--adv-border);border-top-color:var(--adv-blue);border-radius:50%;animation:sp .8s linear infinite;margin-bottom:14px}
 </style>
 </head>
 <body>
 
-<!-- ÉCRAN DE CONNEXION / INSCRIPTION (affiché si non connecté) -->
-<div id="authScreen" style="display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;gap:14px;position:relative;overflow:hidden">
-<div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 80% 60% at 15% 10%,rgba(212,201,184,.45) 0%,transparent 55%),radial-gradient(ellipse 60% 70% at 85% 90%,rgba(184,150,78,.08) 0%,transparent 50%)"></div>
+<!-- ════════════════════════════════════════════
+     ÉCRAN DE CONNEXION
+════════════════════════════════════════════ -->
+<div id="authScreen">
   <div class="auth-container">
-    <div style="text-align:center;margin-bottom:28px">
-      <div style="font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:300;letter-spacing:.05em">THE <span style="color:var(--gold)">CAPITAL</span></div>
-      <p style="color:var(--muted);font-size:13px;margin-top:6px">Intelligence financière africaine</p>
+    <div class="auth-logo">
+      <div class="auth-logo-title">THE <span>CAPITAL</span></div>
+      <p class="auth-logo-sub">Intelligence financière africaine</p>
     </div>
     <div class="auth-card">
       <div class="auth-tabs">
         <button class="auth-tab active" id="tabLogin">Connexion</button>
         <button class="auth-tab" id="tabSignup">Créer un compte</button>
       </div>
+      <!-- Login -->
       <div id="loginForm">
         <div class="auth-field">
           <label>Email</label>
@@ -145,10 +292,11 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
         <div class="auth-error" id="loginError"></div>
         <button class="auth-btn" id="loginBtn">Se connecter</button>
       </div>
+      <!-- Signup -->
       <div id="signupForm" style="display:none">
         <div class="auth-field">
           <label>Nom (prénom ou société)</label>
-          <input type="text" id="signupName" placeholder="Jean Dupont">
+          <input type="text" id="signupName" placeholder="Jean Dupont" autocomplete="name">
         </div>
         <div class="auth-field">
           <label>Email</label>
@@ -162,18 +310,58 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
         <div class="auth-success" id="signupSuccess"></div>
         <button class="auth-btn" id="signupBtn">Créer mon compte</button>
       </div>
-      <div class="auth-note">Compte de démonstration — Vos données sont sécurisées.</div>
+      <div class="auth-note">Vos données sont chiffrées et sécurisées.</div>
     </div>
-    <div style="text-align:center;margin-top:20px">
-      <a href="index.html" style="color:var(--gold);text-decoration:none;font-size:12px;letter-spacing:.06em;text-transform:uppercase">← Retour à l'accueil</a>
-    </div>
+    <a href="index.html" class="auth-back">← Retour à l'accueil</a>
   </div>
 </div>
 
-<!-- INTERFACE PRINCIPALE DU DASHBOARD (affichée une fois connecté) -->
-<div id="app" style="display:none">
+<!-- ════════════════════════════════════════════
+     PORTAIL — SÉLECTION DE LA PLATEFORME
+════════════════════════════════════════════ -->
+<div id="portalScreen">
+  <div class="portal-header">
+    <div class="portal-title">THE <span>CAPITAL</span></div>
+    <div class="portal-welcome" id="portal-welcome">Bienvenue — choisissez votre espace</div>
+  </div>
+  <div class="portal-cards">
+
+    <!-- INVEST -->
+    <div class="portal-card invest" onclick="enterApp('invest')">
+      <div class="portal-orb">
+        <span class="portal-orb-icon">◈</span>
+      </div>
+      <div class="portal-card-name">The Capital <em style="font-style:normal">Invest</em></div>
+      <div class="portal-card-sub">Bourse & Marchés</div>
+      <div class="portal-card-desc">
+        Suivez la BRVM en temps réel, gérez votre portefeuille, analysez les entreprises cotées et accédez aux archives BOC.
+      </div>
+      <button class="portal-card-cta">Accéder →</button>
+    </div>
+
+    <!-- ADVISORY -->
+    <div class="portal-card advisory" onclick="enterApp('advisory')">
+      <div class="portal-orb" style="background:linear-gradient(135deg,#E8F0FA,#FFFFFF,#D0E4F7);border:1px solid rgba(100,160,220,.25);box-shadow:0 6px 28px rgba(100,160,220,.2)">
+        <span class="portal-orb-icon" style="color:#4A90D9">◇</span>
+      </div>
+      <div class="portal-card-name" style="color:#3A6EA5">The Capital <em style="font-style:normal">Advisory</em></div>
+      <div class="portal-card-sub">Conseil & Stratégie</div>
+      <div class="portal-card-desc">
+        Business plans, restructuration financière, conseil en automatisation et modèles Excel sectoriels pour votre entreprise.
+      </div>
+      <button class="portal-card-cta" style="background:rgba(74,144,217,.08);color:#4A90D9;border:1px solid rgba(74,144,217,.2)">Accéder →</button>
+    </div>
+
+  </div>
+  <button class="portal-logout" onclick="doLogout()">Se déconnecter</button>
+</div>
+
+<!-- ════════════════════════════════════════════
+     INVEST — DASHBOARD PRINCIPAL
+════════════════════════════════════════════ -->
+<div id="app">
 <nav>
-  <a href="/index.html" class="nav-logo">The <span>Capital</span></a>
+  <a href="/index.html" class="nav-logo">The <span>Capital</span> <span style="font-size:9px;color:var(--gold);letter-spacing:.12em;margin-left:2px">Invest</span></a>
   <div class="nav-tabs">
     <button class="nav-tab active" onclick="showTab('marche',this)">Marché</button>
     <button class="nav-tab" onclick="showTab('portefeuille',this)">Portefeuille</button>
@@ -182,6 +370,7 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
   </div>
   <div class="nav-right">
     <span class="nav-user" id="nav-user"></span>
+    <button class="nav-portal-btn" onclick="showPortal()">⊞ Changer d'espace</button>
     <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
   </div>
 </nav>
@@ -289,17 +478,8 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
     </div>
     <div class="tw">
       <table>
-        <thead>
-          <tr>
-            <th>Date de séance</th>
-            <th>Nom du fichier</th>
-            <th>Ajouté le</th>
-            <th>Télécharger</th>
-          </tr>
-        </thead>
-        <tbody id="bocTbodyClient">
-          <tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>
-        </tbody>
+        <thead><tr><th>Date de séance</th><th>Nom du fichier</th><th>Ajouté le</th><th>Télécharger</th></tr></thead>
+        <tbody id="bocTbodyClient"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
       </table>
     </div>
   </div>
@@ -308,28 +488,375 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
 </main>
 </div>
 
+<!-- ════════════════════════════════════════════
+     ADVISORY — PLATEFORME CONSEIL
+════════════════════════════════════════════ -->
+<div id="advisory">
+<nav>
+  <a href="#" class="nav-logo" style="color:#C8D8E8">The <span style="color:#6AABF5">Capital</span> <span style="font-size:9px;color:#4A90D9;letter-spacing:.12em;margin-left:2px">Advisory</span></a>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showAdvTab('accueil',this)">Accueil</button>
+    <button class="nav-tab" onclick="showAdvTab('businessplan',this)">Business Plan</button>
+    <button class="nav-tab" onclick="showAdvTab('conseil',this)">Conseil IA</button>
+    <button class="nav-tab" onclick="showAdvTab('modeles',this)">Modèles Excel</button>
+    <button class="nav-tab" onclick="showAdvTab('restructuration',this)">Restructuration</button>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user" id="adv-nav-user"></span>
+    <button class="nav-portal-btn" onclick="showPortal()" style="background:rgba(74,144,217,.1);color:#6AABF5;border-color:rgba(74,144,217,.25)">⊞ Changer d'espace</button>
+    <button class="btn-logout" onclick="doLogout()" style="color:#5A7080">Déconnexion</button>
+  </div>
+</nav>
+<main>
+
+<!-- ACCUEIL ADVISORY -->
+<div class="tab active" id="adv-tab-accueil">
+  <h1 class="page-title">The Capital <em>Advisory</em></h1>
+  <p class="page-sub">Conseil financier · Business plans · Restructuration · Automatisation</p>
+
+  <div class="adv-grid">
+    <div class="adv-stat">
+      <div class="adv-stat-label">Services disponibles</div>
+      <div class="adv-stat-val">4</div>
+      <div class="adv-stat-sub">Business Plan, Conseil, Modèles, Restructuration</div>
+    </div>
+    <div class="adv-stat">
+      <div class="adv-stat-label">Secteurs couverts</div>
+      <div class="adv-stat-val">12+</div>
+      <div class="adv-stat-sub">Transport, Blanchisserie, Restauration, Commerce...</div>
+    </div>
+    <div class="adv-stat">
+      <div class="adv-stat-label">Modèles Excel</div>
+      <div class="adv-stat-val">15+</div>
+      <div class="adv-stat-sub">Prêts à l'emploi pour votre secteur</div>
+    </div>
+  </div>
+
+  <div class="adv-services">
+    <div class="adv-service-card" onclick="showAdvTab('businessplan',document.querySelectorAll('#advisory .nav-tab')[1])">
+      <div class="adv-service-icon">📋</div>
+      <div class="adv-service-name">Business Plan</div>
+      <div class="adv-service-desc">Générez un business plan complet et structuré pour votre projet — projections financières, analyse de marché, stratégie.</div>
+      <button class="adv-service-cta">Créer mon BP →</button>
+    </div>
+    <div class="adv-service-card" onclick="showAdvTab('conseil',document.querySelectorAll('#advisory .nav-tab')[2])">
+      <div class="adv-service-icon">💬</div>
+      <div class="adv-service-name">Conseil IA</div>
+      <div class="adv-service-desc">Un conseiller financier IA disponible 24h/24 pour répondre à vos questions de gestion, comptabilité et stratégie.</div>
+      <button class="adv-service-cta">Consulter →</button>
+    </div>
+    <div class="adv-service-card" onclick="showAdvTab('modeles',document.querySelectorAll('#advisory .nav-tab')[3])">
+      <div class="adv-service-icon">📊</div>
+      <div class="adv-service-name">Modèles Excel</div>
+      <div class="adv-service-desc">Tableaux de bord, suivi de trésorerie, gestion des stocks, paie — téléchargez les fichiers adaptés à votre activité.</div>
+      <button class="adv-service-cta">Parcourir →</button>
+    </div>
+    <div class="adv-service-card" onclick="showAdvTab('restructuration',document.querySelectorAll('#advisory .nav-tab')[4])">
+      <div class="adv-service-icon">⚙️</div>
+      <div class="adv-service-name">Restructuration & Automatisation</div>
+      <div class="adv-service-desc">Diagnostic de votre structure, optimisation des coûts, automatisation des processus répétitifs pour gagner en efficacité.</div>
+      <button class="adv-service-cta">Démarrer →</button>
+    </div>
+  </div>
+</div>
+
+<!-- BUSINESS PLAN -->
+<div class="tab" id="adv-tab-businessplan">
+  <h1 class="page-title">Business <em>Plan</em></h1>
+  <p class="page-sub">Générez un plan d'affaires structuré en quelques minutes</p>
+
+  <div class="adv-card" id="bp-form-card">
+    <div class="adv-card-head"><span class="adv-card-title">Informations sur votre projet</span></div>
+    <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="adv-form-group">
+        <label>Nom du projet / entreprise</label>
+        <input type="text" id="bp-nom" placeholder="Ex: Transport Diallo & Fils">
+      </div>
+      <div class="adv-form-group">
+        <label>Secteur d'activité</label>
+        <select id="bp-secteur">
+          <option value="">Choisir un secteur...</option>
+          <option>Transport & Logistique</option>
+          <option>Blanchisserie & Pressing</option>
+          <option>Restauration & Food</option>
+          <option>Commerce de détail</option>
+          <option>BTP & Construction</option>
+          <option>Agriculture & Élevage</option>
+          <option>Santé & Pharmacie</option>
+          <option>Education & Formation</option>
+          <option>Hôtellerie & Tourisme</option>
+          <option>Technologie & Digital</option>
+          <option>Industrie & Manufacture</option>
+          <option>Services aux entreprises</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="adv-form-group">
+        <label>Pays / Ville</label>
+        <input type="text" id="bp-pays" placeholder="Ex: Sénégal, Dakar">
+      </div>
+      <div class="adv-form-group">
+        <label>Capital de départ estimé (FCFA)</label>
+        <input type="number" id="bp-capital" placeholder="Ex: 5000000">
+      </div>
+      <div class="adv-form-group" style="grid-column:1/-1">
+        <label>Description du projet</label>
+        <textarea id="bp-desc" placeholder="Décrivez votre activité, vos clients cibles, ce qui vous différencie..."></textarea>
+      </div>
+      <div class="adv-form-group">
+        <label>Horizon temporel</label>
+        <select id="bp-horizon">
+          <option value="1 an">1 an</option>
+          <option value="3 ans" selected>3 ans</option>
+          <option value="5 ans">5 ans</option>
+        </select>
+      </div>
+      <div class="adv-form-group">
+        <label>Nombre d'employés prévus</label>
+        <input type="number" id="bp-employes" placeholder="Ex: 5">
+      </div>
+    </div>
+    <div style="padding:0 20px 20px;display:flex;align-items:center;gap:10px">
+      <button class="adv-btn" onclick="genBusinessPlan()">✦ Générer le Business Plan</button>
+      <span id="bp-msg" style="font-size:12px;color:#5A7080"></span>
+    </div>
+  </div>
+
+  <div id="bp-result" style="display:none;margin-top:20px"></div>
+</div>
+
+<!-- CONSEIL IA -->
+<div class="tab" id="adv-tab-conseil">
+  <h1 class="page-title">Conseiller <em>IA</em></h1>
+  <p class="page-sub">Posez vos questions de gestion, finance, stratégie et comptabilité</p>
+  <div class="adv-card">
+    <div class="adv-card-head">
+      <span class="adv-card-title">Chat avec votre conseiller</span>
+      <button onclick="clearAdvChat()" style="margin-left:auto;background:none;border:none;color:#5A7080;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif;letter-spacing:.06em;text-transform:uppercase">Réinitialiser</button>
+    </div>
+    <div class="adv-chat">
+      <div class="adv-chat-msgs" id="adv-chat-msgs">
+        <div class="adv-msg assistant">Bonjour ! Je suis votre conseiller financier The Capital Advisory. Je peux vous aider sur la gestion de votre entreprise, vos finances, votre comptabilité, votre stratégie ou la réglementation. Que puis-je faire pour vous ?</div>
+      </div>
+      <div class="adv-chat-input">
+        <input type="text" id="adv-chat-input" placeholder="Posez votre question..." onkeydown="if(event.key==='Enter')sendAdvMsg()">
+        <button class="adv-chat-send" id="adv-chat-send" onclick="sendAdvMsg()">Envoyer</button>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px">
+    <span style="font-size:11px;color:#5A7080;margin-right:4px;line-height:2">Questions rapides :</span>
+    <button onclick="askAdvQuick('Comment calculer mon seuil de rentabilité ?')" style="padding:5px 12px;background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:16px;color:#6AABF5;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">Seuil de rentabilité</button>
+    <button onclick="askAdvQuick('Comment gérer ma trésorerie au quotidien ?')" style="padding:5px 12px;background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:16px;color:#6AABF5;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">Trésorerie</button>
+    <button onclick="askAdvQuick('Quelles charges fiscales pour une SARL au Sénégal ?')" style="padding:5px 12px;background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:16px;color:#6AABF5;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">Fiscalité SARL</button>
+    <button onclick="askAdvQuick('Comment fixer mes prix de vente ?')" style="padding:5px 12px;background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:16px;color:#6AABF5;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">Pricing</button>
+    <button onclick="askAdvQuick('Comment obtenir un financement bancaire ?')" style="padding:5px 12px;background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.2);border-radius:16px;color:#6AABF5;font-size:11px;cursor:pointer;font-family:'Outfit',sans-serif">Financement</button>
+  </div>
+</div>
+
+<!-- MODÈLES EXCEL -->
+<div class="tab" id="adv-tab-modeles">
+  <h1 class="page-title">Modèles <em>Excel</em></h1>
+  <p class="page-sub">Fichiers prêts à l'emploi pour chaque secteur d'activité</p>
+
+  <div class="adv-sectors">
+    <div class="adv-sector" onclick="genExcelModel('Transport & Logistique')">
+      <div class="adv-sector-icon">🚛</div>
+      <div class="adv-sector-name">Transport</div>
+      <div class="adv-sector-sub">Flotte, chauffeurs, dépenses</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Blanchisserie & Pressing')">
+      <div class="adv-sector-icon">🧺</div>
+      <div class="adv-sector-name">Blanchisserie</div>
+      <div class="adv-sector-sub">Commandes, stock, facturation</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Restauration & Food')">
+      <div class="adv-sector-icon">🍽️</div>
+      <div class="adv-sector-name">Restauration</div>
+      <div class="adv-sector-sub">Recettes, coûts, caisse</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Commerce de détail')">
+      <div class="adv-sector-icon">🏪</div>
+      <div class="adv-sector-name">Commerce</div>
+      <div class="adv-sector-sub">Stocks, ventes, marges</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('BTP & Construction')">
+      <div class="adv-sector-icon">🏗️</div>
+      <div class="adv-sector-name">BTP</div>
+      <div class="adv-sector-sub">Devis, chantiers, matériaux</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Agriculture & Élevage')">
+      <div class="adv-sector-icon">🌾</div>
+      <div class="adv-sector-name">Agriculture</div>
+      <div class="adv-sector-sub">Récoltes, charges, revenus</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Hôtellerie & Tourisme')">
+      <div class="adv-sector-icon">🏨</div>
+      <div class="adv-sector-name">Hôtellerie</div>
+      <div class="adv-sector-sub">Réservations, occupation, CA</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Santé & Pharmacie')">
+      <div class="adv-sector-icon">💊</div>
+      <div class="adv-sector-name">Pharmacie</div>
+      <div class="adv-sector-sub">Produits, ordonnances, caisse</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Services aux entreprises')">
+      <div class="adv-sector-icon">💼</div>
+      <div class="adv-sector-name">Services B2B</div>
+      <div class="adv-sector-sub">Clients, projets, facturation</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Gestion RH & Paie')">
+      <div class="adv-sector-icon">👥</div>
+      <div class="adv-sector-name">RH & Paie</div>
+      <div class="adv-sector-sub">Employés, salaires, cotisations</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Trésorerie universelle')">
+      <div class="adv-sector-icon">💰</div>
+      <div class="adv-sector-name">Trésorerie</div>
+      <div class="adv-sector-sub">Entrées, sorties, solde</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Tableau de bord PME')">
+      <div class="adv-sector-icon">📈</div>
+      <div class="adv-sector-name">Dashboard PME</div>
+      <div class="adv-sector-sub">KPIs, performance globale</div>
+    </div>
+  </div>
+
+  <div id="excel-result" style="display:none"></div>
+</div>
+
+<!-- RESTRUCTURATION & AUTOMATISATION -->
+<div class="tab" id="adv-tab-restructuration">
+  <h1 class="page-title">Restructuration & <em>Automatisation</em></h1>
+  <p class="page-sub">Optimisez votre structure et vos processus</p>
+
+  <div class="adv-card" id="restr-form-card">
+    <div class="adv-card-head"><span class="adv-card-title">Diagnostic de votre entreprise</span></div>
+    <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:14px">
+      <div class="adv-form-group">
+        <label>Nom de l'entreprise</label>
+        <input type="text" id="restr-nom" placeholder="Ex: Entreprise Koné">
+      </div>
+      <div class="adv-form-group">
+        <label>Secteur</label>
+        <select id="restr-secteur">
+          <option value="">Choisir...</option>
+          <option>Transport & Logistique</option><option>Blanchisserie</option>
+          <option>Restauration</option><option>Commerce</option><option>BTP</option>
+          <option>Agriculture</option><option>Services</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="adv-form-group">
+        <label>Chiffre d'affaires annuel (FCFA)</label>
+        <input type="number" id="restr-ca" placeholder="Ex: 50000000">
+      </div>
+      <div class="adv-form-group">
+        <label>Nombre d'employés</label>
+        <input type="number" id="restr-employes" placeholder="Ex: 10">
+      </div>
+      <div class="adv-form-group" style="grid-column:1/-1">
+        <label>Principaux problèmes rencontrés</label>
+        <textarea id="restr-problemes" placeholder="Ex: Pertes de stock non contrôlées, retards de livraison, difficultés de trésorerie, gestion manuelle chronophage..."></textarea>
+      </div>
+      <div class="adv-form-group" style="grid-column:1/-1">
+        <label>Objectifs de restructuration</label>
+        <select id="restr-objectif">
+          <option value="">Choisir l'objectif principal...</option>
+          <option>Réduire les coûts opérationnels</option>
+          <option>Automatiser les processus répétitifs</option>
+          <option>Améliorer la trésorerie</option>
+          <option>Optimiser la gestion des stocks</option>
+          <option>Structurer la comptabilité</option>
+          <option>Préparer une levée de fonds</option>
+          <option>Diagnostic complet</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:0 20px 20px;display:flex;gap:10px;align-items:center">
+      <button class="adv-btn" onclick="genRestructuration()">✦ Générer le diagnostic</button>
+      <span id="restr-msg" style="font-size:12px;color:#5A7080"></span>
+    </div>
+  </div>
+
+  <div id="restr-result" style="display:none;margin-top:20px"></div>
+</div>
+
+</main>
+</div>
+
 <script>
-// ---------- GESTION DE L'AUTHENTIFICATION ----------
-const SN=localStorage.getItem('tc_session');
-const SE=SN?JSON.parse(SN):null;
+// ═══════════════════════════════════════════════
+// SÉCURITÉ — helpers
+// ═══════════════════════════════════════════════
+function escHtml(s){
+  if(!s)return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function getSession(){
+  try{
+    const raw=sessionStorage.getItem('tc_session')||localStorage.getItem('tc_session');
+    if(!raw)return null;
+    const s=JSON.parse(raw);
+    // Vérification basique d'expiration
+    if(s?.expires_at && Date.now()/1000 > s.expires_at){
+      clearSession();return null;
+    }
+    return s;
+  }catch{return null;}
+}
+function setSession(s){
+  sessionStorage.setItem('tc_session',JSON.stringify(s));
+  localStorage.setItem('tc_session',JSON.stringify(s));
+}
+function clearSession(){
+  sessionStorage.removeItem('tc_session');
+  localStorage.removeItem('tc_session');
+}
+
+const SE=getSession();
 let TK=SE?.access_token||'';
 
-function showAuthScreen(show){
-  document.getElementById('authScreen').style.display=show?'flex':'none';
-  document.getElementById('app').style.display=show?'none':'block';
-  if(!show && TK){
-    document.getElementById('nav-user').textContent=SE.user?.user_metadata?.nom||SE.user?.email?.split('@')[0]||'';
+// ═══════════════════════════════════════════════
+// NAVIGATION ENTRE ÉCRANS
+// ═══════════════════════════════════════════════
+function showScreen(name){
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('portalScreen').style.display='none';
+  document.getElementById('app').style.display='none';
+  document.getElementById('advisory').style.display='none';
+  if(name==='auth') document.getElementById('authScreen').style.display='flex';
+  else if(name==='portal') document.getElementById('portalScreen').style.display='flex';
+  else if(name==='invest') document.getElementById('app').style.display='block';
+  else if(name==='advisory') document.getElementById('advisory').style.display='block';
+}
+
+function showPortal(){
+  showScreen('portal');
+  const nom=SE?.user?.user_metadata?.nom||SE?.user?.email?.split('@')[0]||'';
+  document.getElementById('portal-welcome').textContent=nom?`Bienvenue, ${escHtml(nom)} — choisissez votre espace`:'Bienvenue — choisissez votre espace';
+}
+
+function enterApp(type){
+  if(type==='invest'){
+    showScreen('invest');
+    const nom=SE?.user?.user_metadata?.nom||SE?.user?.email?.split('@')[0]||'';
+    document.getElementById('nav-user').textContent=escHtml(nom);
     document.getElementById('txdate').value=new Date().toISOString().split('T')[0];
     lm();
+  } else {
+    showScreen('advisory');
+    const nom=SE?.user?.user_metadata?.nom||SE?.user?.email?.split('@')[0]||'';
+    document.getElementById('adv-nav-user').textContent=escHtml(nom);
   }
 }
 
-if(TK){
-  showAuthScreen(false);
-} else {
-  showAuthScreen(true);
-}
+// Démarrage
+if(TK){ showPortal(); }
+else { showScreen('auth'); }
 
+// ═══════════════════════════════════════════════
+// AUTHENTIFICATION
+// ═══════════════════════════════════════════════
 document.getElementById('tabLogin').addEventListener('click',function(){
   document.getElementById('tabLogin').classList.add('active');
   document.getElementById('tabSignup').classList.remove('active');
@@ -344,7 +871,6 @@ document.getElementById('tabSignup').addEventListener('click',function(){
   document.getElementById('signupForm').style.display='block';
   clearAuthMessages();
 });
-
 function clearAuthMessages(){
   document.getElementById('loginError').textContent='';
   document.getElementById('signupError').textContent='';
@@ -355,27 +881,16 @@ document.getElementById('loginBtn').addEventListener('click',async function(){
   const email=document.getElementById('loginEmail').value.trim();
   const password=document.getElementById('loginPassword').value;
   const errEl=document.getElementById('loginError');
-  if(!email||!password){ errEl.textContent='Email et mot de passe requis.'; return; }
-  const btn=document.getElementById('loginBtn');
-  btn.disabled=true;
-  btn.textContent='Connexion...';
-  errEl.textContent='';
+  if(!email||!password){errEl.textContent='Email et mot de passe requis.';return;}
+  const btn=this; btn.disabled=true; btn.textContent='Connexion...'; errEl.textContent='';
   try{
-    const res=await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'login',email,password})
-    });
+    const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password})});
     const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'Erreur de connexion');
-    localStorage.setItem('tc_session',JSON.stringify(data.session));
+    if(!res.ok)throw new Error(data.error||'Erreur de connexion');
+    setSession(data.session);
     TK=data.session.access_token;
     location.reload();
-  }catch(e){
-    errEl.textContent=e.message;
-    btn.disabled=false;
-    btn.textContent='Se connecter';
-  }
+  }catch(e){errEl.textContent=escHtml(e.message);btn.disabled=false;btn.textContent='Se connecter';}
 });
 
 document.getElementById('signupBtn').addEventListener('click',async function(){
@@ -384,55 +899,32 @@ document.getElementById('signupBtn').addEventListener('click',async function(){
   const password=document.getElementById('signupPassword').value;
   const errEl=document.getElementById('signupError');
   const successEl=document.getElementById('signupSuccess');
-  if(!nom||!email||!password){ errEl.textContent='Tous les champs sont requis.'; return; }
-  if(password.length<6){ errEl.textContent='Mot de passe (min. 6 caractères).'; return; }
-  const btn=document.getElementById('signupBtn');
-  btn.disabled=true;
-  btn.textContent='Création...';
-  errEl.textContent='';
-  successEl.textContent='';
+  if(!nom||!email||!password){errEl.textContent='Tous les champs sont requis.';return;}
+  if(password.length<6){errEl.textContent='Mot de passe (min. 6 caractères).';return;}
+  const btn=this; btn.disabled=true; btn.textContent='Création...';
+  errEl.textContent=''; successEl.textContent='';
   try{
-    const res=await fetch('/api/auth',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'signup',email,password,nom})
-    });
+    const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'signup',email,password,nom})});
     const data=await res.json();
-    if(!res.ok) throw new Error(data.error||'Erreur inscription');
-    if(data.session){
-      localStorage.setItem('tc_session',JSON.stringify(data.session));
-      TK=data.session.access_token;
-      location.reload();
-    } else {
-      successEl.textContent='Compte créé ! Vous pouvez maintenant vous connecter.';
-      document.getElementById('signupName').value='';
-      document.getElementById('signupEmail').value='';
-      document.getElementById('signupPassword').value='';
-      document.getElementById('tabLogin').click();
-    }
-  }catch(e){
-    errEl.textContent=e.message;
-  }finally{
-    btn.disabled=false;
-    btn.textContent='Créer mon compte';
-  }
+    if(!res.ok)throw new Error(data.error||'Erreur inscription');
+    if(data.session){setSession(data.session);TK=data.session.access_token;location.reload();}
+    else{successEl.textContent='Compte créé ! Vous pouvez maintenant vous connecter.';['signupName','signupEmail','signupPassword'].forEach(id=>document.getElementById(id).value='');document.getElementById('tabLogin').click();}
+  }catch(e){errEl.textContent=escHtml(e.message);}
+  finally{btn.disabled=false;btn.textContent='Créer mon compte';}
 });
 
 function doLogout(){
-  localStorage.removeItem('tc_session');
-  TK='';
-  showAuthScreen(true);
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.getElementById('tab-marche').classList.add('active');
+  clearSession(); TK=''; location.reload();
 }
 
-// ---------- FONCTIONS DASHBOARD ----------
+// ═══════════════════════════════════════════════
+// INVEST — DASHBOARD
+// ═══════════════════════════════════════════════
 const TABS={marche:lm,portefeuille:lp,fiche:()=>{},boc:loadBocArchives};
 let AT='marche';
 function showTab(n,el){
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#app .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#app .nav-tab').forEach(t=>t.classList.remove('active'));
   document.getElementById('tab-'+n).classList.add('active');el.classList.add('active');
   if(n!==AT){AT=n;(TABS[n]||function(){})();}
 }
@@ -440,6 +932,7 @@ const N=n=>n!=null?parseFloat(n).toLocaleString('fr-FR'):'—';
 const P=n=>{if(n==null)return '<span class="flat">—</span>';const c=n>0?'up':n<0?'down':'flat',s=n>0?'+':'';return `<span class="${c}">${s}${parseFloat(n).toFixed(2)}%</span>`;};
 const AH=()=>({'Authorization':`Bearer ${TK}`,'Content-Type':'application/json'});
 let AC=[];
+
 async function lm(){
   const[ir,cr]=await Promise.all([
     fetch('/api/marche?type=indices').then(r=>r.json()).catch(()=>({data:[]})),
@@ -455,14 +948,14 @@ function ri(d){
   if(!a.length){document.getElementById('indices-grid').innerHTML='<div style="color:var(--dim);font-size:13px;padding:12px">Aucun indice — uploadez un BOC depuis l\'admin.</div>';return;}
   document.getElementById('indices-grid').innerHTML=a.map(i=>{
     const v=parseFloat(i.variation||0),c=v>0?'up':v<0?'down':'flat',s=v>0?'+':'';
-    return `<div class="ic"><div class="ic-name">${i.indice.replace('BRVM - ','').replace('BRVM ','')}</div><div class="ic-val">${parseFloat(i.valeur).toLocaleString('fr-FR',{minimumFractionDigits:2})}</div><div class="ic-var ${c}">${s}${v.toFixed(2)}%</div></div>`;
+    return `<div class="ic"><div class="ic-name">${escHtml(i.indice.replace('BRVM - ','').replace('BRVM ',''))}</div><div class="ic-val">${parseFloat(i.valeur).toLocaleString('fr-FR',{minimumFractionDigits:2})}</div><div class="ic-var ${c}">${s}${v.toFixed(2)}%</div></div>`;
   }).join('');
   const dt=a[0]?.date_seance;
   if(dt)document.getElementById('marche-date').textContent='Séance du '+new Date(dt).toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
 }
 function rhb(){
   const w=[...AC].filter(c=>c.variation!=null).sort((a,b)=>parseFloat(b.variation)-parseFloat(a.variation));
-  const row=c=>`<div class="hb-row" onclick="gf('${c.ticker}')"><span class="hb-tk">${c.ticker}</span><span class="hb-nom">${c.nom||''}</span><span class="hb-c">${N(c.cours)}</span><span class="hb-v">${P(parseFloat(c.variation))}</span></div>`;
+  const row=c=>`<div class="hb-row" onclick="gf('${escHtml(c.ticker)}')"><span class="hb-tk">${escHtml(c.ticker)}</span><span class="hb-nom">${escHtml(c.nom||'')}</span><span class="hb-c">${N(c.cours)}</span><span class="hb-v">${P(parseFloat(c.variation))}</span></div>`;
   document.getElementById('hausses').innerHTML=w.slice(0,5).map(row).join('')||'<div class="loading">—</div>';
   document.getElementById('baisses').innerHTML=w.slice().reverse().slice(0,5).map(row).join('')||'<div class="loading">—</div>';
 }
@@ -479,8 +972,8 @@ function rm(){
   else l.sort((a,b)=>a.ticker.localeCompare(b.ticker));
   document.getElementById('mc').textContent=`${l.length} titre${l.length>1?'s':''}`;
   if(!l.length){document.getElementById('mtb').innerHTML='<tr><td colspan="7"><div class="loading">Aucun résultat</div></td></tr>';return;}
-  document.getElementById('mtb').innerHTML=l.map(c=>`<tr onclick="gf('${c.ticker}')">
-    <td class="ttk">${c.ticker}</td><td class="tmu">${c.nom||'—'}</td><td class="tdi">${c.secteur||'—'}</td>
+  document.getElementById('mtb').innerHTML=l.map(c=>`<tr onclick="gf('${escHtml(c.ticker)}')">
+    <td class="ttk">${escHtml(c.ticker)}</td><td class="tmu">${escHtml(c.nom||'—')}</td><td class="tdi">${escHtml(c.secteur||'—')}</td>
     <td class="r" style="font-weight:500">${N(c.cours)} <span style="font-size:10px;color:var(--dim)">FCFA</span></td>
     <td class="r">${P(parseFloat(c.variation||0))}</td>
     <td class="r" style="color:var(--muted)">${c.volume?parseInt(c.volume).toLocaleString('fr-FR'):'—'}</td>
@@ -488,7 +981,7 @@ function rm(){
   </tr>`).join('');
 }
 function gf(tk){
-  document.querySelectorAll('.nav-tab').forEach(t=>{if(t.textContent.includes('Fiche'))showTab('fiche',t);});
+  document.querySelectorAll('#app .nav-tab').forEach(t=>{if(t.textContent.includes('Fiche'))showTab('fiche',t);});
   document.getElementById('fq').value=tk;lf();
 }
 async function lp(){
@@ -504,7 +997,7 @@ async function lp(){
   document.getElementById('pf-ppct').innerHTML=P(inv?((val-inv)/inv*100):0);
   const pos=pf.data||[];
   document.getElementById('pftb').innerHTML=!pos.length?'<tr><td colspan="8"><div class="loading">Aucune position. Ajoutez une transaction ci-dessous.</div></td></tr>':pos.map(p=>`<tr>
-    <td class="ttk">${p.ticker}</td><td class="tmu">${p.nom||''}</td>
+    <td class="ttk">${escHtml(p.ticker)}</td><td class="tmu">${escHtml(p.nom||'')}</td>
     <td class="r">${p.quantite.toLocaleString('fr-FR')}</td>
     <td class="r">${N(p.cmp)}</td><td class="r">${N(p.cours_actuel)}</td>
     <td class="r" style="font-weight:500">${N(p.valeur_actuelle)}</td>
@@ -514,14 +1007,14 @@ async function lp(){
   const tx2=tx.data||[];
   document.getElementById('txcount').textContent=`${tx2.length} transaction${tx2.length>1?'s':''}`;
   document.getElementById('txtb').innerHTML=!tx2.length?'<tr><td colspan="8"><div class="loading">Aucune transaction.</div></td></tr>':tx2.map(t=>`<tr>
-    <td style="color:var(--muted)">${t.date_transaction||''}</td>
-    <td><span style="font-size:11px;font-weight:600;color:${t.type==='ACHAT'?'var(--grn)':'var(--red)'}">${t.type}</span></td>
-    <td class="ttk">${t.ticker}</td>
+    <td style="color:var(--muted)">${escHtml(t.date_transaction||'')}</td>
+    <td><span style="font-size:11px;font-weight:600;color:${t.type==='ACHAT'?'var(--grn)':'var(--red)'}">${escHtml(t.type)}</span></td>
+    <td class="ttk">${escHtml(t.ticker)}</td>
     <td class="r">${(t.quantite||0).toLocaleString('fr-FR')}</td>
     <td class="r">${N(t.prix_unitaire)}</td>
     <td class="r" style="color:var(--muted)">${N(t.frais_total)}</td>
     <td class="r" style="font-weight:500">${N(t.montant_net)}</td>
-    <td class="r"><button class="btn-d" onclick="dTx('${t.id}')">✕</button></td>
+    <td class="r"><button class="btn-d" onclick="dTx('${escHtml(t.id)}')">✕</button></td>
   </tr>`).join('');
 }
 async function addTx(){
@@ -530,26 +1023,27 @@ async function addTx(){
   const qt=document.getElementById('txqte').value;
   const pr=document.getElementById('txprix').value;
   const dt=document.getElementById('txdate').value;
-  const nt=document.getElementById('txnote').value;
+  const nt=document.getElementById('txnote').value.substring(0,200);
   if(!tk||!qt||!pr){document.getElementById('txmsg').textContent='Remplissez les champs obligatoires.';return;}
+  if(!/^[A-Z]{2,6}$/.test(tk)){document.getElementById('txmsg').textContent='Ticker invalide.';return;}
   const btn=document.getElementById('txbtn');btn.disabled=true;
   document.getElementById('txmsg').textContent='Enregistrement...';
-  const r=await fetch('/api/portefeuille?mode=transaction',{method:'POST',headers:AH(),body:JSON.stringify({ticker:tk,type:tp,quantite:qt,prix:pr,date_transaction:dt,note:nt})}).then(r=>r.json()).catch(()=>({error:'Erreur'}));
-  if(r.error){document.getElementById('txmsg').textContent=r.error;btn.disabled=false;return;}
+  const r=await fetch('/api/portefeuille?mode=transaction',{method:'POST',headers:AH(),body:JSON.stringify({ticker:tk,type:tp,quantite:parseInt(qt),prix:parseFloat(pr),date_transaction:dt,note:nt})}).then(r=>r.json()).catch(()=>({error:'Erreur réseau'}));
+  if(r.error){document.getElementById('txmsg').textContent=escHtml(r.error);btn.disabled=false;return;}
   document.getElementById('txmsg').textContent='✓ Enregistrée !';
   ['txtk','txqte','txprix','txnote'].forEach(id=>document.getElementById(id).value='');
   btn.disabled=false;lp();
 }
 async function dTx(id){
-  if(!confirm('Supprimer ?'))return;
-  await fetch(`/api/portefeuille?mode=transaction&id=${id}`,{method:'DELETE',headers:AH()});lp();
+  if(!confirm('Supprimer cette transaction ?'))return;
+  await fetch(`/api/portefeuille?mode=transaction&id=${encodeURIComponent(id)}`,{method:'DELETE',headers:AH()});lp();
 }
 let FC=null;
 async function lf(){
   const tk=document.getElementById('fq').value.trim().toUpperCase();
-  if(!tk)return;
+  if(!tk||!/^[A-Z]{2,6}$/.test(tk))return;
   document.getElementById('fc').innerHTML='<div class="loading"><div class="spin"></div><br>Chargement...</div>';
-  const r=await fetch(`/api/fiche?ticker=${tk}`).then(r=>r.json()).catch(()=>({}));
+  const r=await fetch(`/api/fiche?ticker=${encodeURIComponent(tk)}`).then(r=>r.json()).catch(()=>({}));
   const{entreprise:e,cours:c,chartData:cd,financials:fi,analyses:an,valuation:v}=r;
   if(!e&&!c){document.getElementById('fc').innerHTML='<div class="loading" style="color:var(--red)">Ticker introuvable.</div>';return;}
   const mults=[
@@ -563,18 +1057,18 @@ async function lf(){
   document.getElementById('fc').innerHTML=`
   <div class="fh">
     <div class="fn" style="flex:1">
-      <h2>${e?.nom||tk}</h2>
+      <h2>${escHtml(e?.nom||tk)}</h2>
       <div class="fbg">
         ${e?.compartiment==='PRESTIGE'?'<span class="bg bgp">Prestige</span>':''}
-        <span class="bg bgs">${e?.secteur||''}</span>
-        <span class="bg bgs">${e?.pays||''}</span>
+        <span class="bg bgs">${escHtml(e?.secteur||'')}</span>
+        <span class="bg bgs">${escHtml(e?.pays||'')}</span>
       </div>
-      <div style="font-size:13px;color:var(--muted);max-width:480px;line-height:1.7">${e?.description||''}</div>
+      <div style="font-size:13px;color:var(--muted);max-width:480px;line-height:1.7">${escHtml(e?.description||'')}</div>
     </div>
     <div style="text-align:right;flex-shrink:0">
       <div class="fcv">${N(c?.cours)}<span style="font-size:15px;color:var(--muted)"> FCFA</span></div>
       <div style="font-size:14px;margin-top:3px">${P(parseFloat(c?.variation||0))}</div>
-      <div style="font-size:12px;color:var(--dim);margin-top:2px">Séance du ${c?.date_seance||'—'}</div>
+      <div style="font-size:12px;color:var(--dim);margin-top:2px">Séance du ${escHtml(c?.date_seance||'—')}</div>
     </div>
   </div>
   <div class="mg">${mults.map(m=>`<div class="mc"><div class="ml">${m.l}</div><div class="mv${m.g?' good':''}">${m.v}</div></div>`).join('')}</div>
@@ -588,7 +1082,7 @@ async function lf(){
       <th>Année</th><th class="r">CA</th><th class="r">EBIT</th><th class="r">Résultat net</th>
       <th class="r">BPA</th><th class="r">DPA</th><th class="r">ROE</th>
     </tr></thead><tbody>${fi.map(f=>`<tr>
-      <td style="font-weight:600">${f.annee}</td>
+      <td style="font-weight:600">${escHtml(String(f.annee))}</td>
       <td class="r">${N(f.chiffre_affaires)}</td><td class="r">${N(f.ebit)}</td>
       <td class="r" style="color:${(f.resultat_net||0)>0?'var(--grn)':'var(--red)'}">${N(f.resultat_net)}</td>
       <td class="r">${N(f.bpa)}</td>
@@ -600,12 +1094,12 @@ async function lf(){
     <div class="card-head"><span class="card-title">Recommandations</span></div>
     ${an.map(a=>{const rc={'Acheter':'var(--grn)','Renforcer':'#4ADE80','Conserver':'var(--gold)','Alléger':'#FB923C','Vendre':'var(--red)'}[a.recommandation]||'var(--muted)';
     return `<div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid rgba(26,23,20,.04)">
-      <span style="color:${rc};font-weight:600;min-width:80px">${a.recommandation}</span>
+      <span style="color:${rc};font-weight:600;min-width:80px">${escHtml(a.recommandation)}</span>
       <span style="min-width:90px;font-weight:500">${a.objectif_cours?N(a.objectif_cours)+' FCFA':'—'}</span>
       <span style="color:${(a.potentiel_pct||0)>=0?'var(--grn)':'var(--red)'};min-width:55px">${a.potentiel_pct!=null?((a.potentiel_pct>=0?'+':'')+parseFloat(a.potentiel_pct).toFixed(1)+'%'):'—'}</span>
-      <span style="flex:1;font-size:12px;color:var(--muted)">${a.commentaire||''}</span>
-      <span style="font-size:11px;color:var(--dim)">${a.date_analyse||''}</span>
-    </div>`}).join('')}
+      <span style="flex:1;font-size:12px;color:var(--muted)">${escHtml(a.commentaire||'')}</span>
+      <span style="font-size:11px;color:var(--dim)">${escHtml(a.date_analyse||'')}</span>
+    </div>`;}).join('')}
   </div>`:''}`;
   if(cd?.length>1){
     const lb=cd.map(h=>h.date_seance),vs=cd.map(h=>parseFloat(h.cloture||h.cours));
@@ -624,33 +1118,390 @@ async function lf(){
     });
   }
 }
+async function loadBocArchives(){
+  const tbody=document.getElementById('bocTbodyClient');
+  const countSpan=document.getElementById('bocCount');
+  tbody.innerHTML=`<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
+  try{
+    const res=await fetch('/api/boc_public');
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Erreur');
+    countSpan.textContent=`${data.length} document${data.length>1?'s':''}`;
+    if(!data.length){tbody.innerHTML='<tr><td colspan="4" style="padding:20px;color:var(--dim)">Aucun BOC archivé pour le moment.</td></tr>';return;}
+    tbody.innerHTML=data.map(b=>`<tr>
+      <td>${escHtml(b.date_seance)}</td>
+      <td>${escHtml(b.fichier_nom)}</td>
+      <td>${new Date(b.created_at).toLocaleDateString('fr-FR')}</td>
+      <td><a href="${escHtml(b.fichier_url)}" target="_blank" rel="noopener noreferrer" class="btn-small">📄 PDF</a></td>
+    </tr>`).join('');
+  }catch(e){tbody.innerHTML=`<tr><td colspan="4" style="color:var(--red);padding:16px">Erreur: ${escHtml(e.message)}</td></tr>`;countSpan.textContent='';}
+}
 
-// Nouvelle fonction pour charger les archives BOC publiques
-async function loadBocArchives() {
-  const tbody = document.getElementById('bocTbodyClient');
-  const countSpan = document.getElementById('bocCount');
-  tbody.innerHTML = `<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
-  try {
-    const res = await fetch('/api/boc_public');
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Erreur');
-    countSpan.textContent = `${data.length} document${data.length > 1 ? 's' : ''}`;
-    if (!data.length) {
-      tbody.innerHTML = '<tr><td colspan="4">Aucun BOC archivé pour le moment.</td></tr>';
-      return;
-    }
-    tbody.innerHTML = data.map(b => `
-      <tr>
-        <td>${b.date_seance}</td>
-        <td>${b.fichier_nom}</td>
-        <td>${new Date(b.created_at).toLocaleDateString('fr-FR')}</td>
-        <td><a href="${b.fichier_url}" target="_blank" class="btn-small">📄 PDF</a></td>
-      </tr>
-    `).join('');
-  } catch (e) {
-    tbody.innerHTML = `<tr><td colspan="4" style="color:var(--red)">Erreur: ${e.message}</td></tr>`;
-    countSpan.textContent = '';
+// ═══════════════════════════════════════════════
+// ADVISORY — Navigation
+// ═══════════════════════════════════════════════
+let advChatHistory=[];
+function showAdvTab(n,el){
+  document.querySelectorAll('#advisory .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#advisory .nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('adv-tab-'+n).classList.add('active');
+  if(el)el.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// ADVISORY — Génération Business Plan via Claude API
+// ═══════════════════════════════════════════════
+async function genBusinessPlan(){
+  const nom=document.getElementById('bp-nom').value.trim();
+  const secteur=document.getElementById('bp-secteur').value;
+  const pays=document.getElementById('bp-pays').value.trim();
+  const capital=document.getElementById('bp-capital').value;
+  const desc=document.getElementById('bp-desc').value.trim();
+  const horizon=document.getElementById('bp-horizon').value;
+  const employes=document.getElementById('bp-employes').value;
+  if(!nom||!secteur||!desc){document.getElementById('bp-msg').textContent='Remplissez les champs obligatoires.';return;}
+
+  const result=document.getElementById('bp-result');
+  result.style.display='block';
+  result.innerHTML=`<div class="adv-card"><div style="padding:60px 20px;text-align:center;color:#5A7080"><div class="adv-spin"></div><br><div style="font-size:13px;margin-top:12px">Génération de votre business plan en cours...</div><div style="font-size:11px;margin-top:6px;color:#3A5060">Cela peut prendre 30 à 60 secondes</div></div></div>`;
+  document.getElementById('bp-msg').textContent='';
+
+  const prompt=`Tu es un expert en business plan et finance d'entreprise africaine. Génère un business plan professionnel et détaillé pour ce projet :
+
+Nom: ${nom}
+Secteur: ${secteur}
+Pays/Ville: ${pays||'Afrique de l\'Ouest'}
+Capital de départ: ${capital?parseInt(capital).toLocaleString('fr-FR')+' FCFA':'Non précisé'}
+Description: ${desc}
+Horizon: ${horizon}
+Employés prévus: ${employes||'Non précisé'}
+
+Génère un business plan complet avec ces sections EXACTEMENT dans cet ordre, en utilisant ce format :
+
+## RÉSUMÉ EXÉCUTIF
+[contenu]
+
+## PRÉSENTATION DU PROJET
+[contenu]
+
+## ANALYSE DU MARCHÉ
+[contenu]
+
+## STRATÉGIE COMMERCIALE
+[contenu]
+
+## PLAN OPÉRATIONNEL
+[contenu]
+
+## PROJECTIONS FINANCIÈRES
+[contenu avec tableau de projection sur ${horizon}]
+
+## ANALYSE DES RISQUES
+[contenu]
+
+## CONCLUSION & PROCHAINES ÉTAPES
+[contenu]
+
+Sois précis, réaliste pour le contexte africain (FCFA, réglementations locales, marché). Inclus des chiffres concrets dans les projections financières.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:3000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'';
+    if(!text)throw new Error('Réponse vide');
+    renderBP(text,nom,secteur);
+  }catch(e){
+    result.innerHTML=`<div class="adv-card"><div style="padding:30px;color:#C62828;font-size:13px">Erreur lors de la génération : ${escHtml(e.message)}</div></div>`;
   }
+}
+
+function renderBP(text,nom,secteur){
+  const sections=text.split(/^## /m).filter(s=>s.trim());
+  const result=document.getElementById('bp-result');
+  const sectionColors={'RÉSUMÉ EXÉCUTIF':'#4A90D9','PRÉSENTATION DU PROJET':'#5BA85F','ANALYSE DU MARCHÉ':'#D4A24A','STRATÉGIE COMMERCIALE':'#9B6BD4','PLAN OPÉRATIONNEL':'#4AA8A8','PROJECTIONS FINANCIÈRES':'#5BA85F','ANALYSE DES RISQUES':'#D4744A','CONCLUSION':'#4A90D9'};
+  result.innerHTML=`
+  <div class="adv-card" style="margin-bottom:16px">
+    <div class="adv-card-head" style="background:rgba(74,144,217,.08)">
+      <span class="adv-card-title" style="color:#6AABF5">Business Plan — ${escHtml(nom)}</span>
+      <span class="adv-tag adv-tag-blue" style="margin-left:auto">${escHtml(secteur)}</span>
+    </div>
+    <div style="padding:20px">
+      ${sections.map(s=>{
+        const lines=s.split('\n');
+        const title=lines[0].trim();
+        const body=lines.slice(1).join('\n').trim();
+        const color=Object.entries(sectionColors).find(([k])=>title.toUpperCase().includes(k))?.[1]||'#4A90D9';
+        return `<div class="adv-bp-section">
+          <div class="adv-bp-section-title" style="border-bottom-color:${color}20">${escHtml(title)}</div>
+          <div class="adv-bp-content" style="color:#8AA0B0">${escHtml(body)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="padding:16px;border-top:1px solid var(--adv-border);display:flex;gap:10px">
+      <button class="adv-btn" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="adv-btn adv-btn-ghost" onclick="copyBP()">📋 Copier le texte</button>
+    </div>
+  </div>`;
+  window._bpText=text;
+}
+
+function copyBP(){
+  if(window._bpText){navigator.clipboard.writeText(window._bpText).then(()=>alert('Business plan copié !'));}
+}
+
+// ═══════════════════════════════════════════════
+// ADVISORY — Chat Conseiller IA
+// ═══════════════════════════════════════════════
+async function sendAdvMsg(){
+  const input=document.getElementById('adv-chat-input');
+  const msg=input.value.trim();
+  if(!msg)return;
+  input.value='';
+  appendAdvMsg('user',msg);
+  advChatHistory.push({role:'user',content:msg});
+  const sendBtn=document.getElementById('adv-chat-send');
+  sendBtn.disabled=true;
+  const loadingId='loading-'+Date.now();
+  appendAdvMsg('assistant','Réflexion en cours...','loading-msg',loadingId);
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1000,
+        system:`Tu es un conseiller financier expert de The Capital Advisory, spécialisé dans l'accompagnement des PME et entrepreneurs en Afrique de l'Ouest. Tu maîtrises la comptabilité SYSCOHADA, la fiscalité des pays de l'UEMOA (Sénégal, Côte d'Ivoire, Mali, Burkina Faso, etc.), la gestion d'entreprise, et les financements locaux. Réponds en français, de façon professionnelle mais accessible. Sois concret avec des chiffres et exemples pratiques.`,
+        messages:advChatHistory
+      })
+    });
+    const data=await res.json();
+    const reply=data.content?.[0]?.text||'Je suis désolé, je n\'ai pas pu générer une réponse.';
+    const loadEl=document.getElementById(loadingId);
+    if(loadEl){loadEl.textContent=reply;loadEl.classList.remove('loading-msg');}
+    advChatHistory.push({role:'assistant',content:reply});
+  }catch(e){
+    const loadEl=document.getElementById(loadingId);
+    if(loadEl){loadEl.textContent='Erreur de connexion. Veuillez réessayer.';loadEl.classList.remove('loading-msg');}
+  }
+  sendBtn.disabled=false;
+  const msgs=document.getElementById('adv-chat-msgs');
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function appendAdvMsg(role,text,extra='',id=''){
+  const msgs=document.getElementById('adv-chat-msgs');
+  const div=document.createElement('div');
+  div.className=`adv-msg ${role}${extra?' '+extra:''}`;
+  if(id)div.id=id;
+  div.textContent=text;
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+  return div;
+}
+
+function askAdvQuick(q){
+  document.getElementById('adv-chat-input').value=q;
+  sendAdvMsg();
+}
+
+function clearAdvChat(){
+  advChatHistory=[];
+  const msgs=document.getElementById('adv-chat-msgs');
+  msgs.innerHTML='<div class="adv-msg assistant">Bonjour ! Je suis votre conseiller financier The Capital Advisory. Je peux vous aider sur la gestion de votre entreprise, vos finances, votre comptabilité, votre stratégie ou la réglementation. Que puis-je faire pour vous ?</div>';
+}
+
+// ═══════════════════════════════════════════════
+// ADVISORY — Modèles Excel
+// ═══════════════════════════════════════════════
+async function genExcelModel(secteur){
+  const result=document.getElementById('excel-result');
+  result.style.display='block';
+  result.innerHTML=`<div class="adv-card"><div style="padding:50px 20px;text-align:center;color:#5A7080"><div class="adv-spin"></div><br><div style="font-size:13px;margin-top:12px">Génération du modèle ${escHtml(secteur)}...</div></div></div>`;
+
+  const prompt=`Tu es un expert comptable et gestionnaire d'entreprise. Génère un modèle de tableur Excel détaillé pour le secteur : ${secteur} en Afrique de l'Ouest (FCFA).
+
+Fournis EXACTEMENT ce format JSON (rien d'autre, pas de markdown) :
+{
+  "titre": "Modèle ${secteur}",
+  "description": "Description courte",
+  "onglets": [
+    {
+      "nom": "Nom de l'onglet",
+      "description": "À quoi sert cet onglet",
+      "colonnes": ["Colonne 1", "Colonne 2", "..."],
+      "exemple_lignes": [["val1", "val2", "..."], ["val1", "val2", "..."]],
+      "formules_cles": ["Description formule 1", "Description formule 2"]
+    }
+  ],
+  "instructions": ["Instruction 1", "Instruction 2"],
+  "kpis_suivre": ["KPI 1", "KPI 2"]
+}
+
+Génère 3 à 5 onglets pertinents pour ce secteur. Les colonnes et valeurs doivent être en FCFA et adaptées à la réalité africaine.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2000,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    let text=data.content?.[0]?.text||'';
+    text=text.replace(/```json|```/g,'').trim();
+    const model=JSON.parse(text);
+    renderExcelModel(model,secteur);
+  }catch(e){
+    result.innerHTML=`<div class="adv-card"><div style="padding:30px;color:#C62828;font-size:13px">Erreur : ${escHtml(e.message)}</div></div>`;
+  }
+}
+
+function renderExcelModel(model,secteur){
+  const result=document.getElementById('excel-result');
+  result.innerHTML=`
+  <div class="adv-card">
+    <div class="adv-card-head" style="background:rgba(91,168,95,.08)">
+      <span class="adv-card-title" style="color:#66BB6A">${escHtml(model.titre||secteur)}</span>
+      <span class="adv-tag adv-tag-green" style="margin-left:auto">Excel</span>
+    </div>
+    <div style="padding:20px">
+      <p style="color:#8AA0B0;font-size:13px;margin-bottom:20px">${escHtml(model.description||'')}</p>
+
+      ${(model.onglets||[]).map(o=>`
+      <div style="margin-bottom:20px;background:rgba(255,255,255,.03);border:1px solid var(--adv-border);border-radius:8px;overflow:hidden">
+        <div style="padding:10px 14px;background:rgba(74,144,217,.08);border-bottom:1px solid var(--adv-border);display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#6AABF5">📋 ${escHtml(o.nom)}</span>
+          <span style="font-size:11px;color:#5A7080">${escHtml(o.description||'')}</span>
+        </div>
+        <div style="overflow-x:auto;padding:0">
+          <table style="width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap">
+            <thead><tr style="background:rgba(255,255,255,.03)">${(o.colonnes||[]).map(c=>`<th style="padding:7px 12px;text-align:left;color:#5A7080;font-weight:600;letter-spacing:.06em;font-size:10px;text-transform:uppercase;border-bottom:1px solid var(--adv-border)">${escHtml(c)}</th>`).join('')}</tr></thead>
+            <tbody>
+              ${(o.exemple_lignes||[]).map(row=>`<tr style="border-bottom:1px solid rgba(255,255,255,.04)">${row.map(cell=>`<td style="padding:7px 12px;color:#8AA0B0">${escHtml(cell)}</td>`).join('')}</tr>`).join('')}
+              <tr style="background:rgba(74,144,217,.04)"><td colspan="${(o.colonnes||[]).length}" style="padding:6px 12px;font-size:11px;color:#4A90D9;font-style:italic">... (vos données ici)</td></tr>
+            </tbody>
+          </table>
+        </div>
+        ${o.formules_cles?.length?`<div style="padding:10px 14px;border-top:1px solid var(--adv-border)"><span style="font-size:10px;color:#5A7080;font-weight:600;text-transform:uppercase;letter-spacing:.07em">Formules clés :</span> ${o.formules_cles.map(f=>`<span style="display:inline-block;margin:3px 4px 3px 0;padding:2px 8px;background:rgba(74,144,217,.08);border:1px solid rgba(74,144,217,.15);border-radius:4px;font-size:11px;color:#6AABF5">${escHtml(f)}</span>`).join('')}</div>`:''}
+      </div>`).join('')}
+
+      ${model.kpis_suivre?.length?`<div style="margin-top:16px"><div style="font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#5A7080;margin-bottom:10px">KPIs à suivre</div><div style="display:flex;flex-wrap:wrap;gap:8px">${model.kpis_suivre.map(k=>`<span class="adv-tag adv-tag-orange">${escHtml(k)}</span>`).join('')}</div></div>`:''}
+
+      ${model.instructions?.length?`<div style="margin-top:16px;padding:14px;background:rgba(74,144,217,.05);border:1px solid rgba(74,144,217,.15);border-radius:8px"><div style="font-size:11px;font-weight:600;color:#6AABF5;margin-bottom:8px;letter-spacing:.07em;text-transform:uppercase">Instructions d'utilisation</div>${model.instructions.map((i,n)=>`<div style="font-size:12px;color:#8AA0B0;margin-bottom:4px">${n+1}. ${escHtml(i)}</div>`).join('')}</div>`:''}
+    </div>
+    <div style="padding:16px;border-top:1px solid var(--adv-border)">
+      <button class="adv-btn" onclick="copyExcelInstructions(${JSON.stringify(JSON.stringify(model)).slice(1,-1)})">📋 Copier les instructions</button>
+    </div>
+  </div>`;
+  window._excelModel=model;
+}
+
+function copyExcelInstructions(){
+  if(!window._excelModel)return;
+  const m=window._excelModel;
+  let txt=`MODÈLE EXCEL — ${m.titre}\n\n${m.description}\n\n`;
+  (m.onglets||[]).forEach(o=>{
+    txt+=`ONGLET : ${o.nom}\n${o.description}\nColonnes : ${o.colonnes?.join(' | ')}\n\n`;
+  });
+  txt+=`KPIs : ${(m.kpis_suivre||[]).join(', ')}\n\nInstructions :\n${(m.instructions||[]).map((i,n)=>`${n+1}. ${i}`).join('\n')}`;
+  navigator.clipboard.writeText(txt).then(()=>alert('Instructions copiées !'));
+}
+
+// ═══════════════════════════════════════════════
+// ADVISORY — Restructuration
+// ═══════════════════════════════════════════════
+async function genRestructuration(){
+  const nom=document.getElementById('restr-nom').value.trim();
+  const secteur=document.getElementById('restr-secteur').value;
+  const ca=document.getElementById('restr-ca').value;
+  const employes=document.getElementById('restr-employes').value;
+  const problemes=document.getElementById('restr-problemes').value.trim();
+  const objectif=document.getElementById('restr-objectif').value;
+  if(!nom||!problemes||!objectif){document.getElementById('restr-msg').textContent='Remplissez les champs obligatoires.';return;}
+
+  const result=document.getElementById('restr-result');
+  result.style.display='block';
+  result.innerHTML=`<div class="adv-card"><div style="padding:60px 20px;text-align:center;color:#5A7080"><div class="adv-spin"></div><br><div style="font-size:13px;margin-top:12px">Analyse de votre entreprise en cours...</div></div></div>`;
+
+  const prompt=`Tu es un consultant expert en restructuration d'entreprise et automatisation des processus, spécialisé dans les PME africaines.
+
+Entreprise: ${nom}
+Secteur: ${secteur||'Non précisé'}
+CA annuel: ${ca?parseInt(ca).toLocaleString('fr-FR')+' FCFA':'Non précisé'}
+Employés: ${employes||'Non précisé'}
+Problèmes: ${problemes}
+Objectif principal: ${objectif}
+
+Génère un diagnostic complet et un plan de restructuration avec ces sections :
+
+## DIAGNOSTIC
+[Analyse des problèmes identifiés avec leur impact financier estimé]
+
+## AXES DE RESTRUCTURATION
+[3 à 5 axes prioritaires d'amélioration concrets]
+
+## PLAN D'AUTOMATISATION
+[Quels processus automatiser et avec quels outils simples et accessibles en Afrique]
+
+## PLAN D'ACTION 90 JOURS
+[Actions concrètes semaine par semaine pour les 3 premiers mois]
+
+## ÉCONOMIES POTENTIELLES
+[Estimation des économies et gains d'efficacité attendus en FCFA]
+
+## OUTILS RECOMMANDÉS
+[Applications, logiciels et solutions adaptés au contexte africain avec leurs coûts]
+
+Sois très concret, pratique et adapté à la réalité des PME africaines.`;
+
+  try{
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:2500,messages:[{role:'user',content:prompt}]})
+    });
+    const data=await res.json();
+    const text=data.content?.[0]?.text||'';
+    if(!text)throw new Error('Réponse vide');
+    renderRestructuration(text,nom);
+  }catch(e){
+    result.innerHTML=`<div class="adv-card"><div style="padding:30px;color:#C62828;font-size:13px">Erreur : ${escHtml(e.message)}</div></div>`;
+  }
+}
+
+function renderRestructuration(text,nom){
+  const sections=text.split(/^## /m).filter(s=>s.trim());
+  const result=document.getElementById('restr-result');
+  result.innerHTML=`
+  <div class="adv-card">
+    <div class="adv-card-head" style="background:rgba(155,107,212,.08)">
+      <span class="adv-card-title" style="color:#B08FE0">Diagnostic — ${escHtml(nom)}</span>
+      <span class="adv-tag" style="margin-left:auto;background:rgba(155,107,212,.15);color:#B08FE0;border:1px solid rgba(155,107,212,.2)">Restructuration</span>
+    </div>
+    <div style="padding:20px">
+      ${sections.map(s=>{
+        const lines=s.split('\n');
+        const title=lines[0].trim();
+        const body=lines.slice(1).join('\n').trim();
+        return `<div class="adv-bp-section">
+          <div class="adv-bp-section-title" style="border-bottom-color:rgba(155,107,212,.3)">${escHtml(title)}</div>
+          <div class="adv-bp-content" style="color:#8AA0B0">${escHtml(body)}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="padding:16px;border-top:1px solid var(--adv-border);display:flex;gap:10px">
+      <button class="adv-btn" style="background:#7B5EA7" onclick="window.print()">🖨️ Imprimer</button>
+      <button class="adv-btn adv-btn-ghost" style="color:#B08FE0;border-color:rgba(155,107,212,.3)" onclick="navigator.clipboard.writeText(window._restrText||'').then(()=>alert('Copié !'))">📋 Copier</button>
+    </div>
+  </div>`;
+  window._restrText=text;
 }
 </script>
 </body>
