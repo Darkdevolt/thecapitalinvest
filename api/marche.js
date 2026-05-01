@@ -1,18 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://otsiwiwlnowxeolbbgvm.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-if (!SUPABASE_KEY) {
-  throw new Error('SUPABASE_SERVICE_KEY manquant dans les variables d\'environnement');
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error('Variables d'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY || 'dummy-key');
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export default async function handler(req, res) {
-  if (!SUPABASE_KEY) {
-    return res.status(500).json({ error: 'SUPABASE_SERVICE_KEY missing' });
-  }
-  
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Content-Type', 'application/json');
 
