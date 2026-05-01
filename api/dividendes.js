@@ -1,10 +1,12 @@
+// api/dividendes.js — Calendrier des dividendes BRVM (données publiques)
 import { createClient } from '@supabase/supabase-js';
 
+// ── VALIDATION DES VARIABLES D'ENVIRONNEMENT ──
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
 
 if (!SUPABASE_URL || !SUPABASE_KEY) {
-  throw new Error('Variables d'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
+  throw new Error('Variables d\'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -28,6 +30,7 @@ export default async function handler(req, res) {
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
 
+  // Stats agrégées
   const rdts = (data || []).filter(d => d.rendement).map(d => parseFloat(d.rendement));
   const rdtMoyen = rdts.length ? (rdts.reduce((a, b) => a + b, 0) / rdts.length).toFixed(2) : null;
   const societes = [...new Set((data || []).map(d => d.ticker))].length;
