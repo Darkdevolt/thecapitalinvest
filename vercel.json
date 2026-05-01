@@ -24,11 +24,5 @@
         { "key": "X-Frame-Options", "value": "DENY" }
       ]
     }
-  ],
-  "crons": [
-    {
-      "path": "/api/scraper",
-      "schedule": "0 22 * * 1-5"
-    }
   ]
 }
