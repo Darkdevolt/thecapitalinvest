@@ -1,13 +1,20 @@
 {
-  "name": "the-capital-invest",
-  "version": "2.0.0",
+  "name": "the-capital",
+  "version": "3.0.0",
+  "description": "Plateforme d'intelligence financière africaine — BRVM",
   "type": "module",
-  "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "dev": "vercel dev",
+    "deploy": "vercel --prod"
   },
   "dependencies": {
-    "express": "^4.18.2",
-    "jsonwebtoken": "^9.0.2"
+    "@supabase/supabase-js": "^2.49.0",
+    "jose": "^5.9.0"
+  },
+  "devDependencies": {
+    "vercel": "^41.0.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
   }
 }
