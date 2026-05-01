@@ -26,8 +26,33 @@
 html{font-size:14px}
 body{background:var(--bg);font-family:var(--sans);color:var(--cream);min-height:100vh;font-weight:300}
 body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.5}
+
+/* AUTH SCREEN */
+.auth-container{width:100%;max-width:420px;padding:0 20px;position:relative;z-index:1}
+.auth-logo{text-align:center;margin-bottom:40px}
+.auth-logo-title{font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:3px;color:var(--cream)}
+.auth-logo-title span{color:var(--gold)}
+.auth-logo-sub{color:var(--muted);font-size:13px;margin-top:8px}
+.auth-card{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;padding:0}
+.auth-tabs{display:flex;border-bottom:1px solid var(--border)}
+.auth-tab{flex:1;padding:16px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
+.auth-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+.auth-field{margin-bottom:20px}
+.auth-field label{display:block;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.auth-field input{width:100%;padding:11px 14px;background:var(--card);border:1px solid var(--border);border-radius:4px;font-family:var(--sans);font-size:14px;color:var(--cream);outline:none;transition:border-color .15s}
+.auth-field input:focus{border-color:var(--gold)}
+.auth-error{color:var(--red);font-size:12px;margin-bottom:12px;min-height:18px}
+.auth-success{color:var(--grn);font-size:12px;margin-bottom:12px;min-height:18px}
+.auth-btn{width:100%;padding:13px;background:var(--gold);color:var(--bg);border:none;border-radius:4px;font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:opacity .2s}
+.auth-btn:hover{opacity:.88}
+.auth-btn:disabled{opacity:.45;cursor:not-allowed}
+.auth-note{font-size:12px;color:var(--muted);text-align:center;padding:16px;border-top:1px solid var(--border);margin-top:4px}
+.auth-back{display:block;text-align:center;margin-top:20px;color:var(--gold);text-decoration:none;font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.7;transition:opacity .15s}
+.auth-back:hover{opacity:1}
+#loginForm,#signupForm{padding:28px 32px 8px}
+
 .portal-header{text-align:center;margin-bottom:52px;position:relative;z-index:1}
-.portal-title{font-family:var(--serif);font-size:38px;font-weight:300;letter-spacing:.04em;color:var(--ink)}
+.portal-title{font-family:var(--serif);font-size:38px;font-weight:300;letter-spacing:.04em;color:var(--cream)}
 .portal-title span{color:var(--gold)}
 .portal-welcome{font-size:13px;color:var(--muted);margin-top:8px}
 .portal-cards{display:flex;gap:24px;flex-wrap:wrap;justify-content:center;position:relative;z-index:1;padding:0 20px}
@@ -60,13 +85,13 @@ body::before{content:'';position:fixed;inset:0;background-image:url("data:image/
    INVEST APP
 ═══════════════════════════════════════════════ */
 #app{display:none}
-nav{position:sticky;top:0;z-index:100;background:rgba(250,248,244,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;height:54px}
+nav{position:sticky;top:0;z-index:100;background:rgba(10,8,4,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;height:54px}
 .nav-logo{font-family:var(--serif);font-size:16px;font-weight:400;letter-spacing:.16em;color:var(--ink);text-transform:uppercase;text-decoration:none;margin-right:32px;flex-shrink:0}
 .nav-logo span{color:var(--gold)}
 .nav-tabs{display:flex;gap:2px;flex:1}
 .nav-tab{padding:5px 14px;font-size:11px;font-weight:400;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);background:none;border:none;border-radius:6px;cursor:pointer;font-family:var(--sans);transition:all .15s;position:relative}
-.nav-tab:hover{color:var(--ink);background:var(--stone)}
-.nav-tab.active{color:var(--ink);font-weight:500}
+.nav-tab:hover{color:var(--cream);background:var(--surface)}
+.nav-tab.active{color:var(--cream);font-weight:500}
 .nav-tab.active::after{content:'';position:absolute;bottom:-13px;left:20%;right:20%;height:1.5px;background:var(--gold);border-radius:2px}
 .nav-right{display:flex;align-items:center;gap:14px;margin-left:auto}
 .nav-user{font-size:12px;color:var(--muted)}
@@ -235,7 +260,7 @@ td{padding:9px 13px;vertical-align:middle}td.r{text-align:right}
 <!-- ════════════════════════════════════════════
      ÉCRAN DE CONNEXION
 ════════════════════════════════════════════ -->
-<div id="authScreen">
+<div id="authScreen" style="display:none;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;background:var(--bg)">
   <div class="auth-container">
     <div class="auth-logo">
       <div class="auth-logo-title">THE <span>CAPITAL</span></div>
