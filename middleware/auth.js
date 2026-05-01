@@ -1,29 +1,36 @@
-import jwt from "jsonwebtoken";
+import { verifyToken } from "../utils/token.js";
 
-// EXACTEMENT la même clé → NE RIEN CHANGER
-const SECRET = "THE_CAPITAL_INVEST_2026_SECURE_KEY";
-
-// Vérifier utilisateur
+// Vérifie connexion
 export function isAuthenticated(req, res, next) {
-  const token = req.headers.authorization;
+  const header = req.headers.authorization;
 
-  if (!token) {
-    return res.status(401).json({ error: "No token" });
+  if (!header) {
+    return res.status(401).json({ error: "No token provided" });
   }
 
   try {
-    const decoded = jwt.verify(token.split(" ")[1], SECRET);
+    const token = header.split(" ")[1];
+    const decoded = verifyToken(token);
+
     req.user = decoded;
     next();
-  } catch {
+  } catch (err) {
     return res.status(401).json({ error: "Invalid token" });
   }
 }
 
-// Vérifier admin
+// Vérifie admin
 export function isAdmin(req, res, next) {
   if (req.user.role !== "admin") {
-    return res.status(403).json({ error: "Admin only" });
+    return res.status(403).json({ error: "Access denied (admin only)" });
+  }
+  next();
+}
+
+// Vérifie plan pro
+export function isPro(req, res, next) {
+  if (req.user.plan !== "pro") {
+    return res.status(403).json({ error: "Pro subscription required" });
   }
   next();
 }
