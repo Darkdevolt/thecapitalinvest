@@ -3,6 +3,9 @@ import { createClient } from '@supabase/supabase-js';
 // Fallback pour debug
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+if (!SUPABASE_KEY) {
+  throw new Error('SUPABASE_SERVICE_KEY manquant dans les variables d\'environnement');
+}
 
 if (!SUPABASE_KEY) {
   console.error('ERROR: SUPABASE_SERVICE_KEY is missing!');
