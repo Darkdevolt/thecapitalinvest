@@ -1102,3 +1102,9 @@ async function loadBocArchives(){
     </tr>`).join('');
   }catch(e){tbody.innerHTML=`<tr><td colspan="4" style="color:var(--red);padding:16px">Erreur: ${escHtml(e.message)}</td></tr>`;countSpan.textContent='';}
 }
+// === INIT ===
+if(TK){ showPortal(); }
+else { showScreen('auth'); }
+</script>
+</body>
+</html>
