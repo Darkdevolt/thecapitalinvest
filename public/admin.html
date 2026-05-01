@@ -321,10 +321,10 @@ let TK = '', ME = null;
 
 function init() {
   const s = localStorage.getItem(SK);
-  if (!s) { window.location.href = 'login.html'; return; }
+  if (!s) { window.location.href = 'app.html'; return; }
   const sess = JSON.parse(s);
   TK = sess?.access_token || '';
-  if (!TK) { window.location.href = 'login.html'; return; }
+  if (!TK) { window.location.href = 'app.html'; return; }
   // Vérifier is_admin
   fetch('/api/admin?action=check', { headers: { Authorization: `Bearer ${TK}` } })
     .then(r => r.json())
@@ -334,10 +334,10 @@ function init() {
       document.getElementById('admin-user').textContent = d.email || '';
       loadDashboard();
     })
-    .catch(() => { window.location.href = 'login.html'; });
+    .catch(() => { window.location.href = 'app.html'; });
 }
 
-function doLogout() { localStorage.removeItem(SK); window.location.href = 'login.html'; }
+function doLogout() { localStorage.removeItem(SK); window.location.href = 'app.html'; }
 const AH = () => ({ Authorization: `Bearer ${TK}`, 'Content-Type': 'application/json' });
 
 let activeTab = 'dashboard';
