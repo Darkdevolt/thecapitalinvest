@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error('Variables d'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const calcFrais = (montant) => {
   const commission = montant * 0.012;
@@ -33,7 +37,6 @@ export default async function handler(req, res) {
   const { mode, type, id } = req.query;
 
   try {
-    // GET - Positions
     if (req.method === 'GET' && (mode === 'portefeuille' || type === 'positions')) {
       const { data: txs } = await supabase
         .from('transactions')
@@ -52,7 +55,6 @@ export default async function handler(req, res) {
         }
       }
 
-      // Cours actuels
       const tickers = Object.keys(positions).filter(t => positions[t].qte > 0);
       const { data: cours } = await supabase
         .from('cours_brvm')
@@ -85,7 +87,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // GET - Transactions
     if (req.method === 'GET' && (mode === 'transactions' || type === 'transactions')) {
       const { data } = await supabase
         .from('transactions')
@@ -95,7 +96,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ data: data || [] });
     }
 
-    // POST - Nouvelle transaction
     if (req.method === 'POST') {
       const { ticker, type: tType, quantite, prix, date_transaction, note } = req.body;
       const montant = quantite * prix;
@@ -122,7 +122,6 @@ export default async function handler(req, res) {
       return res.status(200).json({ data });
     }
 
-    // DELETE
     if (req.method === 'DELETE' && id) {
       await supabase.from('transactions').delete().eq('id', id).eq('user_id', user.id);
       return res.status(200).json({ success: true });
