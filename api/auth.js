@@ -1,49 +1,31 @@
 import express from "express";
-import jwt from "jsonwebtoken";
+import { findUser } from "../services/userService.js";
+import { generateToken } from "../utils/token.js";
 
 const router = express.Router();
-
-// Base utilisateurs (fonctionnelle directement)
-const users = [
-  {
-    email: "admin@test.com",
-    password: "admin123",
-    role: "admin"
-  },
-  {
-    email: "user@test.com",
-    password: "user123",
-    role: "user"
-  }
-];
-
-// Clé déjà définie → NE RIEN CHANGER
-const SECRET = "THE_CAPITAL_INVEST_2026_SECURE_KEY";
 
 // LOGIN
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
-  const user = users.find(
-    (u) => u.email === email && u.password === password
-  );
+  const user = findUser(email, password);
 
   if (!user) {
-    return res.status(401).json({ error: "Invalid credentials" });
+    return res.status(401).json({
+      error: "Email ou mot de passe incorrect"
+    });
   }
 
-  const token = jwt.sign(
-    {
-      email: user.email,
-      role: user.role
-    },
-    SECRET,
-    { expiresIn: "1d" }
-  );
+  const token = generateToken(user);
 
   return res.json({
+    message: "Connexion réussie",
     token,
-    role: user.role
+    user: {
+      email: user.email,
+      role: user.role,
+      plan: user.plan
+    }
   });
 });
 
