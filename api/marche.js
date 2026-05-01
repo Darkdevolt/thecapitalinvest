@@ -2,9 +2,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
 if (!SUPABASE_KEY) {
-  console.error('ERROR: SUPABASE_SERVICE_KEY is missing!');
+  throw new Error('SUPABASE_SERVICE_KEY manquant dans les variables d\'environnement');
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY || 'dummy-key');
