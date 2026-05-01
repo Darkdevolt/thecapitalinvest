@@ -1,27 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Fallback pour debug
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://otsiwiwlnowxeolbbgvm.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
-if (!SUPABASE_KEY) {
-  throw new Error('SUPABASE_SERVICE_KEY manquant dans les variables d\'environnement');
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error('Variables d'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
 }
 
-if (!SUPABASE_KEY) {
-  console.error('ERROR: SUPABASE_SERVICE_KEY is missing!');
-}
-
-const supabase = createClient(SUPABASE_URL, SUPABASE_KEY || 'dummy-key');
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 export default async function handler(req, res) {
-  // Si pas de clé, retourner erreur explicite
-  if (!SUPABASE_KEY) {
-    return res.status(500).json({ 
-      error: 'Configuration error: SUPABASE_SERVICE_KEY missing',
-      debug: { url: !!process.env.SUPABASE_URL, key: !!SUPABASE_KEY }
-    });
-  }
-
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
