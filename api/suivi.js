@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_KEY
-);
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+if (!SUPABASE_URL || !SUPABASE_KEY) {
+  throw new Error('Variables d'environnement SUPABASE_URL et SUPABASE_SERVICE_KEY requises');
+}
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const getUser = async (authHeader) => {
   if (!authHeader?.startsWith('Bearer ')) return null;
@@ -22,7 +26,6 @@ export default async function handler(req, res) {
   const { type, id } = req.query;
 
   try {
-    // WATCHLIST
     if (type === 'watchlist') {
       if (req.method === 'GET') {
         const { data } = await supabase.from('watchlist').select('*').eq('user_id', user.id);
@@ -40,7 +43,6 @@ export default async function handler(req, res) {
       }
     }
 
-    // ALERTES
     if (type === 'alertes') {
       if (req.method === 'GET') {
         const { data } = await supabase.from('alertes_cours').select('*').eq('user_id', user.id);
