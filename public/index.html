@@ -4,219 +4,662 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital — Intelligence Financière Africaine</title>
+<meta name="description" content="Plateforme d'intelligence financière dédiée aux marchés africains et à la BRVM. Données en temps réel, analyses fondamentales, screeners.">
+<meta property="og:title" content="The Capital — Intelligence Financière Africaine">
+<meta property="og:description" content="La première plateforme d'intelligence financière dédiée à la BRVM et aux marchés africains.">
+<meta property="og:url" content="https://thecapitalinvest.vercel.app">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#080603;
-  --surface:#0F0D09;
-  --card:#16130E;
-  --border:rgba(184,150,78,0.12);
-  --gold:#C9A84C;
-  --gold-l:#E8C97A;
-  --gold-d:#8A6E2F;
-  --gold-glow:rgba(201,168,76,0.15);
-  --cream:#F5F0E8;
-  --muted:rgba(245,240,232,0.45);
-  --dim:rgba(245,240,232,0.25);
-  --grn:#4ADE80;
-  --red:#F87171;
-  --serif:'Playfair Display',serif;
-  --sans:'DM Sans',sans-serif;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-size:14px;background:var(--bg)}
-body{font-family:var(--sans);color:var(--cream);min-height:100vh;font-weight:400;overflow-x:hidden;background:var(--bg)}
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
 
-body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.6}
-
-@keyframes sphereFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes spherePulse{0%,100%{transform:scale(1);opacity:0.4}50%{transform:scale(1.08);opacity:0.1}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
-@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-
-.gold-sphere{
-  width:48px;height:48px;border-radius:50%;
-  background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 40%,#8A6E2F 80%,#4A3A18 100%);
-  box-shadow:inset -4px -4px 12px rgba(0,0,0,0.4),inset 4px 4px 12px rgba(255,255,255,0.25),0 0 20px rgba(201,168,76,0.3),0 4px 12px rgba(0,0,0,0.3);
-  position:relative;display:flex;align-items:center;justify-content:center;
-  animation:sphereFloat 4s ease-in-out infinite;
-}
-.gold-sphere::before{
-  content:'';position:absolute;top:8%;left:15%;width:35%;height:25%;
-  background:radial-gradient(ellipse at center,rgba(255,255,255,0.5) 0%,transparent 70%);
-  border-radius:50%;filter:blur(1px);
-}
-.gold-sphere::after{
-  content:'';position:absolute;inset:-3px;border-radius:50%;
-  border:1px solid rgba(201,168,76,0.3);animation:spherePulse 3s ease-in-out infinite;
+:root {
+  --black: #0A0804;
+  --deep: #111009;
+  --surface: #16130D;
+  --border: rgba(184,150,78,0.15);
+  --gold: #B8964E;
+  --gold-light: #D4AF6A;
+  --gold-dim: rgba(184,150,78,0.4);
+  --cream: #F5F0E8;
+  --muted: rgba(245,240,232,0.45);
+  --faint: rgba(245,240,232,0.12);
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
 }
 
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(8,6,3,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);padding:0 32px;display:flex;align-items:center;height:60px}
-.nav-brand{display:flex;align-items:center;gap:12px;margin-right:auto;text-decoration:none}
-.nav-brand-sphere{width:28px;height:28px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 50%,#8A6E2F 100%);box-shadow:0 0 12px rgba(201,168,76,0.25),inset -1px -1px 3px rgba(0,0,0,0.3);position:relative;flex-shrink:0}
-.nav-brand-sphere::before{content:'';position:absolute;top:12%;left:18%;width:32%;height:24%;background:radial-gradient(ellipse at center,rgba(255,255,255,0.5) 0%,transparent 70%);border-radius:50%}
-.nav-logo{font-family:var(--serif);font-size:17px;font-weight:600;letter-spacing:.14em;color:var(--cream);text-transform:uppercase}
-.nav-logo span{color:var(--gold)}
-.nav-links{display:flex;gap:28px;align-items:center;margin-left:auto}
-.nav-links a{color:var(--muted);text-decoration:none;font-size:12px;font-weight:500;letter-spacing:.06em;transition:color .2s}
-.nav-links a:hover{color:var(--cream)}
-.nav-cta{padding:8px 18px;background:linear-gradient(135deg,var(--gold) 0%,var(--gold-l) 100%);color:var(--bg);border:none;border-radius:8px;font-family:var(--sans);font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(201,168,76,0.2);text-decoration:none}
-.nav-cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,0.3)}
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--black);
+  color: var(--cream);
+  font-family: var(--sans);
+  font-weight: 300;
+  line-height: 1.7;
+  min-height: 100vh;
+  cursor: none;
+  overflow-x: hidden;
+}
 
-.hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;position:relative;z-index:1;padding:100px 24px 60px}
-.hero-orb{position:absolute;top:-120px;right:-120px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,0.08) 0%,transparent 70%);pointer-events:none}
-.hero-orb-2{position:absolute;bottom:-180px;left:-120px;width:600px;height:600px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,0.05) 0%,transparent 70%);pointer-events:none}
-.hero-sphere{width:80px;height:80px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 40%,#8A6E2F 80%,#4A3A18 100%);box-shadow:0 0 30px rgba(201,168,76,0.25),0 8px 24px rgba(0,0,0,0.3),inset -2px -2px 6px rgba(0,0,0,0.3),inset 2px 2px 6px rgba(255,255,255,0.2);position:relative;margin-bottom:32px;animation:sphereFloat 4s ease-in-out infinite}
-.hero-sphere::before{content:'';position:absolute;top:10%;left:18%;width:30%;height:22%;background:radial-gradient(ellipse at center,rgba(255,255,255,0.5) 0%,transparent 70%);border-radius:50%}
-.hero-title{font-family:var(--serif);font-size:52px;font-weight:400;letter-spacing:-.01em;color:var(--cream);line-height:1.1;margin-bottom:16px;animation:fadeUp .8s ease-out}
-.hero-title em{font-style:italic;color:var(--gold)}
-.hero-sub{font-size:16px;color:var(--muted);max-width:520px;line-height:1.7;margin-bottom:40px;animation:fadeUp .8s ease-out .15s both}
-.hero-btns{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;animation:fadeUp .8s ease-out .3s both}
-.btn-primary{padding:14px 28px;background:linear-gradient(135deg,var(--gold) 0%,var(--gold-l) 100%);color:var(--bg);border:none;border-radius:10px;font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 20px rgba(201,168,76,0.25);text-decoration:none}
-.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(201,168,76,0.35)}
-.btn-ghost{padding:14px 28px;background:transparent;color:var(--cream);border:1px solid var(--border);border-radius:10px;font-family:var(--sans);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;text-decoration:none}
-.btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+/* Curseur custom */
+.cursor {
+  position: fixed;
+  width: 8px; height: 8px;
+  background: var(--gold);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9999;
+  transform: translate(-50%, -50%);
+  transition: transform 0.1s ease, width 0.3s ease, height 0.3s ease, background 0.3s;
+}
+.cursor-ring {
+  position: fixed;
+  width: 36px; height: 36px;
+  border: 1px solid var(--gold-dim);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 9998;
+  transform: translate(-50%, -50%);
+  transition: transform 0.18s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s;
+}
 
-.features{max-width:1200px;margin:0 auto;padding:80px 24px;position:relative;z-index:1}
-.features-title{font-family:var(--serif);font-size:28px;font-weight:400;text-align:center;margin-bottom:60px;color:var(--cream)}
-.features-title em{color:var(--gold);font-style:italic}
-.features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
-.feature-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 28px;transition:all .3s;position:relative;overflow:hidden}
-.feature-card:hover{border-color:rgba(201,168,76,0.2);transform:translateY(-4px);box-shadow:0 16px 48px rgba(0,0,0,.4)}
-.feature-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--gold),transparent);opacity:0.5}
-.feature-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:20px;background:rgba(201,168,76,0.08);border:1px solid rgba(201,168,76,0.15);color:var(--gold)}
-.feature-name{font-size:16px;font-weight:600;color:var(--cream);margin-bottom:8px}
-.feature-desc{font-size:13px;color:var(--muted);line-height:1.7}
+/* Grain overlay */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.6;
+}
 
-.divider{height:1px;background:linear-gradient(90deg,transparent,var(--border),transparent);max-width:800px;margin:0 auto}
+/* Navigation */
+header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px 60px;
+  background: linear-gradient(to bottom, rgba(10,8,4,0.98) 0%, rgba(10,8,4,0) 100%);
+  backdrop-filter: blur(0px);
+  border-bottom: 1px solid transparent;
+  transition: all 0.4s ease;
+}
+header.scrolled {
+  backdrop-filter: blur(20px);
+  background: rgba(10,8,4,0.92);
+  border-bottom-color: var(--border);
+  padding: 20px 60px;
+}
+.logo {
+  font-family: var(--serif);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--cream);
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.logo .dot { color: var(--gold); font-size: 28px; line-height: 1; }
 
-.brvm{max-width:1200px;margin:0 auto;padding:80px 24px;text-align:center;position:relative;z-index:1}
-.brvm-label{font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
-.brvm-title{font-family:var(--serif);font-size:32px;font-weight:400;color:var(--cream);margin-bottom:16px}
-.brvm-sub{font-size:14px;color:var(--muted);max-width:560px;margin:0 auto;line-height:1.7;margin-bottom:32px}
-.brvm-stats{display:flex;gap:40px;justify-content:center;flex-wrap:wrap}
-.brvm-stat{text-align:center}
-.brvm-stat-val{font-family:var(--serif);font-size:36px;font-weight:500;color:var(--cream);line-height:1}
-.brvm-stat-val em{color:var(--gold);font-style:normal}
-.brvm-stat-label{font-size:11px;color:var(--dim);margin-top:6px;letter-spacing:.08em;text-transform:uppercase}
+nav { display: flex; gap: 0; align-items: center; }
+nav a {
+  padding: 6px 16px;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s;
+  position: relative;
+}
+nav a::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 16px; right: 16px;
+  height: 1px;
+  background: var(--gold);
+  transform: scaleX(0);
+  transition: transform 0.3s ease;
+}
+nav a:hover { color: var(--cream); }
+nav a:hover::after, nav a.active::after { transform: scaleX(1); }
+nav a.active { color: var(--gold); }
 
-.footer{background:var(--surface);border-top:1px solid var(--border);padding:40px 24px;text-align:center;position:relative;z-index:1}
-.footer-brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:16px}
-.footer-brand-sphere{width:20px;height:20px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 50%,#8A6E2F 100%);box-shadow:0 0 8px rgba(201,168,76,0.2)}
-.footer-logo{font-family:var(--serif);font-size:14px;font-weight:600;letter-spacing:.14em;color:var(--cream);text-transform:uppercase}
-.footer-logo span{color:var(--gold)}
-.footer-copy{font-size:12px;color:var(--dim)}
-.footer-links{display:flex;gap:24px;justify-content:center;margin-top:16px}
-.footer-links a{color:var(--muted);text-decoration:none;font-size:12px;transition:color .2s}
-.footer-links a:hover{color:var(--cream)}
+.nav-cta {
+  margin-left: 20px;
+  padding: 10px 22px !important;
+  background: var(--gold);
+  color: var(--black) !important;
+  border-radius: 2px;
+  font-weight: 500 !important;
+  letter-spacing: 0.1em;
+  transition: background 0.2s, color 0.2s !important;
+}
+.nav-cta:hover { background: var(--gold-light) !important; }
+.nav-cta::after { display: none !important; }
 
-@media(max-width:640px){
-  .hero-title{font-size:36px}
-  .nav-links{display:none}
-  .brvm-stats{gap:24px}
-  .brvm-stat-val{font-size:28px}
+/* Container */
+.container { max-width: 1280px; margin: 0 auto; padding: 0 60px; }
+
+/* Hero */
+.hero {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  position: relative;
+  overflow: hidden;
+}
+.hero-bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.hero-bg::before {
+  content: '';
+  position: absolute;
+  right: -120px; top: 50%;
+  transform: translateY(-50%);
+  width: 720px; height: 720px;
+  border-radius: 50%;
+  border: 1px solid rgba(184,150,78,0.12);
+  animation: pulse 6s ease-in-out infinite;
+}
+.hero-bg::after {
+  content: '';
+  position: absolute;
+  right: -220px; top: 50%;
+  transform: translateY(-50%);
+  width: 920px; height: 920px;
+  border-radius: 50%;
+  border: 1px solid rgba(184,150,78,0.06);
+  animation: pulse 6s ease-in-out infinite 1s;
+}
+.hero-circle {
+  position: absolute;
+  right: 8%; top: 50%;
+  transform: translateY(-50%);
+  width: 480px; height: 480px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 40%, #D4AF6A 0%, #8B6A28 45%, #3D2D0A 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 120px rgba(184,150,78,0.15), inset 0 0 60px rgba(0,0,0,0.4);
+  animation: floatCircle 8s ease-in-out infinite;
+}
+.hero-circle-inner { text-align: center; mix-blend-mode: overlay; }
+.hero-circle-inner h2 {
+  font-family: var(--serif);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 6px;
+  color: rgba(255,255,255,0.8);
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.hero-circle-inner h1 {
+  font-family: var(--serif);
+  font-size: 62px;
+  font-weight: 900;
+  letter-spacing: 4px;
+  color: white;
+  line-height: 1;
+}
+@keyframes floatCircle {
+  0%, 100% { transform: translateY(-50%) translateY(0); }
+  50%       { transform: translateY(-50%) translateY(-16px); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; transform: translateY(-50%) scale(1); }
+  50%       { opacity: 1;   transform: translateY(-50%) scale(1.02); }
+}
+
+.hero-content {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 160px 60px 80px;
+  max-width: 680px;
+  position: relative;
+  z-index: 2;
+}
+.hero-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.hero-eyebrow::before {
+  content: '';
+  width: 40px; height: 1px;
+  background: var(--gold);
+  display: block;
+}
+.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(56px, 8vw, 104px);
+  font-weight: 900;
+  line-height: 0.95;
+  letter-spacing: -2px;
+  color: var(--cream);
+  margin-bottom: 32px;
+}
+.hero-title em { font-style: italic; color: var(--gold); display: block; }
+.hero-desc {
+  font-size: 17px;
+  color: var(--muted);
+  line-height: 1.8;
+  max-width: 440px;
+  margin-bottom: 48px;
+}
+.hero-actions { display: flex; gap: 16px; align-items: center; }
+.hero-scroll {
+  position: absolute;
+  bottom: 40px; left: 60px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+  z-index: 2;
+}
+.hero-scroll::after {
+  content: '';
+  width: 60px; height: 1px;
+  background: var(--gold-dim);
+}
+
+/* Ticker */
+.ticker {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  overflow: hidden;
+  position: relative;
+  z-index: 2;
+}
+.ticker-track {
+  display: flex;
+  gap: 0;
+  animation: tickerScroll 30s linear infinite;
+  white-space: nowrap;
+}
+.ticker-item {
+  padding: 14px 32px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ticker-item .sym { color: var(--cream); font-weight: 500; }
+.ticker-item .up { color: #5CB85C; }
+.ticker-item .dn { color: #D9534F; }
+@keyframes tickerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Section features */
+.section { padding: 100px 60px; max-width: 1280px; margin: 0 auto; }
+.section-label {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 16px;
+}
+.section-title {
+  font-family: var(--serif);
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 900;
+  line-height: 1.05;
+  color: var(--cream);
+  margin-bottom: 60px;
+  max-width: 600px;
+}
+.section-title em { font-style: italic; color: var(--gold); }
+
+.features-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+.feature {
+  background: var(--deep);
+  padding: 48px 40px;
+  position: relative;
+  transition: background 0.3s;
+}
+.feature:hover { background: var(--surface); }
+.feature-num {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--gold-dim);
+  letter-spacing: 0.15em;
+  margin-bottom: 24px;
+  display: block;
+}
+.feature h3 {
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cream);
+  margin-bottom: 12px;
+}
+.feature p { font-size: 14px; color: var(--muted); line-height: 1.8; }
+
+/* Stats */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  margin: 60px 0;
+}
+.stat {
+  background: var(--deep);
+  padding: 40px 32px;
+  text-align: center;
+}
+.stat .num {
+  font-family: var(--serif);
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--gold);
+  display: block;
+  line-height: 1;
+}
+.stat .label {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 8px;
+  display: block;
+}
+
+/* CTA */
+.cta-section {
+  margin: 0;
+  padding: 120px 60px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  text-align: center;
+}
+.cta-section h2 {
+  font-family: var(--serif);
+  font-size: clamp(40px, 6vw, 80px);
+  font-weight: 900;
+  line-height: 1.0;
+  color: var(--cream);
+  margin-bottom: 24px;
+}
+.cta-section h2 em { font-style: italic; color: var(--gold); }
+.cta-section p { font-size: 17px; color: var(--muted); margin-bottom: 48px; }
+
+/* Boutons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 32px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  text-decoration: none;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  cursor: none;
+}
+.btn-primary {
+  background: var(--gold);
+  color: var(--black);
+}
+.btn-primary:hover { background: var(--gold-light); transform: translateY(-1px); }
+.btn-outline {
+  border: 1px solid var(--gold-dim);
+  color: var(--gold);
+}
+.btn-outline:hover { border-color: var(--gold); background: rgba(184,150,78,0.07); }
+.btn-arrow::after { content: '->'; font-size: 16px; }
+
+/* Footer */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 40px 60px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+}
+footer .logo-sm {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--cream);
+  letter-spacing: 2px;
+}
+footer .logo-sm span { color: var(--gold); }
+
+/* Animations */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(30px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.anim { opacity: 0; }
+.anim.visible { animation: fadeUp 0.8s ease forwards; }
+.anim-delay-1 { animation-delay: 0.1s; }
+.anim-delay-2 { animation-delay: 0.2s; }
+.anim-delay-3 { animation-delay: 0.3s; }
+.anim-delay-4 { animation-delay: 0.4s; }
+
+/* Scroll indicator */
+.scroll-line {
+  position: fixed;
+  top: 0; left: 0;
+  height: 2px;
+  background: var(--gold);
+  z-index: 200;
+  transition: width 0.1s linear;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  header { padding: 16px 24px; }
+  header.scrolled { padding: 14px 24px; }
+  .hero-content { padding: 100px 24px 48px; }
+  .container { padding: 0 24px; }
+  .section { padding: 60px 24px; }
+  .features-grid { grid-template-columns: 1fr; }
+  .stats-row { grid-template-columns: repeat(2, 1fr); }
+  .cta-section { padding: 80px 24px; }
+  footer { padding: 28px 24px; flex-direction: column; gap: 10px; text-align: center; }
+  body { cursor: auto; }
+  .cursor, .cursor-ring { display: none; }
 }
 </style>
-<base target="_blank">
 </head>
 <body>
 
-<nav>
-  <a href="index.html" class="nav-brand">
-    <div class="nav-brand-sphere"></div>
-    <span class="nav-logo">The <span>Capital</span></span>
-  </a>
-  <div class="nav-links">
-    <a href="#features">Services</a>
-    <a href="#brvm">BRVM</a>
-    <a href="app.html" class="nav-cta">Accéder à la plateforme</a>
-  </div>
-</nav>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+<div class="scroll-line" id="scrollLine"></div>
+
+<header>
+  <a href="index.html" class="logo">THE <span class="dot">·</span> CAPITAL</a>
+  <nav>
+    <a href="index.html" class="active">Accueil</a>
+    <a href="platform.html">Plateforme</a>
+    <a href="features.html">Fonctionnalités</a>
+    <a href="markets.html">Marchés</a>
+    <a href="pricing.html">Tarifs</a>
+    <a href="about.html">À propos</a>
+    <a href="contact.html">Contact</a>
+    <a href="app.html" class="nav-cta">Dashboard</a>
+  </nav>
+</header>
 
 <section class="hero">
-  <div class="hero-orb"></div>
-  <div class="hero-orb-2"></div>
-  <div class="hero-sphere"></div>
-  <h1 class="hero-title">L'intelligence financière<br>de l'Afrique de l'<em>Ouest</em></h1>
-  <p class="hero-sub">Suivez la BRVM en temps réel, gérez votre portefeuille, analysez les entreprises cotées et accédez à des conseils stratégiques personnalisés.</p>
-  <div class="hero-btns">
-    <a href="app.html" class="btn-primary">Entrer sur la plateforme</a>
-    <a href="#features" class="btn-ghost">Découvrir les services</a>
+  <div class="hero-bg"></div>
+  <div class="hero-circle">
+    <div class="hero-circle-inner">
+      <h2>The</h2>
+      <h1>CAP<br>ITAL</h1>
+    </div>
   </div>
+  <div class="hero-content">
+    <div class="hero-eyebrow anim">Intelligence Financière Africaine</div>
+    <h1 class="hero-title anim anim-delay-1">
+      La BRVM,<br>
+      <em>enfin lisible.</em>
+    </h1>
+    <p class="hero-desc anim anim-delay-2">
+      Données de marché, analyses fondamentales et outils de suivi de portefeuille — conçus pour les marchés africains. Décidez mieux, plus vite.
+    </p>
+    <div class="hero-actions anim anim-delay-3">
+      <a href="app.html" class="btn btn-primary btn-arrow">Accéder au Dashboard</a>
+      <a href="platform.html" class="btn btn-outline">Découvrir la plateforme</a>
+    </div>
+  </div>
+  <div class="hero-scroll">Défiler</div>
 </section>
 
-<div class="divider"></div>
+<!-- Ticker -->
+<div class="ticker">
+  <div class="ticker-track">
+    <div class="ticker-item"><span class="sym">BRVM CI</span> 246.78 <span class="up">▲ +1.2%</span></div>
+    <div class="ticker-item"><span class="sym">SONATEL</span> 14 500 <span class="up">▲ +0.8%</span></div>
+    <div class="ticker-item"><span class="sym">ECOBANK TG</span> 22.10 <span class="dn">▼ -0.4%</span></div>
+    <div class="ticker-item"><span class="sym">BOA BF</span> 3 200 <span class="up">▲ +2.1%</span></div>
+    <div class="ticker-item"><span class="sym">SGBCI</span> 9 800 <span class="dn">▼ -0.3%</span></div>
+    <div class="ticker-item"><span class="sym">TOTAL SN</span> 2 150 <span class="up">▲ +0.6%</span></div>
+    <div class="ticker-item"><span class="sym">CIE</span> 1 890 <span class="up">▲ +1.4%</span></div>
+    <div class="ticker-item"><span class="sym">PALMCI</span> 7 900 <span class="dn">▼ -0.9%</span></div>
+    <!-- Doublon pour boucle infinie -->
+    <div class="ticker-item"><span class="sym">BRVM CI</span> 246.78 <span class="up">▲ +1.2%</span></div>
+    <div class="ticker-item"><span class="sym">SONATEL</span> 14 500 <span class="up">▲ +0.8%</span></div>
+    <div class="ticker-item"><span class="sym">ECOBANK TG</span> 22.10 <span class="dn">▼ -0.4%</span></div>
+    <div class="ticker-item"><span class="sym">BOA BF</span> 3 200 <span class="up">▲ +2.1%</span></div>
+    <div class="ticker-item"><span class="sym">SGBCI</span> 9 800 <span class="dn">▼ -0.3%</span></div>
+    <div class="ticker-item"><span class="sym">TOTAL SN</span> 2 150 <span class="up">▲ +0.6%</span></div>
+    <div class="ticker-item"><span class="sym">CIE</span> 1 890 <span class="up">▲ +1.4%</span></div>
+    <div class="ticker-item"><span class="sym">PALMCI</span> 7 900 <span class="dn">▼ -0.9%</span></div>
+  </div>
+</div>
 
-<section class="features" id="features">
-  <h2 class="features-title">Deux univers, <em>une excellence</em></h2>
+<!-- Stats -->
+<div class="container">
+  <div class="stats-row anim">
+    <div class="stat"><span class="num">45+</span><span class="label">Sociétés cotées suivies</span></div>
+    <div class="stat"><span class="num">8</span><span class="label">Pays couverts</span></div>
+    <div class="stat"><span class="num">100%</span><span class="label">Données BRVM</span></div>
+    <div class="stat"><span class="num">2026</span><span class="label">Dakar, Sénégal</span></div>
+  </div>
+</div>
+
+<!-- Features -->
+<section class="section">
+  <div class="section-label anim">Pourquoi The Capital</div>
+  <h2 class="section-title anim anim-delay-1">Une plateforme <em>construite pour l'Afrique.</em></h2>
   <div class="features-grid">
-    <div class="feature-card">
-      <div class="feature-icon">◈</div>
-      <div class="feature-name">The Capital Invest</div>
-      <div class="feature-desc">Cours BRVM en temps réel, gestion de portefeuille avec CMP automatique, fiches entreprises complètes et archives des Bulletins Officiels de la Cote.</div>
+    <div class="feature anim">
+      <span class="feature-num">01</span>
+      <h3>Données temps réel</h3>
+      <p>Indices et cours BRVM mis à jour quotidiennement. Historiques complets, dividendes, volumes.</p>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">◆</div>
-      <div class="feature-name">The Capital Advisory</div>
-      <div class="feature-desc">Business plans structurés, conseil financier par IA, modèles Excel sectoriels et diagnostic de restructuration pour optimiser votre entreprise.</div>
+    <div class="feature anim anim-delay-1">
+      <span class="feature-num">02</span>
+      <h3>Analyse fondamentale</h3>
+      <p>Bilans, comptes de résultat, ratios de valorisation — pour chaque société cotée.</p>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">📊</div>
-      <div class="feature-name">Analyse en temps réel</div>
-      <div class="feature-desc">Indices, plus fortes hausses et baisses, volumes et variations — tout le marché BRVM synthétisé en un coup d'œil.</div>
+    <div class="feature anim anim-delay-2">
+      <span class="feature-num">03</span>
+      <h3>Screener avancé</h3>
+      <p>Filtrez les actions selon PER, rendement, volatilité, bêta et plus de 20 critères.</p>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">🔒</div>
-      <div class="feature-name">Sécurisé & Personnel</div>
-      <div class="feature-desc">Vos données sont chiffrées. Votre portefeuille, vos transactions et vos documents restent strictement confidentiels.</div>
+    <div class="feature anim anim-delay-3">
+      <span class="feature-num">04</span>
+      <h3>Portefeuille virtuel</h3>
+      <p>Simulez vos investissements avec les frais réels BRVM. Performance en temps réel.</p>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">🌍</div>
-      <div class="feature-name">100% Afrique de l'Ouest</div>
-      <div class="feature-desc">Conçu pour les investisseurs et entrepreneurs de l'UEMOA. Franc CFA, réglementation locale, réalité du terrain.</div>
+    <div class="feature anim">
+      <span class="feature-num">05</span>
+      <h3>Alertes de cours</h3>
+      <p>Soyez notifié instantanément lorsque vos seuils de prix sont atteints.</p>
     </div>
-    <div class="feature-card">
-      <div class="feature-icon">⚡</div>
-      <div class="feature-name">Conseil IA 24h/24</div>
-      <div class="feature-desc">Un conseiller financier intelligent disponible à tout moment pour vos questions de gestion, comptabilité et stratégie.</div>
-    </div>
-  </div>
-</section>
-
-<div class="divider"></div>
-
-<section class="brvm" id="brvm">
-  <div class="brvm-label">Bourse Régionale des Valeurs Mobilières</div>
-  <h2 class="brvm-title">Le marché, sans intermédiaire</h2>
-  <p class="brvm-sub">Accédez directement aux données de la BRVM : cours, indices, historiques et analyses — le tout sur une seule plateforme.</p>
-  <div class="brvm-stats">
-    <div class="brvm-stat">
-      <div class="brvm-stat-val">46+</div>
-      <div class="brvm-stat-label">Titres cotés</div>
-    </div>
-    <div class="brvm-stat">
-      <div class="brvm-stat-val">8</div>
-      <div class="brvm-stat-label">Pays UEMOA</div>
-    </div>
-    <div class="brvm-stat">
-      <div class="brvm-stat-val"><em>FCFA</em></div>
-      <div class="brvm-stat-label">Monnaie locale</div>
+    <div class="feature anim anim-delay-1">
+      <span class="feature-num">06</span>
+      <h3>Outils quantitatifs</h3>
+      <p>Volatilité, ratio de Sharpe, corrélations — le toolkit des professionnels.</p>
     </div>
   </div>
 </section>
 
-<footer class="footer">
-  <div class="footer-brand">
-    <div class="footer-brand-sphere"></div>
-    <span class="footer-logo">The <span>Capital</span></span>
+<!-- CTA -->
+<div class="cta-section">
+  <h2 class="anim">Prêt à investir<br><em>en connaissance de cause ?</em></h2>
+  <p class="anim anim-delay-1">Accès gratuit au dashboard de démonstration. Sans carte bancaire.</p>
+  <div class="anim anim-delay-2">
+    <a href="app.html" class="btn btn-primary btn-arrow">Essayer gratuitement</a>
   </div>
-  <p class="footer-copy">© 2026 The Capital. Intelligence financière africaine.</p>
-  <div class="footer-links">
-    <a href="app.html">Plateforme</a>
-    <a href="mailto:contact@thecapital.africa">Contact</a>
-  </div>
+</div>
+
+<footer>
+  <span class="logo-sm">THE <span>·</span> CAPITAL</span>
+  <span>Dakar, Sénégal — Intelligence financière africaine</span>
+  <span>© 2026 The Capital</span>
 </footer>
 
+<script>
+const cursor = document.getElementById('cursor');
+const ring = document.getElementById('cursorRing');
+let mx = 0, my = 0, rx = 0, ry = 0;
+document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+(function loop() {
+  rx += (mx - rx) * 0.18; ry += (my - ry) * 0.18;
+  cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
+  ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
+  requestAnimationFrame(loop);
+})();
+document.querySelectorAll('a, button').forEach(el => {
+  el.addEventListener('mouseenter', () => { cursor.style.width = '16px'; cursor.style.height = '16px'; ring.style.width = '56px'; ring.style.height = '56px'; });
+  el.addEventListener('mouseleave', () => { cursor.style.width = '8px'; cursor.style.height = '8px'; ring.style.width = '36px'; ring.style.height = '36px'; });
+});
+const header = document.querySelector('header');
+const scrollLine = document.getElementById('scrollLine');
+window.addEventListener('scroll', () => {
+  header.classList.toggle('scrolled', window.scrollY > 60);
+  scrollLine.style.width = (window.scrollY / (document.body.scrollHeight - window.innerHeight) * 100) + '%';
+});
+const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
+document.querySelectorAll('.anim').forEach(el => obs.observe(el));
+</script>
 </body>
 </html>
