@@ -5,806 +5,1516 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital — Plateforme</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="config.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-/* === VARIABLES AMÉLIORÉES === */
-:root {
-  --bg: #0A0804;
-  --surface: #16130D;
-  --card: #1A1610;
-  --card-hover: #1E1A14;
-  --border: rgba(184,150,78,0.15);
-  --border-light: rgba(184,150,78,0.08);
-  --gold: #B8964E;
-  --gold-light: #D4AF6A;
-  --gold-glow: rgba(184,150,78,0.25);
-  --cream: #F5F0E8;
-  --muted: rgba(245,240,232,0.6);
-  --dim: rgba(245,240,232,0.35);
-  --green: #4ADE80;
-  --red: #F87171;
-  --serif: 'Playfair Display', serif;
-  --sans: 'DM Sans', sans-serif;
-  --mono: 'DM Mono', monospace;
-  --shadow: 0 4px 24px rgba(0,0,0,0.4);
-  --shadow-lg: 0 16px 48px rgba(0,0,0,0.3);
+/* ═══════════════════════════════════════════════════════════════
+   THE CAPITAL — DESIGN SYSTEM DUAL-THEME
+   Invest: Dark + Gold Sphere  |  Advisory: Light + Diamond
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ─── ROOT TOKENS ─── */
+:root{
+  /* Invest — Dark Gold */
+  --i-bg:#080603;--i-surface:#0F0D09;--i-card:#16130E;--i-card2:#1E1A14;
+  --i-border:rgba(184,150,78,0.12);--i-border2:rgba(184,150,78,0.06);
+  --i-gold:#C9A84C;--i-gold-l:#E8C97A;--i-gold-d:#8A6E2F;--i-gold-glow:rgba(201,168,76,0.15);
+  --i-cream:#F5F0E8;--i-ink:#F5F0E8;--i-muted:rgba(245,240,232,0.45);--i-dim:rgba(245,240,232,0.25);
+  --i-grn:#4ADE80;--i-red:#F87171;
+  --i-serif:'Playfair Display',serif;--i-sans:'DM Sans',sans-serif;
+
+  /* Advisory — Light Blue */
+  --a-bg:#F7F9FC;--a-surface:#FFFFFF;--a-card:#FFFFFF;--a-card2:#F0F4F8;
+  --a-border:rgba(74,144,226,0.12);--a-border2:rgba(74,144,226,0.06);
+  --a-blue:#4A90E2;--a-blue-l:#63B3ED;--a-blue-d:#2C5AA0;--a-blue-glow:rgba(74,144,226,0.10);
+  --a-ink:#1A202C;--a-muted:#718096;--a-dim:#A0AEC0;
+  --a-grn:#38A169;--a-red:#E53E3E;
+  --a-sans:'Inter',sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;background:var(--i-bg)}
+body{font-family:var(--i-sans);color:var(--i-cream);min-height:100vh;font-weight:400;overflow-x:hidden;background:var(--i-bg)}
+
+/* ─── NOISE TEXTURE ─── */
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;opacity:0.6}
+
+/* ═══════════════════════════════════════════════════════════════
+   GOLD SPHERE — INVEST LOGO ELEMENT
+   ═══════════════════════════════════════════════════════════════ */
+.gold-sphere{
+  width:48px;height:48px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 40%,#8A6E2F 80%,#4A3A18 100%);
+  box-shadow:
+    inset -4px -4px 12px rgba(0,0,0,0.4),
+    inset 4px 4px 12px rgba(255,255,255,0.25),
+    0 0 20px rgba(201,168,76,0.3),
+    0 4px 12px rgba(0,0,0,0.3);
+  position:relative;display:flex;align-items:center;justify-content:center;
+  animation:sphereFloat 4s ease-in-out infinite;
+}
+.gold-sphere::before{
+  content:'';position:absolute;top:8%;left:15%;width:35%;height:25%;
+  background:radial-gradient(ellipse at center,rgba(255,255,255,0.5) 0%,transparent 70%);
+  border-radius:50%;filter:blur(1px);
+}
+.gold-sphere::after{
+  content:'';position:absolute;inset:-3px;border-radius:50%;
+  border:1px solid rgba(201,168,76,0.3);animation:spherePulse 3s ease-in-out infinite;
+}
+@keyframes sphereFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-4px)}
+}
+@keyframes spherePulse{
+  0%,100%{transform:scale(1);opacity:0.4}
+  50%{transform:scale(1.08);opacity:0.1}
 }
 
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
+/* ═══════════════════════════════════════════════════════════════
+   DIAMOND — ADVISORY LOGO ELEMENT
+   ═══════════════════════════════════════════════════════════════ */
+.diamond-wrap{
+  width:48px;height:48px;display:flex;align-items:center;justify-content:center;
+  position:relative;animation:diamondFloat 4s ease-in-out infinite;
+}
+.diamond{
+  width:28px;height:28px;background:linear-gradient(135deg,#E3F2FD 0%,#4A90E2 50%,#2C5AA0 100%);
+  transform:rotate(45deg);
+  box-shadow:
+    0 0 15px rgba(74,144,226,0.25),
+    inset 0 0 8px rgba(255,255,255,0.3),
+    0 4px 8px rgba(44,90,160,0.15);
+  position:relative;
+}
+.diamond::before{
+  content:'';position:absolute;top:2px;left:2px;right:2px;bottom:2px;
+  background:linear-gradient(135deg,rgba(255,255,255,0.4) 0%,transparent 60%);
+}
+.diamond-wrap::after{
+  content:'';position:absolute;inset:-6px;border:1px solid rgba(74,144,226,0.15);
+  transform:rotate(45deg);animation:diamondPulse 3s ease-in-out infinite;
+}
+@keyframes diamondFloat{
+  0%,100%{transform:translateY(0)}
+  50%{transform:translateY(-4px)}
+}
+@keyframes diamondPulse{
+  0%,100%{transform:rotate(45deg) scale(1);opacity:0.4}
+  50%{transform:rotate(45deg) scale(1.15);opacity:0.1}
 }
 
-body {
-  background: var(--bg);
-  font-family: var(--sans);
-  color: var(--cream);
-  min-height: 100vh;
-  font-weight: 300;
-  line-height: 1.6;
-  position: relative;
+/* ═══════════════════════════════════════════════════════════════
+   AUTH SCREEN — DUAL AMBIANCE
+   ═══════════════════════════════════════════════════════════════ */
+#authScreen{display:flex;min-height:100vh;align-items:center;justify-content:center;flex-direction:column;background:var(--i-bg);position:relative;z-index:1}
+.auth-bg-orb{position:absolute;top:-100px;right:-100px;width:400px;height:400px;border-radius:50%;
+  background:radial-gradient(circle,rgba(201,168,76,0.08) 0%,transparent 70%);pointer-events:none}
+.auth-bg-orb-2{position:absolute;bottom:-150px;left:-100px;width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle,rgba(201,168,76,0.05) 0%,transparent 70%);pointer-events:none}
+.auth-container{width:100%;max-width:420px;padding:0 24px;position:relative;z-index:2}
+.auth-brand{text-align:center;margin-bottom:48px;display:flex;flex-direction:column;align-items:center;gap:16px}
+.auth-brand-sphere{width:64px;height:64px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 40%,#8A6E2F 80%,#4A3A18 100%);
+  box-shadow:0 0 30px rgba(201,168,76,0.25),0 8px 24px rgba(0,0,0,0.3),inset -2px -2px 6px rgba(0,0,0,0.3),inset 2px 2px 6px rgba(255,255,255,0.2);
+  position:relative;animation:sphereFloat 4s ease-in-out infinite;
 }
+.auth-brand-sphere::before{content:'';position:absolute;top:10%;left:18%;width:30%;height:22%;
+  background:radial-gradient(ellipse at center,rgba(255,255,255,0.5) 0%,transparent 70%);border-radius:50%}
+.auth-brand-title{font-family:var(--i-serif);font-size:32px;font-weight:600;letter-spacing:4px;color:var(--i-cream);text-transform:uppercase}
+.auth-brand-title span{color:var(--i-gold);font-weight:700}
+.auth-brand-sub{color:var(--i-muted);font-size:13px;letter-spacing:0.08em;margin-top:4px}
+.auth-card{background:var(--i-surface);border:1px solid var(--i-border);border-radius:12px;overflow:hidden;backdrop-filter:blur(10px)}
+.auth-tabs{display:flex;border-bottom:1px solid var(--i-border)}
+.auth-tab{flex:1;padding:18px;background:none;border:none;color:var(--i-muted);font-family:var(--i-sans);font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .3s}
+.auth-tab.active{color:var(--i-gold);border-bottom-color:var(--i-gold)}
+.auth-tab:hover:not(.active){color:var(--i-cream)}
+.auth-field{margin-bottom:20px}
+.auth-field label{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--i-muted);margin-bottom:8px}
+.auth-field input{width:100%;padding:12px 14px;background:var(--i-card);border:1px solid var(--i-border);border-radius:8px;font-family:var(--i-sans);font-size:14px;color:var(--i-cream);outline:none;transition:all .2s}
+.auth-field input:focus{border-color:var(--i-gold);box-shadow:0 0 0 3px var(--i-gold-glow)}
+.auth-field input::placeholder{color:var(--i-dim)}
+.auth-error{color:var(--i-red);font-size:12px;margin-bottom:12px;min-height:18px}
+.auth-success{color:var(--i-grn);font-size:12px;margin-bottom:12px;min-height:18px}
+.auth-btn{width:100%;padding:14px;background:linear-gradient(135deg,var(--i-gold) 0%,var(--i-gold-l) 100%);color:var(--i-bg);border:none;border-radius:8px;font-family:var(--i-sans);font-size:12px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(201,168,76,0.2)}
+.auth-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,0.3)}
+.auth-btn:disabled{opacity:.45;cursor:not-allowed;transform:none}
+.auth-note{font-size:12px;color:var(--i-muted);text-align:center;padding:18px;border-top:1px solid var(--i-border);background:rgba(201,168,76,0.02)}
+.auth-back{display:block;text-align:center;margin-top:24px;color:var(--i-gold);text-decoration:none;font-size:11px;letter-spacing:.1em;text-transform:uppercase;opacity:.7;transition:opacity .15s}
+.auth-back:hover{opacity:1}
+#loginForm,#signupForm{padding:32px 32px 12px}
 
-/* Grain texture */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
-  pointer-events: none;
-  z-index: 0;
-  opacity: 0.5;
+/* ═══════════════════════════════════════════════════════════════
+   PORTAL — TWO WORLDS
+   ═══════════════════════════════════════════════════════════════ */
+#portalScreen{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;position:relative;z-index:1;background:var(--i-bg)}
+.portal-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.portal-bg::before{content:'';position:absolute;top:-200px;left:50%;transform:translateX(-50%);width:800px;height:800px;border-radius:50%;
+  background:radial-gradient(circle,rgba(201,168,76,0.06) 0%,transparent 60%)}
+.portal-header{text-align:center;margin-bottom:60px;position:relative;z-index:2}
+.portal-brand{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:16px}
+.portal-brand-sphere{width:44px;height:44px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 40%,#8A6E2F 100%);
+  box-shadow:0 0 20px rgba(201,168,76,0.2),inset -2px -2px 4px rgba(0,0,0,0.3),inset 2px 2px 4px rgba(255,255,255,0.2);
+  position:relative;
 }
-
-/* ============================================ */
-/* ÉCRAN AUTHENTIFICATION AMÉLIORÉ */
-/* ============================================ */
-
-#authScreen {
-  display: none;
-  min-height: 100vh;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-  padding: 40px 20px;
+.portal-brand-sphere::before{content:'';position:absolute;top:10%;left:18%;width:30%;height:22%;
+  background:radial-gradient(ellipse at center,rgba(255,255,255,0.45) 0%,transparent 70%);border-radius:50%}
+.portal-title{font-family:var(--i-serif);font-size:36px;font-weight:600;letter-spacing:.06em;color:var(--i-cream)}
+.portal-title span{color:var(--i-gold)}
+.portal-welcome{font-size:14px;color:var(--i-muted);margin-top:10px;letter-spacing:0.02em}
+.portal-cards{display:flex;gap:28px;flex-wrap:wrap;justify-content:center;padding:0 24px;position:relative;z-index:2}
+.portal-card{width:340px;background:var(--i-surface);border:1px solid var(--i-border);border-radius:16px;padding:40px 32px 32px;cursor:pointer;transition:all .4s cubic-bezier(.34,1.56,.64,1);text-align:center;position:relative;overflow:hidden;text-decoration:none;color:inherit}
+.portal-card:hover{transform:translateY(-8px);box-shadow:0 24px 64px rgba(0,0,0,.5),0 0 0 1px rgba(201,168,76,0.15)}
+.portal-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--i-gold),var(--i-gold-l))}
+.portal-orb{width:90px;height:90px;border-radius:50%;margin:0 auto 24px;display:flex;align-items:center;justify-content:center;position:relative;
+  background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 40%,#8A6E2F 100%);
+  box-shadow:0 8px 32px rgba(201,168,76,.35),inset -3px -3px 8px rgba(0,0,0,0.3),inset 3px 3px 8px rgba(255,255,255,0.25);
+  border:1px solid rgba(201,168,76,0.4);
 }
+.portal-orb::after{content:'';position:absolute;inset:-8px;border-radius:50%;opacity:.15;border:1px solid var(--i-gold);animation:spherePulse 3s ease-in-out infinite}
+.portal-orb-icon{font-size:30px;line-height:1;color:var(--i-bg);font-weight:700}
+.portal-card-name{font-family:var(--i-serif);font-size:22px;font-weight:600;letter-spacing:.02em;margin-bottom:6px;color:var(--i-cream)}
+.portal-card-name em{font-style:normal;color:var(--i-gold)}
+.portal-card-sub{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--i-muted);margin-bottom:18px}
+.portal-card-desc{font-size:13px;color:var(--i-muted);line-height:1.7}
+.portal-card-cta{display:inline-flex;align-items:center;gap:6px;margin-top:24px;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;padding:10px 20px;border-radius:8px;border:none;cursor:pointer;font-family:var(--i-sans);transition:all .2s;background:rgba(201,168,76,.1);color:var(--i-gold);border:1px solid rgba(201,168,76,.25)}
+.portal-card-cta:hover{background:rgba(201,168,76,.18);gap:10px}
+.portal-logout{margin-top:48px;font-size:12px;color:var(--i-dim);cursor:pointer;background:none;border:none;font-family:var(--i-sans);letter-spacing:.08em;text-transform:uppercase;transition:all .2s;padding:8px 16px;border-radius:6px}
+.portal-logout:hover{color:var(--i-red);background:rgba(248,113,113,0.05)}
 
-.auth-container {
-  width: 100%;
-  max-width: 460px;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+/* ─── Advisory Portal Card Variant ─── */
+.portal-card.advisory-card::before{background:linear-gradient(90deg,var(--a-blue),var(--a-blue-l))}
+.portal-card.advisory-card .portal-orb{
+  border-radius:0;width:70px;height:70px;background:linear-gradient(135deg,#E3F2FD 0%,var(--a-blue) 50%,var(--a-blue-d) 100%);
+  transform:rotate(45deg);box-shadow:0 8px 32px rgba(74,144,226,.3),inset 0 0 8px rgba(255,255,255,0.3);
+  border:none;
 }
+.portal-card.advisory-card .portal-orb::after{content:'';position:absolute;inset:-8px;border:1px solid rgba(74,144,226,0.2);transform:rotate(0deg);border-radius:0;animation:diamondPulse 3s ease-in-out infinite}
+.portal-card.advisory-card .portal-orb-icon{transform:rotate(-45deg);color:#fff;font-size:24px}
+.portal-card.advisory-card:hover{box-shadow:0 24px 64px rgba(74,144,226,.12),0 0 0 1px rgba(74,144,226,0.12)}
+.portal-card.advisory-card .portal-card-name em{color:var(--a-blue)}
+.portal-card.advisory-card .portal-card-cta{background:rgba(74,144,226,.08);color:var(--a-blue);border-color:rgba(74,144,226,.2)}
+.portal-card.advisory-card .portal-card-cta:hover{background:rgba(74,144,226,.15)}
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* ═══════════════════════════════════════════════════════════════
+   INVEST — DARK THEME DASHBOARD
+   ═══════════════════════════════════════════════════════════════ */
+#app{display:none;background:var(--i-bg);min-height:100vh;position:relative;z-index:1}
+#app nav{position:sticky;top:0;z-index:100;background:rgba(8,6,3,.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--i-border);padding:0 32px;display:flex;align-items:center;height:60px}
+#app .nav-brand{display:flex;align-items:center;gap:12px;margin-right:36px;flex-shrink:0;text-decoration:none}
+#app .nav-brand-sphere{width:28px;height:28px;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%,#F0D78C 0%,#C9A84C 50%,#8A6E2F 100%);
+  box-shadow:0 0 12px rgba(201,168,76,0.25),inset -1px -1px 3px rgba(0,0,0,0.3);
+  position:relative;flex-shrink:0;
 }
+#app .nav-brand-sphere::before{content:'';position:absolute;top:12%;left:18%;width:32%;height:24%;
+  background:radial-gradient(ellipse at center,rgba(255,255,255,0.5) 0%,transparent 70%);border-radius:50%}
+#app .nav-logo{font-family:var(--i-serif);font-size:17px;font-weight:600;letter-spacing:.14em;color:var(--i-ink);text-transform:uppercase}
+#app .nav-logo span{color:var(--i-gold)}
+#app .nav-tabs{display:flex;gap:4px;flex:1}
+#app .nav-tab{padding:6px 16px;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--i-muted);background:none;border:none;border-radius:8px;cursor:pointer;font-family:var(--i-sans);transition:all .2s;position:relative}
+#app .nav-tab:hover{color:var(--i-cream);background:rgba(201,168,76,0.05)}
+#app .nav-tab.active{color:var(--i-gold);font-weight:600;background:rgba(201,168,76,0.08)}
+#app .nav-tab.active::after{content:'';position:absolute;bottom:-14px;left:25%;right:25%;height:2px;background:linear-gradient(90deg,transparent,var(--i-gold),transparent);border-radius:2px}
+#app .nav-right{display:flex;align-items:center;gap:16px;margin-left:auto}
+#app .nav-user{font-size:12px;color:var(--i-muted);font-weight:500}
+#app .nav-portal-btn{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--i-gold);cursor:pointer;background:rgba(201,168,76,.08);border:1px solid rgba(201,168,76,.18);border-radius:6px;padding:5px 12px;font-family:var(--i-sans);transition:all .2s}
+#app .nav-portal-btn:hover{background:rgba(201,168,76,.15);border-color:rgba(201,168,76,.3)}
+#app .btn-logout{font-size:11px;color:var(--i-dim);cursor:pointer;background:none;border:none;font-family:var(--i-sans);letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:6px;transition:all .2s}
+#app .btn-logout:hover{color:var(--i-red);background:rgba(248,113,113,0.06)}
+#app main{position:relative;z-index:1;max-width:1320px;margin:0 auto;padding:32px 32px 100px}
+#app .page-title{font-family:var(--i-serif);font-size:34px;font-weight:400;color:var(--i-cream);letter-spacing:-.01em;line-height:1;margin-bottom:6px}
+#app .page-title em{font-style:italic;color:var(--i-gold)}
+#app .page-sub{font-size:13px;color:var(--i-muted);margin-bottom:28px;letter-spacing:0.01em}
 
-/* Logo */
-.auth-logo {
-  text-align: center;
-  margin-bottom: 48px;
-}
+/* Invest Cards */
+#app .card{background:var(--i-surface);border:1px solid var(--i-border);border-radius:12px;box-shadow:0 4px 24px rgba(0,0,0,0.3);overflow:hidden;transition:border-color .2s}
+#app .card:hover{border-color:rgba(201,168,76,0.2)}
+#app .card-head{padding:14px 20px;border-bottom:1px solid var(--i-border);display:flex;align-items:center;gap:10px}
+#app .card-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--i-muted)}
+#app .card-count{font-size:11px;color:var(--i-dim);margin-left:auto}
+#app .tab{display:none}#app .tab.active{display:block}
 
-.auth-logo-title {
-  font-family: var(--serif);
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: 4px;
-  color: var(--cream);
-  margin-bottom: 8px;
-}
+/* Invest Indices */
+#app .indices-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+#app .ic{background:var(--i-surface);border:1px solid var(--i-border);border-radius:12px;padding:16px 18px;box-shadow:0 4px 16px rgba(0,0,0,0.2);transition:all .2s;position:relative;overflow:hidden}
+#app .ic:hover{border-color:rgba(201,168,76,0.2);transform:translateY(-2px)}
+#app .ic::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--i-gold),transparent);opacity:0.5}
+#app .ic-name{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--i-muted);margin-bottom:6px}
+#app .ic-val{font-family:var(--i-serif);font-size:24px;font-weight:500;line-height:1;margin-bottom:4px;color:var(--i-cream)}
+#app .ic-var{font-size:13px;font-weight:600}
+#app .up{color:var(--i-grn)}#app .down{color:var(--i-red)}#app .flat{color:var(--i-muted)}
 
-.auth-logo-title span {
-  color: var(--gold);
-}
+/* Invest Tables & Lists */
+#app .hb-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:24px}
+@media(max-width:700px){#app .hb-grid{grid-template-columns:1fr}}
+#app .hb-row{display:flex;align-items:center;padding:10px 18px;border-bottom:1px solid rgba(255,255,255,0.03);gap:12px;cursor:pointer;transition:all .15s}
+#app .hb-row:hover{background:rgba(201,168,76,0.04)}
+#app .hb-row:last-child{border-bottom:none}
+#app .hb-tk{font-family:var(--i-serif);font-size:15px;font-weight:600;min-width:56px;color:var(--i-cream)}
+#app .hb-nom{font-size:12px;color:var(--i-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#app .hb-c{font-size:13px;font-weight:500;min-width:80px;text-align:right;color:var(--i-cream)}
+#app .hb-v{font-size:13px;font-weight:600;min-width:56px;text-align:right}
+#app .toolbar{padding:12px 18px;border-bottom:1px solid var(--i-border);display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+#app .si{flex:1;min-width:160px;max-width:260px;padding:8px 12px;background:var(--i-card);border:1px solid var(--i-border);border-radius:8px;font-family:var(--i-sans);font-size:13px;color:var(--i-ink);outline:none;transition:all .2s}
+#app .si:focus{border-color:var(--i-gold);box-shadow:0 0 0 3px var(--i-gold-glow)}
+#app .si::placeholder{color:var(--i-dim)}
+#app .fs{padding:7px 11px;background:var(--i-card);border:1px solid var(--i-border);border-radius:8px;font-family:var(--i-sans);font-size:12px;color:var(--i-cream);outline:none;cursor:pointer;transition:all .2s}
+#app .fs:focus{border-color:var(--i-gold)}
+#app .tw{overflow-x:auto}
+#app table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+#app thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--i-dim);border-bottom:1px solid var(--i-border);background:var(--i-surface)}
+#app thead th.r{text-align:right}
+#app tbody tr{border-bottom:1px solid rgba(255,255,255,0.03);cursor:pointer;transition:all .15s}
+#app tbody tr:hover{background:rgba(201,168,76,0.04)}
+#app tbody tr:last-child{border-bottom:none}
+#app td{padding:10px 14px;vertical-align:middle}#app td.r{text-align:right}
+#app .ttk{font-family:var(--i-serif);font-size:15px;font-weight:600;color:var(--i-cream)}
+#app .tmu{color:var(--i-muted);max-width:180px;overflow:hidden;text-overflow:ellipsis}
+#app .tdi{color:var(--i-dim);font-size:11px;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+#app .tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:600}
+#app .tagp{background:rgba(201,168,76,.1);color:var(--i-gold);border:1px solid rgba(201,168,76,.2)}
+#app .loading{padding:48px 20px;text-align:center;color:var(--i-dim);font-size:13px}
+#app .spin{display:inline-block;width:18px;height:18px;border:2px solid var(--i-border);border-top-color:var(--i-gold);border-radius:50%;animation:sp .8s linear infinite;margin-bottom:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
 
-.auth-logo-sub {
-  color: var(--muted);
-  font-size: 13px;
-  letter-spacing: 0.05em;
-}
+/* Invest Stats Grid */
+#app .sg{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:24px}
+#app .sc{background:var(--i-surface);border:1px solid var(--i-border);border-radius:12px;padding:18px 20px;box-shadow:0 4px 16px rgba(0,0,0,0.2);position:relative;overflow:hidden}
+#app .sc::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--i-gold),transparent);opacity:0.6}
+#app .sl{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--i-muted);margin-bottom:6px}
+#app .sv{font-family:var(--i-serif);font-size:26px;font-weight:500;letter-spacing:-.02em;color:var(--i-cream)}
+#app .ss{font-size:12px;margin-top:4px;font-weight:500}
 
-/* Card */
-.auth-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: var(--shadow-lg);
-}
+/* Invest Forms */
+#app .txf{padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
+#app .ff label{display:block;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--i-muted);margin-bottom:6px}
+#app .ff input,#app .ff select{width:100%;padding:10px 12px;background:var(--i-card);border:1px solid var(--i-border);border-radius:8px;font-family:var(--i-sans);font-size:13px;color:var(--i-ink);outline:none;transition:all .2s}
+#app .ff input:focus,#app .ff select:focus{border-color:var(--i-gold);box-shadow:0 0 0 3px var(--i-gold-glow)}
+#app .ff input::placeholder{color:var(--i-dim)}
+#app .btn-p{padding:11px 22px;background:linear-gradient(135deg,var(--i-gold) 0%,var(--i-gold-l) 100%);color:var(--i-bg);border:none;border-radius:8px;font-family:var(--i-sans);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(201,168,76,0.2)}
+#app .btn-p:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,0.3)}
+#app .btn-p:disabled{opacity:.5;cursor:not-allowed;transform:none}
+#app .btn-d{background:none;border:none;color:var(--i-dim);cursor:pointer;font-size:13px;padding:4px 8px;border-radius:6px;transition:all .15s}
+#app .btn-d:hover{color:var(--i-red);background:rgba(248,113,113,0.06)}
+#app .btn-small{display:inline-block;background:var(--i-card);color:var(--i-cream);padding:5px 10px;border-radius:6px;text-decoration:none;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--i-border);transition:all .2s}
+#app .btn-small:hover{background:var(--i-gold);color:var(--i-bg);border-color:var(--i-gold)}
+#app .fh{display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;margin-bottom:24px}
+#app .fn h2{font-family:var(--i-serif);font-size:36px;font-weight:400;margin-bottom:6px;color:var(--i-cream)}
+#app .fbg{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+#app .bg{display:inline-block;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600}
+#app .bgp{background:rgba(201,168,76,.1);color:var(--i-gold);border:1px solid rgba(201,168,76,.2)}
+#app .bgs{background:rgba(255,255,255,.04);color:var(--i-muted);border:1px solid rgba(255,255,255,.06)}
+#app .fcv{font-family:var(--i-serif);font-size:48px;font-weight:500;line-height:1;color:var(--i-cream)}
+#app .mg{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:24px}
+#app .mc{background:var(--i-surface);border:1px solid var(--i-border);border-radius:12px;padding:14px 16px;position:relative;overflow:hidden}
+#app .mc::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--i-gold),transparent);opacity:0.4}
+#app .ml{font-size:10px;font-weight:600;letter-spacing:.09em;text-transform:uppercase;color:var(--i-muted);margin-bottom:4px}
+#app .mv{font-size:20px;font-weight:600;color:var(--i-cream)}#app .mv.good{color:var(--i-grn)}
+#app .fs-form{display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+#app .fs-form input{flex:1;min-width:180px;max-width:300px;padding:11px 16px;background:var(--i-card);border:1px solid var(--i-border);border-radius:10px;font-family:var(--i-sans);font-size:14px;color:var(--i-ink);outline:none;transition:all .2s}
+#app .fs-form input:focus{border-color:var(--i-gold);box-shadow:0 0 0 3px var(--i-gold-glow)}
+#app .fs-form button{padding:11px 20px;background:linear-gradient(135deg,var(--i-gold) 0%,var(--i-gold-l) 100%);color:var(--i-bg);border:none;border-radius:8px;font-family:var(--i-sans);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(201,168,76,0.2)}
+#app .fs-form button:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(201,168,76,0.3)}
+#app .cw{padding:18px;height:240px}
 
-/* Tabs améliorés */
-.auth-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  background: rgba(0,0,0,0.2);
-}
+/* ═══════════════════════════════════════════════════════════════
+   ADVISORY — LIGHT THEME DASHBOARD
+   ═══════════════════════════════════════════════════════════════ */
+#advisory{display:none;min-height:100vh;background:var(--a-bg);font-family:var(--a-sans);color:var(--a-ink);position:relative;z-index:1}
+#advisory::before{content:'';position:fixed;inset:0;background:linear-gradient(180deg,rgba(74,144,226,0.03) 0%,transparent 50%);pointer-events:none;z-index:0}
+#advisory nav{position:sticky;top:0;z-index:100;background:rgba(255,255,255,.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--a-border);padding:0 32px;display:flex;align-items:center;height:60px;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+#advisory .nav-brand{display:flex;align-items:center;gap:12px;margin-right:36px;flex-shrink:0;text-decoration:none}
+#advisory .nav-brand-diamond{width:28px;height:28px;position:relative;display:flex;align-items:center;justify-content:center}
+#advisory .nav-brand-diamond .diamond-inner{width:18px;height:18px;background:linear-gradient(135deg,#E3F2FD 0%,var(--a-blue) 50%,var(--a-blue-d) 100%);transform:rotate(45deg);box-shadow:0 0 10px rgba(74,144,226,0.2),inset 0 0 4px rgba(255,255,255,0.3)}
+#advisory .nav-logo{font-family:var(--a-sans);font-size:17px;font-weight:600;letter-spacing:.04em;color:var(--a-ink)}
+#advisory .nav-logo span{color:var(--a-blue)}
+#advisory .nav-logo .adv-tag{font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--a-blue);margin-left:6px;background:var(--a-blue-glow);padding:2px 8px;border-radius:4px;border:1px solid var(--a-border)}
+#advisory .nav-tabs{display:flex;gap:4px;flex:1}
+#advisory .nav-tab{padding:6px 16px;font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--a-muted);background:none;border:none;border-radius:8px;cursor:pointer;font-family:var(--a-sans);transition:all .2s;position:relative}
+#advisory .nav-tab:hover{color:var(--a-ink);background:rgba(74,144,226,0.05)}
+#advisory .nav-tab.active{color:var(--a-blue);font-weight:600;background:rgba(74,144,226,0.08)}
+#advisory .nav-tab.active::after{content:'';position:absolute;bottom:-14px;left:25%;right:25%;height:2px;background:linear-gradient(90deg,transparent,var(--a-blue),transparent);border-radius:2px}
+#advisory .nav-right{display:flex;align-items:center;gap:16px;margin-left:auto}
+#advisory .nav-user{font-size:12px;color:var(--a-muted);font-weight:500}
+#advisory .nav-portal-btn{font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--a-blue);cursor:pointer;background:rgba(74,144,226,.06);border:1px solid rgba(74,144,226,.15);border-radius:6px;padding:5px 12px;font-family:var(--a-sans);transition:all .2s}
+#advisory .nav-portal-btn:hover{background:rgba(74,144,226,.12);border-color:rgba(74,144,226,.25)}
+#advisory .btn-logout{font-size:11px;color:var(--a-muted);cursor:pointer;background:none;border:none;font-family:var(--a-sans);letter-spacing:.06em;text-transform:uppercase;padding:5px 10px;border-radius:6px;transition:all .2s}
+#advisory .btn-logout:hover{color:var(--a-red);background:rgba(229,62,62,0.05)}
+#advisory main{max-width:1320px;margin:0 auto;padding:32px 32px 100px;position:relative;z-index:1}
+#advisory .tab{display:none}#advisory .tab.active{display:block}
+#advisory .page-title{font-family:var(--a-sans);font-size:32px;font-weight:300;color:var(--a-ink);letter-spacing:-.02em;line-height:1;margin-bottom:6px}
+#advisory .page-title em{font-style:normal;color:var(--a-blue);font-weight:500}
+#advisory .page-sub{font-size:13px;color:var(--a-muted);margin-bottom:28px}
 
-.auth-tab {
-  flex: 1;
-  padding: 18px;
-  background: none;
-  border: none;
-  color: var(--muted);
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  border-bottom: 2px solid transparent;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-}
+/* Advisory Cards */
+#advisory .card{background:var(--a-card);border:1px solid var(--a-border);border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.04),0 4px 16px rgba(74,144,226,0.04);overflow:hidden;transition:all .2s}
+#advisory .card:hover{box-shadow:0 4px 24px rgba(74,144,226,0.08);border-color:rgba(74,144,226,0.18)}
+#advisory .card-head{padding:14px 20px;border-bottom:1px solid var(--a-border);display:flex;align-items:center;gap:10px}
+#advisory .card-title{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--a-muted)}
 
-.auth-tab::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--gold);
-  transform: scaleX(0);
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+/* Advisory Stats */
+#advisory .adv-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px;margin-bottom:28px}
+#advisory .adv-stat{background:var(--a-card);border:1px solid var(--a-border);border-radius:12px;padding:20px 22px;position:relative;overflow:hidden;transition:all .2s}
+#advisory .adv-stat:hover{border-color:rgba(74,144,226,0.2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(74,144,226,0.06)}
+#advisory .adv-stat::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:linear-gradient(180deg,var(--a-blue),transparent);opacity:0.5}
+#advisory .adv-stat-label{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--a-muted);margin-bottom:8px}
+#advisory .adv-stat-val{font-family:var(--a-sans);font-size:28px;font-weight:300;color:var(--a-ink);line-height:1}
+#advisory .adv-stat-sub{font-size:12px;color:var(--a-muted);margin-top:6px}
 
-.auth-tab.active {
-  color: var(--gold);
-  background: rgba(184,150,78,0.03);
-}
+/* Advisory Services */
+#advisory .adv-services{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-bottom:28px}
+#advisory .adv-service-card{background:var(--a-card);border:1px solid var(--a-border);border-radius:14px;padding:28px;cursor:pointer;transition:all .3s;position:relative;overflow:hidden}
+#advisory .adv-service-card:hover{border-color:var(--a-blue);transform:translateY(-3px);box-shadow:0 12px 32px rgba(74,144,226,0.1)}
+#advisory .adv-service-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--a-blue),var(--a-blue-l));opacity:0;transition:opacity .3s}
+#advisory .adv-service-card:hover::before{opacity:1}
+#advisory .adv-service-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:16px;background:var(--a-blue-glow);border:1px solid var(--a-border);color:var(--a-blue);transition:all .2s}
+#advisory .adv-service-card:hover .adv-service-icon{background:rgba(74,144,226,0.12);transform:scale(1.05)}
+#advisory .adv-service-name{font-size:16px;font-weight:600;color:var(--a-ink);margin-bottom:6px}
+#advisory .adv-service-desc{font-size:13px;color:var(--a-muted);line-height:1.7}
+#advisory .adv-service-cta{display:inline-flex;align-items:center;gap:5px;margin-top:16px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--a-blue);background:none;border:none;cursor:pointer;font-family:var(--a-sans);padding:0;transition:gap .2s}
+#advisory .adv-service-cta:hover{gap:10px}
 
-.auth-tab.active::after {
-  transform: scaleX(1);
-}
+/* Advisory Sectors */
+#advisory .adv-sectors{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px;margin-bottom:28px}
+#advisory .adv-sector{background:var(--a-card);border:1px solid var(--a-border);border-radius:12px;padding:20px;cursor:pointer;transition:all .2s;text-align:center}
+#advisory .adv-sector:hover{border-color:var(--a-blue);background:rgba(74,144,226,0.03);transform:translateY(-2px);box-shadow:0 8px 24px rgba(74,144,226,0.06)}
+#advisory .adv-sector-icon{font-size:28px;margin-bottom:10px;transition:transform .2s}
+#advisory .adv-sector:hover .adv-sector-icon{transform:scale(1.1)}
+#advisory .adv-sector-name{font-size:13px;font-weight:600;color:var(--a-ink)}
+#advisory .adv-sector-sub{font-size:12px;color:var(--a-muted);margin-top:4px}
 
-.auth-tab:hover:not(.active) {
-  color: var(--cream);
-  background: rgba(255,255,255,0.03);
-}
+/* Advisory Forms */
+#advisory .adv-form-group{margin-bottom:18px}
+#advisory .adv-form-group label{display:block;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--a-muted);margin-bottom:8px}
+#advisory .adv-form-group input,#advisory .adv-form-group select,#advisory .adv-form-group textarea{width:100%;padding:11px 14px;background:var(--a-card2);border:1px solid var(--a-border);border-radius:8px;font-family:var(--a-sans);font-size:13px;color:var(--a-ink);outline:none;transition:all .2s}
+#advisory .adv-form-group textarea{min-height:90px;resize:vertical}
+#advisory .adv-form-group input:focus,#advisory .adv-form-group select:focus,#advisory .adv-form-group textarea:focus{border-color:var(--a-blue);box-shadow:0 0 0 3px var(--a-blue-glow)}
+#advisory .adv-form-group select option{background:var(--a-card);color:var(--a-ink)}
+#advisory .adv-btn{padding:11px 24px;background:linear-gradient(135deg,var(--a-blue) 0%,var(--a-blue-l) 100%);color:#fff;border:none;border-radius:8px;font-family:var(--a-sans);font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(74,144,226,0.2)}
+#advisory .adv-btn:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(74,144,226,0.3)}
+#advisory .adv-btn-ghost{background:transparent;color:var(--a-blue);border:1px solid rgba(74,144,226,.3);margin-left:10px;box-shadow:none}
+#advisory .adv-btn-ghost:hover{background:rgba(74,144,226,.06);box-shadow:none}
 
-/* Forms */
-#loginForm, #signupForm {
-  padding: 40px 36px 32px;
-}
+/* Advisory Chat */
+#advisory .adv-chat{display:flex;flex-direction:column;height:460px;background:var(--a-card);border:1px solid var(--a-border);border-radius:12px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.04)}
+#advisory .adv-chat-msgs{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:14px;background:var(--a-bg)}
+#advisory .adv-msg{max-width:80%;padding:12px 16px;border-radius:14px;font-size:13px;line-height:1.7;box-shadow:0 1px 3px rgba(0,0,0,0.04)}
+#advisory .adv-msg.user{align-self:flex-end;background:linear-gradient(135deg,var(--a-blue) 0%,var(--a-blue-l) 100%);color:#fff;border-radius:14px 14px 2px 14px}
+#advisory .adv-msg.assistant{align-self:flex-start;background:var(--a-card);color:var(--a-ink);border:1px solid var(--a-border);border-radius:14px 14px 14px 2px}
+#advisory .adv-msg.assistant.loading-msg{color:var(--a-muted);font-style:italic;background:transparent;border:none;box-shadow:none}
+#advisory .adv-chat-input{display:flex;gap:10px;padding:14px 18px;border-top:1px solid var(--a-border);background:var(--a-card)}
+#advisory .adv-chat-input input{flex:1;padding:11px 16px;background:var(--a-bg);border:1px solid var(--a-border);border-radius:10px;font-family:var(--a-sans);font-size:13px;color:var(--a-ink);outline:none;transition:all .2s}
+#advisory .adv-chat-input input:focus{border-color:var(--a-blue);box-shadow:0 0 0 3px var(--a-blue-glow)}
+#advisory .adv-chat-input input::placeholder{color:var(--a-dim)}
+#advisory .adv-chat-send{padding:11px 20px;background:linear-gradient(135deg,var(--a-blue) 0%,var(--a-blue-l) 100%);color:#fff;border:none;border-radius:10px;cursor:pointer;font-family:var(--a-sans);font-size:12px;font-weight:600;transition:all .2s;box-shadow:0 4px 12px rgba(74,144,226,0.2)}
+#advisory .adv-chat-send:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(74,144,226,0.3)}
+#advisory .adv-chat-send:disabled{opacity:.5;cursor:not-allowed;transform:none}
 
-.auth-field {
-  margin-bottom: 24px;
-}
+/* Advisory BP & Restructuration */
+#advisory .adv-bp-section{margin-bottom:32px}
+#advisory .adv-bp-section-title{font-family:var(--a-sans);font-size:20px;font-weight:600;color:var(--a-ink);margin-bottom:14px;padding-bottom:10px;border-bottom:1px solid var(--a-border)}
+#advisory .adv-bp-content{font-size:13px;color:var(--a-muted);line-height:1.9;white-space:pre-wrap}
+#advisory .adv-tag{display:inline-block;padding:4px 12px;border-radius:20px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase}
+#advisory .adv-tag-gold{background:rgba(201,168,76,.1);color:#8A6E2F;border:1px solid rgba(201,168,76,.15)}
+#advisory .adv-tag-green{background:rgba(56,161,105,.1);color:var(--a-grn);border:1px solid rgba(56,161,105,.2)}
+#advisory .adv-tag-blue{background:rgba(74,144,226,.1);color:var(--a-blue);border:1px solid rgba(74,144,226,.2)}
+#advisory .adv-tag-orange{background:rgba(237,137,54,.1);color:#DD6B20;border:1px solid rgba(237,137,54,.2)}
+#advisory .adv-generating{text-align:center;padding:70px 20px;color:var(--a-muted)}
+#advisory .adv-spin{display:inline-block;width:24px;height:24px;border:2px solid var(--a-border);border-top-color:var(--a-blue);border-radius:50%;animation:sp .8s linear infinite;margin-bottom:14px}
 
-.auth-field label {
-  display: block;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted);
-  margin-bottom: 10px;
-}
+/* Advisory Tables */
+#advisory .tw{overflow-x:auto}
+#advisory table{width:100%;border-collapse:collapse;font-size:13px;white-space:nowrap}
+#advisory thead th{padding:10px 14px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--a-muted);border-bottom:1px solid var(--a-border);background:var(--a-card)}
+#advisory thead th.r{text-align:right}
+#advisory tbody tr{border-bottom:1px solid rgba(0,0,0,0.04);cursor:pointer;transition:all .15s}
+#advisory tbody tr:hover{background:rgba(74,144,226,0.03)}
+#advisory tbody tr:last-child{border-bottom:none}
+#advisory td{padding:10px 14px;vertical-align:middle;color:var(--a-ink)}#advisory td.r{text-align:right}
+#advisory .loading{padding:48px 20px;text-align:center;color:var(--a-muted);font-size:13px}
+#advisory .spin{display:inline-block;width:18px;height:18px;border:2px solid var(--a-border);border-top-color:var(--a-blue);border-radius:50%;animation:sp .8s linear infinite;margin-bottom:8px}
 
-.auth-field input {
-  width: 100%;
-  padding: 14px 16px;
-  background: var(--card);
-  border: 1.5px solid var(--border-light);
-  border-radius: 8px;
-  font-family: var(--sans);
-  font-size: 15px;
-  color: var(--cream);
-  outline: none;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.auth-field input:focus {
-  border-color: var(--gold);
-  background: rgba(26,22,16,1);
-  box-shadow: 0 0 0 3px rgba(184,150,78,0.08);
-}
-
-.auth-field input::placeholder {
-  color: var(--dim);
-}
-
-/* Messages */
-.auth-error, .auth-success {
-  font-size: 13px;
-  margin-bottom: 16px;
-  min-height: 20px;
-  padding: 0 4px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.auth-error {
-  color: var(--red);
-}
-
-.auth-success {
-  color: var(--green);
-}
-
-/* Bouton amélioré */
-.auth-btn {
-  width: 100%;
-  padding: 16px;
-  background: var(--gold);
-  color: var(--bg);
-  border: none;
-  border-radius: 8px;
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.auth-btn::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
-  transform: translateX(-100%);
-  transition: transform 0.6s ease;
-}
-
-.auth-btn:hover::before {
-  transform: translateX(100%);
-}
-
-.auth-btn:hover {
-  background: var(--gold-light);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(184,150,78,0.3);
-}
-
-.auth-btn:active {
-  transform: translateY(0);
-}
-
-.auth-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* Note */
-.auth-note {
-  font-size: 12px;
-  color: var(--muted);
-  text-align: center;
-  padding: 20px 16px;
-  border-top: 1px solid var(--border-light);
-  margin-top: 8px;
-  line-height: 1.6;
-}
-
-.auth-back {
-  display: block;
-  text-align: center;
-  margin-top: 24px;
-  color: var(--gold);
-  text-decoration: none;
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-  font-weight: 500;
-}
-
-.auth-back:hover {
-  opacity: 1;
-}
-
-/* ============================================ */
-/* PORTAIL AMÉLIORÉ */
-/* ============================================ */
-
-#portalScreen {
-  display: none;
-  min-height: 100vh;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  z-index: 1;
-  padding: 60px 20px;
-}
-
-.portal-header {
-  text-align: center;
-  margin-bottom: 64px;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.portal-title {
-  font-family: var(--serif);
-  font-size: clamp(32px, 5vw, 48px);
-  font-weight: 300;
-  letter-spacing: 0.02em;
-  color: var(--cream);
-  margin-bottom: 12px;
-  line-height: 1.2;
-}
-
-.portal-title span {
-  color: var(--gold);
-}
-
-.portal-welcome {
-  font-size: 14px;
-  color: var(--muted);
-  letter-spacing: 0.03em;
-}
-
-.portal-cards {
-  display: flex;
-  gap: 32px;
-  flex-wrap: wrap;
-  justify-content: center;
-  max-width: 800px;
-  margin: 0 auto;
-}
-
-.portal-card {
-  width: 340px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  padding: 48px 40px 40px;
-  cursor: pointer;
-  transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-  text-align: center;
-  position: relative;
-  overflow: hidden;
-  text-decoration: none;
-  color: inherit;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.portal-card:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.portal-card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(90deg, var(--gold), var(--gold-light));
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.portal-card:hover {
-  transform: translateY(-12px) scale(1.02);
-  box-shadow: 0 24px 64px rgba(0,0,0,0.4), 0 0 0 1px var(--gold-glow);
-  border-color: var(--gold-glow);
-}
-
-.portal-card:hover::before {
-  transform: scaleX(1);
-}
-
-/* Orbe */
-.portal-orb {
-  width: 96px;
-  height: 96px;
-  border-radius: 50%;
-  margin: 0 auto 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-  box-shadow: 0 8px 32px rgba(184,150,78,0.4);
-  border: 2px solid rgba(255,255,255,0.1);
-}
-
-.portal-orb::after {
-  content: '';
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  border: 1px solid var(--gold-glow);
-  opacity: 0.3;
-}
-
-.portal-orb-icon {
-  font-size: 36px;
-  line-height: 1;
-  color: var(--bg);
-}
-
-.portal-card:hover .portal-orb {
-  transform: scale(1.1) rotate(5deg);
-  transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.portal-card-name {
-  font-family: var(--serif);
-  font-size: 26px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  margin-bottom: 10px;
-  color: var(--cream);
-}
-
-.portal-card-sub {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--gold);
-  margin-bottom: 20px;
-}
-
-.portal-card-desc {
-  font-size: 14px;
-  color: var(--muted);
-  line-height: 1.7;
-  margin-bottom: 28px;
-}
-
-.portal-card-cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 12px 24px;
-  border-radius: 8px;
-  border: none;
-  cursor: pointer;
-  font-family: var(--sans);
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: rgba(184,150,78,0.1);
-  color: var(--gold);
-  border: 1.5px solid var(--border);
-}
-
-.portal-card:hover .portal-card-cta {
-  background: rgba(184,150,78,0.2);
-  border-color: var(--gold);
-}
-
-.portal-logout {
-  margin-top: 48px;
-  font-size: 12px;
-  color: var(--dim);
-  cursor: pointer;
-  background: none;
-  border: none;
-  font-family: var(--sans);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  transition: color 0.2s;
-  font-weight: 500;
-  animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
-}
-
-.portal-logout:hover {
-  color: var(--red);
-}
-
-/* ============================================ */
-/* RESPONSIVE */
-/* ============================================ */
-
-@media (max-width: 768px) {
-  .auth-container {
-    max-width: 100%;
-  }
-  
-  #loginForm, #signupForm {
-    padding: 32px 24px 24px;
-  }
-  
-  .portal-cards {
-    gap: 24px;
-  }
-  
-  .portal-card {
-    width: 100%;
-    max-width: 380px;
-    padding: 40px 32px 32px;
-  }
-  
-  .portal-header {
-    margin-bottom: 48px;
-  }
-}
-
-@media (max-width: 480px) {
-  .auth-logo-title {
-    font-size: 26px;
-  }
-  
-  #loginForm, #signupForm {
-    padding: 28px 20px 20px;
-  }
-  
-  .auth-field input {
-    padding: 12px 14px;
-    font-size: 14px;
-  }
-  
-  .auth-btn {
-    padding: 14px;
-  }
-  
-  .portal-card {
-    padding: 36px 24px 28px;
-  }
-  
-  .portal-orb {
-    width: 80px;
-    height: 80px;
-  }
-  
-  .portal-orb-icon {
-    font-size: 32px;
-  }
-}
+/* Quick Questions Advisory */
+.adv-quick-q{padding:6px 14px;background:var(--a-card);border:1px solid var(--a-border);border-radius:20px;color:var(--a-blue);font-size:11px;cursor:pointer;font-family:var(--a-sans);font-weight:500;transition:all .2s}
+.adv-quick-q:hover{background:rgba(74,144,226,0.08);border-color:rgba(74,144,226,0.25);transform:translateY(-1px)}
 </style>
+<base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
-<!-- ============================================ -->
-<!-- ÉCRAN AUTHENTIFICATION -->
-<!-- ============================================ -->
+<!-- ═══════════════════════════════════════════════════════════════
+     AUTH SCREEN
+     ═══════════════════════════════════════════════════════════════ -->
 <div id="authScreen">
+  <div class="auth-bg-orb"></div>
+  <div class="auth-bg-orb-2"></div>
   <div class="auth-container">
-    <div class="auth-logo">
-      <div class="auth-logo-title">THE <span>·</span> CAPITAL</div>
-      <div class="auth-logo-sub">Intelligence Financière Africaine</div>
+    <div class="auth-brand">
+      <div class="auth-brand-sphere"></div>
+      <div>
+        <div class="auth-brand-title">THE <span>CAPITAL</span></div>
+        <p class="auth-brand-sub">Intelligence financière africaine</p>
+      </div>
     </div>
-    
     <div class="auth-card">
       <div class="auth-tabs">
-        <button class="auth-tab active" onclick="switchAuthTab('login')">Connexion</button>
-        <button class="auth-tab" onclick="switchAuthTab('signup')">Inscription</button>
+        <button class="auth-tab active" id="tabLogin">Connexion</button>
+        <button class="auth-tab" id="tabSignup">Créer un compte</button>
       </div>
-      
-      <!-- FORMULAIRE CONNEXION -->
-      <form id="loginForm">
+      <div id="loginForm">
         <div class="auth-field">
           <label>Email</label>
-          <input type="email" id="loginEmail" placeholder="votre@email.com" required>
+          <input type="email" id="loginEmail" placeholder="vous@exemple.com" autocomplete="email">
         </div>
         <div class="auth-field">
           <label>Mot de passe</label>
-          <input type="password" id="loginPassword" placeholder="••••••••" required>
+          <input type="password" id="loginPassword" placeholder="••••••••" autocomplete="current-password">
         </div>
         <div class="auth-error" id="loginError"></div>
-        <button type="submit" class="auth-btn">Se connecter</button>
-        <div class="auth-note">
-          Accès sécurisé à votre dashboard personnel
-        </div>
-      </form>
-      
-      <!-- FORMULAIRE INSCRIPTION -->
-      <form id="signupForm" style="display:none;">
+        <button class="auth-btn" id="loginBtn">Se connecter</button>
+      </div>
+      <div id="signupForm" style="display:none">
         <div class="auth-field">
-          <label>Nom complet</label>
-          <input type="text" id="signupNom" placeholder="Ibrahima Diop" required>
+          <label>Nom (prénom ou société)</label>
+          <input type="text" id="signupName" placeholder="Jean Dupont" autocomplete="name">
         </div>
         <div class="auth-field">
           <label>Email</label>
-          <input type="email" id="signupEmail" placeholder="votre@email.com" required>
+          <input type="email" id="signupEmail" placeholder="vous@exemple.com" autocomplete="email">
         </div>
         <div class="auth-field">
           <label>Mot de passe</label>
-          <input type="password" id="signupPassword" placeholder="Min. 8 caractères" required minlength="8">
+          <input type="password" id="signupPassword" placeholder="Minimum 6 caractères" autocomplete="new-password">
         </div>
         <div class="auth-error" id="signupError"></div>
         <div class="auth-success" id="signupSuccess"></div>
-        <button type="submit" class="auth-btn">Créer mon compte</button>
-        <div class="auth-note">
-          Créez votre compte gratuit pour accéder à la plateforme
-        </div>
-      </form>
+        <button class="auth-btn" id="signupBtn">Créer mon compte</button>
+      </div>
+      <div class="auth-note">Vos données sont chiffrées et sécurisées.</div>
     </div>
-    
     <a href="index.html" class="auth-back">← Retour à l'accueil</a>
   </div>
 </div>
 
-<!-- ============================================ -->
-<!-- PORTAIL -->
-<!-- ============================================ -->
+<!-- ═══════════════════════════════════════════════════════════════
+     PORTAL — TWO WORLDS
+     ═══════════════════════════════════════════════════════════════ -->
 <div id="portalScreen">
+  <div class="portal-bg"></div>
   <div class="portal-header">
-    <div class="portal-title">Bienvenue sur <span>The Capital</span></div>
-    <div class="portal-welcome" id="portalWelcome">Choisissez votre service</div>
+    <div class="portal-brand">
+      <div class="portal-brand-sphere"></div>
+      <div class="portal-title">THE <span>CAPITAL</span></div>
+    </div>
+    <div class="portal-welcome" id="portal-welcome">Bienvenue — choisissez votre espace</div>
   </div>
-  
   <div class="portal-cards">
-    <!-- The Capital Invest -->
-    <a href="#" class="portal-card" onclick="loadInvest(); return false;">
+    <div class="portal-card" onclick="enterApp('invest')">
       <div class="portal-orb">
-        <div class="portal-orb-icon">◈</div>
+        <span class="portal-orb-icon">◈</span>
       </div>
-      <div class="portal-card-name">The Capital Invest</div>
+      <div class="portal-card-name">The Capital <em>Invest</em></div>
       <div class="portal-card-sub">Bourse & Marchés</div>
       <div class="portal-card-desc">
-        Données BRVM en temps réel, analyses fondamentales, screeners et suivi de portefeuille professionnel.
+        Suivez la BRVM en temps réel, gérez votre portefeuille, analysez les entreprises cotées et accédez aux archives BOC.
       </div>
-      <button class="portal-card-cta">
-        Accéder →
-      </button>
-    </a>
-    
-    <!-- The Capital Advisory -->
-    <a href="#" class="portal-card" onclick="loadAdvisory(); return false;">
+      <button class="portal-card-cta">Accéder →</button>
+    </div>
+    <div class="portal-card advisory-card" onclick="enterApp('advisory')">
       <div class="portal-orb">
-        <div class="portal-orb-icon">◇</div>
+        <span class="portal-orb-icon">◆</span>
       </div>
-      <div class="portal-card-name">The Capital Advisory</div>
+      <div class="portal-card-name">The Capital <em>Advisory</em></div>
       <div class="portal-card-sub">Conseil & Stratégie</div>
       <div class="portal-card-desc">
-        IA de conseil financier, générateur de business plans, modèles Excel et diagnostic de restructuration.
+        Business plans, restructuration financière, conseil en automatisation et modèles Excel sectoriels pour votre entreprise.
       </div>
-      <button class="portal-card-cta">
-        Accéder →
-      </button>
-    </a>
+      <button class="portal-card-cta">Accéder →</button>
+    </div>
   </div>
-  
-  <button class="portal-logout" onclick="logout()">Se déconnecter</button>
+  <button class="portal-logout" onclick="doLogout()">Se déconnecter</button>
 </div>
 
-<!-- Le reste du code (navigation, invest, advisory) reste identique -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- ═══════════════════════════════════════════════════════════════
+     INVEST — DARK GOLD DASHBOARD
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="app">
+<nav>
+  <a href="/index.html" class="nav-brand">
+    <div class="nav-brand-sphere"></div>
+    <span class="nav-logo">The <span>Capital</span></span>
+  </a>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('marche',this)">Marché</button>
+    <button class="nav-tab" onclick="showTab('portefeuille',this)">Portefeuille</button>
+    <button class="nav-tab" onclick="showTab('fiche',this)">Fiche Entreprise</button>
+    <button class="nav-tab" onclick="showTab('boc',this)">Archives BOC</button>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user" id="nav-user"></span>
+    <button class="nav-portal-btn" onclick="showPortal()">⊞ Changer d'espace</button>
+    <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+  </div>
+</nav>
+<main>
+
+<div class="tab active" id="tab-marche">
+  <h1 class="page-title">Marché <em>BRVM</em></h1>
+  <div class="page-sub" id="marche-date">Chargement...</div>
+  <div class="indices-grid" id="indices-grid"><div class="ic"><div class="spin"></div></div></div>
+  <div class="hb-grid">
+    <div class="card">
+      <div class="card-head"><span style="width:6px;height:6px;background:var(--i-grn);border-radius:50%;display:inline-block"></span><span class="card-title">Plus fortes hausses</span></div>
+      <div id="hausses"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><span style="width:6px;height:6px;background:var(--i-red);border-radius:50%;display:inline-block"></span><span class="card-title">Plus fortes baisses</span></div>
+      <div id="baisses"><div class="loading"><div class="spin"></div></div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="toolbar">
+      <span class="card-title">Tous les titres</span>
+      <input class="si" type="text" id="ms" placeholder="Ticker, société..." oninput="rm()">
+      <select class="fs" id="msect" onchange="rm()">
+        <option value="">Tous secteurs</option>
+        <option>Finance</option><option>Télécommunications</option>
+        <option>Consommation de Base</option><option>Consommation Discrétionnaire</option>
+        <option>Industrie</option><option>Energie</option><option>Services Publics</option>
+      </select>
+      <select class="fs" id="msort" onchange="rm()">
+        <option value="vd">Var. ↓</option><option value="va">Var. ↑</option>
+        <option value="cd">Cours ↓</option><option value="ca">Cours ↑</option>
+        <option value="vold">Volume ↓</option><option value="az">A-Z</option>
+      </select>
+      <span class="card-count" id="mc"></span>
+    </div>
+    <div class="tw"><table><thead><tr>
+      <th>Ticker</th><th>Société</th><th>Secteur</th>
+      <th class="r">Cours</th><th class="r">Variation</th><th class="r">Volume</th><th>Comp.</th>
+    </tr></thead><tbody id="mtb"><tr><td colspan="7"><div class="loading"><div class="spin"></div></div></td></tr></tbody></table></div>
+  </div>
+</div>
+
+<div class="tab" id="tab-portefeuille">
+  <h1 class="page-title">Mon <em>portefeuille</em></h1>
+  <div class="page-sub">CMP auto · Frais BRVM inclus</div>
+  <div class="sg">
+    <div class="sc"><div class="sl">Investi</div><div class="sv" id="pf-inv">—</div></div>
+    <div class="sc"><div class="sl">Valeur actuelle</div><div class="sv" id="pf-val">—</div></div>
+    <div class="sc"><div class="sl">Plus-value</div><div class="sv" id="pf-pv">—</div><div class="ss" id="pf-ppct"></div></div>
+  </div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-head"><span class="card-title">Positions</span></div>
+    <div class="tw"><table><thead><tr>
+      <th>Ticker</th><th>Société</th><th class="r">Qté</th><th class="r">CMP</th>
+      <th class="r">Cours</th><th class="r">Valeur</th><th class="r">P&L</th><th class="r">P&L%</th>
+    </tr></thead><tbody id="pftb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody></table></div>
+  </div>
+  <div class="card" style="margin-bottom:18px">
+    <div class="card-head"><span class="card-title">Nouvelle transaction</span></div>
+    <div class="txf">
+      <div class="ff"><label>Type</label><select id="txtype"><option value="ACHAT">Achat</option><option value="VENTE">Vente</option></select></div>
+      <div class="ff"><label>Ticker</label><input type="text" id="txtk" placeholder="SGBC" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="ff"><label>Quantité</label><input type="number" id="txqte" placeholder="100" min="1"></div>
+      <div class="ff"><label>Prix (FCFA)</label><input type="number" id="txprix" placeholder="33100" step="any"></div>
+      <div class="ff"><label>Date</label><input type="date" id="txdate"></div>
+      <div class="ff"><label>Note</label><input type="text" id="txnote" placeholder="Optionnel"></div>
+    </div>
+    <div style="padding:0 18px 16px;display:flex;align-items:center;gap:14px">
+      <button class="btn-p" id="txbtn" onclick="addTx()">Enregistrer</button>
+      <span id="txmsg" style="font-size:12px;color:var(--i-muted)"></span>
+    </div>
+    <div style="padding:0 18px 16px;font-size:11px;color:var(--i-dim)">Commission 1,2% + TVA 18% + BRVM 0,07% + DC/BR 0,05%</div>
+  </div>
+  <div class="card">
+    <div class="card-head"><span class="card-title">Historique</span><span class="card-count" id="txcount"></span></div>
+    <div class="tw"><table><thead><tr>
+      <th>Date</th><th>Type</th><th>Ticker</th>
+      <th class="r">Qté</th><th class="r">Prix</th><th class="r">Frais</th><th class="r">Net</th><th></th>
+    </tr></thead><tbody id="txtb"><tr><td colspan="8"><div class="loading"><div class="spin"></div></div></td></tr></tbody></table></div>
+  </div>
+</div>
+
+<div class="tab" id="tab-fiche">
+  <h1 class="page-title">Fiche <em>entreprise</em></h1>
+  <div class="page-sub" style="margin-bottom:18px">Cours · Multiples · Historique · Financials</div>
+  <div class="fs-form">
+    <input type="text" id="fq" placeholder="Entrez un ticker — ex: SGBC, SNTS, NTLC..." onkeydown="if(event.key==='Enter')lf()" oninput="this.value=this.value.toUpperCase()">
+    <button onclick="lf()">Voir la fiche</button>
+  </div>
+  <div id="fc"><div class="loading" style="padding:80px 20px">Entrez un ticker ci-dessus.</div></div>
+</div>
+
+<div class="tab" id="tab-boc">
+  <h1 class="page-title">Archives <em>BOC</em></h1>
+  <div class="page-sub">Bulletins Officiels de la Cote disponibles</div>
+  <div class="card">
+    <div class="toolbar">
+      <span class="card-title">Liste des PDF</span>
+      <span class="card-count" id="bocCount"></span>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Date de séance</th><th>Nom du fichier</th><th>Ajouté le</th><th>Télécharger</th></tr></thead>
+        <tbody id="bocTbodyClient"><tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+</main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     ADVISORY — LIGHT BLUE DASHBOARD
+     ═══════════════════════════════════════════════════════════════ -->
+<div id="advisory">
+<nav>
+  <a href="#" class="nav-brand">
+    <div class="nav-brand-diamond"><div class="diamond-inner"></div></div>
+    <span class="nav-logo">The <span>Capital</span> <span class="adv-tag">Advisory</span></span>
+  </a>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showAdvTab('accueil',this)">Accueil</button>
+    <button class="nav-tab" onclick="showAdvTab('businessplan',this)">Business Plan</button>
+    <button class="nav-tab" onclick="showAdvTab('conseil',this)">Conseil IA</button>
+    <button class="nav-tab" onclick="showAdvTab('modeles',this)">Modèles Excel</button>
+    <button class="nav-tab" onclick="showAdvTab('restructuration',this)">Restructuration</button>
+  </div>
+  <div class="nav-right">
+    <span class="nav-user" id="adv-nav-user"></span>
+    <button class="nav-portal-btn" onclick="showPortal()">⊞ Changer d'espace</button>
+    <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+  </div>
+</nav>
+<main>
+
+<div class="tab active" id="adv-tab-accueil">
+  <h1 class="page-title">The Capital <em>Advisory</em></h1>
+  <p class="page-sub">Conseil financier · Business plans · Restructuration · Automatisation</p>
+
+  <div class="adv-grid">
+    <div class="adv-stat">
+      <div class="adv-stat-label">Services disponibles</div>
+      <div class="adv-stat-val">4</div>
+      <div class="adv-stat-sub">Business Plan, Conseil, Modèles, Restructuration</div>
+    </div>
+    <div class="adv-stat">
+      <div class="adv-stat-label">Secteurs couverts</div>
+      <div class="adv-stat-val">12+</div>
+      <div class="adv-stat-sub">Transport, Blanchisserie, Restauration, Commerce...</div>
+    </div>
+    <div class="adv-stat">
+      <div class="adv-stat-label">Modèles Excel</div>
+      <div class="adv-stat-val">15+</div>
+      <div class="adv-stat-sub">Prêts à l'emploi pour votre secteur</div>
+    </div>
+  </div>
+
+  <div class="adv-services">
+    <div class="adv-service-card" onclick="showAdvTab('businessplan',document.querySelectorAll('#advisory .nav-tab')[1])">
+      <div class="adv-service-icon">📋</div>
+      <div class="adv-service-name">Business Plan</div>
+      <div class="adv-service-desc">Générez un business plan complet et structuré pour votre projet — projections financières, analyse de marché, stratégie.</div>
+      <button class="adv-service-cta">Créer mon BP →</button>
+    </div>
+    <div class="adv-service-card" onclick="showAdvTab('conseil',document.querySelectorAll('#advisory .nav-tab')[2])">
+      <div class="adv-service-icon">💬</div>
+      <div class="adv-service-name">Conseil IA</div>
+      <div class="adv-service-desc">Un conseiller financier IA disponible 24h/24 pour répondre à vos questions de gestion, comptabilité et stratégie.</div>
+      <button class="adv-service-cta">Consulter →</button>
+    </div>
+    <div class="adv-service-card" onclick="showAdvTab('modeles',document.querySelectorAll('#advisory .nav-tab')[3])">
+      <div class="adv-service-icon">📊</div>
+      <div class="adv-service-name">Modèles Excel</div>
+      <div class="adv-service-desc">Tableaux de bord, suivi de trésorerie, gestion des stocks, paie — téléchargez les fichiers adaptés à votre activité.</div>
+      <button class="adv-service-cta">Parcourir →</button>
+    </div>
+    <div class="adv-service-card" onclick="showAdvTab('restructuration',document.querySelectorAll('#advisory .nav-tab')[4])">
+      <div class="adv-service-icon">⚙️</div>
+      <div class="adv-service-name">Restructuration & Automatisation</div>
+      <div class="adv-service-desc">Diagnostic de votre structure, optimisation des coûts, automatisation des processus répétitifs pour gagner en efficacité.</div>
+      <button class="adv-service-cta">Démarrer →</button>
+    </div>
+  </div>
+</div>
+
+<div class="tab" id="adv-tab-businessplan">
+  <h1 class="page-title">Business <em>Plan</em></h1>
+  <p class="page-sub">Générez un plan d'affaires structuré en quelques minutes</p>
+
+  <div class="card" id="bp-form-card">
+    <div class="card-head"><span class="card-title">Informations sur votre projet</span></div>
+    <div style="padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="adv-form-group">
+        <label>Nom du projet / entreprise</label>
+        <input type="text" id="bp-nom" placeholder="Ex: Transport Diallo & Fils">
+      </div>
+      <div class="adv-form-group">
+        <label>Secteur d'activité</label>
+        <select id="bp-secteur">
+          <option value="">Choisir un secteur...</option>
+          <option>Transport & Logistique</option>
+          <option>Blanchisserie & Pressing</option>
+          <option>Restauration & Food</option>
+          <option>Commerce de détail</option>
+          <option>BTP & Construction</option>
+          <option>Agriculture & Élevage</option>
+          <option>Santé & Pharmacie</option>
+          <option>Education & Formation</option>
+          <option>Hôtellerie & Tourisme</option>
+          <option>Technologie & Digital</option>
+          <option>Industrie & Manufacture</option>
+          <option>Services aux entreprises</option>
+          <option>Autre</option>
+        </select>
+      </div>
+      <div class="adv-form-group">
+        <label>Pays / Ville</label>
+        <input type="text" id="bp-pays" placeholder="Ex: Sénégal, Dakar">
+      </div>
+      <div class="adv-form-group">
+        <label>Capital de départ estimé (FCFA)</label>
+        <input type="number" id="bp-capital" placeholder="Ex: 5000000">
+      </div>
+      <div class="adv-form-group" style="grid-column:1/-1">
+        <label>Description du projet</label>
+        <textarea id="bp-desc" placeholder="Décrivez votre activité, vos clients cibles, ce qui vous différencie..."></textarea>
+      </div>
+      <div class="adv-form-group">
+        <label>Horizon temporel</label>
+        <select id="bp-horizon">
+          <option value="1 an">1 an</option>
+          <option value="3 ans" selected>3 ans</option>
+          <option value="5 ans">5 ans</option>
+        </select>
+      </div>
+      <div class="adv-form-group">
+        <label>Nombre d'employés prévus</label>
+        <input type="number" id="bp-employes" placeholder="Ex: 5">
+      </div>
+    </div>
+    <div style="padding:0 24px 24px;display:flex;align-items:center;gap:12px">
+      <button class="adv-btn" onclick="genBusinessPlan()">✦ Générer le Business Plan</button>
+      <span id="bp-msg" style="font-size:12px;color:var(--a-muted)"></span>
+    </div>
+  </div>
+
+  <div id="bp-result" style="display:none;margin-top:24px"></div>
+</div>
+
+<div class="tab" id="adv-tab-conseil">
+  <h1 class="page-title">Conseiller <em>IA</em></h1>
+  <p class="page-sub">Posez vos questions de gestion, finance, stratégie et comptabilité</p>
+  <div class="card">
+    <div class="card-head">
+      <span class="card-title">Chat avec votre conseiller</span>
+      <button onclick="clearAdvChat()" style="margin-left:auto;background:none;border:none;color:var(--a-muted);font-size:11px;cursor:pointer;font-family:var(--a-sans);letter-spacing:.06em;text-transform:uppercase;font-weight:500">Réinitialiser</button>
+    </div>
+    <div class="adv-chat">
+      <div class="adv-chat-msgs" id="adv-chat-msgs">
+        <div class="adv-msg assistant">Bonjour ! Je suis votre conseiller financier The Capital Advisory. Je peux vous aider sur la gestion de votre entreprise, vos finances, votre comptabilité, votre stratégie ou la réglementation. Que puis-je faire pour vous ?</div>
+      </div>
+      <div class="adv-chat-input">
+        <input type="text" id="adv-chat-input" placeholder="Posez votre question..." onkeydown="if(event.key==='Enter')sendAdvMsg()">
+        <button class="adv-chat-send" id="adv-chat-send" onclick="sendAdvMsg()">Envoyer</button>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+    <span style="font-size:11px;color:var(--a-muted);margin-right:4px;line-height:2;font-weight:500">Questions rapides :</span>
+    <button class="adv-quick-q" onclick="askAdvQuick('Comment calculer mon seuil de rentabilité ?')">Seuil de rentabilité</button>
+    <button class="adv-quick-q" onclick="askAdvQuick('Comment gérer ma trésorerie au quotidien ?')">Trésorerie</button>
+    <button class="adv-quick-q" onclick="askAdvQuick('Quelles charges fiscales pour une SARL au Sénégal ?')">Fiscalité SARL</button>
+    <button class="adv-quick-q" onclick="askAdvQuick('Comment fixer mes prix de vente ?')">Pricing</button>
+    <button class="adv-quick-q" onclick="askAdvQuick('Comment obtenir un financement bancaire ?')">Financement</button>
+  </div>
+</div>
+
+<div class="tab" id="adv-tab-modeles">
+  <h1 class="page-title">Modèles <em>Excel</em></h1>
+  <p class="page-sub">Fichiers prêts à l'emploi pour chaque secteur d'activité</p>
+
+  <div class="adv-sectors">
+    <div class="adv-sector" onclick="genExcelModel('Transport & Logistique')">
+      <div class="adv-sector-icon">🚛</div>
+      <div class="adv-sector-name">Transport</div>
+      <div class="adv-sector-sub">Flotte, chauffeurs, dépenses</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Blanchisserie & Pressing')">
+      <div class="adv-sector-icon">🧺</div>
+      <div class="adv-sector-name">Blanchisserie</div>
+      <div class="adv-sector-sub">Commandes, stock, facturation</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Restauration & Food')">
+      <div class="adv-sector-icon">🍽️</div>
+      <div class="adv-sector-name">Restauration</div>
+      <div class="adv-sector-sub">Recettes, coûts, caisse</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Commerce de détail')">
+      <div class="adv-sector-icon">🏪</div>
+      <div class="adv-sector-name">Commerce</div>
+      <div class="adv-sector-sub">Stocks, ventes, marges</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('BTP & Construction')">
+      <div class="adv-sector-icon">🏗️</div>
+      <div class="adv-sector-name">BTP</div>
+      <div class="adv-sector-sub">Devis, chantiers, matériaux</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Agriculture & Élevage')">
+      <div class="adv-sector-icon">🌾</div>
+      <div class="adv-sector-name">Agriculture</div>
+      <div class="adv-sector-sub">Récoltes, charges, revenus</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Hôtellerie & Tourisme')">
+      <div class="adv-sector-icon">🏨</div>
+      <div class="adv-sector-name">Hôtellerie</div>
+      <div class="adv-sector-sub">Réservations, occupation, CA</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Santé & Pharmacie')">
+      <div class="adv-sector-icon">💊</div>
+      <div class="adv-sector-name">Pharmacie</div>
+      <div class="adv-sector-sub">Produits, ordonnances, caisse</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Services aux entreprises')">
+      <div class="adv-sector-icon">💼</div>
+      <div class="adv-sector-name">Services B2B</div>
+      <div class="adv-sector-sub">Clients, projets, facturation</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Gestion RH & Paie')">
+      <div class="adv-sector-icon">👥</div>
+      <div class="adv-sector-name">RH & Paie</div>
+      <div class="adv-sector-sub">Employés, salaires, cotisations</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Trésorerie universelle')">
+      <div class="adv-sector-icon">💰</div>
+      <div class="adv-sector-name">Trésorerie</div>
+      <div class="adv-sector-sub">Entrées, sorties, solde</div>
+    </div>
+    <div class="adv-sector" onclick="genExcelModel('Tableau de bord PME')">
+      <div class="adv-sector-icon">📈</div>
+      <div class="adv-sector-name">Dashboard PME</div>
+      <div class="adv-sector-sub">KPIs, performance globale</div>
+    </div>
+  </div>
+
+  <div id="excel-result" style="display:none"></div>
+</div>
+
+<div class="tab" id="adv-tab-restructuration">
+  <h1 class="page-title">Restructuration & <em>Automatisation</em></h1>
+  <p class="page-sub">Optimisez votre structure et vos processus</p>
+
+  <div class="card" id="restr-form-card">
+    <div class="card-head"><span class="card-title">Diagnostic de votre entreprise</span></div>
+    <div style="padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="adv-form-group">
+        <label>Nom de l'entreprise</label>
+        <input type="text" id="restr-nom" placeholder="Ex: Entreprise Koné">
+      </div>
+      <div class="adv-form-group">
+        <label>Secteur</label>
+        <select id="restr-secteur">
+          <option value="">Choisir...</option>
+          <option>Transport & Logistique</option><option>Blanchisserie</option>
+          <option>Restauration</option><option>Commerce</option><option>BTP</option>
+          <option>Agriculture</option><option>Services</option><option>Autre</option>
+        </select>
+      </div>
+      <div class="adv-form-group">
+        <label>Chiffre d'affaires annuel (FCFA)</label>
+        <input type="number" id="restr-ca" placeholder="Ex: 50000000">
+      </div>
+      <div class="adv-form-group">
+        <label>Nombre d'employés</label>
+        <input type="number" id="restr-employes" placeholder="Ex: 10">
+      </div>
+      <div class="adv-form-group" style="grid-column:1/-1">
+        <label>Principaux problèmes rencontrés</label>
+        <textarea id="restr-problemes" placeholder="Ex: Pertes de stock non contrôlées, retards de livraison, difficultés de trésorerie..."></textarea>
+      </div>
+      <div class="adv-form-group" style="grid-column:1/-1">
+        <label>Objectifs de restructuration</label>
+        <select id="restr-objectif">
+          <option value="">Choisir l'objectif principal...</option>
+          <option>Réduire les coûts opérationnels</option>
+          <option>Automatiser les processus répétitifs</option>
+          <option>Améliorer la trésorerie</option>
+          <option>Optimiser la gestion des stocks</option>
+          <option>Structurer la comptabilité</option>
+          <option>Préparer une levée de fonds</option>
+          <option>Diagnostic complet</option>
+        </select>
+      </div>
+    </div>
+    <div style="padding:0 24px 24px;display:flex;gap:12px;align-items:center">
+      <button class="adv-btn" onclick="genRestructuration()">✦ Générer le diagnostic</button>
+      <span id="restr-msg" style="font-size:12px;color:var(--a-muted)"></span>
+    </div>
+  </div>
+
+  <div id="restr-result" style="display:none;margin-top:24px"></div>
+</div>
+
+</main>
+</div>
+
 <script>
-// Configuration Supabase
-const supabaseUrl = window.SUPABASE_URL || 'https://otsiwiwlnowxeolbbgvm.supabase.co';
-const supabaseKey = window.SUPABASE_ANON_KEY || 'votre-clé-publique';
-const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+// === SÉCURITÉ ===
+function escHtml(s){if(!s)return '';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function getSession(){
+  try{
+    const raw=sessionStorage.getItem('tc_session')||localStorage.getItem('tc_session');
+    if(!raw)return null;
+    const s=JSON.parse(raw);
+    if(s?.expires_at && Date.now()/1000 > s.expires_at){clearSession();return null;}
+    return s;
+  }catch{return null;}
+}
+function setSession(s){sessionStorage.setItem('tc_session',JSON.stringify(s));localStorage.setItem('tc_session',JSON.stringify(s));}
+function clearSession(){sessionStorage.removeItem('tc_session');localStorage.removeItem('tc_session');}
 
-let currentUser = null;
+const SE=getSession();
+let TK=SE?.access_token||'';
 
-// Initialisation
-document.addEventListener('DOMContentLoaded', async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    currentUser = user;
-    showPortal();
+// === NAVIGATION ===
+function showScreen(name){
+  document.getElementById('authScreen').style.display='none';
+  document.getElementById('portalScreen').style.display='none';
+  document.getElementById('app').style.display='none';
+  document.getElementById('advisory').style.display='none';
+  if(name==='auth') document.getElementById('authScreen').style.display='flex';
+  else if(name==='portal') document.getElementById('portalScreen').style.display='flex';
+  else if(name==='invest') document.getElementById('app').style.display='block';
+  else if(name==='advisory') document.getElementById('advisory').style.display='block';
+}
+
+function showPortal(){
+  showScreen('portal');
+  const nom=SE?.user?.user_metadata?.nom||SE?.user?.email?.split('@')[0]||'';
+  document.getElementById('portal-welcome').textContent=nom?`Bienvenue, ${escHtml(nom)} — choisissez votre espace`:'Bienvenue — choisissez votre espace';
+}
+
+function enterApp(type){
+  if(type==='invest'){
+    showScreen('invest');
+    const nom=SE?.user?.user_metadata?.nom||SE?.user?.email?.split('@')[0]||'';
+    document.getElementById('nav-user').textContent=escHtml(nom);
+    document.getElementById('txdate').value=new Date().toISOString().split('T')[0];
+    lm();
   } else {
-    showAuth();
+    showScreen('advisory');
+    const nom=SE?.user?.user_metadata?.nom||SE?.user?.email?.split('@')[0]||'';
+    document.getElementById('adv-nav-user').textContent=escHtml(nom);
   }
+}
+
+if(TK){ showPortal(); }
+else { showScreen('auth'); }
+
+// === AUTHENTIFICATION ===
+document.getElementById('tabLogin').addEventListener('click',function(){
+  document.getElementById('tabLogin').classList.add('active');
+  document.getElementById('tabSignup').classList.remove('active');
+  document.getElementById('loginForm').style.display='block';
+  document.getElementById('signupForm').style.display='none';
+  clearAuthMessages();
+});
+document.getElementById('tabSignup').addEventListener('click',function(){
+  document.getElementById('tabSignup').classList.add('active');
+  document.getElementById('tabLogin').classList.remove('active');
+  document.getElementById('loginForm').style.display='none';
+  document.getElementById('signupForm').style.display='block';
+  clearAuthMessages();
+});
+function clearAuthMessages(){
+  document.getElementById('loginError').textContent='';
+  document.getElementById('signupError').textContent='';
+  document.getElementById('signupSuccess').textContent='';
+}
+
+document.getElementById('loginBtn').addEventListener('click',async function(){
+  const email=document.getElementById('loginEmail').value.trim();
+  const password=document.getElementById('loginPassword').value;
+  const errEl=document.getElementById('loginError');
+  if(!email||!password){errEl.textContent='Email et mot de passe requis.';return;}
+  const btn=this; btn.disabled=true; btn.textContent='Connexion...'; errEl.textContent='';
+  try{
+    const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'login',email,password})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Erreur de connexion');
+    setSession(data.session);
+    TK=data.session.access_token;
+    location.reload();
+  }catch(e){errEl.textContent=escHtml(e.message);btn.disabled=false;btn.textContent='Se connecter';}
 });
 
-// Afficher écrans
-function showAuth() {
-  document.getElementById('authScreen').style.display = 'flex';
-  document.getElementById('portalScreen').style.display = 'none';
-}
-
-function showPortal() {
-  document.getElementById('authScreen').style.display = 'none';
-  document.getElementById('portalScreen').style.display = 'flex';
-  if (currentUser) {
-    document.getElementById('portalWelcome').textContent = 
-      `Bienvenue, ${currentUser.email}`;
-  }
-}
-
-// Switch tabs
-function switchAuthTab(tab) {
-  const loginTab = document.querySelectorAll('.auth-tab')[0];
-  const signupTab = document.querySelectorAll('.auth-tab')[1];
-  const loginForm = document.getElementById('loginForm');
-  const signupForm = document.getElementById('signupForm');
-  
-  if (tab === 'login') {
-    loginTab.classList.add('active');
-    signupTab.classList.remove('active');
-    loginForm.style.display = 'block';
-    signupForm.style.display = 'none';
-  } else {
-    signupTab.classList.add('active');
-    loginTab.classList.remove('active');
-    signupForm.style.display = 'block';
-    loginForm.style.display = 'none';
-  }
-}
-
-// Login
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('loginEmail').value;
-  const password = document.getElementById('loginPassword').value;
-  const errorDiv = document.getElementById('loginError');
-  
-  errorDiv.textContent = '';
-  
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-    
-    if (error) throw error;
-    
-    currentUser = data.user;
-    showPortal();
-  } catch (error) {
-    errorDiv.textContent = '⚠ ' + error.message;
-  }
+document.getElementById('signupBtn').addEventListener('click',async function(){
+  const nom=document.getElementById('signupName').value.trim();
+  const email=document.getElementById('signupEmail').value.trim();
+  const password=document.getElementById('signupPassword').value;
+  const errEl=document.getElementById('signupError');
+  const successEl=document.getElementById('signupSuccess');
+  if(!nom||!email||!password){errEl.textContent='Tous les champs sont requis.';return;}
+  if(password.length<6){errEl.textContent='Mot de passe (min. 6 caractères).';return;}
+  const btn=this; btn.disabled=true; btn.textContent='Création...';
+  errEl.textContent=''; successEl.textContent='';
+  try{
+    const res=await fetch('/api/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'signup',email,password,nom})});
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Erreur inscription');
+    if(data.session){setSession(data.session);TK=data.session.access_token;location.reload();}
+    else{successEl.textContent='Compte créé ! Vous pouvez maintenant vous connecter.';['signupName','signupEmail','signupPassword'].forEach(id=>document.getElementById(id).value='');document.getElementById('tabLogin').click();}
+  }catch(e){errEl.textContent=escHtml(e.message);}
+  finally{btn.disabled=false;btn.textContent='Créer mon compte';}
 });
 
-// Signup
-document.getElementById('signupForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const nom = document.getElementById('signupNom').value;
-  const email = document.getElementById('signupEmail').value;
-  const password = document.getElementById('signupPassword').value;
-  const errorDiv = document.getElementById('signupError');
-  const successDiv = document.getElementById('signupSuccess');
-  
-  errorDiv.textContent = '';
-  successDiv.textContent = '';
-  
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { nom }
+function doLogout(){
+  clearSession(); TK=''; location.reload();
+}
+
+// === INVEST ===
+const TABS={marche:lm,portefeuille:lp,fiche:()=>{},boc:loadBocArchives};
+let AT='marche';
+function showTab(n,el){
+  document.querySelectorAll('#app .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#app .nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+n).classList.add('active');el.classList.add('active');
+  if(n!==AT){AT=n;(TABS[n]||function(){})();}
+}
+const N=n=>n!=null?parseFloat(n).toLocaleString('fr-FR'):'—';
+const P=n=>{if(n==null)return '<span class="flat">—</span>';const c=n>0?'up':n<0?'down':'flat',s=n>0?'+':'';return `<span class="${c}">${s}${parseFloat(n).toFixed(2)}%</span>`;};
+const AH=()=>({'Authorization':`Bearer ${TK}`,'Content-Type':'application/json'});
+let AC=[];
+
+async function lm(){
+  const[ir,cr]=await Promise.all([
+    fetch('/api/marche?type=indices').then(r=>r.json()).catch(()=>({data:[]})),
+    fetch('/api/marche?type=cours').then(r=>r.json()).catch(()=>({data:[]})),
+  ]);
+  ri(ir.data||[]);AC=cr.data||[];rhb();rm();
+}
+function ri(d){
+  const M=['BRVM COMPOSITE','BRVM 30','BRVM PRESTIGE'];
+  const m=M.map(n=>d.find(x=>x.indice===n)).filter(Boolean);
+  const s=d.filter(x=>x.indice.startsWith('BRVM -'));
+  const a=[...m,...s];
+  if(!a.length){document.getElementById('indices-grid').innerHTML='<div style="color:var(--i-dim);font-size:13px;padding:14px">Aucun indice — uploadez un BOC depuis l'admin.</div>';return;}
+  document.getElementById('indices-grid').innerHTML=a.map(i=>{
+    const v=parseFloat(i.variation||0),c=v>0?'up':v<0?'down':'flat',s=v>0?'+':'';
+    return `<div class="ic"><div class="ic-name">${escHtml(i.indice.replace('BRVM - ','').replace('BRVM ',''))}</div><div class="ic-val">${parseFloat(i.valeur).toLocaleString('fr-FR',{minimumFractionDigits:2})}</div><div class="ic-var ${c}">${s}${v.toFixed(2)}%</div></div>`;
+  }).join('');
+  const dt=a[0]?.date_seance;
+  if(dt)document.getElementById('marche-date').textContent='Séance du '+new Date(dt).toLocaleDateString('fr-FR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+}
+function rhb(){
+  const w=[...AC].filter(c=>c.variation!=null).sort((a,b)=>parseFloat(b.variation)-parseFloat(a.variation));
+  const row=c=>`<div class="hb-row" onclick="gf('${escHtml(c.ticker)}')"><span class="hb-tk">${escHtml(c.ticker)}</span><span class="hb-nom">${escHtml(c.nom||'')}</span><span class="hb-c">${N(c.cours)}</span><span class="hb-v">${P(parseFloat(c.variation))}</span></div>`;
+  document.getElementById('hausses').innerHTML=w.slice(0,5).map(row).join('')||'<div class="loading">—</div>';
+  document.getElementById('baisses').innerHTML=w.slice().reverse().slice(0,5).map(row).join('')||'<div class="loading">—</div>';
+}
+function rm(){
+  const q=document.getElementById('ms').value.toLowerCase();
+  const se=document.getElementById('msect').value;
+  const so=document.getElementById('msort').value;
+  let l=AC.filter(c=>(!q||(c.ticker||'').toLowerCase().includes(q)||(c.nom||'').toLowerCase().includes(q))&&(!se||c.secteur===se));
+  if(so==='vd')l.sort((a,b)=>parseFloat(b.variation||0)-parseFloat(a.variation||0));
+  else if(so==='va')l.sort((a,b)=>parseFloat(a.variation||0)-parseFloat(b.variation||0));
+  else if(so==='cd')l.sort((a,b)=>parseFloat(b.cours||0)-parseFloat(a.cours||0));
+  else if(so==='ca')l.sort((a,b)=>parseFloat(a.cours||0)-parseFloat(b.cours||0));
+  else if(so==='vold')l.sort((a,b)=>parseInt(b.volume||0)-parseInt(a.volume||0));
+  else l.sort((a,b)=>a.ticker.localeCompare(b.ticker));
+  document.getElementById('mc').textContent=`${l.length} titre${l.length>1?'s':''}`;
+  if(!l.length){document.getElementById('mtb').innerHTML='<tr><td colspan="7"><div class="loading">Aucun résultat</div></td></tr>';return;}
+  document.getElementById('mtb').innerHTML=l.map(c=>`<tr onclick="gf('${escHtml(c.ticker)}')">
+    <td class="ttk">${escHtml(c.ticker)}</td><td class="tmu">${escHtml(c.nom||'—')}</td><td class="tdi">${escHtml(c.secteur||'—')}</td>
+    <td class="r" style="font-weight:500">${N(c.cours)} <span style="font-size:10px;color:var(--i-dim)">FCFA</span></td>
+    <td class="r">${P(parseFloat(c.variation||0))}</td>
+    <td class="r" style="color:var(--i-muted)">${c.volume?parseInt(c.volume).toLocaleString('fr-FR'):'—'}</td>
+    <td>${c.compartiment==='PRESTIGE'?'<span class="tag tagp">Prestige</span>':'<span style="font-size:11px;color:var(--i-dim)">Principal</span>'}</td>
+  </tr>`).join('');
+}
+function gf(tk){
+  document.querySelectorAll('#app .nav-tab').forEach(t=>{if(t.textContent.includes('Fiche'))showTab('fiche',t);});
+  document.getElementById('fq').value=tk;lf();
+}
+async function lp(){
+  const[pf,tx]=await Promise.all([
+    fetch('/api/portefeuille?mode=portefeuille',{headers:AH()}).then(r=>r.json()).catch(()=>({})),
+    fetch('/api/portefeuille?mode=transactions',{headers:AH()}).then(r=>r.json()).catch(()=>({data:[]})),
+  ]);
+  const inv=pf.total_investi||0,val=pf.total_valeur||0,pv=val-inv;
+  document.getElementById('pf-inv').textContent=N(inv)+' FCFA';
+  document.getElementById('pf-val').textContent=N(val)+' FCFA';
+  document.getElementById('pf-pv').innerHTML=(pv>=0?'+':'')+N(pv)+' FCFA';
+  document.getElementById('pf-pv').className='sv '+(pv>=0?'up':'down');
+  document.getElementById('pf-ppct').innerHTML=P(inv?((val-inv)/inv*100):0);
+  const pos=pf.data||[];
+  document.getElementById('pftb').innerHTML=!pos.length?'<tr><td colspan="8"><div class="loading">Aucune position. Ajoutez une transaction ci-dessous.</div></td></tr>':pos.map(p=>`<tr>
+    <td class="ttk">${escHtml(p.ticker)}</td><td class="tmu">${escHtml(p.nom||'')}</td>
+    <td class="r">${p.quantite.toLocaleString('fr-FR')}</td>
+    <td class="r">${N(p.cmp)}</td><td class="r">${N(p.cours_actuel)}</td>
+    <td class="r" style="font-weight:500">${N(p.valeur_actuelle)}</td>
+    <td class="r">${P(p.plus_value_pct)}</td>
+    <td class="r" style="font-size:12px">${(p.plus_value>=0?'+':'')+N(p.plus_value)}</td>
+  </tr>`).join('');
+  const tx2=tx.data||[];
+  document.getElementById('txcount').textContent=`${tx2.length} transaction${tx2.length>1?'s':''}`;
+  document.getElementById('txtb').innerHTML=!tx2.length?'<tr><td colspan="8"><div class="loading">Aucune transaction.</div></td></tr>':tx2.map(t=>`<tr>
+    <td style="color:var(--i-muted)">${escHtml(t.date_transaction||'')}</td>
+    <td><span style="font-size:11px;font-weight:600;color:${t.type==='ACHAT'?'var(--i-grn)':'var(--i-red)'}">${escHtml(t.type)}</span></td>
+    <td class="ttk">${escHtml(t.ticker)}</td>
+    <td class="r">${(t.quantite||0).toLocaleString('fr-FR')}</td>
+    <td class="r">${N(t.prix_unitaire)}</td>
+    <td class="r" style="color:var(--i-muted)">${N(t.frais_total)}</td>
+    <td class="r" style="font-weight:500">${N(t.montant_net)}</td>
+    <td class="r"><button class="btn-d" onclick="dTx('${escHtml(t.id)}')">✕</button></td>
+  </tr>`).join('');
+}
+async function addTx(){
+  const tk=document.getElementById('txtk').value.trim();
+  const tp=document.getElementById('txtype').value;
+  const qt=document.getElementById('txqte').value;
+  const pr=document.getElementById('txprix').value;
+  const dt=document.getElementById('txdate').value;
+  const nt=document.getElementById('txnote').value.substring(0,200);
+  if(!tk||!qt||!pr){document.getElementById('txmsg').textContent='Remplissez les champs obligatoires.';return;}
+  if(!/^[A-Z]{2,6}$/.test(tk)){document.getElementById('txmsg').textContent='Ticker invalide.';return;}
+  const btn=document.getElementById('txbtn');btn.disabled=true;
+  document.getElementById('txmsg').textContent='Enregistrement...';
+  const r=await fetch('/api/portefeuille?mode=transaction',{method:'POST',headers:AH(),body:JSON.stringify({ticker:tk,type:tp,quantite:parseInt(qt),prix:parseFloat(pr),date_transaction:dt,note:nt})}).then(r=>r.json()).catch(()=>({error:'Erreur réseau'}));
+  if(r.error){document.getElementById('txmsg').textContent=escHtml(r.error);btn.disabled=false;return;}
+  document.getElementById('txmsg').textContent='✓ Enregistrée !';
+  ['txtk','txqte','txprix','txnote'].forEach(id=>document.getElementById(id).value='');
+  btn.disabled=false;lp();
+}
+async function dTx(id){
+  if(!confirm('Supprimer cette transaction ?'))return;
+  await fetch(`/api/portefeuille?mode=transaction&id=${encodeURIComponent(id)}`,{method:'DELETE',headers:AH()});lp();
+}
+let FC=null;
+async function lf(){
+  const tk=document.getElementById('fq').value.trim().toUpperCase();
+  if(!tk||!/^[A-Z]{2,6}$/.test(tk))return;
+  document.getElementById('fc').innerHTML='<div class="loading"><div class="spin"></div><br>Chargement...</div>';
+  const r=await fetch(`/api/fiche?ticker=${encodeURIComponent(tk)}`).then(r=>r.json()).catch(()=>({}));
+  const{entreprise:e,cours:c,chartData:cd,financials:fi,analyses:an,valuation:v}=r;
+  if(!e&&!c){document.getElementById('fc').innerHTML='<div class="loading" style="color:var(--i-red)">Ticker introuvable.</div>';return;}
+  const mults=[
+    {l:'PER',v:v?.per?v.per+'x':'—',g:v?.per&&v.per<15},
+    {l:'Rendement',v:v?.rdt?v.rdt+'%':'—',g:v?.rdt>4},
+    {l:'P/Actif net',v:v?.p_actif_net?v.p_actif_net+'x':'—'},
+    {l:'EV/EBITDA',v:v?.ev_ebitda?v.ev_ebitda+'x':'—'},
+    {l:'Capitalisation',v:v?.cap_bours_mrd?v.cap_bours_mrd+' Mrd FCFA':'—'},
+    {l:'ROE',v:fi?.[0]?.roe?fi[0].roe+'%':'—',g:fi?.[0]?.roe>15},
+  ];
+  document.getElementById('fc').innerHTML=`
+  <div class="fh">
+    <div class="fn" style="flex:1">
+      <h2>${escHtml(e?.nom||tk)}</h2>
+      <div class="fbg">
+        ${e?.compartiment==='PRESTIGE'?'<span class="bg bgp">Prestige</span>':''}
+        <span class="bg bgs">${escHtml(e?.secteur||'')}</span>
+        <span class="bg bgs">${escHtml(e?.pays||'')}</span>
+      </div>
+      <div style="font-size:13px;color:var(--i-muted);max-width:480px;line-height:1.7">${escHtml(e?.description||'')}</div>
+    </div>
+    <div style="text-align:right;flex-shrink:0">
+      <div class="fcv">${N(c?.cours)}<span style="font-size:15px;color:var(--i-muted)"> FCFA</span></div>
+      <div style="font-size:14px;margin-top:3px">${P(parseFloat(c?.variation||0))}</div>
+      <div style="font-size:12px;color:var(--i-dim);margin-top:2px">Séance du ${escHtml(c?.date_seance||'—')}</div>
+    </div>
+  </div>
+  <div class="mg">${mults.map(m=>`<div class="mc"><div class="ml">${m.l}</div><div class="mv${m.g?' good':''}">${m.v}</div></div>`).join('')}</div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="card-head"><span class="card-title">Cours historique${cd?.length?' ('+cd.length+' séances)':''}</span></div>
+    <div class="cw"><canvas id="fch"></canvas></div>
+  </div>
+  ${fi?.length?`<div class="card" style="margin-bottom:14px">
+    <div class="card-head"><span class="card-title">Données financières (FCFA)</span></div>
+    <div class="tw"><table><thead><tr>
+      <th>Année</th><th class="r">CA</th><th class="r">EBIT</th><th class="r">Résultat net</th>
+      <th class="r">BPA</th><th class="r">DPA</th><th class="r">ROE</th>
+    </tr></thead><tbody>${fi.map(f=>`<tr>
+      <td style="font-weight:600">${escHtml(String(f.annee))}</td>
+      <td class="r">${N(f.chiffre_affaires)}</td><td class="r">${N(f.ebit)}</td>
+      <td class="r" style="color:${(f.resultat_net||0)>0?'var(--i-grn)':'var(--i-red)'}">${N(f.resultat_net)}</td>
+      <td class="r">${N(f.bpa)}</td>
+      <td class="r" style="color:var(--i-gold)">${N(f.dpa)}</td>
+      <td class="r">${f.roe?f.roe+'%':'—'}</td>
+    </tr>`).join('')}</tbody></table></div>
+  </div>`:''}
+  ${an?.length?`<div class="card">
+    <div class="card-head"><span class="card-title">Recommandations</span></div>
+    ${an.map(a=>{const rc={'Acheter':'var(--i-grn)','Renforcer':'#4ADE80','Conserver':'var(--i-gold)','Alléger':'#FB923C','Vendre':'var(--i-red)'}[a.recommandation]||'var(--i-muted)';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:9px 16px;border-bottom:1px solid rgba(255,255,255,0.03)">
+      <span style="color:${rc};font-weight:600;min-width:80px">${escHtml(a.recommandation)}</span>
+      <span style="min-width:90px;font-weight:500">${a.objectif_cours?N(a.objectif_cours)+' FCFA':'—'}</span>
+      <span style="color:${(a.potentiel_pct||0)>=0?'var(--i-grn)':'var(--i-red)'};min-width:55px">${a.potentiel_pct!=null?((a.potentiel_pct>=0?'+':'')+parseFloat(a.potentiel_pct).toFixed(1)+'%'):'—'}</span>
+      <span style="flex:1;font-size:12px;color:var(--i-muted)">${escHtml(a.commentaire||'')}</span>
+      <span style="font-size:11px;color:var(--i-dim)">${escHtml(a.date_analyse||'')}</span>
+    </div>`;}).join('')}
+  </div>`:''}`;
+  if(cd?.length>1){
+    const lb=cd.map(h=>h.date_seance),vs=cd.map(h=>parseFloat(h.cloture||h.cours));
+    if(FC)FC.destroy();
+    const col=vs[vs.length-1]>=vs[0]?'#2E7D32':'#C62828';
+    FC=new Chart(document.getElementById('fch').getContext('2d'),{
+      type:'line',
+      data:{labels:lb,datasets:[{data:vs,borderColor:col,backgroundColor:col+'15',borderWidth:2,pointRadius:0,fill:true,tension:.3}]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.parsed.y.toLocaleString('fr-FR')+' FCFA'}}},
+        scales:{
+          x:{ticks:{maxTicksLimit:8,color:'#8C8279',font:{size:10}},grid:{color:'rgba(255,255,255,.03)'}},
+          y:{ticks:{color:'#8C8279',font:{size:10},callback:v=>(v/1000).toFixed(0)+'k'},grid:{color:'rgba(255,255,255,.03)'}}
+        }
       }
     });
-    
-    if (error) throw error;
-    
-    currentUser = data.user;
-    successDiv.textContent = '✓ Compte créé avec succès !';
-    
-    setTimeout(() => {
-      showPortal();
-    }, 1000);
-  } catch (error) {
-    errorDiv.textContent = '⚠ ' + error.message;
   }
-});
-
-// Logout
-async function logout() {
-  await supabase.auth.signOut();
-  currentUser = null;
-  showAuth();
+}
+async function loadBocArchives(){
+  const tbody=document.getElementById('bocTbodyClient');
+  const countSpan=document.getElementById('bocCount');
+  tbody.innerHTML=`<tr><td colspan="4"><div class="loading"><div class="spin"></div></div></td></tr>`;
+  try{
+    const res=await fetch('/api/boc');
+    const data=await res.json();
+    if(!res.ok)throw new Error(data.error||'Erreur');
+    const list=data.data||[];
+    countSpan.textContent=`${list.length} document${list.length>1?'s':''}`;
+    if(!list.length){tbody.innerHTML='<tr><td colspan="4" style="padding:20px;color:var(--i-dim)">Aucun BOC archivé pour le moment.</td></tr>';return;}
+    tbody.innerHTML=list.map(b=>`<tr>
+      <td>${escHtml(b.date_seance)}</td>
+      <td>${escHtml(b.fichier_nom)}</td>
+      <td>${new Date(b.created_at).toLocaleDateString('fr-FR')}</td>
+      <td><a href="${escHtml(b.fichier_url)}" target="_blank" rel="noopener noreferrer" class="btn-small">📄 PDF</a></td>
+    </tr>`).join('');
+  }catch(e){tbody.innerHTML=`<tr><td colspan="4" style="color:var(--i-red);padding:16px">Erreur: ${escHtml(e.message)}</td></tr>`;countSpan.textContent='';}
 }
 
-// Load Invest/Advisory (à compléter avec le code existant)
-function loadInvest() {
-  alert('Chargement de The Capital Invest...');
-  // Ajouter ici le code pour afficher la section Invest
+// === ADVISORY ===
+let currentAdvTab='accueil';
+function showAdvTab(tab,el){
+  document.querySelectorAll('#advisory .tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#advisory .nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('adv-tab-'+tab).classList.add('active');
+  el.classList.add('active');
+  currentAdvTab=tab;
 }
 
-function loadAdvisory() {
-  alert('Chargement de The Capital Advisory...');
-  // Ajouter ici le code pour afficher la section Advisory
+async function genBusinessPlan(){
+  const nom=document.getElementById('bp-nom').value.trim();
+  const secteur=document.getElementById('bp-secteur').value;
+  const pays=document.getElementById('bp-pays').value.trim();
+  const capital=document.getElementById('bp-capital').value;
+  const desc=document.getElementById('bp-desc').value.trim();
+  const horizon=document.getElementById('bp-horizon').value;
+  const employes=document.getElementById('bp-employes').value;
+
+  if(!nom||!secteur||!desc){
+    document.getElementById('bp-msg').textContent='Veuillez remplir tous les champs obligatoires';
+    return;
+  }
+
+  document.getElementById('bp-msg').textContent='Génération en cours...';
+  document.getElementById('bp-result').style.display='block';
+  document.getElementById('bp-result').innerHTML='<div class="adv-generating"><div class="adv-spin"></div><br>Génération de votre business plan...</div>';
+
+  try{
+    const res=await fetch('/api/advisory',{
+      method:'POST',
+      headers:AH(),
+      body:JSON.stringify({
+        action:'business_plan',
+        data:{nom,secteur,pays,capital,description:desc,horizon,employes}
+      })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erreur génération');
+
+    document.getElementById('bp-msg').textContent='✓ Business plan généré !';
+    document.getElementById('bp-result').innerHTML=`
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Business Plan — ${escHtml(nom)}</span>
+          <span class="adv-tag adv-tag-green" style="margin-left:auto">${escHtml(secteur)}</span>
+        </div>
+        <div style="padding:28px">
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Résumé Exécutif</div>
+            <div class="adv-bp-content">${escHtml(data.resume_executif||'')}</div>
+          </div>
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Analyse de Marché</div>
+            <div class="adv-bp-content">${escHtml(data.analyse_marche||'')}</div>
+          </div>
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Stratégie Marketing</div>
+            <div class="adv-bp-content">${escHtml(data.strategie_marketing||'')}</div>
+          </div>
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Plan Opérationnel</div>
+            <div class="adv-bp-content">${escHtml(data.plan_operationnel||'')}</div>
+          </div>
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Projections Financières</div>
+            <div class="adv-bp-content">${escHtml(data.projections_financieres||'')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }catch(e){
+    document.getElementById('bp-msg').textContent='Erreur: '+escHtml(e.message);
+    document.getElementById('bp-result').style.display='none';
+  }
+}
+
+let advChatHistory=[];
+async function sendAdvMsg(){
+  const input=document.getElementById('adv-chat-input');
+  const msg=input.value.trim();
+  if(!msg)return;
+
+  input.value='';
+  const btn=document.getElementById('adv-chat-send');
+  btn.disabled=true;
+
+  const msgsDiv=document.getElementById('adv-chat-msgs');
+  msgsDiv.innerHTML+=`<div class="adv-msg user">${escHtml(msg)}</div>`;
+  msgsDiv.innerHTML+=`<div class="adv-msg assistant loading-msg">Réflexion...</div>`;
+  msgsDiv.scrollTop=msgsDiv.scrollHeight;
+
+  advChatHistory.push({role:'user',content:msg});
+
+  try{
+    const res=await fetch('/api/advisory',{
+      method:'POST',
+      headers:AH(),
+      body:JSON.stringify({
+        action:'chat',
+        messages:advChatHistory
+      })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erreur');
+
+    advChatHistory.push({role:'assistant',content:data.response});
+    msgsDiv.removeChild(msgsDiv.lastChild);
+    msgsDiv.innerHTML+=`<div class="adv-msg assistant">${escHtml(data.response)}</div>`;
+    msgsDiv.scrollTop=msgsDiv.scrollHeight;
+  }catch(e){
+    msgsDiv.removeChild(msgsDiv.lastChild);
+    msgsDiv.innerHTML+=`<div class="adv-msg assistant" style="color:var(--a-red)">Erreur: ${escHtml(e.message)}</div>`;
+  }
+
+  btn.disabled=false;
+}
+
+function askAdvQuick(question){
+  document.getElementById('adv-chat-input').value=question;
+  sendAdvMsg();
+}
+
+function clearAdvChat(){
+  advChatHistory=[];
+  document.getElementById('adv-chat-msgs').innerHTML=`<div class="adv-msg assistant">Bonjour ! Je suis votre conseiller financier The Capital Advisory. Je peux vous aider sur la gestion de votre entreprise, vos finances, votre comptabilité, votre stratégie ou la réglementation. Que puis-je faire pour vous ?</div>`;
+}
+
+async function genExcelModel(secteur){
+  document.getElementById('excel-result').style.display='block';
+  document.getElementById('excel-result').innerHTML='<div class="adv-generating"><div class="adv-spin"></div><br>Génération du modèle Excel...</div>';
+
+  try{
+    const res=await fetch('/api/advisory',{
+      method:'POST',
+      headers:AH(),
+      body:JSON.stringify({
+        action:'excel_model',
+        secteur:secteur
+      })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erreur génération');
+
+    document.getElementById('excel-result').innerHTML=`
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Modèle Excel — ${escHtml(secteur)}</span>
+          <span class="adv-tag adv-tag-blue" style="margin-left:auto">Prêt à télécharger</span>
+        </div>
+        <div style="padding:28px">
+          <p style="font-size:13px;color:var(--a-muted);margin-bottom:18px">${escHtml(data.description||'')}</p>
+          <div style="display:flex;gap:10px">
+            <button class="adv-btn" onclick="window.open('${escHtml(data.download_url)}','_blank')">📥 Télécharger le fichier Excel</button>
+            <button class="adv-btn adv-btn-ghost" onclick="document.getElementById('excel-result').style.display='none'">Fermer</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }catch(e){
+    document.getElementById('excel-result').innerHTML=`<div class="card"><div style="padding:24px;color:var(--a-red)">Erreur: ${escHtml(e.message)}</div></div>`;
+  }
+}
+
+async function genRestructuration(){
+  const nom=document.getElementById('restr-nom').value.trim();
+  const secteur=document.getElementById('restr-secteur').value;
+  const ca=document.getElementById('restr-ca').value;
+  const employes=document.getElementById('restr-employes').value;
+  const problemes=document.getElementById('restr-problemes').value.trim();
+  const objectif=document.getElementById('restr-objectif').value;
+
+  if(!nom||!secteur||!problemes||!objectif){
+    document.getElementById('restr-msg').textContent='Veuillez remplir tous les champs obligatoires';
+    return;
+  }
+
+  document.getElementById('restr-msg').textContent='Génération en cours...';
+  document.getElementById('restr-result').style.display='block';
+  document.getElementById('restr-result').innerHTML='<div class="adv-generating"><div class="adv-spin"></div><br>Analyse de votre entreprise...</div>';
+
+  try{
+    const res=await fetch('/api/advisory',{
+      method:'POST',
+      headers:AH(),
+      body:JSON.stringify({
+        action:'restructuration',
+        data:{nom,secteur,ca,employes,problemes,objectif}
+      })
+    });
+    const data=await res.json();
+    if(!res.ok) throw new Error(data.error||'Erreur génération');
+
+    document.getElementById('restr-msg').textContent='✓ Diagnostic généré !';
+    document.getElementById('restr-result').innerHTML=`
+      <div class="card">
+        <div class="card-head">
+          <span class="card-title">Diagnostic — ${escHtml(nom)}</span>
+          <span class="adv-tag adv-tag-orange" style="margin-left:auto">${escHtml(objectif)}</span>
+        </div>
+        <div style="padding:28px">
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Diagnostic Global</div>
+            <div class="adv-bp-content">${escHtml(data.diagnostic||'')}</div>
+          </div>
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Recommandations Prioritaires</div>
+            <div class="adv-bp-content">${escHtml(data.recommandations||'')}</div>
+          </div>
+          <div class="adv-bp-section">
+            <div class="adv-bp-section-title">Plan d'Action</div>
+            <div class="adv-bp-content">${escHtml(data.plan_action||'')}</div>
+          </div>
+        </div>
+      </div>
+    `;
+  }catch(e){
+    document.getElementById('restr-msg').textContent='Erreur: '+escHtml(e.message);
+    document.getElementById('restr-result').style.display='none';
+  }
 }
 </script>
 </body>
