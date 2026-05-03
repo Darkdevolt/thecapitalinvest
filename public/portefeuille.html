@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Portefeuille — The Capital</title>
+<script src="nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<script>initNav('portefeuille');</script>
+
+<div class="page-content">
+  <div class="page-header">
+    <h1>Portefeuille <span style="color:var(--gold)">Virtuel</span></h1>
+    <p>Simulez vos investissements BRVM avec les frais réels</p>
+  </div>
+
+  <!-- KPIs portefeuille -->
+  <div class="grid-4 mb20">
+    <div class="stat-card">
+      <div class="stat-label">Valeur totale</div>
+      <div class="stat-value" id="pf-valeur">—</div>
+      <div class="stat-change" id="pf-variation">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Investi</div>
+      <div class="stat-value" id="pf-investi">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">P&L</div>
+      <div class="stat-value" id="pf-pl">—</div>
+      <div class="stat-change" id="pf-pl-pct">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Liquidité</div>
+      <div class="stat-value" id="pf-liquide">—</div>
+    </div>
+  </div>
+
+  <div class="grid-7030">
+    <!-- Positions -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Mes positions</div>
+        <button class="btn btn-primary" onclick="showAddModal()" style="padding:6px 14px;font-size:11px">+ Ajouter</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th class="right">Qté</th>
+              <th class="right">CMP</th>
+              <th class="right">Cours</th>
+              <th class="right">P&L</th>
+              <th class="right">% PF</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="pf-positions"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Allocation -->
+    <div>
+      <div class="card mb20">
+        <div class="card-header"><div class="card-title">Allocation sectorielle</div></div>
+        <div class="card-body"><div class="chart-container"><canvas id="chartSectors"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Performance vs BRVM</div></div>
+        <div class="card-body"><div class="chart-container"><canvas id="chartPerf"></canvas></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Historique transactions -->
+  <div class="card">
+    <div class="card-header"><div class="card-title">Historique des transactions</div></div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Type</th><th>Titre</th><th class="right">Qté</th><th class="right">Prix</th><th class="right">Frais</th><th class="right">Total</th></tr>
+        </thead>
+        <tbody id="pf-transactions"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal ajout position -->
+<div id="addModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:28px;width:90%;max-width:400px">
+    <h3 style="font-family:var(--serif);font-size:18px;margin-bottom:16px">Nouvelle transaction</h3>
+    <div class="field" style="margin-bottom:12px">
+      <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Ticker</label>
+      <select id="modal-ticker" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)"></select>
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Type</label>
+      <select id="modal-type" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)">
+        <option value="achat">Achat</option>
+        <option value="vente">Vente</option>
+      </select>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+      <div class="field">
+        <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Quantité</label>
+        <input type="number" id="modal-qte" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)" placeholder="100">
+      </div>
+      <div class="field">
+        <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Prix (FCFA)</label>
+        <input type="number" id="modal-prix" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)" placeholder="5000">
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--dim);margin-bottom:16px">
+      Frais estimés : <span id="modal-frais" style="color:var(--gold)">—</span> FCFA (1.2% + TVA 18%)
+    </div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" onclick="addTransaction()" style="flex:1">Confirmer</button>
+      <button class="btn btn-outline" onclick="hideAddModal()" style="flex:1">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Frais BRVM réels
+const FRAIS_COURTAGE = 0.012; // 1.2%
+const TVA = 0.18;
+const REDEVANCE_BRVM = 0.0003; // 0.03%
+const REDEVANCE_DC_BR = 0.0001; // 0.01%
+
+function calcFrais(montant) {
+  const courtage = montant * FRAIS_COURTAGE;
+  const tva = courtage * TVA;
+  const redevance = montant * (REDEVANCE_BRVM + REDEVANCE_DC_BR);
+  return courtage + tva + redevance;
+}
+
+// State
+let portfolio = JSON.parse(localStorage.getItem('tc_portfolio') || '[]');
+let transactions = JSON.parse(localStorage.getItem('tc_transactions') || '[]');
+let allCours = [];
+
+async function loadData() {
+  const r = await sbQuery('cours', { order: 'date_seance.desc', limit: 300 }).catch(() => []);
+  allCours = r || [];
+  
+  // Populate ticker select
+  const tickers = [...new Set(allCours.map(c => c.ticker))].sort();
+  document.getElementById('modal-ticker').innerHTML = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
+  
+  renderPortfolio();
+}
+
+function renderPortfolio() {
+  // Calculer positions agrégées
+  const positions = {};
+  transactions.forEach(t => {
+    if (!positions[t.ticker]) positions[t.ticker] = { qte: 0, investi: 0, frais: 0 };
+    const sign = t.type === 'achat' ? 1 : -1;
+    positions[t.ticker].qte += sign * t.qte;
+    positions[t.ticker].investi += sign * (t.qte * t.prix + t.frais);
+    positions[t.ticker].frais += t.frais;
+  });
+
+  let totalValeur = 0, totalInvesti = 0, totalFrais = 0;
+  const rows = [];
+  const sectorAlloc = {};
+
+  Object.entries(positions).forEach(([ticker, pos]) => {
+    if (pos.qte <= 0) return;
+    const cours = allCours.find(c => c.ticker === ticker);
+    const cp = cours?.cours || pos.investi / pos.qte;
+    const valeur = pos.qte * cp;
+    const pl = valeur - pos.investi;
+    const plPct = pos.investi > 0 ? (pl / pos.investi * 100) : 0;
+    const sector = getSector(ticker);
+    
+    totalValeur += valeur;
+    totalInvesti += pos.investi;
+    totalFrais += pos.frais;
+    
+    sectorAlloc[sector] = (sectorAlloc[sector] || 0) + valeur;
+
+    rows.push({ ticker, qte: pos.qte, cmp: pos.investi / pos.qte, cp, pl, plPct, valeur, sector });
+  });
+
+  const liquide = 10000000 - totalInvesti; // Capital initial fictif 10M
+
+  // KPIs
+  document.getElementById('pf-valeur').textContent = fmtM(totalValeur);
+  document.getElementById('pf-investi').textContent = fmtM(totalInvesti);
+  document.getElementById('pf-liquide').textContent = fmtM(liquide);
+  
+  const plTotal = totalValeur - totalInvesti;
+  const plPct = totalInvesti > 0 ? plTotal / totalInvesti * 100 : 0;
+  document.getElementById('pf-pl').textContent = (plTotal >= 0 ? '+' : '') + fmtM(plTotal);
+  document.getElementById('pf-pl').style.color = plTotal >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('pf-pl-pct').innerHTML = changePill(plPct);
+  document.getElementById('pf-variation').innerHTML = changePill(plPct);
+
+  // Table positions
+  document.getElementById('pf-positions').innerHTML = rows.length
+    ? rows.map(r => `<tr>
+        <td><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${r.ticker}</span></td>
+        <td class="right">${fmt(r.qte)}</td>
+        <td class="right">${fmt(r.cmp)}</td>
+        <td class="right">${fmt(r.cp)}</td>
+        <td class="right" style="color:${r.pl>=0?'var(--green)':'var(--red)'}">${r.pl>=0?'+':''}${fmtM(r.pl)}</td>
+        <td class="right">${totalValeur>0?(r.valeur/totalValeur*100).toFixed(1):0}%</td>
+        <td><button class="btn btn-danger btn-sm" onclick="removePosition('${r.ticker}')">✕</button></td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--dim)">Aucune position</td></tr>';
+
+  // Transactions
+  document.getElementById('pf-transactions').innerHTML = transactions.slice(-20).reverse().map(t => {
+    const total = t.qte * t.prix + t.frais;
+    return `<tr>
+      <td>${fmtDate(t.date)}</td>
+      <td><span style="color:${t.type==='achat'?'var(--green)':'var(--red)'}">${t.type.toUpperCase()}</span></td>
+      <td style="font-family:var(--mono);color:var(--gold)">${t.ticker}</td>
+      <td class="right">${fmt(t.qte)}</td>
+      <td class="right">${fmt(t.prix)}</td>
+      <td class="right" style="color:var(--dim)">${fmt(t.frais)}</td>
+      <td class="right">${fmt(total)}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;padding:16px;color:var(--dim)">Aucune transaction</td></tr>';
+
+  // Charts
+  renderSectorChart(sectorAlloc, totalValeur);
+}
+
+function renderSectorChart(alloc, total) {
+  const ctx = document.getElementById('chartSectors');
+  if (!ctx) return;
+  const labels = Object.keys(alloc);
+  const data = Object.values(alloc).map(v => (v / total * 100).toFixed(1));
+  const colors = ['#B8964E', '#60A5FA', '#4ADE80', '#F87171', '#FB923C', '#A78BFA'];
+  
+  new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [{
+        data,
+        backgroundColor: colors,
+        borderColor: 'var(--surface)',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'right', labels: { color: 'var(--muted)', font: { size: 10 } } }
+      }
+    }
+  });
+}
+
+// Modal
+function showAddModal() { document.getElementById('addModal').style.display = 'flex'; }
+function hideAddModal() { document.getElementById('addModal').style.display = 'none'; }
+
+document.getElementById('modal-qte')?.addEventListener('input', updateFrais);
+document.getElementById('modal-prix')?.addEventListener('input', updateFrais);
+
+function updateFrais() {
+  const qte = parseFloat(document.getElementById('modal-qte').value) || 0;
+  const prix = parseFloat(document.getElementById('modal-prix').value) || 0;
+  const frais = calcFrais(qte * prix);
+  document.getElementById('modal-frais').textContent = fmt(frais);
+}
+
+function addTransaction() {
+  const ticker = document.getElementById('modal-ticker').value;
+  const type = document.getElementById('modal-type').value;
+  const qte = parseInt(document.getElementById('modal-qte').value) || 0;
+  const prix = parseFloat(document.getElementById('modal-prix').value) || 0;
+  
+  if (!qte || !prix) return;
+  
+  const montant = qte * prix;
+  const frais = calcFrais(montant);
+  
+  transactions.push({
+    id: Date.now(),
+    date: new Date().toISOString(),
+    ticker, type, qte, prix, frais
+  });
+  
+  localStorage.setItem('tc_transactions', JSON.stringify(transactions));
+  hideAddModal();
+  renderPortfolio();
+}
+
+function removePosition(ticker) {
+  if (!confirm(`Clôturer la position ${ticker} ?`)) return;
+  // Marquer comme vendu à cours du jour
+  const cours = allCours.find(c => c.ticker === ticker)?.cours || 0;
+  const pos = positions?.[ticker];
+  if (pos) {
+    transactions.push({
+      id: Date.now(),
+      date: new Date().toISOString(),
+      ticker, type: 'vente', qte: pos.qte, prix: cours, frais: calcFrais(pos.qte * cours)
+    });
+    localStorage.setItem('tc_transactions', JSON.stringify(transactions));
+    renderPortfolio();
+  }
+}
+
+loadData();
+</script>
+</body>
+</html>
