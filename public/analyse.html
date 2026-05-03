@@ -24,7 +24,6 @@
     <div class="section-title">Graphique d'une Action</div>
     <div class="section-sub">Historique des cours avec indicateurs techniques</div>
 
-    <!-- Sélecteur ticker -->
     <div class="ticker-selector card mb20">
       <div class="card-body" style="padding:16px 20px">
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -56,7 +55,6 @@
       </div>
     </div>
 
-    <!-- Fiche rapide du titre sélectionné -->
     <div id="tickerHero" style="display:none" class="card mb20">
       <div class="card-body" style="padding:16px 20px">
         <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
@@ -74,7 +72,6 @@
       </div>
     </div>
 
-    <!-- Chart principal -->
     <div class="card mb20">
       <div class="card-header">
         <div class="card-title" id="graphChartTitle">Sélectionnez un titre</div>
@@ -87,7 +84,6 @@
       </div>
     </div>
 
-    <!-- Volume chart -->
     <div class="card" id="volChartCard" style="display:none;margin-bottom:20px">
       <div class="card-header"><div class="card-title">Volume échangé</div></div>
       <div class="card-body">
@@ -104,15 +100,12 @@
     <div class="section-sub">Niveaux clés, supports, résistances et indicateurs pour le titre sélectionné</div>
 
     <div class="grid-2">
-      <!-- Niveaux -->
       <div class="card">
         <div class="card-header"><div class="card-title">Niveaux clés</div></div>
         <div id="niveauxTable" class="card-body" style="padding-top:8px;padding-bottom:8px">
           <div style="color:var(--dim);font-size:13px;text-align:center;padding:20px 0">Sélectionnez un titre</div>
         </div>
       </div>
-
-      <!-- Moyennes mobiles -->
       <div class="card">
         <div class="card-header"><div class="card-title">Moyennes Mobiles</div></div>
         <div id="mmTable" class="card-body" style="padding-top:8px;padding-bottom:8px">
@@ -121,7 +114,6 @@
       </div>
     </div>
 
-    <!-- RSI Gauge -->
     <div class="card mb20">
       <div class="card-header">
         <div class="card-title">RSI — Relative Strength Index (14 périodes)</div>
@@ -226,7 +218,6 @@
       </div>
     </div>
 
-    <!-- Tableau comparatif -->
     <div class="card">
       <div class="card-header"><div class="card-title">Comparatif des performances</div></div>
       <div class="table-wrap">
@@ -280,7 +271,7 @@
     </div>
   </div>
 
-</div><!-- /page-content -->
+</div>
 
 <style>
 /* Styles spécifiques à analyse.html */
@@ -293,12 +284,8 @@
 .signal-sell { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
 .signal-neutral { background: rgba(245,240,232,0.05); color: var(--dim); border: 1px solid var(--border2); }
 
-.tendance-bar {
-  display: flex; align-items: center; gap: 6px;
-}
-.trend-dot {
-  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-}
+.tendance-bar { display: flex; align-items: center; gap: 6px; }
+.trend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
 
 .notation-bar-wrap {
   display: flex; align-items: center; gap: 8px;
@@ -358,7 +345,7 @@
 // STATE
 // ═══════════════════════════════════════
 let allCours = [], allFinancials = [];
-let tickerHistorique = {};   // cache par ticker
+let tickerHistorique = {};
 let graphTicker = null, graphPeriod = 30;
 let compTickers = [], compPeriod = 30;
 let graphChartInst = null, volChartInst = null, compChartInst = null;
@@ -420,7 +407,6 @@ async function loadTickerData(ticker) {
   if (!ticker) return;
   graphTicker = ticker;
 
-  // Cours du ticker
   const c = allCours.find(x => x.ticker === ticker) || {};
   document.getElementById('tickerHero').style.display = 'block';
   document.getElementById('heroTicker').textContent = ticker;
@@ -432,7 +418,6 @@ async function loadTickerData(ticker) {
   document.getElementById('heroCap').textContent = c.capitalisation ? fmtM(c.capitalisation) : '—';
   document.getElementById('graphChartTitle').textContent = `${ticker} — Historique des cours`;
 
-  // Charger ou générer historique
   if (!tickerHistorique[ticker]) {
     try {
       const hist = await sbQuery('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
@@ -450,15 +435,11 @@ async function loadTickerData(ticker) {
 }
 
 function generateDemoHistorique(ticker, baseCours) {
-  return Array.from({ length: 252 }, (_, i) => {
-    const drift = (Math.random() - 0.48) * 0.012;
-    const prev = i === 0 ? baseCours : null;
-    return {
-      date_seance: new Date(Date.now() - (251 - i) * 86400000).toISOString().split('T')[0],
-      cloture: baseCours * (0.85 + Math.sin(i * 0.05) * 0.1 + (Math.random() - 0.47) * 0.04),
-      volume: Math.floor(Math.random() * 50000 + 5000),
-    };
-  });
+  return Array.from({ length: 252 }, (_, i) => ({
+    date_seance: new Date(Date.now() - (251 - i) * 86400000).toISOString().split('T')[0],
+    cloture: baseCours * (0.85 + Math.sin(i * 0.05) * 0.1 + (Math.random() - 0.47) * 0.04),
+    volume: Math.floor(Math.random() * 50000 + 5000),
+  }));
 }
 
 // ═══════════════════════════════════════
@@ -472,7 +453,6 @@ function renderGraphChart() {
   const prix = hist.map(d => d.cloture || d.cours || 0);
   const volumes = hist.map(d => d.volume || 0);
 
-  // Calcul moyennes mobiles
   function calcMM(data, n) {
     return data.map((_, i) => {
       if (i < n - 1) return null;
@@ -483,7 +463,6 @@ function renderGraphChart() {
   const mm20 = showMM20 ? calcMM(prix, Math.min(20, prix.length)) : null;
   const mm50 = showMM50 ? calcMM(prix, Math.min(50, prix.length)) : null;
 
-  // Date range
   if (hist.length >= 2) {
     document.getElementById('graphDateRange').textContent =
       fmtDate(hist[0].date_seance) + ' → ' + fmtDate(hist[hist.length - 1].date_seance);
@@ -517,7 +496,6 @@ function renderGraphChart() {
     }
   });
 
-  // Volume chart
   const volCard = document.getElementById('volChartCard');
   if (showVol) {
     volCard.style.display = 'block';
@@ -570,7 +548,6 @@ function renderTechnique() {
   const mm20 = prix.slice(-20).reduce((s, v) => s + v, 0) / Math.min(20, prix.length);
   const mm50 = prix.length >= 50 ? prix.slice(-50).reduce((s, v) => s + v, 0) / 50 : null;
 
-  // Supports/résistances simples
   const support = low52 + (current - low52) * 0.2;
   const resistance = current + (high52 - current) * 0.3;
 
@@ -603,7 +580,6 @@ function renderTechnique() {
     </div>`
   ).join('');
 
-  // RSI
   const rsi = calcRSI(prix, 14);
   renderRSI(rsi);
 }
@@ -652,9 +628,8 @@ function renderSignaux() {
   const byTicker = {};
   allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
   window._sigRows = Object.values(byTicker).map(c => {
-    // Signal simplifié basé sur variation + heuristiques
     const v = parseFloat(c.variation);
-    const rsi = 45 + v * 3 + (Math.random() - 0.5) * 15; // simulé
+    const rsi = 45 + v * 3 + (Math.random() - 0.5) * 15;
     const mm20 = c.cours * (0.97 + Math.random() * 0.06);
     const mm50 = c.cours * (0.94 + Math.random() * 0.12);
     const signal = v > 2 || (c.cours > mm20 && c.cours > mm50 && rsi < 65) ? 'buy'
@@ -707,7 +682,6 @@ function filterSignaux() {
 // ═══════════════════════════════════════
 function buildCompButtons() {
   const tickers = [...new Set(allCours.map(c => c.ticker))].sort().slice(0, 12);
-  // Sélectionner les 3 premiers par défaut
   compTickers = tickers.slice(0, 3);
 
   document.getElementById('compTickerBtns').innerHTML = tickers.map(t => {
@@ -731,7 +705,6 @@ function toggleCompTicker(ticker, btn) {
     const colorIdx = compTickers.length;
     btn.className = `comp-ticker-btn selected c${colorIdx}`;
   }
-  // Update all button colors
   document.querySelectorAll('.comp-ticker-btn').forEach(b => {
     const t = b.dataset.ticker;
     const i = compTickers.indexOf(t);
@@ -837,21 +810,18 @@ function renderNotations() {
     if (!c) return null;
     const cp = parseFloat(c.cours);
 
-    // Rentabilité (0-100)
     let rentabilite = 50;
     if (f?.resultat_net && f?.fonds_propres) {
       const roe = f.resultat_net / f.fonds_propres * 100;
       rentabilite = Math.min(100, Math.max(0, roe * 3));
     }
 
-    // Valorisation (0-100, inverse du PER — PER faible = bonne valorisation)
     let valorisation = 50;
     if (f?.bpa && cp) {
       const per = cp / f.bpa;
       valorisation = Math.min(100, Math.max(0, 100 - (per - 5) * 4));
     }
 
-    // Solidité financière (0-100)
     let solidite = 50;
     if (f?.fonds_propres && f?.total_actif) {
       const ratio = f.fonds_propres / f.total_actif * 100;
