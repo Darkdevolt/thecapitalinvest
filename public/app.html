@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Capital — Dashboard BRVM</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0A0804;
+  --surface: #16130D;
+  --card: #1A1610;
+  --card2: #1E1B13;
+  --border: rgba(184,150,78,0.15);
+  --border2: rgba(184,150,78,0.08);
+  --gold: #B8964E;
+  --gold-light: #D4AF6A;
+  --gold-dim: rgba(184,150,78,0.4);
+  --cream: #F5F0E8;
+  --muted: rgba(245,240,232,0.6);
+  --dim: rgba(245,240,232,0.3);
+  --green: #4ADE80;
+  --green-bg: rgba(74,222,128,0.08);
+  --red: #F87171;
+  --red-bg: rgba(248,113,113,0.08);
+  --blue: #60A5FA;
+  --serif: 'Playfair Display', serif;
+  --sans: 'DM Sans', sans-serif;
+  --mono: 'DM Mono', monospace;
+  --sidebar-w: 240px;
+  --header-h: 64px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); font-family: var(--sans); color: var(--cream); min-height: 100vh; font-weight: 300; line-height: 1.6; overflow-x: hidden; }
+body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.5; }
+
+/* SIDEBAR */
+.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; }
+.sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid var(--border2); }
+.logo-title { font-family: var(--serif); font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--cream); }
+.logo-title span { color: var(--gold); }
+.logo-sub { color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; font-weight: 500; }
+.sidebar-section { padding: 16px 16px 6px; font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 8px; margin: 1px 8px; cursor: pointer; transition: all 0.18s; color: var(--muted); font-size: 13.5px; font-weight: 400; border: 1px solid transparent; }
+.nav-item:hover { background: rgba(184,150,78,0.05); color: var(--cream); border-color: var(--border2); }
+.nav-item.active { background: rgba(184,150,78,0.08); color: var(--gold); border-color: rgba(184,150,78,0.2); }
+.nav-item .icon { width: 18px; text-align: center; font-size: 15px; flex-shrink: 0; }
+.sidebar-bottom { margin-top: auto; padding: 16px 12px; border-top: 1px solid var(--border2); }
+.user-info { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--border2); }
+.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-light)); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--bg); font-weight: 600; flex-shrink: 0; }
+.user-name { font-size: 12.5px; font-weight: 500; color: var(--cream); line-height: 1.2; }
+.user-role { font-size: 10px; color: var(--dim); font-weight: 400; }
+
+/* HEADER */
+.header { position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: var(--header-h); background: rgba(10,8,4,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 32px; gap: 16px; z-index: 90; }
+.header-title { font-family: var(--serif); font-size: 17px; font-weight: 400; color: var(--cream); flex: 1; }
+.header-badge { display: flex; align-items: center; gap: 6px; background: var(--green-bg); border: 1px solid rgba(74,222,128,0.2); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 500; color: var(--green); letter-spacing: 0.04em; }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+.header-time { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+
+/* MAIN */
+.main { margin-left: var(--sidebar-w); margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); position: relative; z-index: 1; }
+.view { display: none; padding: 32px; animation: fadeIn 0.35s ease; }
+.view.active { display: block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+
+/* PAGE HEADER */
+.page-header { margin-bottom: 28px; }
+.page-header h1 { font-family: var(--serif); font-size: 26px; font-weight: 400; color: var(--cream); margin-bottom: 4px; }
+.page-header p { font-size: 13px; color: var(--muted); }
+
+/* CARD */
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border2); }
+.card-title { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.card-body { padding: 20px; }
+.mb20 { margin-bottom: 20px; }
+
+/* GRIDS */
+.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
+.grid-7030 { display: grid; grid-template-columns: 1fr 300px; gap: 20px; margin-bottom: 20px; }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+
+/* STAT CARDS */
+.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
+.stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--gold), transparent); }
+.stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
+.stat-value { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--cream); line-height: 1; margin-bottom: 6px; }
+.stat-change { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
+.stat-change.up { color: var(--green); }
+.stat-change.down { color: var(--red); }
+.stat-change.neutral { color: var(--dim); }
+
+/* TABLE */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+thead th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--border2); white-space: nowrap; }
+thead th.right { text-align: right; }
+tbody tr { border-bottom: 1px solid rgba(184,150,78,0.04); cursor: pointer; transition: background 0.15s; }
+tbody tr:hover { background: rgba(184,150,78,0.03); }
+tbody tr:last-child { border-bottom: none; }
+tbody td { padding: 11px 14px; color: var(--cream); font-weight: 300; }
+tbody td.right { text-align: right; font-family: var(--mono); font-size: 12px; }
+tbody td.mono { font-family: var(--mono); font-size: 12px; }
+
+/* PILLS */
+.pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; font-family: var(--mono); }
+.pill.up { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.pill.down { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.pill.neutral { background: rgba(245,240,232,0.05); color: var(--dim); border: 1px solid var(--border2); }
+.sector-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; background: rgba(184,150,78,0.08); color: var(--gold); border: 1px solid rgba(184,150,78,0.15); }
+
+/* CHART */
+.chart-container { position: relative; height: 200px; }
+.chart-container.tall { height: 280px; }
+
+/* SEARCH */
+.search-bar { display: flex; align-items: center; gap: 10px; padding-bottom: 20px; flex-wrap: wrap; }
+.search-input { flex: 1; min-width: 200px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 14px; color: var(--cream); outline: none; transition: border-color 0.2s; }
+.search-input:focus { border-color: var(--gold); }
+.search-input::placeholder { color: var(--dim); }
+.filter-btn { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0.05em; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
+.filter-btn:hover, .filter-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(184,150,78,0.05); }
+
+/* FICHE */
+.fiche-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 20px; position: relative; overflow: hidden; }
+.fiche-hero::after { content:''; position:absolute; top:0; right:0; width:200px; height:200px; background:radial-gradient(circle, rgba(184,150,78,0.06) 0%, transparent 70%); pointer-events:none; }
+.fiche-ticker-label { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
+.fiche-company { font-family: var(--serif); font-size: 24px; font-weight: 500; color: var(--cream); margin-bottom: 12px; }
+.fiche-price-row { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 6px; }
+.fiche-price { font-family: var(--mono); font-size: 34px; font-weight: 500; color: var(--cream); }
+.fiche-meta { font-size: 12px; color: var(--dim); margin-top: 6px; }
+.ratios-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; margin-top: 20px; }
+.ratio-item { background: var(--card); padding: 14px 16px; }
+.ratio-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+.ratio-value { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--gold-light); }
+
+/* BOC */
+.boc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr)); gap: 16px; }
+.boc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all 0.2s; }
+.boc-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.boc-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border2); display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.boc-title { font-size: 13.5px; font-weight: 500; color: var(--cream); line-height: 1.3; }
+.boc-emetteur { font-size: 11px; color: var(--dim); margin-top: 3px; }
+.boc-type { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; flex-shrink: 0; margin-top: 2px; }
+.boc-type.obligation { background: rgba(96,165,250,0.1); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+.boc-type.action { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
+.boc-type.opcvm { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.boc-body { padding: 12px 18px 14px; }
+.boc-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(184,150,78,0.04); }
+.boc-row:last-child { border-bottom: none; }
+.boc-key { font-size: 11px; color: var(--dim); }
+.boc-val { font-family: var(--mono); font-size: 12px; color: var(--cream); font-weight: 500; }
+.boc-footer { padding: 9px 18px; background: rgba(0,0,0,0.2); font-size: 11px; color: var(--dim); }
+
+/* ANALYSE */
+.analyse-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; }
+.analyse-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
+.analyse-ticker { font-family: var(--mono); font-size: 11px; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 3px; }
+.analyse-title { font-size: 15px; font-weight: 500; color: var(--cream); }
+.rec { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }
+.rec.buy { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.rec.sell { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.rec.hold { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
+.analyse-text { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+.analyse-meta { display: flex; gap: 16px; font-size: 11px; color: var(--dim); flex-wrap: wrap; }
+
+/* FIN */
+.fin-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid rgba(184,150,78,0.04); }
+.fin-row:last-child { border-bottom: none; }
+.fin-label { font-size: 13px; color: var(--muted); }
+.fin-value { font-family: var(--mono); font-size: 13px; color: var(--cream); font-weight: 500; }
+.fin-section-title { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); padding: 10px 0 6px; border-bottom: 1px solid var(--border2); }
+.year-tab { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--muted); font-family: var(--mono); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.year-tab.active { background: rgba(184,150,78,0.1); border-color: var(--gold); color: var(--gold); }
+
+/* BACK */
+.back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.18s; margin-bottom: 20px; }
+.back-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
+
+/* EMPTY */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--dim); }
+.empty-icon { font-size: 36px; margin-bottom: 14px; opacity: 0.5; }
+.empty-title { font-family: var(--serif); font-size: 18px; color: var(--muted); margin-bottom: 6px; }
+.empty-text { font-size: 13px; }
+
+/* RESPONSIVE */
+@media (max-width:1024px) {
+  .ratios-grid { grid-template-columns: repeat(2,1fr); }
+  .grid-7030 { grid-template-columns: 1fr; }
+}
+@media (max-width:768px) {
+  :root { --sidebar-w: 0px; }
+  .sidebar { transform: translateX(-240px); }
+  .grid-3 { grid-template-columns: 1fr; }
+  .view { padding: 20px 16px; }
+}
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-title">THE <span>·</span> CAPITAL</div>
+    <div class="logo-sub">Intelligence Financière Africaine</div>
+  </div>
+  <div class="sidebar-section">Marché</div>
+  <div class="nav-item active" onclick="nav('overview')"><span class="icon">◈</span> Vue d'ensemble</div>
+  <div class="nav-item" onclick="nav('titres')"><span class="icon">▦</span> Titres BRVM</div>
+  <div class="nav-item" onclick="nav('boc')"><span class="icon">◉</span> BOC / Emprunts</div>
+  <div class="sidebar-section">Analyse</div>
+  <div class="nav-item" onclick="nav('analyses')"><span class="icon">◎</span> Analyses</div>
+  <div class="nav-item" onclick="nav('financials')"><span class="icon">≡</span> États Financiers</div>
+  <div class="sidebar-bottom">
+    <div class="user-info">
+      <div class="user-avatar">TC</div>
+      <div>
+        <div class="user-name">The Capital</div>
+        <div class="user-role">Mode Test · BRVM</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="header-title" id="headerTitle">Vue d'ensemble — BRVM</div>
+  <div class="header-badge"><div class="live-dot"></div>Marché ouvert</div>
+  <div class="header-time" id="headerTime"></div>
+</header>
+
+<main class="main">
+
+<!-- ═══ OVERVIEW ═══ -->
+<div class="view active" id="view-overview">
+  <div class="page-header">
+    <h1>Tableau de Bord <span style="color:var(--gold)">BRVM</span></h1>
+    <p>Bourse Régionale des Valeurs Mobilières — Données en temps réel</p>
+  </div>
+  <div class="grid-3">
+    <div class="stat-card"><div class="stat-label">BRVM Composite</div><div class="stat-value" id="idx-composite">—</div><div class="stat-change" id="idx-composite-chg">—</div></div>
+    <div class="stat-card"><div class="stat-label">BRVM 30</div><div class="stat-value" id="idx-30">—</div><div class="stat-change" id="idx-30-chg">—</div></div>
+    <div class="stat-card"><div class="stat-label">BRVM Prestige</div><div class="stat-value" id="idx-prestige">—</div><div class="stat-change" id="idx-prestige-chg">—</div></div>
+  </div>
+  <div class="grid-7030">
+    <div class="card">
+      <div class="card-header"><div class="card-title">BRVM Composite — 30 séances</div><div style="font-family:var(--mono);font-size:11px;color:var(--dim)" id="lastSession"></div></div>
+      <div class="card-body"><div class="chart-container tall"><canvas id="chartComposite"></canvas></div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">Top Mouvements</div></div>
+      <div id="topMovers" style="padding:6px 0"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Cours du jour</div><div style="font-size:12px;color:var(--dim)" id="coursCount"></div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Titre</th><th class="right">Cours (FCFA)</th><th class="right">Variation</th><th class="right">Volume</th><th class="right">Capitalisation</th><th>Secteur</th></tr></thead>
+        <tbody id="coursTable"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Chargement...</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TITRES ═══ -->
+<div class="view" id="view-titres">
+  <div class="page-header">
+    <h1>Titres <span style="color:var(--gold)">BRVM</span></h1>
+    <p>Sélectionnez un titre pour accéder à sa fiche complète d'analyse</p>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="searchTitres" placeholder="🔍  Rechercher un ticker, une société..." oninput="filterTitres()">
+    <button class="filter-btn active" onclick="setTitreFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setTitreFilter('banque',this)">Banque</button>
+    <button class="filter-btn" onclick="setTitreFilter('agro',this)">Agro</button>
+    <button class="filter-btn" onclick="setTitreFilter('industrie',this)">Industrie</button>
+    <button class="filter-btn" onclick="setTitreFilter('telecom',this)">Telecom</button>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">+ haut 52s</th><th class="right">+ bas 52s</th><th class="right">Volume</th><th>Secteur</th></tr></thead>
+        <tbody id="titresTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ FICHE ═══ -->
+<div class="view" id="view-fiche">
+  <button class="back-btn" id="ficheBackBtn" onclick="nav('titres')">← Retour</button>
+  <div class="fiche-hero">
+    <div class="fiche-ticker-label" id="ficheTickerLabel"></div>
+    <div class="fiche-company" id="ficheCompany">—</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="sector-tag" id="ficheSector"></span>
+      <span style="font-size:11px;color:var(--dim)" id="fichePays"></span>
+    </div>
+    <div class="fiche-price-row">
+      <div class="fiche-price" id="fichePrice">—</div>
+      <div style="font-size:14px;color:var(--muted)">FCFA</div>
+      <div id="ficheChange" style="font-family:var(--mono);font-size:18px;font-weight:500"></div>
+    </div>
+    <div class="fiche-meta" id="ficheMeta"></div>
+    <div class="ratios-grid" id="ficheRatios">
+      <div class="ratio-item"><div class="ratio-label">P/E Ratio</div><div class="ratio-value" id="r-per">—</div></div>
+      <div class="ratio-item"><div class="ratio-label">Div. Yield</div><div class="ratio-value" id="r-rdt">—</div></div>
+      <div class="ratio-item"><div class="ratio-label">P / Actif Net</div><div class="ratio-value" id="r-pan">—</div></div>
+      <div class="ratio-item"><div class="ratio-label">Capitalisation</div><div class="ratio-value" id="r-cap">—</div></div>
+    </div>
+  </div>
+  <div class="grid-7030">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Historique des cours</div>
+        <div style="display:flex;gap:6px">
+          <button class="year-tab active" onclick="setChartPeriod(30,this)">1M</button>
+          <button class="year-tab" onclick="setChartPeriod(90,this)">3M</button>
+          <button class="year-tab" onclick="setChartPeriod(180,this)">6M</button>
+          <button class="year-tab" onclick="setChartPeriod(252,this)">1A</button>
+        </div>
+      </div>
+      <div class="card-body"><div class="chart-container tall"><canvas id="chartFiche"></canvas></div></div>
+    </div>
+    <div>
+      <div class="card mb20" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Description</div></div>
+        <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7" id="ficheDesc">—</div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Informations</div></div>
+        <div id="ficheInfo" style="padding:0 20px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card mb20" style="margin-bottom:16px">
+    <div class="card-header"><div class="card-title">Dernières Analyses</div></div>
+    <div id="ficheAnalyseList" class="card-body"></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Données Financières</div>
+      <div style="display:flex;gap:6px" id="fichYearTabs"></div>
+    </div>
+    <div class="card-body" id="ficheFinBody"></div>
+  </div>
+</div>
+
+<!-- ═══ BOC ═══ -->
+<div class="view" id="view-boc">
+  <div class="page-header">
+    <h1>BOC — <span style="color:var(--gold)">Bulletin Officiel de la Cote</span></h1>
+    <p>Avis d'émissions, obligations d'état et emprunts publics</p>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="searchBoc" placeholder="🔍  Rechercher un émetteur, type de titre..." oninput="filterBoc()">
+    <button class="filter-btn active" onclick="setBocFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setBocFilter('obligation',this)">Obligations</button>
+    <button class="filter-btn" onclick="setBocFilter('action',this)">Actions</button>
+    <button class="filter-btn" onclick="setBocFilter('opcvm',this)">OPCVM</button>
+  </div>
+  <div class="boc-grid" id="bocGrid"></div>
+</div>
+
+<!-- ═══ ANALYSES ═══ -->
+<div class="view" id="view-analyses">
+  <div class="page-header">
+    <h1>Analyses <span style="color:var(--gold)">Fondamentales</span></h1>
+    <p>Recommandations et études de valorisation sur les titres BRVM</p>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="searchAnalyses" placeholder="🔍  Rechercher une analyse, un ticker..." oninput="filterAnalyses()">
+    <button class="filter-btn active" onclick="setAnalyseFilter('all',this)">Toutes</button>
+    <button class="filter-btn" onclick="setAnalyseFilter('buy',this)">Achat</button>
+    <button class="filter-btn" onclick="setAnalyseFilter('hold',this)">Conserver</button>
+    <button class="filter-btn" onclick="setAnalyseFilter('sell',this)">Vendre</button>
+  </div>
+  <div id="analysesList"></div>
+</div>
+
+<!-- ═══ FINANCIALS ═══ -->
+<div class="view" id="view-financials">
+  <div class="page-header">
+    <h1>États <span style="color:var(--gold)">Financiers</span></h1>
+    <p>Comptes annuels, bilans et données fondamentales des sociétés cotées</p>
+  </div>
+  <div class="search-bar" style="padding-bottom:16px">
+    <input class="search-input" id="searchFin" placeholder="🔍  Chercher une société (ex: SGBCI, ONAB)..." oninput="filterFin()">
+  </div>
+  <div id="finGrid"></div>
+</div>
+
+</main>
+
+<script>
+// ═══════════════════════════════════════
+// SUPABASE CONFIG
+// ═══════════════════════════════════════
+const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbb3d4ZW9sYmJndm0iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcyMjk3MzY0OSwiZXhwIjoyMDM4NTQ5NjQ5fQ.HZ5xbUhQKLRhRPl7VYdQZrWPJUZsEJLIvp8_zQXLmVA';
+
+async function sb(table, params = {}) {
+  const url = new URL(`${SB_URL}/rest/v1/${table}`);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
+  const r = await fetch(url, {
+    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'apikey': SB_KEY, 'Accept': 'application/json' }
+  });
+  if (!r.ok) throw new Error(r.status);
+  return r.json();
+}
+
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let allCours = [], allBoc = [], allAnalyses = [], allFinancials = [], allEntreprises = [];
+let ficheHistorique = [], ficheChartPeriod = 30;
+let ficheChartInst = null, compositeChartInst = null;
+let prevView = 'titres';
+let _titreFilter = 'all', _bocFilter = 'all', _analyseFilter = 'all';
+
+// ═══════════════════════════════════════
+// CLOCK & NAV
+// ═══════════════════════════════════════
+setInterval(() => {
+  document.getElementById('headerTime').textContent =
+    new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' GMT';
+}, 1000);
+
+const TITLES = { overview:'Vue d\'ensemble — BRVM', titres:'Titres BRVM', boc:'BOC — Bulletin Officiel', analyses:'Analyses Fondamentales', financials:'États Financiers', fiche:'Fiche Titre' };
+
+function nav(id) {
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  const v = document.getElementById('view-' + id);
+  if (v) v.classList.add('active');
+  const navEl = document.querySelector(`.nav-item[onclick="nav('${id}')"]`);
+  if (navEl) navEl.classList.add('active');
+  document.getElementById('headerTitle').textContent = TITLES[id] || id;
+}
+
+// ═══════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════
+const fmt = (n, d = 0) => (n == null || isNaN(+n)) ? '—' : (+n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+const fmtM = n => {
+  if (n == null || isNaN(+n)) return '—';
+  const v = +n;
+  if (Math.abs(v) >= 1e9) return (v/1e9).toFixed(1) + ' Mrd';
+  if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(0) + ' M';
+  return fmt(v);
+};
+
+function changePill(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return '<span class="pill neutral">—</span>';
+  if (n > 0) return `<span class="pill up">▲ ${n.toFixed(2)}%</span>`;
+  if (n < 0) return `<span class="pill down">▼ ${Math.abs(n).toFixed(2)}%</span>`;
+  return '<span class="pill neutral">= 0.00%</span>';
+}
+
+const SECTORS = { SGBC:'Banque', BICC:'Banque', ETIT:'Telecom', NTLC:'Telecom', SAFC:'Finance', PALM:'Agro', SIVC:'Agro', SOLB:'Distribution', BOAB:'Banque', BOAN:'Banque', ONAB:'Agro', CABC:'Agro', TTLS:'Industrie', SHEC:'Industrie' };
+function getSector(t) {
+  if (!t) return 'Divers';
+  for (const [k,v] of Object.entries(SECTORS)) if (t.startsWith(k)) return v;
+  return 'Divers';
+}
+
+// ═══════════════════════════════════════
+// CHART DEFAULTS
+// ═══════════════════════════════════════
+const chartOpts = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      backgroundColor: '#1A1610', borderColor: 'rgba(184,150,78,0.3)', borderWidth: 1,
+      titleColor: '#B8964E', bodyColor: '#F5F0E8', padding: 12,
+      callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y, 2) }
+    }
+  },
+  scales: {
+    x: { grid: { color: 'rgba(184,150,78,0.04)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10, family: 'DM Mono' }, maxTicksLimit: 8 } },
+    y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10, family: 'DM Mono' }, callback: v => fmt(v) } }
+  }
+};
+
+function mkDataset(vals, color = '#B8964E') {
+  return {
+    data: vals, borderColor: color, borderWidth: 2,
+    pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: color,
+    fill: true, tension: 0.3,
+    backgroundColor: ctx => {
+      const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+      g.addColorStop(0, color + '22'); g.addColorStop(1, color + '00');
+      return g;
+    }
+  };
+}
+
+// ═══════════════════════════════════════
+// LOAD
+// ═══════════════════════════════════════
+async function loadAll() {
+  const results = await Promise.allSettled([
+    sb('cours', { order: 'date_seance.desc', limit: 300 }),
+    sb('boc', { order: 'date_seance.desc', limit: 100 }),
+    sb('analyses', { order: 'date_analyse.desc', limit: 60 }),
+    sb('financials', { order: 'annee.desc', limit: 300 }),
+    sb('entreprises', { limit: 300 }),
+    sb('indices', { order: 'date_seance.desc', limit: 60 }),
+  ]);
+
+  if (results[0].status === 'fulfilled') allCours = results[0].value || [];
+  if (results[1].status === 'fulfilled') allBoc = results[1].value || [];
+  if (results[2].status === 'fulfilled') allAnalyses = results[2].value || [];
+  if (results[3].status === 'fulfilled') allFinancials = results[3].value || [];
+  if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
+
+  // If no real data → inject demo
+  if (!allCours.length) injectDemo();
+
+  renderOverview(results[5].status === 'fulfilled' ? results[5].value || [] : []);
+  renderTitres();
+  renderBoc();
+  renderAnalyses();
+  renderFinancials();
+}
+
+function injectDemo() {
+  allCours = [
+    { ticker:'SGBCI', cours:14500, variation:1.23, volume:42000, capitalisation:504000000000, date_seance:'2024-10-15' },
+    { ticker:'ETIT', cours:19, variation:-0.52, volume:180000, capitalisation:96000000000, date_seance:'2024-10-15' },
+    { ticker:'PALMCI', cours:6500, variation:2.11, volume:8400, capitalisation:45000000000, date_seance:'2024-10-15' },
+    { ticker:'BICCICI', cours:9800, variation:-1.01, volume:12000, capitalisation:128000000000, date_seance:'2024-10-15' },
+    { ticker:'ONAB', cours:3200, variation:0.00, volume:3500, capitalisation:38000000000, date_seance:'2024-10-15' },
+    { ticker:'SIVCOCI', cours:700, variation:3.20, volume:95000, capitalisation:21000000000, date_seance:'2024-10-15' },
+    { ticker:'NTLC', cours:1250, variation:-2.34, volume:22000, capitalisation:40000000000, date_seance:'2024-10-15' },
+    { ticker:'CABC', cours:2100, variation:0.48, volume:6700, capitalisation:18000000000, date_seance:'2024-10-15' },
+    { ticker:'BOAB', cours:4650, variation:0.65, volume:9800, capitalisation:185000000000, date_seance:'2024-10-15' },
+    { ticker:'TTLS', cours:1800, variation:-0.83, volume:4100, capitalisation:14000000000, date_seance:'2024-10-15' },
+  ];
+  allBoc = [
+    { titre:'TPCI 6,50% 2023-2033', type:'obligation', emetteur:'République de Côte d\'Ivoire', montant:150000000000, taux:6.50, date_echeance:'2033-12-31', date_seance:'2024-10-15', valeur_nominale:10000 },
+    { titre:'TPSN 6,25% 2023-2030', type:'obligation', emetteur:'République du Sénégal', montant:100000000000, taux:6.25, date_echeance:'2030-06-30', date_seance:'2024-10-14', valeur_nominale:10000 },
+    { titre:'PALMCI OPV 2024', type:'action', emetteur:'PALMCI', montant:5000000000, prix_offre:6500, date_seance:'2024-10-10', valeur_nominale:1000 },
+    { titre:'FCPE Atlantique Actions', type:'opcvm', emetteur:'Atlantique Gestion', montant:2000000000, valeur_liquidative:12500, date_seance:'2024-10-15' },
+    { titre:'TPBF 6,75% 2022-2029', type:'obligation', emetteur:'République du Burkina Faso', montant:75000000000, taux:6.75, date_echeance:'2029-03-15', date_seance:'2024-10-12', valeur_nominale:10000 },
+    { titre:'TPML 6,40% 2023-2031', type:'obligation', emetteur:'République du Mali', montant:60000000000, taux:6.40, date_echeance:'2031-09-30', date_seance:'2024-10-11', valeur_nominale:10000 },
+  ];
+  allAnalyses = [
+    { ticker:'SGBCI', titre:'SGBCI : Croissance solide malgré la conjoncture', recommandation:'Achat', resume:'La SGBCI affiche une progression notable de son résultat net sur l\'exercice 2023, portée par une augmentation du PNB et une maîtrise des charges d\'exploitation. Nous relevons notre objectif de cours à 16 000 FCFA.', cours_cible:16000, date_analyse:'2024-09-15', analyste:'Research BRVM' },
+    { ticker:'ETIT', titre:'ECOBANK Transnational : Dividende en hausse', recommandation:'Conserver', resume:'ETIT continue de dégager une rentabilité satisfaisante à l\'échelle panafricaine. La diversification géographique constitue un avantage compétitif mais les risques pays pèsent sur la valorisation actuelle.', cours_cible:20, date_analyse:'2024-10-01', analyste:'Capital Research' },
+    { ticker:'PALMCI', titre:'PALMCI : Bonne tenue des cours du palmier', recommandation:'Achat', resume:'Les cours mondiaux de l\'huile de palme restent orientés à la hausse. PALMCI bénéficie d\'une production en augmentation et de marges en amélioration. Le dividende 2023 devrait se consolider.', cours_cible:7200, date_analyse:'2024-08-20', analyste:'West Africa Finance' },
+    { ticker:'NTLC', titre:'NTEL : Pression concurrentielle sur le mobile', recommandation:'Vendre', resume:'L\'intensification de la concurrence dans le secteur télécom ivoirien pèse sur les marges de NTEL. Les investissements en infrastructure 4G/5G alourdissent la structure des coûts à court terme.', cours_cible:1000, date_analyse:'2024-09-30', analyste:'Research BRVM' },
+  ];
+  allFinancials = [
+    { ticker:'SGBCI', annee:2023, chiffre_affaires:185000000000, resultat_net:32000000000, fonds_propres:280000000000, total_actif:2100000000000, bpa:9200, dpa:6000, nombre_actions:34620000 },
+    { ticker:'SGBCI', annee:2022, chiffre_affaires:172000000000, resultat_net:28000000000, fonds_propres:260000000000, total_actif:1980000000000, bpa:8050, dpa:5500, nombre_actions:34620000 },
+    { ticker:'ETIT', annee:2023, chiffre_affaires:320000000000, resultat_net:18000000000, fonds_propres:150000000000, total_actif:3200000000000, bpa:1.2, dpa:0.8, nombre_actions:5060000000 },
+    { ticker:'PALMCI', annee:2023, chiffre_affaires:95000000000, resultat_net:12000000000, fonds_propres:80000000000, total_actif:180000000000, bpa:1800, dpa:1200, nombre_actions:6938000 },
+    { ticker:'PALMCI', annee:2022, chiffre_affaires:87000000000, resultat_net:9500000000, fonds_propres:70000000000, total_actif:165000000000, bpa:1370, dpa:900, nombre_actions:6938000 },
+  ];
+  allEntreprises = [
+    { ticker:'SGBCI', nom:'Société Générale de Banques en Côte d\'Ivoire', secteur:'Banque', pays:'Côte d\'Ivoire', description:'La SGBCI est l\'une des premières banques de Côte d\'Ivoire. Filiale du Groupe Société Générale, elle propose une gamme complète de services bancaires aux particuliers, aux professionnels et aux entreprises.', nombre_actions:34620000 },
+    { ticker:'ETIT', nom:'Ecobank Transnational Incorporated', secteur:'Banque', pays:'Togo', description:'ETI est le holding du groupe Ecobank, premier réseau bancaire panafricain opérant dans 35 pays africains. La banque offre des services bancaires de détail, commerciaux et d\'investissement à travers l\'Afrique.', nombre_actions:5060000000 },
+    { ticker:'PALMCI', nom:'Société de Palmeraies de la Côte d\'Ivoire', secteur:'Agro-Alimentaire', pays:'Côte d\'Ivoire', description:'PALMCI est le premier producteur d\'huile de palme en Côte d\'Ivoire. La société exploite plusieurs palmeraies sur le territoire national et transforme les fruits en huile de palme brute destinée à l\'exportation et à l\'industrie locale.', nombre_actions:6938000 },
+  ];
+}
+
+// ═══════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════
+function renderOverview(indices) {
+  const setIdx = (id, val, chgId, chg) => {
+    const el = document.getElementById(id); const ce = document.getElementById(chgId);
+    if (el) el.textContent = fmt(val, 2);
+    if (ce) {
+      const n = parseFloat(chg); const cls = n > 0 ? 'up' : n < 0 ? 'down' : 'neutral';
+      ce.className = `stat-change ${cls}`;
+      ce.innerHTML = (n > 0 ? '▲' : n < 0 ? '▼' : '=') + ' ' + Math.abs(n).toFixed(2) + ' pts';
+    }
+  };
+
+  let chartLabels, chartVals;
+  if (indices.length > 1) {
+    const [l, p] = [indices[0], indices[1]];
+    if (l.brvm_composite) setIdx('idx-composite', l.brvm_composite, 'idx-composite-chg', l.brvm_composite - (p.brvm_composite||0));
+    if (l.brvm_30) setIdx('idx-30', l.brvm_30, 'idx-30-chg', l.brvm_30 - (p.brvm_30||0));
+    if (l.brvm_prestige) setIdx('idx-prestige', l.brvm_prestige, 'idx-prestige-chg', l.brvm_prestige - (p.brvm_prestige||0));
+    document.getElementById('lastSession').textContent = 'Séance ' + fmtDate(l.date_seance);
+    const rev = indices.slice(0,30).reverse();
+    chartLabels = rev.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
+    chartVals = rev.map(d => d.brvm_composite);
+  } else {
+    ['idx-composite','idx-30','idx-prestige'].forEach((id, i) => {
+      const vals = [220.34, 185.67, 310.92];
+      const chgs = [1.23, -0.45, 2.10];
+      document.getElementById(id).textContent = fmt(vals[i], 2);
+      const ce = document.getElementById(id + '-chg');
+      ce.className = `stat-change ${chgs[i] > 0 ? 'up' : 'down'}`;
+      ce.innerHTML = (chgs[i] > 0 ? '▲' : '▼') + ' ' + Math.abs(chgs[i]).toFixed(2) + ' pts';
+    });
+    document.getElementById('lastSession').textContent = 'Séance ' + fmtDate(new Date().toISOString());
+    chartLabels = Array.from({length:30}, (_,i) => { const d=new Date(); d.setDate(d.getDate()-(29-i)); return d.toLocaleDateString('fr-FR', {day:'2-digit',month:'short'}); });
+    const base = 220;
+    chartVals = chartLabels.map((_,i) => base + Math.sin(i*0.4)*8 + i*0.3 + (Math.random()-0.45)*2);
+  }
+
+  if (compositeChartInst) compositeChartInst.destroy();
+  compositeChartInst = new Chart(document.getElementById('chartComposite'), {
+    type: 'line',
+    data: { labels: chartLabels, datasets: [mkDataset(chartVals)] },
+    options: chartOpts
+  });
+
+  renderCoursTable();
+  renderTopMovers();
+}
+
+function renderCoursTable() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const rows = Object.values(byTicker).sort((a,b) => (a.ticker||'').localeCompare(b.ticker||''));
+  document.getElementById('coursCount').textContent = rows.length + ' titres';
+  document.getElementById('coursTable').innerHTML = rows.map(c =>
+    `<tr onclick="openFiche('${c.ticker}','overview')">
+      <td><strong style="font-family:var(--mono);font-size:12px;color:var(--gold)">${c.ticker}</strong></td>
+      <td class="right">${fmt(c.cours)}</td>
+      <td class="right">${changePill(c.variation)}</td>
+      <td class="right">${fmt(c.volume)}</td>
+      <td class="right">${c.capitalisation ? fmtM(c.capitalisation) : '—'}</td>
+      <td><span class="sector-tag">${getSector(c.ticker)}</span></td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Aucune donnée</td></tr>';
+}
+
+function renderTopMovers() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const sorted = Object.values(byTicker).filter(c => c.variation != null)
+    .sort((a,b) => Math.abs(b.variation) - Math.abs(a.variation)).slice(0,8);
+  document.getElementById('topMovers').innerHTML = sorted.map(c => {
+    const v = parseFloat(c.variation);
+    const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
+    return `<div onclick="openFiche('${c.ticker}','overview')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid rgba(184,150,78,0.04);cursor:pointer" onmouseenter="this.style.background='rgba(184,150,78,0.03)'" onmouseleave="this.style.background=''">
+      <div>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--cream)">${c.ticker}</div>
+        <div style="font-size:11px;color:var(--dim)">${fmt(c.cours)} FCFA</div>
+      </div>
+      <span class="stat-change ${cls}" style="font-family:var(--mono);font-size:12px">${v>0?'▲':v<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// TITRES
+// ═══════════════════════════════════════
+function renderTitres() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  window._titresRows = Object.values(byTicker);
+  filterTitres();
+}
+
+function setTitreFilter(f, btn) {
+  _titreFilter = f;
+  document.querySelectorAll('#view-titres .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterTitres();
+}
+
+function filterTitres() {
+  const q = (document.getElementById('searchTitres')?.value || '').toLowerCase();
+  let rows = window._titresRows || [];
+  if (_titreFilter !== 'all') rows = rows.filter(r => getSector(r.ticker).toLowerCase().includes(_titreFilter));
+  if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q) || (r.nom||r.ticker||'').toLowerCase().includes(q));
+  const ent = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
+  document.getElementById('titresTable').innerHTML = rows.sort((a,b) => (a.ticker||'').localeCompare(b.ticker||'')).map(c =>
+    `<tr onclick="openFiche('${c.ticker}','titres')">
+      <td><span style="font-family:var(--mono);font-size:13px;font-weight:500;color:var(--gold)">${c.ticker}</span></td>
+      <td style="color:var(--cream)">${ent[c.ticker]?.nom || c.ticker}</td>
+      <td class="right">${fmt(c.cours)}</td>
+      <td class="right">${changePill(c.variation)}</td>
+      <td class="right" style="color:var(--dim)">${c.plus_haut_52 ? fmt(c.plus_haut_52) : '—'}</td>
+      <td class="right" style="color:var(--dim)">${c.plus_bas_52 ? fmt(c.plus_bas_52) : '—'}</td>
+      <td class="right">${fmt(c.volume)}</td>
+      <td><span class="sector-tag">${getSector(c.ticker)}</span></td>
+    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--dim)">Aucun titre trouvé</td></tr>';
+}
+
+// ═══════════════════════════════════════
+// FICHE
+// ═══════════════════════════════════════
+async function openFiche(ticker, from) {
+  prevView = from;
+  document.getElementById('ficheBackBtn').onclick = () => nav(from);
+  nav('fiche');
+
+  const cours = allCours.find(c => c.ticker === ticker) || {};
+  const ent = allEntreprises.find(e => e.ticker === ticker) || {};
+  const fins = allFinancials.filter(f => f.ticker === ticker).sort((a,b) => b.annee - a.annee);
+  const ans = allAnalyses.filter(a => a.ticker === ticker);
+
+  // Hero
+  document.getElementById('ficheTickerLabel').textContent = ticker;
+  document.getElementById('ficheCompany').textContent = ent.nom || ticker;
+  document.getElementById('ficheSector').textContent = ent.secteur || getSector(ticker);
+  document.getElementById('fichePays').textContent = ent.pays || '';
+  document.getElementById('fichePrice').textContent = fmt(cours.cours);
+  document.getElementById('ficheMeta').textContent = `Dernière séance : ${fmtDate(cours.date_seance)} · Volume : ${fmt(cours.volume)}`;
+
+  const v = parseFloat(cours.variation);
+  const cl = !isNaN(v) ? (v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--dim)') : 'var(--dim)';
+  document.getElementById('ficheChange').innerHTML = !isNaN(v)
+    ? `<span style="color:${cl}">${v>0?'▲':v<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>` : '';
+
+  // Ratios
+  const f0 = fins[0];
+  const cp = parseFloat(cours.cours);
+  document.getElementById('r-per').textContent = (f0?.bpa && cp) ? (cp/f0.bpa).toFixed(1) + 'x' : '—';
+  document.getElementById('r-rdt').textContent = (f0?.dpa && cp) ? ((f0.dpa/cp)*100).toFixed(2) + '%' : '—';
+  document.getElementById('r-pan').textContent = (f0?.fonds_propres && f0?.nombre_actions && cp)
+    ? (cp/(f0.fonds_propres/f0.nombre_actions)).toFixed(2) + 'x' : '—';
+  document.getElementById('r-cap').textContent = (f0?.nombre_actions && cp) ? fmtM(cp*f0.nombre_actions) : '—';
+
+  // Description
+  document.getElementById('ficheDesc').textContent = ent.description || 'Aucune description disponible.';
+
+  // Info
+  const infoRows = [['Pays', ent.pays], ['Secteur', ent.secteur || getSector(ticker)], ['Bourse', 'BRVM'], ['Devise', 'FCFA (XOF)'], ['Nb. Actions', ent.nombre_actions ? fmt(ent.nombre_actions) : null]].filter(r => r[1]);
+  document.getElementById('ficheInfo').innerHTML = infoRows.map(([k,v]) =>
+    `<div class="fin-row"><span class="fin-label">${k}</span><span class="fin-value">${v}</span></div>`).join('');
+
+  // Analyses
+  document.getElementById('ficheAnalyseList').innerHTML = ans.length
+    ? ans.slice(0,3).map(renderAnalyseCard).join('')
+    : '<div style="color:var(--dim);font-size:13px">Aucune analyse disponible pour ce titre.</div>';
+
+  // Financials
+  renderFicheFin(fins, cours);
+
+  // Chart
+  ficheChartPeriod = 30;
+  document.querySelectorAll('#view-fiche .year-tab').forEach((b,i) => b.classList.toggle('active', i===0));
+  try {
+    ficheHistorique = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
+  } catch {
+    ficheHistorique = Array.from({length:252}, (_,i) => ({
+      date_seance: new Date(Date.now() - (251-i)*86400000).toISOString().split('T')[0],
+      cloture: (cours.cours||5000) * (1 + Math.sin(i*0.08)*0.06 + (Math.random()-0.5)*0.02)
+    }));
+  }
+  renderFicheChart();
+}
+
+function renderFicheFin(fins, cours) {
+  const tabs = document.getElementById('fichYearTabs');
+  const body = document.getElementById('ficheFinBody');
+  if (!fins.length) { tabs.innerHTML = ''; body.innerHTML = '<div style="color:var(--dim);font-size:13px">Données financières non disponibles.</div>'; return; }
+  tabs.innerHTML = fins.map((f,i) => `<button class="year-tab ${i===0?'active':''}" onclick="showFinYear(${i},this)">${f.annee}</button>`).join('');
+  window._ficheFins = fins; window._ficheCours = cours;
+  showFinYear(0, null);
+}
+
+function showFinYear(idx, btn) {
+  if (btn) {
+    document.querySelectorAll('#fichYearTabs .year-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+  const f = (window._ficheFins||[])[idx]; if (!f) return;
+  const cp = parseFloat((window._ficheCours||{}).cours);
+  document.getElementById('r-per').textContent = (f.bpa && cp) ? (cp/f.bpa).toFixed(1)+'x' : '—';
+  document.getElementById('r-rdt').textContent = (f.dpa && cp) ? ((f.dpa/cp)*100).toFixed(2)+'%' : '—';
+  document.getElementById('r-pan').textContent = (f.fonds_propres && f.nombre_actions && cp) ? (cp/(f.fonds_propres/f.nombre_actions)).toFixed(2)+'x' : '—';
+  document.getElementById('r-cap').textContent = (f.nombre_actions && cp) ? fmtM(cp*f.nombre_actions) : '—';
+
+  const sections = [
+    ['RÉSULTATS', [["Chiffre d'affaires", fmtM(f.chiffre_affaires)], ["RBE", fmtM(f.rbe)], ["Résultat Net", fmtM(f.resultat_net)], ["BPA", f.bpa ? fmt(f.bpa)+' FCFA' : '—'], ["DPA", f.dpa ? fmt(f.dpa)+' FCFA' : '—']]],
+    ['BILAN', [["Total Actif", fmtM(f.total_actif)], ["Fonds Propres", fmtM(f.fonds_propres)], ["Dettes Financières", fmtM(f.dettes_financieres)]]],
+    ['FLUX', [["Cash-flow Opér.", fmtM(f.cash_flow_operationnel)], ["CAPEX", fmtM(f.capex)]]],
+  ];
+
+  document.getElementById('ficheFinBody').innerHTML = sections.map(([title, rows]) => {
+    const validRows = rows.filter(([,v]) => v !== '—');
+    if (!validRows.length) return '';
+    return `<div style="margin-bottom:16px">
+      <div class="fin-section-title">${title}</div>
+      ${validRows.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}
+    </div>`;
+  }).join('') || '<div style="color:var(--dim);font-size:13px">Données comptables non renseignées.</div>';
+}
+
+function renderFicheChart() {
+  const data = ficheHistorique.slice(-ficheChartPeriod);
+  const labels = data.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
+  const vals = data.map(d => d.cloture || d.cours || 0);
+  if (ficheChartInst) ficheChartInst.destroy();
+  ficheChartInst = new Chart(document.getElementById('chartFiche'), {
+    type: 'line', data: { labels, datasets: [mkDataset(vals)] }, options: chartOpts
+  });
+}
+
+function setChartPeriod(n, btn) {
+  ficheChartPeriod = n;
+  document.querySelectorAll('#view-fiche .year-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderFicheChart();
+}
+
+// ═══════════════════════════════════════
+// BOC
+// ═══════════════════════════════════════
+function renderBoc() { window._bocRows = allBoc; filterBoc(); }
+
+function setBocFilter(f, btn) {
+  _bocFilter = f;
+  document.querySelectorAll('#view-boc .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); filterBoc();
+}
+
+function filterBoc() {
+  const q = (document.getElementById('searchBoc')?.value || '').toLowerCase();
+  let rows = window._bocRows || [];
+  if (_bocFilter !== 'all') rows = rows.filter(r => (r.type||'').toLowerCase().includes(_bocFilter));
+  if (q) rows = rows.filter(r => (r.titre||'').toLowerCase().includes(q) || (r.emetteur||'').toLowerCase().includes(q));
+  const grid = document.getElementById('bocGrid');
+  if (!rows.length) { grid.innerHTML = '<div class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">Aucun résultat</div></div>'; return; }
+  grid.innerHTML = rows.map(boc => {
+    const type = (boc.type||'obligation').toLowerCase();
+    const typeLabel = { obligation:'Obligation', action:'Action', opcvm:'OPCVM' }[type] || type;
+    const details = [
+      boc.taux && ['Taux', boc.taux.toFixed(2) + '%'],
+      boc.montant && ['Montant émis', fmtM(boc.montant) + ' FCFA'],
+      boc.valeur_nominale && ['Val. Nominale', fmt(boc.valeur_nominale) + ' FCFA'],
+      boc.prix_offre && ['Prix d\'offre', fmt(boc.prix_offre) + ' FCFA'],
+      boc.valeur_liquidative && ['Val. Liquidative', fmt(boc.valeur_liquidative) + ' FCFA'],
+      boc.date_echeance && ['Échéance', fmtDate(boc.date_echeance)],
+    ].filter(Boolean);
+    return `<div class="boc-card">
+      <div class="boc-header">
+        <div><div class="boc-title">${boc.titre||'—'}</div><div class="boc-emetteur">${boc.emetteur||'—'}</div></div>
+        <span class="boc-type ${type}">${typeLabel}</span>
+      </div>
+      <div class="boc-body">${details.map(([k,v]) => `<div class="boc-row"><span class="boc-key">${k}</span><span class="boc-val">${v}</span></div>`).join('')}</div>
+      <div class="boc-footer">📅 ${fmtDate(boc.date_seance)}</div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// ANALYSES
+// ═══════════════════════════════════════
+function renderAnalyseCard(a) {
+  const rec = (a.recommandation||'').toLowerCase();
+  const rc = rec.includes('achat')||rec.includes('buy') ? 'buy' : rec.includes('vend')||rec.includes('sell') ? 'sell' : 'hold';
+  const rl = { buy:'Achat', sell:'Vendre', hold:'Conserver' }[rc];
+  const text = (a.resume || a.contenu || '');
+  return `<div class="analyse-card">
+    <div class="analyse-header">
+      <div><div class="analyse-ticker">${a.ticker||'—'}</div><div class="analyse-title">${a.titre||'Analyse fondamentale'}</div></div>
+      <span class="rec ${rc}">${rl}</span>
+    </div>
+    ${text ? `<div class="analyse-text">${text.slice(0,240)}${text.length>240?'…':''}</div>` : ''}
+    <div class="analyse-meta">
+      ${a.date_analyse ? `<span>📅 ${fmtDate(a.date_analyse)}</span>` : ''}
+      ${a.analyste ? `<span>✍ ${a.analyste}</span>` : ''}
+      ${a.cours_cible ? `<span>🎯 Cible : ${fmt(a.cours_cible)} FCFA</span>` : ''}
+    </div>
+  </div>`;
+}
+
+function renderAnalyses() { window._analyseRows = allAnalyses; filterAnalyses(); }
+
+function setAnalyseFilter(f, btn) {
+  _analyseFilter = f;
+  document.querySelectorAll('#view-analyses .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active'); filterAnalyses();
+}
+
+function filterAnalyses() {
+  const q = (document.getElementById('searchAnalyses')?.value || '').toLowerCase();
+  let rows = window._analyseRows || [];
+  if (_analyseFilter !== 'all') {
+    rows = rows.filter(r => {
+      const rec = (r.recommandation||'').toLowerCase();
+      if (_analyseFilter==='buy') return rec.includes('achat')||rec.includes('buy');
+      if (_analyseFilter==='sell') return rec.includes('vend')||rec.includes('sell');
+      if (_analyseFilter==='hold') return rec.includes('conserv')||rec.includes('hold')||rec.includes('neutr');
+      return true;
+    });
+  }
+  if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q) || (r.titre||'').toLowerCase().includes(q) || (r.resume||'').toLowerCase().includes(q));
+  document.getElementById('analysesList').innerHTML = rows.length
+    ? rows.map(renderAnalyseCard).join('')
+    : '<div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Aucune analyse</div></div>';
+}
+
+// ═══════════════════════════════════════
+// FINANCIALS
+// ═══════════════════════════════════════
+function renderFinancials() {
+  const byTicker = {};
+  allFinancials.forEach(f => { if (!byTicker[f.ticker]) byTicker[f.ticker] = []; byTicker[f.ticker].push(f); });
+  window._finByTicker = byTicker;
+  window._finTickers = Object.keys(byTicker).sort();
+  filterFin();
+}
+
+function filterFin() {
+  const q = (document.getElementById('searchFin')?.value || '').toLowerCase();
+  const tickers = (window._finTickers || []).filter(t => !q || t.toLowerCase().includes(q));
+  const byTicker = window._finByTicker || {};
+  const container = document.getElementById('finGrid');
+  if (!tickers.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">Aucun résultat</div></div>'; return; }
+  container.innerHTML = tickers.map(ticker => {
+    const fins = (byTicker[ticker]||[]).sort((a,b) => b.annee - a.annee);
+    const latest = fins[0]; const prev = fins[1];
+    if (!latest) return '';
+    const growthRN = (latest.resultat_net && prev?.resultat_net)
+      ? ((latest.resultat_net - prev.resultat_net) / Math.abs(prev.resultat_net) * 100).toFixed(1) : null;
+    const rows = [
+      ["Chiffre d'affaires", fins.map(f => fmtM(f.chiffre_affaires))],
+      ["Résultat Net", fins.map(f => fmtM(f.resultat_net))],
+      ["Fonds Propres", fins.map(f => fmtM(f.fonds_propres))],
+      ["Total Actif", fins.map(f => fmtM(f.total_actif))],
+      ["BPA (FCFA)", fins.map(f => f.bpa ? fmt(f.bpa) : '—')],
+      ["DPA (FCFA)", fins.map(f => f.dpa ? fmt(f.dpa) : '—')],
+    ].filter(([,vals]) => vals.some(v => v !== '—'));
+    return `<div class="card" style="margin-bottom:16px">
+      <div class="card-header" style="cursor:pointer" onclick="openFiche('${ticker}','financials')">
+        <div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--gold);margin-bottom:2px">${ticker}</div>
+          <div class="card-title">Exercices ${fins.map(f=>f.annee).join(' · ')}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${growthRN !== null ? `<span class="pill ${parseFloat(growthRN)>=0?'up':'down'}">${parseFloat(growthRN)>=0?'▲':'▼'} ${Math.abs(growthRN)}% RN</span>` : ''}
+          <span style="font-size:11px;color:var(--gold)">Fiche →</span>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Indicateur</th>${fins.map(f => `<th class="right">${f.annee}</th>`).join('')}</tr></thead>
+          <tbody>${rows.map(([label,vals]) => `<tr><td style="color:var(--muted)">${label}</td>${vals.map(v=>`<td class="right">${v}</td>`).join('')}</tr>`).join('')}</tbody>
+        </table>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════
+loadAll();
+</script>
+</body>
+</html>
