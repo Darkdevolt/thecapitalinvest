@@ -3,9 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Capital — Plateforme</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<title>The Capital — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <style>
 :root {
   --bg: #0A0804;
@@ -52,45 +51,45 @@ body::before {
   position: relative;
   z-index: 1;
   padding: 40px 20px;
+  flex-direction: column;
 }
 
-.screen.active { display: flex; flex-direction: column; }
+.screen.active { display: flex; }
 
-/* AUTH */
-.auth-container {
+/* AUTH SCREEN */
+.container {
   width: 100%;
-  max-width: 460px;
-  animation: fadeIn 0.6s ease;
+  max-width: 440px;
+  animation: fadeIn 0.5s ease;
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(30px); }
+  from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-.auth-logo {
+.logo {
   text-align: center;
   margin-bottom: 48px;
 }
 
-.auth-logo-title {
+.logo-title {
   font-family: var(--serif);
   font-size: 32px;
   font-weight: 700;
   letter-spacing: 4px;
   color: var(--cream);
-  margin-bottom: 8px;
 }
 
-.auth-logo-title span { color: var(--gold); }
+.logo-title span { color: var(--gold); }
 
-.auth-logo-sub {
+.logo-sub {
   color: var(--muted);
   font-size: 13px;
-  letter-spacing: 0.05em;
+  margin-top: 8px;
 }
 
-.auth-card {
+.card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -98,13 +97,13 @@ body::before {
   box-shadow: 0 16px 48px rgba(0,0,0,0.3);
 }
 
-.auth-tabs {
+.tabs {
   display: flex;
   border-bottom: 1px solid var(--border);
   background: rgba(0,0,0,0.2);
 }
 
-.auth-tab {
+.tab {
   flex: 1;
   padding: 18px;
   background: none;
@@ -117,39 +116,39 @@ body::before {
   text-transform: uppercase;
   cursor: pointer;
   border-bottom: 2px solid transparent;
-  transition: all 0.25s;
+  transition: all 0.2s;
 }
 
-.auth-tab.active {
+.tab.active {
   color: var(--gold);
   background: rgba(184,150,78,0.03);
   border-bottom-color: var(--gold);
 }
 
-.auth-form {
-  padding: 40px 36px 32px;
+.form {
+  padding: 36px;
   display: none;
 }
 
-.auth-form.active { display: block; }
+.form.active { display: block; }
 
-.auth-field {
-  margin-bottom: 24px;
+.field {
+  margin-bottom: 20px;
 }
 
-.auth-field label {
+.field label {
   display: block;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
-.auth-field input {
+.field input {
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: var(--card);
   border: 1.5px solid rgba(184,150,78,0.08);
   border-radius: 8px;
@@ -160,27 +159,25 @@ body::before {
   transition: all 0.2s;
 }
 
-.auth-field input:focus {
+.field input:focus {
   border-color: var(--gold);
-  background: rgba(26,22,16,1);
   box-shadow: 0 0 0 3px rgba(184,150,78,0.08);
 }
 
-.auth-field input::placeholder { color: var(--dim); }
+.field input::placeholder { color: var(--dim); }
 
-.auth-message {
+.message {
   font-size: 13px;
   margin-bottom: 16px;
   min-height: 20px;
-  padding: 0 4px;
 }
 
-.auth-error { color: var(--red); }
-.auth-success { color: var(--green); }
+.error { color: var(--red); }
+.success { color: var(--green); }
 
-.auth-btn {
+.btn {
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   background: var(--gold);
   color: var(--bg);
   border: none;
@@ -194,27 +191,27 @@ body::before {
   transition: all 0.2s;
 }
 
-.auth-btn:hover {
+.btn:hover {
   background: var(--gold-light);
   transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(184,150,78,0.3);
 }
 
-.auth-btn:disabled {
+.btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
-.auth-note {
+.note {
   font-size: 12px;
   color: var(--muted);
   text-align: center;
-  padding: 20px 16px;
+  padding: 16px;
   border-top: 1px solid rgba(184,150,78,0.08);
   margin-top: 8px;
 }
 
-.auth-back {
+.link {
   display: block;
   text-align: center;
   margin-top: 24px;
@@ -224,23 +221,20 @@ body::before {
   letter-spacing: 0.06em;
   text-transform: uppercase;
   opacity: 0.8;
-  transition: opacity 0.2s;
   font-weight: 500;
 }
 
-.auth-back:hover { opacity: 1; }
+.link:hover { opacity: 1; }
 
-/* DASHBOARD */
-.dashboard-header {
+/* DASHBOARD SCREEN */
+.dashboard {
   text-align: center;
-  margin-bottom: 64px;
 }
 
 .dashboard-title {
   font-family: var(--serif);
-  font-size: clamp(32px, 5vw, 48px);
+  font-size: clamp(28px, 5vw, 42px);
   font-weight: 300;
-  letter-spacing: 0.02em;
   color: var(--cream);
   margin-bottom: 12px;
 }
@@ -250,57 +244,54 @@ body::before {
 .dashboard-welcome {
   font-size: 14px;
   color: var(--muted);
-  letter-spacing: 0.03em;
+  margin-bottom: 48px;
 }
 
-.dashboard-card {
-  width: 100%;
-  max-width: 600px;
+.dashboard-box {
+  max-width: 560px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 16px;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
   padding: 48px 40px;
-  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
 }
 
 .dashboard-icon {
-  width: 96px;
-  height: 96px;
+  width: 80px;
+  height: 80px;
   border-radius: 50%;
-  margin: 0 auto 28px;
+  margin: 0 auto 24px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+  background: linear-gradient(135deg, var(--gold), var(--gold-light));
   box-shadow: 0 8px 32px rgba(184,150,78,0.4);
-  border: 2px solid rgba(255,255,255,0.1);
-  font-size: 42px;
+  font-size: 36px;
   color: var(--bg);
 }
 
 .dashboard-name {
   font-family: var(--serif);
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 500;
   color: var(--cream);
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .dashboard-sub {
   font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--gold);
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.dashboard-desc {
+.dashboard-text {
   font-size: 14px;
   color: var(--muted);
   line-height: 1.7;
-  margin-bottom: 32px;
+  margin-bottom: 24px;
 }
 
 .dashboard-info {
@@ -314,7 +305,7 @@ body::before {
 }
 
 .dashboard-logout {
-  margin-top: 48px;
+  margin-top: 32px;
   font-size: 12px;
   color: var(--dim);
   cursor: pointer;
@@ -323,200 +314,193 @@ body::before {
   font-family: var(--sans);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: color 0.2s;
   font-weight: 500;
 }
 
 .dashboard-logout:hover { color: var(--red); }
 
 @media (max-width: 768px) {
-  .auth-form { padding: 32px 24px 24px; }
-  .dashboard-card { padding: 40px 32px; }
+  .form { padding: 28px 24px; }
+  .dashboard-box { padding: 36px 28px; }
 }
 </style>
 </head>
 <body>
 
-<!-- ÉCRAN AUTHENTIFICATION -->
-<div class="screen active" id="authScreen">
-  <div class="auth-container">
-    <div class="auth-logo">
-      <div class="auth-logo-title">THE <span>·</span> CAPITAL</div>
-      <div class="auth-logo-sub">Intelligence Financière Africaine</div>
+<!-- AUTH -->
+<div class="screen active" id="auth">
+  <div class="container">
+    <div class="logo">
+      <div class="logo-title">THE <span>·</span> CAPITAL</div>
+      <div class="logo-sub">Intelligence Financière Africaine</div>
     </div>
     
-    <div class="auth-card">
-      <div class="auth-tabs">
-        <button class="auth-tab active" data-tab="login">Connexion</button>
-        <button class="auth-tab" data-tab="signup">Inscription</button>
+    <div class="card">
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('login')">Connexion</button>
+        <button class="tab" onclick="switchTab('signup')">Inscription</button>
       </div>
       
-      <!-- FORMULAIRE CONNEXION -->
-      <form class="auth-form active" id="loginForm">
-        <div class="auth-field">
+      <form class="form active" id="loginForm" onsubmit="login(event)">
+        <div class="field">
           <label>Email</label>
           <input type="email" id="loginEmail" placeholder="votre@email.com" required>
         </div>
-        <div class="auth-field">
+        <div class="field">
           <label>Mot de passe</label>
           <input type="password" id="loginPassword" placeholder="••••••••" required>
         </div>
-        <div class="auth-message auth-error" id="loginError"></div>
-        <button type="submit" class="auth-btn">Se connecter</button>
-        <div class="auth-note">Accès sécurisé à votre dashboard</div>
+        <div class="message error" id="loginError"></div>
+        <button type="submit" class="btn">Se connecter</button>
+        <div class="note">Accès sécurisé à votre dashboard</div>
       </form>
       
-      <!-- FORMULAIRE INSCRIPTION -->
-      <form class="auth-form" id="signupForm">
-        <div class="auth-field">
-          <label>Nom complet</label>
+      <form class="form" id="signupForm" onsubmit="signup(event)">
+        <div class="field">
+          <label>Nom</label>
           <input type="text" id="signupNom" placeholder="Ibrahima Diop" required>
         </div>
-        <div class="auth-field">
+        <div class="field">
           <label>Email</label>
           <input type="email" id="signupEmail" placeholder="votre@email.com" required>
         </div>
-        <div class="auth-field">
+        <div class="field">
           <label>Mot de passe</label>
           <input type="password" id="signupPassword" placeholder="Min. 8 caractères" required minlength="8">
         </div>
-        <div class="auth-message auth-error" id="signupError"></div>
-        <div class="auth-message auth-success" id="signupSuccess"></div>
-        <button type="submit" class="auth-btn">Créer mon compte</button>
-        <div class="auth-note">Créez votre compte gratuit</div>
+        <div class="message error" id="signupError"></div>
+        <div class="message success" id="signupSuccess"></div>
+        <button type="submit" class="btn">Créer mon compte</button>
+        <div class="note">Gratuit · Sans carte bancaire</div>
       </form>
     </div>
     
-    <a href="index.html" class="auth-back">← Retour à l'accueil</a>
+    <a href="index.html" class="link">← Retour à l'accueil</a>
   </div>
 </div>
 
-<!-- ÉCRAN DASHBOARD -->
-<div class="screen" id="dashboardScreen">
-  <div class="dashboard-header">
+<!-- DASHBOARD -->
+<div class="screen" id="dashboard">
+  <div class="dashboard">
     <div class="dashboard-title">Bienvenue sur <span>The Capital</span></div>
-    <div class="dashboard-welcome" id="dashboardWelcome">Votre plateforme d'investissement BRVM</div>
-  </div>
-  
-  <div class="dashboard-card">
-    <div class="dashboard-icon">◈</div>
-    <div class="dashboard-name">The Capital Invest</div>
-    <div class="dashboard-sub">Bourse & Marchés BRVM</div>
-    <div class="dashboard-desc">
-      Accédez aux données en temps réel, analyses fondamentales et outils de suivi de portefeuille pour la BRVM.
+    <div class="dashboard-welcome" id="welcome"></div>
+    
+    <div class="dashboard-box">
+      <div class="dashboard-icon">◈</div>
+      <div class="dashboard-name">The Capital Invest</div>
+      <div class="dashboard-sub">Plateforme BRVM</div>
+      <div class="dashboard-text">
+        Données en temps réel, analyses fondamentales et outils de suivi de portefeuille pour la BRVM.
+      </div>
+      <div class="dashboard-info">
+        🚧 Dashboard en cours de développement<br>
+        Nous vous tiendrons informé du lancement.
+      </div>
+      <button class="dashboard-logout" onclick="logout()">Se déconnecter</button>
     </div>
-    <div class="dashboard-info">
-      🚧 Dashboard en cours de développement<br>
-      Vous recevrez un email dès que la plateforme sera disponible.
-    </div>
-    <button class="dashboard-logout" onclick="logout()">Se déconnecter</button>
   </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// Configuration
-const SUPABASE_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbb3d4ZW9sYmJndm0iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcyMjk3MzY0OSwiZXhwIjoyMDM4NTQ5NjQ5fQ.HZ5xbUhQKLRhRPl7VYdQZrWPJUZsEJLIvp8_zQXLmVA';
+// CONFIG
+const supabase = window.supabase.createClient(
+  'https://otsiwiwlnowxeolbbgvm.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbb3d4ZW9sYmJndm0iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcyMjk3MzY0OSwiZXhwIjoyMDM4NTQ5NjQ5fQ.HZ5xbUhQKLRhRPl7VYdQZrWPJUZsEJLIvp8_zQXLmVA'
+);
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let currentUser = null;
+let user = null;
 
-// Init
-document.addEventListener('DOMContentLoaded', async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (user) {
-    currentUser = user;
+// INIT
+(async () => {
+  const { data: { user: u } } = await supabase.auth.getUser();
+  if (u) {
+    user = u;
     showDashboard();
   }
-});
+})();
 
-// Switch tabs
-document.querySelectorAll('.auth-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const target = tab.dataset.tab;
-    document.querySelectorAll('.auth-tab').forEach(t => t.classList.remove('active'));
-    document.querySelectorAll('.auth-form').forEach(f => f.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById(target + 'Form').classList.add('active');
-  });
-});
+// SWITCH TAB
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.form').forEach(f => f.classList.remove('active'));
+  
+  if (tab === 'login') {
+    document.querySelectorAll('.tab')[0].classList.add('active');
+    document.getElementById('loginForm').classList.add('active');
+  } else {
+    document.querySelectorAll('.tab')[1].classList.add('active');
+    document.getElementById('signupForm').classList.add('active');
+  }
+}
 
-// Login
-document.getElementById('loginForm').addEventListener('submit', async (e) => {
+// LOGIN
+async function login(e) {
   e.preventDefault();
   const email = document.getElementById('loginEmail').value;
   const password = document.getElementById('loginPassword').value;
-  const errorDiv = document.getElementById('loginError');
+  const error = document.getElementById('loginError');
   
-  errorDiv.textContent = '';
+  error.textContent = '';
   
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { data, error: err } = await supabase.auth.signInWithPassword({
       email,
       password
     });
     
-    if (error) throw error;
+    if (err) throw err;
     
-    currentUser = data.user;
+    user = data.user;
     showDashboard();
-  } catch (error) {
-    errorDiv.textContent = '⚠ ' + error.message;
+  } catch (err) {
+    error.textContent = '⚠ ' + err.message;
   }
-});
+}
 
-// Signup
-document.getElementById('signupForm').addEventListener('submit', async (e) => {
+// SIGNUP
+async function signup(e) {
   e.preventDefault();
   const nom = document.getElementById('signupNom').value;
   const email = document.getElementById('signupEmail').value;
   const password = document.getElementById('signupPassword').value;
-  const errorDiv = document.getElementById('signupError');
-  const successDiv = document.getElementById('signupSuccess');
+  const error = document.getElementById('signupError');
+  const success = document.getElementById('signupSuccess');
   
-  errorDiv.textContent = '';
-  successDiv.textContent = '';
+  error.textContent = '';
+  success.textContent = '';
   
   try {
-    const { data, error } = await supabase.auth.signUp({
+    const { data, error: err } = await supabase.auth.signUp({
       email,
       password,
-      options: {
-        data: { nom }
-      }
+      options: { data: { nom } }
     });
     
-    if (error) throw error;
+    if (err) throw err;
     
-    currentUser = data.user;
-    successDiv.textContent = '✓ Compte créé avec succès !';
+    user = data.user;
+    success.textContent = '✓ Compte créé !';
     
-    setTimeout(() => {
-      showDashboard();
-    }, 1000);
-  } catch (error) {
-    errorDiv.textContent = '⚠ ' + error.message;
-  }
-});
-
-// Show screens
-function showDashboard() {
-  document.getElementById('authScreen').classList.remove('active');
-  document.getElementById('dashboardScreen').classList.add('active');
-  
-  if (currentUser) {
-    document.getElementById('dashboardWelcome').textContent = 
-      `Bienvenue, ${currentUser.email}`;
+    setTimeout(showDashboard, 800);
+  } catch (err) {
+    error.textContent = '⚠ ' + err.message;
   }
 }
 
-// Logout
+// SHOW DASHBOARD
+function showDashboard() {
+  document.getElementById('auth').classList.remove('active');
+  document.getElementById('dashboard').classList.add('active');
+  document.getElementById('welcome').textContent = user ? user.email : '';
+}
+
+// LOGOUT
 async function logout() {
   await supabase.auth.signOut();
-  currentUser = null;
-  document.getElementById('dashboardScreen').classList.remove('active');
-  document.getElementById('authScreen').classList.add('active');
+  user = null;
+  document.getElementById('dashboard').classList.remove('active');
+  document.getElementById('auth').classList.add('active');
   document.getElementById('loginEmail').value = '';
   document.getElementById('loginPassword').value = '';
 }
