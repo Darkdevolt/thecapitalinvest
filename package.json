@@ -2,6 +2,7 @@
   "name": "thecapitalinvest",
   "version": "1.0.0",
   "description": "The Capital - Plateforme d'investissement BRVM et conseil financier",
+  "type": "module",
   "engines": {
     "node": "20.x"
   },
@@ -11,16 +12,11 @@
     "start": "vercel dev"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "jose": "^5.2.0"
   },
   "devDependencies": {},
-  "keywords": [
-    "brvm",
-    "bourse",
-    "afrique",
-    "finance",
-    "investissement"
-  ],
+  "keywords": ["brvm", "bourse", "afrique", "finance", "investissement"],
   "author": "The Capital",
   "license": "ISC"
 }
