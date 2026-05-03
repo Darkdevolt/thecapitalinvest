@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Capital — Analyse BRVM</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="nav.js"></script>
+</head>
+<body>
+<script>initNav('analyse');</script>
+
+<div class="page-content">
+
+  <div class="page-header">
+    <h1>Analyse <span style="color:var(--gold)">Technique & Fondamentale</span></h1>
+    <p>Graphiques, signaux, comparaison des cours et notations financières des titres BRVM</p>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 1 — GRAPHIQUE
+  ═══════════════════════════ -->
+  <div class="section" id="graphique">
+    <div class="section-title">Graphique d'une Action</div>
+    <div class="section-sub">Historique des cours avec indicateurs techniques</div>
+
+    <!-- Sélecteur ticker -->
+    <div class="ticker-selector card mb20">
+      <div class="card-body" style="padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="flex:1;min-width:200px">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Titre</div>
+            <select id="tickerSelect" onchange="loadTickerData(this.value)"
+              style="width:100%;padding:10px 14px;background:var(--card);border:1px solid var(--border);border-radius:8px;font-family:var(--mono);font-size:14px;color:var(--gold);outline:none;cursor:pointer">
+              <option value="">— Sélectionner un titre —</option>
+            </select>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Période</div>
+            <div style="display:flex;gap:6px">
+              <button class="filter-btn active" onclick="setGraphPeriod(30,this)">1M</button>
+              <button class="filter-btn" onclick="setGraphPeriod(90,this)">3M</button>
+              <button class="filter-btn" onclick="setGraphPeriod(180,this)">6M</button>
+              <button class="filter-btn" onclick="setGraphPeriod(252,this)">1A</button>
+            </div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Indicateurs</div>
+            <div style="display:flex;gap:6px">
+              <button class="filter-btn active" id="btn-mm20" onclick="toggleIndicator('mm20',this)">MM20</button>
+              <button class="filter-btn" id="btn-mm50" onclick="toggleIndicator('mm50',this)">MM50</button>
+              <button class="filter-btn" id="btn-vol" onclick="toggleIndicator('vol',this)">Volume</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fiche rapide du titre sélectionné -->
+    <div id="tickerHero" style="display:none" class="card mb20">
+      <div class="card-body" style="padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap">
+          <div>
+            <div style="font-family:var(--mono);font-size:11px;color:var(--gold);letter-spacing:0.1em;margin-bottom:2px" id="heroTicker">—</div>
+            <div style="font-family:var(--serif);font-size:20px;font-weight:500;color:var(--cream)" id="heroName">—</div>
+          </div>
+          <div style="display:flex;gap:20px;flex-wrap:wrap">
+            <div><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px">Cours</div><div style="font-family:var(--mono);font-size:20px;font-weight:500;color:var(--cream)" id="heroCours">—</div></div>
+            <div><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px">Variation</div><div style="font-family:var(--mono);font-size:16px;font-weight:500" id="heroVariation">—</div></div>
+            <div><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px">Volume</div><div style="font-family:var(--mono);font-size:16px;color:var(--cream)" id="heroVolume">—</div></div>
+            <div><div style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:3px">Capitalisation</div><div style="font-family:var(--mono);font-size:16px;color:var(--cream)" id="heroCap">—</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chart principal -->
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title" id="graphChartTitle">Sélectionnez un titre</div>
+        <div style="font-size:11px;color:var(--dim)" id="graphDateRange"></div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height:300px">
+          <canvas id="chartGraph"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Volume chart -->
+    <div class="card" id="volChartCard" style="display:none;margin-bottom:20px">
+      <div class="card-header"><div class="card-title">Volume échangé</div></div>
+      <div class="card-body">
+        <div class="chart-container short"><canvas id="chartVol"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 2 — TECHNIQUE
+  ═══════════════════════════ -->
+  <div class="section" id="technique">
+    <div class="section-title">Analyse Technique</div>
+    <div class="section-sub">Niveaux clés, supports, résistances et indicateurs pour le titre sélectionné</div>
+
+    <div class="grid-2">
+      <!-- Niveaux -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Niveaux clés</div></div>
+        <div id="niveauxTable" class="card-body" style="padding-top:8px;padding-bottom:8px">
+          <div style="color:var(--dim);font-size:13px;text-align:center;padding:20px 0">Sélectionnez un titre</div>
+        </div>
+      </div>
+
+      <!-- Moyennes mobiles -->
+      <div class="card">
+        <div class="card-header"><div class="card-title">Moyennes Mobiles</div></div>
+        <div id="mmTable" class="card-body" style="padding-top:8px;padding-bottom:8px">
+          <div style="color:var(--dim);font-size:13px;text-align:center;padding:20px 0">Sélectionnez un titre</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RSI Gauge -->
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title">RSI — Relative Strength Index (14 périodes)</div>
+        <div style="font-size:11px;color:var(--dim)">Survente &lt;30 · Neutre 30–70 · Surachat &gt;70</div>
+      </div>
+      <div class="card-body">
+        <div id="rsiDisplay" style="text-align:center;padding:10px 0">
+          <div style="color:var(--dim);font-size:13px">Sélectionnez un titre pour voir le RSI</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 3 — SIGNAUX
+  ═══════════════════════════ -->
+  <div class="section" id="signaux">
+    <div class="section-title">Signaux Techniques</div>
+    <div class="section-sub">Récapitulatif des signaux d'achat et de vente sur l'ensemble des titres</div>
+
+    <div class="grid-3 mb20">
+      <div class="stat-card">
+        <div class="stat-label">Signaux Achat</div>
+        <div class="stat-value" id="sig-buy" style="color:var(--green)">—</div>
+        <div class="stat-change neutral">titres avec signal haussier</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Signaux Neutre</div>
+        <div class="stat-value" id="sig-neutral">—</div>
+        <div class="stat-change neutral">titres sans signal fort</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Signaux Vente</div>
+        <div class="stat-value" id="sig-sell" style="color:var(--red)">—</div>
+        <div class="stat-change neutral">titres avec signal baissier</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Tableau des signaux</div>
+        <div style="display:flex;gap:6px">
+          <button class="filter-btn active" onclick="setSigFilter('all',this)">Tous</button>
+          <button class="filter-btn" onclick="setSigFilter('buy',this)">Achat</button>
+          <button class="filter-btn" onclick="setSigFilter('neutral',this)">Neutre</button>
+          <button class="filter-btn" onclick="setSigFilter('sell',this)">Vente</button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th class="right">Cours</th>
+              <th class="right">Var. 1j</th>
+              <th class="right">MM 20</th>
+              <th class="right">MM 50</th>
+              <th class="right">RSI</th>
+              <th>Signal</th>
+              <th>Tendance</th>
+            </tr>
+          </thead>
+          <tbody id="signauxTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 4 — COMPARAISON
+  ═══════════════════════════ -->
+  <div class="section" id="comparaison">
+    <div class="section-title">Comparaison des Cours</div>
+    <div class="section-sub">Comparez l'évolution de plusieurs titres sur la même période</div>
+
+    <div class="card mb20">
+      <div class="card-body" style="padding:16px 20px">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="flex:1">
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Titres à comparer (max 4)</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap" id="compTickerBtns"></div>
+          </div>
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Période</div>
+            <div style="display:flex;gap:6px">
+              <button class="filter-btn active" onclick="setCompPeriod(30,this)">1M</button>
+              <button class="filter-btn" onclick="setCompPeriod(90,this)">3M</button>
+              <button class="filter-btn" onclick="setCompPeriod(252,this)">1A</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title">Performance relative (base 100)</div>
+        <div style="font-size:11px;color:var(--dim)">Normalisé à 100 au début de la période</div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container tall"><canvas id="chartComp"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Tableau comparatif -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">Comparatif des performances</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th class="right">Cours actuel</th>
+              <th class="right">Perf. 1M</th>
+              <th class="right">Perf. 3M</th>
+              <th class="right">Perf. 1A</th>
+              <th class="right">+ Haut 52s</th>
+              <th class="right">+ Bas 52s</th>
+            </tr>
+          </thead>
+          <tbody id="compTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 5 — NOTATIONS
+  ═══════════════════════════ -->
+  <div class="section" id="notations">
+    <div class="section-title">Notations Financières</div>
+    <div class="section-sub">Scores de qualité fondamentale calculés sur les données financières disponibles</div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Notation par titre</div>
+        <div style="font-size:11px;color:var(--dim)">Score /100 · Rentabilité · Valorisation · Solidité</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Titre</th>
+              <th class="right">Cours</th>
+              <th class="right">P/E</th>
+              <th class="right">Div. Yield</th>
+              <th>Rentabilité</th>
+              <th>Valorisation</th>
+              <th>Solidité</th>
+              <th class="right">Score global</th>
+            </tr>
+          </thead>
+          <tbody id="notationsTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-content -->
+
+<style>
+/* Styles spécifiques à analyse.html */
+.signal-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+}
+.signal-buy { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.signal-sell { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+.signal-neutral { background: rgba(245,240,232,0.05); color: var(--dim); border: 1px solid var(--border2); }
+
+.tendance-bar {
+  display: flex; align-items: center; gap: 6px;
+}
+.trend-dot {
+  width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+}
+
+.notation-bar-wrap {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 120px;
+}
+.notation-bar-bg {
+  flex: 1; height: 4px; background: var(--border2); border-radius: 4px; overflow: hidden;
+}
+.notation-bar-fill {
+  height: 100%; border-radius: 4px;
+  transition: width 0.6s ease;
+}
+
+.score-badge {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 40px; height: 40px; border-radius: 50%;
+  font-family: var(--mono); font-size: 13px; font-weight: 500;
+  border: 2px solid;
+}
+
+.comp-ticker-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.comp-ticker-btn.selected {
+  background: rgba(184,150,78,0.1);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+.comp-ticker-btn.selected.c1 { border-color: #B8964E; color: #B8964E; background: rgba(184,150,78,0.1); }
+.comp-ticker-btn.selected.c2 { border-color: #60A5FA; color: #60A5FA; background: rgba(96,165,250,0.1); }
+.comp-ticker-btn.selected.c3 { border-color: #4ADE80; color: #4ADE80; background: rgba(74,222,128,0.1); }
+.comp-ticker-btn.selected.c4 { border-color: #F87171; color: #F87171; background: rgba(248,113,113,0.1); }
+
+.niv-row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(184,150,78,0.04); }
+.niv-row:last-child { border-bottom:none; }
+.niv-label { font-size:13px; color:var(--muted); }
+.niv-val { font-family:var(--mono); font-size:13px; color:var(--cream); }
+
+.rsi-bar-container { max-width: 500px; margin: 0 auto; }
+.rsi-track { height:10px; border-radius:10px; background:linear-gradient(90deg,var(--blue) 0%,var(--green) 30%,var(--green) 70%,var(--red) 100%); position:relative; margin:12px 0; }
+.rsi-thumb { position:absolute; top:50%; transform:translate(-50%,-50%); width:16px; height:16px; border-radius:50%; background:var(--cream); border:2px solid var(--gold); transition:left 0.4s ease; }
+.rsi-labels { display:flex; justify-content:space-between; font-family:var(--mono); font-size:11px; color:var(--dim); }
+.rsi-value { font-family:var(--mono); font-size:32px; font-weight:500; margin-bottom:4px; }
+.rsi-zone { font-size:12px; letter-spacing:0.06em; text-transform:uppercase; }
+</style>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let allCours = [], allFinancials = [];
+let tickerHistorique = {};   // cache par ticker
+let graphTicker = null, graphPeriod = 30;
+let compTickers = [], compPeriod = 30;
+let graphChartInst = null, volChartInst = null, compChartInst = null;
+let showMM20 = true, showMM50 = false, showVol = false;
+let _sigFilter = 'all';
+
+const COMP_COLORS = ['#B8964E','#60A5FA','#4ADE80','#F87171'];
+
+// ═══════════════════════════════════════
+// LOAD
+// ═══════════════════════════════════════
+async function loadAll() {
+  const [cours, financials] = await Promise.allSettled([
+    sbQuery('cours', { order: 'date_seance.desc', limit: 300 }),
+    sbQuery('financials', { order: 'annee.desc', limit: 300 }),
+  ]);
+
+  if (cours.status === 'fulfilled') allCours = cours.value || [];
+  if (financials.status === 'fulfilled') allFinancials = financials.value || [];
+  if (!allCours.length) injectDemoData();
+
+  populateTickerSelect();
+  renderSignaux();
+  renderNotations();
+  buildCompButtons();
+  renderCompChart();
+}
+
+function injectDemoData() {
+  allCours = [
+    { ticker:'SGBCI', cours:14500, variation:1.23, volume:42000, capitalisation:504000000000, date_seance:'2024-10-15' },
+    { ticker:'ETIT', cours:19, variation:-0.52, volume:180000, capitalisation:96000000000, date_seance:'2024-10-15' },
+    { ticker:'PALMCI', cours:6500, variation:2.11, volume:8400, capitalisation:45000000000, date_seance:'2024-10-15' },
+    { ticker:'BICCICI', cours:9800, variation:-1.01, volume:12000, capitalisation:128000000000, date_seance:'2024-10-15' },
+    { ticker:'NTLC', cours:1250, variation:-2.34, volume:22000, capitalisation:40000000000, date_seance:'2024-10-15' },
+    { ticker:'SDCC', cours:8995, variation:7.47, volume:2800, capitalisation:66000000000, date_seance:'2024-10-15' },
+    { ticker:'BOAB', cours:4650, variation:0.65, volume:9800, capitalisation:185000000000, date_seance:'2024-10-15' },
+    { ticker:'SIVCOCI', cours:700, variation:3.20, volume:95000, capitalisation:21000000000, date_seance:'2024-10-15' },
+  ];
+  allFinancials = [
+    { ticker:'SGBCI', annee:2023, bpa:9200, dpa:6000, fonds_propres:280000000000, resultat_net:32000000000, total_actif:2100000000000, nombre_actions:34620000 },
+    { ticker:'ETIT', annee:2023, bpa:1.2, dpa:0.8, fonds_propres:150000000000, resultat_net:18000000000, total_actif:3200000000000, nombre_actions:5060000000 },
+    { ticker:'PALMCI', annee:2023, bpa:1800, dpa:1200, fonds_propres:80000000000, resultat_net:12000000000, total_actif:180000000000, nombre_actions:6938000 },
+    { ticker:'BOAB', annee:2023, bpa:1200, dpa:750, fonds_propres:95000000000, resultat_net:9000000000, total_actif:820000000000, nombre_actions:39800000 },
+  ];
+}
+
+// ═══════════════════════════════════════
+// TICKER SELECT
+// ═══════════════════════════════════════
+function populateTickerSelect() {
+  const sel = document.getElementById('tickerSelect');
+  const tickers = [...new Set(allCours.map(c => c.ticker))].sort();
+  sel.innerHTML = '<option value="">— Sélectionner un titre —</option>' +
+    tickers.map(t => `<option value="${t}">${t}</option>`).join('');
+}
+
+async function loadTickerData(ticker) {
+  if (!ticker) return;
+  graphTicker = ticker;
+
+  // Cours du ticker
+  const c = allCours.find(x => x.ticker === ticker) || {};
+  document.getElementById('tickerHero').style.display = 'block';
+  document.getElementById('heroTicker').textContent = ticker;
+  document.getElementById('heroName').textContent = ticker;
+  document.getElementById('heroCours').textContent = fmt(c.cours) + ' FCFA';
+  const v = parseFloat(c.variation);
+  document.getElementById('heroVariation').innerHTML = changePill(c.variation);
+  document.getElementById('heroVolume').textContent = fmt(c.volume);
+  document.getElementById('heroCap').textContent = c.capitalisation ? fmtM(c.capitalisation) : '—';
+  document.getElementById('graphChartTitle').textContent = `${ticker} — Historique des cours`;
+
+  // Charger ou générer historique
+  if (!tickerHistorique[ticker]) {
+    try {
+      const hist = await sbQuery('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
+      tickerHistorique[ticker] = hist || [];
+    } catch {
+      tickerHistorique[ticker] = generateDemoHistorique(ticker, c.cours || 5000);
+    }
+    if (!tickerHistorique[ticker].length) {
+      tickerHistorique[ticker] = generateDemoHistorique(ticker, c.cours || 5000);
+    }
+  }
+
+  renderGraphChart();
+  renderTechnique();
+}
+
+function generateDemoHistorique(ticker, baseCours) {
+  return Array.from({ length: 252 }, (_, i) => {
+    const drift = (Math.random() - 0.48) * 0.012;
+    const prev = i === 0 ? baseCours : null;
+    return {
+      date_seance: new Date(Date.now() - (251 - i) * 86400000).toISOString().split('T')[0],
+      cloture: baseCours * (0.85 + Math.sin(i * 0.05) * 0.1 + (Math.random() - 0.47) * 0.04),
+      volume: Math.floor(Math.random() * 50000 + 5000),
+    };
+  });
+}
+
+// ═══════════════════════════════════════
+// GRAPH CHART
+// ═══════════════════════════════════════
+function renderGraphChart() {
+  const hist = (tickerHistorique[graphTicker] || []).slice(-graphPeriod);
+  if (!hist.length) return;
+
+  const labels = hist.map(d => fmtDateShort(d.date_seance));
+  const prix = hist.map(d => d.cloture || d.cours || 0);
+  const volumes = hist.map(d => d.volume || 0);
+
+  // Calcul moyennes mobiles
+  function calcMM(data, n) {
+    return data.map((_, i) => {
+      if (i < n - 1) return null;
+      return data.slice(i - n + 1, i + 1).reduce((s, v) => s + v, 0) / n;
+    });
+  }
+
+  const mm20 = showMM20 ? calcMM(prix, Math.min(20, prix.length)) : null;
+  const mm50 = showMM50 ? calcMM(prix, Math.min(50, prix.length)) : null;
+
+  // Date range
+  if (hist.length >= 2) {
+    document.getElementById('graphDateRange').textContent =
+      fmtDate(hist[0].date_seance) + ' → ' + fmtDate(hist[hist.length - 1].date_seance);
+  }
+
+  const datasets = [mkLineDataset(prix, '#B8964E')];
+  if (mm20) datasets.push({
+    data: mm20, borderColor: '#60A5FA', borderWidth: 1.5,
+    pointRadius: 0, fill: false, tension: 0.3, label: 'MM20',
+    borderDash: [4, 3]
+  });
+  if (mm50) datasets.push({
+    data: mm50, borderColor: '#4ADE80', borderWidth: 1.5,
+    pointRadius: 0, fill: false, tension: 0.3, label: 'MM50',
+    borderDash: [6, 3]
+  });
+
+  if (graphChartInst) graphChartInst.destroy();
+  graphChartInst = new Chart(document.getElementById('chartGraph'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        legend: {
+          display: (showMM20 || showMM50),
+          labels: { color: 'rgba(245,240,232,0.5)', font: { size: 11, family: 'DM Mono' }, boxWidth: 24, padding: 14 }
+        }
+      }
+    }
+  });
+
+  // Volume chart
+  const volCard = document.getElementById('volChartCard');
+  if (showVol) {
+    volCard.style.display = 'block';
+    if (volChartInst) volChartInst.destroy();
+    volChartInst = new Chart(document.getElementById('chartVol'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: volumes,
+          backgroundColor: 'rgba(184,150,78,0.25)',
+          borderColor: 'rgba(184,150,78,0.5)',
+          borderWidth: 1,
+          borderRadius: 2,
+        }]
+      },
+      options: { ...chartDefaults, plugins: { ...chartDefaults.plugins, legend: { display: false } } }
+    });
+  } else {
+    volCard.style.display = 'none';
+  }
+}
+
+function setGraphPeriod(n, btn) {
+  graphPeriod = n;
+  document.querySelectorAll('#graphique .filter-btn[onclick^="setGraphPeriod"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  if (graphTicker) renderGraphChart();
+}
+
+function toggleIndicator(ind, btn) {
+  if (ind === 'mm20') showMM20 = !showMM20;
+  if (ind === 'mm50') showMM50 = !showMM50;
+  if (ind === 'vol') showVol = !showVol;
+  btn.classList.toggle('active');
+  if (graphTicker) renderGraphChart();
+}
+
+// ═══════════════════════════════════════
+// TECHNIQUE
+// ═══════════════════════════════════════
+function renderTechnique() {
+  const hist = (tickerHistorique[graphTicker] || []).slice(-252);
+  if (!hist.length) return;
+
+  const prix = hist.map(d => d.cloture || 0);
+  const current = prix[prix.length - 1];
+  const high52 = Math.max(...prix);
+  const low52 = Math.min(...prix);
+  const mm20 = prix.slice(-20).reduce((s, v) => s + v, 0) / Math.min(20, prix.length);
+  const mm50 = prix.length >= 50 ? prix.slice(-50).reduce((s, v) => s + v, 0) / 50 : null;
+
+  // Supports/résistances simples
+  const support = low52 + (current - low52) * 0.2;
+  const resistance = current + (high52 - current) * 0.3;
+
+  const niveaux = [
+    ['Cours actuel', fmt(current) + ' FCFA', 'var(--cream)'],
+    ['Résistance immédiate', fmt(resistance) + ' FCFA', 'var(--red)'],
+    ['Support immédiat', fmt(support) + ' FCFA', 'var(--green)'],
+    ['Plus haut 52 semaines', fmt(high52) + ' FCFA', 'var(--gold)'],
+    ['Plus bas 52 semaines', fmt(low52) + ' FCFA', 'var(--muted)'],
+    ['Distance du + haut', ((current - high52) / high52 * 100).toFixed(1) + '%', current === high52 ? 'var(--gold)' : 'var(--red)'],
+  ];
+
+  document.getElementById('niveauxTable').innerHTML = niveaux.map(([l, v, c]) =>
+    `<div class="niv-row"><span class="niv-label">${l}</span><span class="niv-val" style="color:${c}">${v}</span></div>`
+  ).join('');
+
+  const mmRows = [
+    ['Moyenne Mobile 20j', fmt(mm20), current > mm20 ? 'Cours au-dessus' : 'Cours en-dessous', current > mm20 ? 'var(--green)' : 'var(--red)'],
+    mm50 ? ['Moyenne Mobile 50j', fmt(mm50), current > mm50 ? 'Cours au-dessus' : 'Cours en-dessous', current > mm50 ? 'var(--green)' : 'var(--red)'] : null,
+    ['Écart / MM20', ((current - mm20) / mm20 * 100).toFixed(2) + '%', '', current > mm20 ? 'var(--green)' : 'var(--red)'],
+  ].filter(Boolean);
+
+  document.getElementById('mmTable').innerHTML = mmRows.map(([l, v, note, c]) =>
+    `<div class="niv-row">
+      <span class="niv-label">${l}</span>
+      <div style="text-align:right">
+        <div class="niv-val" style="color:${c}">${v}</div>
+        ${note ? `<div style="font-size:10px;color:var(--dim)">${note}</div>` : ''}
+      </div>
+    </div>`
+  ).join('');
+
+  // RSI
+  const rsi = calcRSI(prix, 14);
+  renderRSI(rsi);
+}
+
+function calcRSI(data, period = 14) {
+  if (data.length < period + 1) return 50;
+  let gains = 0, losses = 0;
+  for (let i = data.length - period; i < data.length; i++) {
+    const diff = data[i] - data[i - 1];
+    if (diff > 0) gains += diff;
+    else losses += Math.abs(diff);
+  }
+  const avgGain = gains / period;
+  const avgLoss = losses / period;
+  if (avgLoss === 0) return 100;
+  const rs = avgGain / avgLoss;
+  return 100 - (100 / (1 + rs));
+}
+
+function renderRSI(rsi) {
+  const zone = rsi < 30 ? 'Survente' : rsi > 70 ? 'Surachat' : 'Zone neutre';
+  const color = rsi < 30 ? 'var(--blue)' : rsi > 70 ? 'var(--red)' : 'var(--green)';
+  const pct = ((rsi / 100) * 100).toFixed(0);
+
+  document.getElementById('rsiDisplay').innerHTML = `
+    <div class="rsi-bar-container">
+      <div class="rsi-value" style="color:${color}">${rsi.toFixed(1)}</div>
+      <div class="rsi-zone" style="color:${color}">${zone}</div>
+      <div class="rsi-track" style="margin-top:16px">
+        <div class="rsi-thumb" style="left:${pct}%"></div>
+      </div>
+      <div class="rsi-labels">
+        <span style="color:var(--blue)">0 — Survente</span>
+        <span>30</span>
+        <span style="color:var(--green)">50 — Neutre</span>
+        <span>70</span>
+        <span style="color:var(--red)">100 — Surachat</span>
+      </div>
+    </div>`;
+}
+
+// ═══════════════════════════════════════
+// SIGNAUX
+// ═══════════════════════════════════════
+function renderSignaux() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  window._sigRows = Object.values(byTicker).map(c => {
+    // Signal simplifié basé sur variation + heuristiques
+    const v = parseFloat(c.variation);
+    const rsi = 45 + v * 3 + (Math.random() - 0.5) * 15; // simulé
+    const mm20 = c.cours * (0.97 + Math.random() * 0.06);
+    const mm50 = c.cours * (0.94 + Math.random() * 0.12);
+    const signal = v > 2 || (c.cours > mm20 && c.cours > mm50 && rsi < 65) ? 'buy'
+      : v < -2 || (c.cours < mm20 && c.cours < mm50 && rsi > 55) ? 'sell' : 'neutral';
+    return { ...c, rsi: Math.min(100, Math.max(0, rsi)).toFixed(0), mm20, mm50, signal };
+  });
+
+  const buys = window._sigRows.filter(r => r.signal === 'buy').length;
+  const sells = window._sigRows.filter(r => r.signal === 'sell').length;
+  document.getElementById('sig-buy').textContent = buys;
+  document.getElementById('sig-sell').textContent = sells;
+  document.getElementById('sig-neutral').textContent = window._sigRows.length - buys - sells;
+
+  filterSignaux();
+}
+
+function setSigFilter(f, btn) {
+  _sigFilter = f;
+  document.querySelectorAll('#signaux .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterSignaux();
+}
+
+function filterSignaux() {
+  let rows = window._sigRows || [];
+  if (_sigFilter !== 'all') rows = rows.filter(r => r.signal === _sigFilter);
+
+  document.getElementById('signauxTable').innerHTML = rows.map(r => {
+    const sigLabel = { buy: '▲ Achat', sell: '▼ Vente', neutral: '— Neutre' }[r.signal];
+    const sigCls = { buy: 'signal-buy', sell: 'signal-sell', neutral: 'signal-neutral' }[r.signal];
+    const rsiNum = parseFloat(r.rsi);
+    const rsiColor = rsiNum < 30 ? 'var(--blue)' : rsiNum > 70 ? 'var(--red)' : 'var(--green)';
+    const trend = r.cours > r.mm20 ? '▲ Haussier' : '▼ Baissier';
+    const trendColor = r.cours > r.mm20 ? 'var(--green)' : 'var(--red)';
+    return `<tr>
+      <td><span style="font-family:var(--mono);font-size:12px;color:var(--gold);cursor:pointer" onclick="document.getElementById('tickerSelect').value='${r.ticker}';loadTickerData('${r.ticker}');window.scrollTo(0,0)">${r.ticker}</span></td>
+      <td class="right">${fmt(r.cours)}</td>
+      <td class="right">${changePill(r.variation)}</td>
+      <td class="right" style="font-family:var(--mono);font-size:12px">${fmt(r.mm20)}</td>
+      <td class="right" style="font-family:var(--mono);font-size:12px">${fmt(r.mm50)}</td>
+      <td class="right" style="font-family:var(--mono);font-size:12px;color:${rsiColor}">${r.rsi}</td>
+      <td><span class="signal-badge ${sigCls}">${sigLabel}</span></td>
+      <td style="color:${trendColor};font-size:12px">${trend}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--dim)">Aucun signal</td></tr>';
+}
+
+// ═══════════════════════════════════════
+// COMPARAISON
+// ═══════════════════════════════════════
+function buildCompButtons() {
+  const tickers = [...new Set(allCours.map(c => c.ticker))].sort().slice(0, 12);
+  // Sélectionner les 3 premiers par défaut
+  compTickers = tickers.slice(0, 3);
+
+  document.getElementById('compTickerBtns').innerHTML = tickers.map(t => {
+    const idx = compTickers.indexOf(t);
+    const cls = idx >= 0 ? `selected c${idx + 1}` : '';
+    return `<button class="comp-ticker-btn ${cls}" data-ticker="${t}" onclick="toggleCompTicker('${t}',this)">${t}</button>`;
+  }).join('');
+
+  renderCompChart();
+  renderCompTable();
+}
+
+function toggleCompTicker(ticker, btn) {
+  const idx = compTickers.indexOf(ticker);
+  if (idx >= 0) {
+    compTickers.splice(idx, 1);
+    btn.className = 'comp-ticker-btn';
+  } else {
+    if (compTickers.length >= 4) return;
+    compTickers.push(ticker);
+    const colorIdx = compTickers.length;
+    btn.className = `comp-ticker-btn selected c${colorIdx}`;
+  }
+  // Update all button colors
+  document.querySelectorAll('.comp-ticker-btn').forEach(b => {
+    const t = b.dataset.ticker;
+    const i = compTickers.indexOf(t);
+    b.className = 'comp-ticker-btn' + (i >= 0 ? ` selected c${i + 1}` : '');
+  });
+  renderCompChart();
+  renderCompTable();
+}
+
+function setCompPeriod(n, btn) {
+  compPeriod = n;
+  document.querySelectorAll('#comparaison .filter-btn[onclick^="setCompPeriod"]').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCompChart();
+  renderCompTable();
+}
+
+function renderCompChart() {
+  if (!compTickers.length) return;
+  const n = compPeriod;
+  const datasets = compTickers.map((ticker, i) => {
+    const hist = tickerHistorique[ticker] || generateDemoHistorique(ticker, allCours.find(c => c.ticker === ticker)?.cours || 5000);
+    tickerHistorique[ticker] = hist;
+    const slice = hist.slice(-n);
+    const base = slice[0]?.cloture || 1;
+    const data = slice.map(d => ((d.cloture || base) / base * 100));
+    return {
+      data, label: ticker,
+      borderColor: COMP_COLORS[i],
+      borderWidth: 2, pointRadius: 0, fill: false, tension: 0.3,
+    };
+  });
+
+  const labels = (tickerHistorique[compTickers[0]] || []).slice(-n)
+    .map(d => fmtDateShort(d.date_seance));
+
+  if (compChartInst) compChartInst.destroy();
+  compChartInst = new Chart(document.getElementById('chartComp'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        legend: {
+          display: true,
+          labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11, family: 'DM Mono' }, boxWidth: 24, padding: 14 }
+        },
+        tooltip: {
+          ...chartDefaults.plugins.tooltip,
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}` }
+        }
+      },
+      scales: {
+        ...chartDefaults.scales,
+        y: {
+          ...chartDefaults.scales.y,
+          ticks: { ...chartDefaults.scales.y.ticks, callback: v => v.toFixed(0) }
+        }
+      }
+    }
+  });
+}
+
+function renderCompTable() {
+  document.getElementById('compTable').innerHTML = compTickers.map((ticker, i) => {
+    const c = allCours.find(x => x.ticker === ticker) || {};
+    const hist = tickerHistorique[ticker] || [];
+    const perf = (n) => {
+      const sl = hist.slice(-n);
+      if (sl.length < 2) return '—';
+      const p = (sl[sl.length-1].cloture - sl[0].cloture) / sl[0].cloture * 100;
+      return `<span style="color:${p>=0?'var(--green)':'var(--red)'}">${p>=0?'+':''}${p.toFixed(2)}%</span>`;
+    };
+    const prix = hist.map(d => d.cloture || 0);
+    const high52 = prix.length ? fmt(Math.max(...prix)) : '—';
+    const low52 = prix.length ? fmt(Math.min(...prix)) : '—';
+    return `<tr>
+      <td><span style="font-family:var(--mono);font-size:12px;font-weight:500;color:${COMP_COLORS[i]}">${ticker}</span></td>
+      <td class="right">${fmt(c.cours)}</td>
+      <td class="right">${perf(30)}</td>
+      <td class="right">${perf(90)}</td>
+      <td class="right">${perf(252)}</td>
+      <td class="right" style="color:var(--dim)">${high52}</td>
+      <td class="right" style="color:var(--dim)">${low52}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--dim)">Sélectionnez des titres</td></tr>';
+}
+
+// ═══════════════════════════════════════
+// NOTATIONS
+// ═══════════════════════════════════════
+function renderNotations() {
+  const coursMap = {};
+  allCours.forEach(c => { if (!coursMap[c.ticker]) coursMap[c.ticker] = c; });
+  const finMap = {};
+  allFinancials.forEach(f => { if (!finMap[f.ticker]) finMap[f.ticker] = f; });
+
+  const tickers = [...new Set(allCours.map(c => c.ticker))];
+
+  function notation(ticker) {
+    const c = coursMap[ticker]; const f = finMap[ticker];
+    if (!c) return null;
+    const cp = parseFloat(c.cours);
+
+    // Rentabilité (0-100)
+    let rentabilite = 50;
+    if (f?.resultat_net && f?.fonds_propres) {
+      const roe = f.resultat_net / f.fonds_propres * 100;
+      rentabilite = Math.min(100, Math.max(0, roe * 3));
+    }
+
+    // Valorisation (0-100, inverse du PER — PER faible = bonne valorisation)
+    let valorisation = 50;
+    if (f?.bpa && cp) {
+      const per = cp / f.bpa;
+      valorisation = Math.min(100, Math.max(0, 100 - (per - 5) * 4));
+    }
+
+    // Solidité financière (0-100)
+    let solidite = 50;
+    if (f?.fonds_propres && f?.total_actif) {
+      const ratio = f.fonds_propres / f.total_actif * 100;
+      solidite = Math.min(100, ratio * 2);
+    }
+
+    const score = Math.round((rentabilite + valorisation + solidite) / 3);
+    const per = (f?.bpa && cp) ? (cp / f.bpa).toFixed(1) + 'x' : '—';
+    const rdt = (f?.dpa && cp) ? ((f.dpa / cp) * 100).toFixed(2) + '%' : '—';
+
+    return { ticker, cours: cp, per, rdt, rentabilite, valorisation, solidite, score };
+  }
+
+  const rows = tickers.map(notation).filter(Boolean).sort((a, b) => b.score - a.score);
+
+  function barHTML(val, color) {
+    return `<div class="notation-bar-wrap">
+      <div class="notation-bar-bg"><div class="notation-bar-fill" style="width:${val}%;background:${color}"></div></div>
+      <span style="font-family:var(--mono);font-size:11px;color:var(--dim);min-width:28px;text-align:right">${val.toFixed(0)}</span>
+    </div>`;
+  }
+
+  function scoreBadge(s) {
+    const c = s >= 70 ? 'var(--green)' : s >= 40 ? 'var(--gold)' : 'var(--red)';
+    return `<span class="score-badge" style="color:${c};border-color:${c}">${s}</span>`;
+  }
+
+  document.getElementById('notationsTable').innerHTML = rows.map(r =>
+    `<tr>
+      <td><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${r.ticker}</span></td>
+      <td class="right">${fmt(r.cours)}</td>
+      <td class="right">${r.per}</td>
+      <td class="right">${r.rdt}</td>
+      <td>${barHTML(r.rentabilite, 'var(--green)')}</td>
+      <td>${barHTML(r.valorisation, 'var(--blue)')}</td>
+      <td>${barHTML(r.solidite, 'var(--gold)')}</td>
+      <td class="right">${scoreBadge(r.score)}</td>
+    </tr>`
+  ).join('') || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--dim)">Données insuffisantes</td></tr>';
+}
+
+// INIT
+loadAll();
+</script>
+</body>
+</html>
