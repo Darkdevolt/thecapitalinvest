@@ -1,61 +1,65 @@
-// FIX A-01 : Refactorisé pour utiliser les modules lib/ comme les autres handlers
-// FIX S-01 : Retourne le token Supabase natif — cohérent avec middleware.js qui utilise supabase.auth.getUser()
-import { supabase } from './lib/supabase.js';
-import { error, success } from './lib/response.js';
-import { rateLimit, parseBody } from './lib/middleware.js';
-import { validate } from './lib/validate.js';
-import { corsHeaders, handleOptions } from './lib/cors.js';
+import { createClient } from '@supabase/supabase-js';
 
-const CORS_TYPE = 'public';
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
+  'Access-Control-Allow-Headers': 'Authorization,Content-Type,X-Requested-With',
+};
 
 export default async function handler(req) {
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders(CORS_TYPE));
-
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: corsHeaders });
+  }
   if (req.method !== 'POST') {
-    return error('Méthode non autorisée', 405);
+    return new Response(JSON.stringify({ error: 'Méthode non autorisée' }), {
+      status: 405, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
   }
 
-  const limit = rateLimit(req);
-  if (limit) return limit;
+  let body;
+  try { body = await req.json(); }
+  catch { return new Response(JSON.stringify({ error: 'Body invalide' }), { status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders } }); }
 
-  const { data: body, response: bodyError } = await parseBody(req);
-  if (bodyError) return bodyError;
+  const { action, email, password, nom } = body;
 
-  const { action } = body;
-
-  // Validation commune email + password
-  const schema = {
-    email: { type: 'email', required: true },
-    password: { type: 'password', required: true },
-  };
-  const { valid, errors } = validate(body, schema);
-  if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-
-  const { email, password } = body;
+  if (!email || !password) {
+    return new Response(JSON.stringify({ error: 'Email et mot de passe requis' }), {
+      status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+  }
 
   try {
     if (action === 'login') {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
-      if (authError) throw authError;
-      return success({ session: data.session });
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, session: data.session }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
     }
 
     if (action === 'signup') {
-      const nameSchema = { nom: { type: 'string', required: false, max: 100 } };
-      const { sanitized } = validate(body, nameSchema);
-
-      const { data, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { nom: sanitized.nom || '' } },
+      const { data, error } = await supabase.auth.signUp({
+        email, password,
+        options: { data: { nom: nom || '' } }
       });
-      if (authError) throw authError;
-      return success({ session: data.session });
+      if (error) throw error;
+      return new Response(JSON.stringify({ success: true, session: data.session }), {
+        status: 200, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+      });
     }
 
-    return error('Action invalide', 400, 'INVALID_ACTION');
+    return new Response(JSON.stringify({ error: 'Action invalide' }), {
+      status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
+
   } catch (e) {
-    console.error('Erreur auth:', e.message);
-    return error(e.message, 400, 'AUTH_ERROR');
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 400, headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    });
   }
 }
