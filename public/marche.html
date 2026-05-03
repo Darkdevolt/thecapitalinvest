@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Capital — Marché BRVM</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="nav.js"></script>
+</head>
+<body>
+<script>initNav('marche');</script>
+
+<div class="page-content">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <h1>Marché <span style="color:var(--gold)">BRVM</span></h1>
+    <p>Bourse Régionale des Valeurs Mobilières · Données en temps réel · Abidjan, Côte d'Ivoire</p>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 1 — INDICES
+  ═══════════════════════════ -->
+  <div class="section" id="indices">
+    <div class="section-title">Cours des Indices</div>
+    <div class="section-sub">Évolution des indices de référence de la BRVM</div>
+
+    <div class="grid-3 mb20">
+      <div class="stat-card">
+        <div class="stat-label">BRVM Composite</div>
+        <div class="stat-value" id="idx-composite">—</div>
+        <div class="stat-change" id="idx-composite-chg">—</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="idx-composite-vol">Volume —</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">BRVM 30</div>
+        <div class="stat-value" id="idx-30">—</div>
+        <div class="stat-change" id="idx-30-chg">—</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="idx-30-vol">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">BRVM Prestige</div>
+        <div class="stat-value" id="idx-prestige">—</div>
+        <div class="stat-change" id="idx-prestige-chg">—</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="idx-prestige-vol">—</div>
+      </div>
+    </div>
+
+    <!-- Index chart -->
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title">BRVM Composite — Historique</div>
+        <div style="display:flex;gap:6px" id="idxPeriodBtns">
+          <button class="filter-btn active" onclick="setIdxPeriod(30,this)">1M</button>
+          <button class="filter-btn" onclick="setIdxPeriod(90,this)">3M</button>
+          <button class="filter-btn" onclick="setIdxPeriod(252,this)">1A</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container tall">
+          <canvas id="chartIndices"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 2 — COURS ACTIONS
+  ═══════════════════════════ -->
+  <div class="section" id="cours">
+    <div class="section-title">Cours des Actions</div>
+    <div class="section-sub">Cotations en temps réel de toutes les sociétés listées à la BRVM</div>
+
+    <div class="search-bar">
+      <input class="search-input" id="searchCours" placeholder="🔍  Rechercher un titre..." oninput="filterCours()">
+      <button class="filter-btn active" onclick="setCoursFilter('all',this)">Tous</button>
+      <button class="filter-btn" onclick="setCoursFilter('up',this)">Hausse</button>
+      <button class="filter-btn" onclick="setCoursFilter('down',this)">Baisse</button>
+      <button class="filter-btn" onclick="setCoursFilter('banque',this)">Banque</button>
+      <button class="filter-btn" onclick="setCoursFilter('agro',this)">Agro</button>
+      <button class="filter-btn" onclick="setCoursFilter('industrie',this)">Industrie</button>
+      <button class="filter-btn" onclick="setCoursFilter('telecom',this)">Telecom</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Séance du <span id="coursDate">—</span></div>
+        <div style="font-size:12px;color:var(--dim)" id="coursCount">—</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Société</th>
+              <th class="right">Cours (FCFA)</th>
+              <th class="right">Variation</th>
+              <th class="right">+ Haut</th>
+              <th class="right">+ Bas</th>
+              <th class="right">Volume</th>
+              <th class="right">Capitalisation</th>
+              <th>Secteur</th>
+            </tr>
+          </thead>
+          <tbody id="coursTable">
+            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--dim)">Chargement...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 3 — PALMARES
+  ═══════════════════════════ -->
+  <div class="section" id="palmares">
+    <div class="section-title">Palmarès</div>
+    <div class="section-sub">Meilleures et moins bonnes performances de la séance</div>
+
+    <div class="grid-2">
+      <!-- Top hausses -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🟢 Top Hausses</div>
+          <span style="font-size:11px;color:var(--green)">Séance en cours</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
+            <tbody id="topHausses"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top baisses -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔴 Top Baisses</div>
+          <span style="font-size:11px;color:var(--red)">Séance en cours</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
+            <tbody id="topBaisses"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top volumes -->
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title">📊 Top Volumes échangés</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Titre</th><th class="right">Volume</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Valeur échangée</th></tr></thead>
+          <tbody id="topVolumes"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 4 — DIVIDENDES
+  ═══════════════════════════ -->
+  <div class="section" id="dividendes">
+    <div class="section-title">Dividendes</div>
+    <div class="section-sub">Distributions de dividendes des sociétés cotées — dernier exercice</div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Dividendes par titre</div>
+        <div style="font-size:12px;color:var(--dim)">DPA = Dividende Par Action</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Société</th>
+              <th class="right">Cours actuel</th>
+              <th class="right">DPA (FCFA)</th>
+              <th class="right">Rendement</th>
+              <th class="right">BPA</th>
+              <th class="right">Taux distribution</th>
+              <th class="right">Exercice</th>
+            </tr>
+          </thead>
+          <tbody id="dividendesTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 5 — PUBLICATIONS
+  ═══════════════════════════ -->
+  <div class="section" id="publications">
+    <div class="section-title">Publications Officielles</div>
+    <div class="section-sub">Avis et bulletins officiels publiés par la BRVM</div>
+
+    <div class="search-bar">
+      <input class="search-input" id="searchPub" placeholder="🔍  Rechercher une publication..." oninput="filterPub()">
+      <button class="filter-btn active" onclick="setPubFilter('all',this)">Toutes</button>
+      <button class="filter-btn" onclick="setPubFilter('obligation',this)">Obligations</button>
+      <button class="filter-btn" onclick="setPubFilter('action',this)">Actions</button>
+      <button class="filter-btn" onclick="setPubFilter('opcvm',this)">OPCVM</button>
+    </div>
+
+    <div class="boc-grid" id="pubGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 6 — CALENDRIER
+  ═══════════════════════════ -->
+  <div class="section" id="calendrier">
+    <div class="section-title">Calendrier des Évènements</div>
+    <div class="section-sub">Prochaines assemblées générales, détachements de dividendes et cotations</div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Prochains évènements</div></div>
+        <div id="calendrierList" style="padding:8px 0"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Statistiques de la séance</div></div>
+        <div class="card-body" id="seanceStats"></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-content -->
+
+<style>
+/* Styles spécifiques à marche.html */
+.event-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--border2);
+  transition: background 0.15s;
+}
+.event-item:last-child { border-bottom: none; }
+.event-item:hover { background: rgba(184,150,78,0.03); }
+.event-date {
+  background: rgba(184,150,78,0.08);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  text-align: center;
+  flex-shrink: 0;
+  min-width: 52px;
+}
+.event-day { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--gold); line-height: 1; }
+.event-month { font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
+.event-title { font-size: 13px; font-weight: 500; color: var(--cream); margin-bottom: 2px; }
+.event-type { font-size: 11px; color: var(--dim); }
+.event-badge {
+  display: inline-block; padding: 2px 8px; border-radius: 20px;
+  font-size: 9px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+  margin-left: 6px;
+}
+.badge-ag { background: rgba(96,165,250,0.1); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+.badge-div { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.badge-cot { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
+
+.boc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all 0.2s; cursor: default; }
+.boc-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
+.boc-header { padding: 14px 18px 12px; border-bottom: 1px solid var(--border2); display: flex; align-items: start; justify-content: space-between; gap: 10px; }
+.boc-title { font-size: 13px; font-weight: 500; color: var(--cream); line-height: 1.3; }
+.boc-emetteur { font-size: 11px; color: var(--dim); margin-top: 3px; }
+.boc-type { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; flex-shrink: 0; margin-top: 2px; }
+.boc-type.obligation { background: rgba(96,165,250,0.1); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
+.boc-type.action { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
+.boc-type.opcvm { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+.boc-body { padding: 10px 18px 12px; }
+.boc-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid rgba(184,150,78,0.04); }
+.boc-row:last-child { border-bottom: none; }
+.boc-key { font-size: 11px; color: var(--dim); }
+.boc-val { font-family: var(--mono); font-size: 12px; color: var(--cream); font-weight: 500; }
+.boc-footer { padding: 8px 18px; background: rgba(0,0,0,0.2); font-size: 11px; color: var(--dim); }
+
+.seance-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border2); }
+.seance-row:last-child { border-bottom: none; }
+.seance-label { font-size: 13px; color: var(--muted); }
+.seance-val { font-family: var(--mono); font-size: 13px; color: var(--cream); font-weight: 500; }
+</style>
+
+<script>
+// ═══════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════
+let allCours = [], allBoc = [], allFinancials = [], allIndices = [];
+let _coursFilter = 'all', _pubFilter = 'all';
+let idxChartInst = null, idxPeriod = 30;
+
+// ═══════════════════════════════════════
+// LOAD
+// ═══════════════════════════════════════
+async function loadAll() {
+  const [cours, boc, financials, indices] = await Promise.allSettled([
+    sbQuery('cours', { order: 'date_seance.desc', limit: 300 }),
+    sbQuery('boc', { order: 'date_seance.desc', limit: 100 }),
+    sbQuery('financials', { order: 'annee.desc', limit: 300 }),
+    sbQuery('indices', { order: 'date_seance.desc', limit: 300 }),
+  ]);
+
+  if (cours.status === 'fulfilled') allCours = cours.value || [];
+  if (boc.status === 'fulfilled') allBoc = boc.value || [];
+  if (financials.status === 'fulfilled') allFinancials = financials.value || [];
+  if (indices.status === 'fulfilled') allIndices = indices.value || [];
+
+  if (!allCours.length) injectDemoData();
+
+  renderIndices();
+  renderCours();
+  renderPalmares();
+  renderDividendes();
+  renderPublications();
+  renderCalendrier();
+  renderSeanceStats();
+}
+
+// ═══════════════════════════════════════
+// DEMO DATA
+// ═══════════════════════════════════════
+function injectDemoData() {
+  allCours = [
+    { ticker:'SGBCI', nom:'SGB Côte d\'Ivoire', cours:14500, variation:1.23, plus_haut:14800, plus_bas:14200, volume:42000, capitalisation:504000000000, date_seance:'2024-10-15' },
+    { ticker:'ETIT', nom:'Ecobank Transnational', cours:19, variation:-0.52, plus_haut:20, plus_bas:18, volume:180000, capitalisation:96000000000, date_seance:'2024-10-15' },
+    { ticker:'PALMCI', nom:'Palmeraies CI', cours:6500, variation:2.11, plus_haut:6700, plus_bas:6400, volume:8400, capitalisation:45000000000, date_seance:'2024-10-15' },
+    { ticker:'BICCICI', nom:'BIC Côte d\'Ivoire', cours:9800, variation:-1.01, plus_haut:10000, plus_bas:9700, volume:12000, capitalisation:128000000000, date_seance:'2024-10-15' },
+    { ticker:'ONAB', nom:'Office National des Huiles', cours:3200, variation:0.00, plus_haut:3200, plus_bas:3150, volume:3500, capitalisation:38000000000, date_seance:'2024-10-15' },
+    { ticker:'SIVCOCI', nom:'SIVCO CI', cours:700, variation:3.20, plus_haut:720, plus_bas:690, volume:95000, capitalisation:21000000000, date_seance:'2024-10-15' },
+    { ticker:'NTLC', nom:'NTEL CI', cours:1250, variation:-2.34, plus_haut:1300, plus_bas:1220, volume:22000, capitalisation:40000000000, date_seance:'2024-10-15' },
+    { ticker:'CABC', nom:'CAISSE ABIDJAN', cours:2100, variation:0.48, plus_haut:2150, plus_bas:2080, volume:6700, capitalisation:18000000000, date_seance:'2024-10-15' },
+    { ticker:'BOAB', nom:'BOA Burkina', cours:4650, variation:0.65, plus_haut:4700, plus_bas:4600, volume:9800, capitalisation:185000000000, date_seance:'2024-10-15' },
+    { ticker:'TTLS', nom:'Total Sénégal', cours:1800, variation:-0.83, plus_haut:1850, plus_bas:1780, volume:4100, capitalisation:14000000000, date_seance:'2024-10-15' },
+    { ticker:'SDCC', nom:'SODECI CI', cours:8995, variation:7.47, plus_haut:9100, plus_bas:8400, volume:2800, capitalisation:66000000000, date_seance:'2024-10-15' },
+  ];
+  allFinancials = [
+    { ticker:'SGBCI', annee:2023, bpa:9200, dpa:6000, nombre_actions:34620000 },
+    { ticker:'ETIT', annee:2023, bpa:1.2, dpa:0.8, nombre_actions:5060000000 },
+    { ticker:'PALMCI', annee:2023, bpa:1800, dpa:1200, nombre_actions:6938000 },
+    { ticker:'BICCICI', annee:2023, bpa:2800, dpa:1500, nombre_actions:13060000 },
+    { ticker:'NTLC', annee:2023, bpa:180, dpa:100, nombre_actions:32000000 },
+    { ticker:'BOAB', annee:2023, bpa:1200, dpa:750, nombre_actions:39800000 },
+    { ticker:'SDCC', annee:2023, bpa:2100, dpa:1400, nombre_actions:7350000 },
+  ];
+  allBoc = [
+    { titre:'TPCI 6,50% 2023-2033', type:'obligation', emetteur:'République de Côte d\'Ivoire', montant:150000000000, taux:6.50, date_echeance:'2033-12-31', date_seance:'2024-10-15', valeur_nominale:10000 },
+    { titre:'TPSN 6,25% 2023-2030', type:'obligation', emetteur:'République du Sénégal', montant:100000000000, taux:6.25, date_echeance:'2030-06-30', date_seance:'2024-10-14', valeur_nominale:10000 },
+    { titre:'PALMCI OPV 2024', type:'action', emetteur:'PALMCI', montant:5000000000, prix_offre:6500, date_seance:'2024-10-10', valeur_nominale:1000 },
+    { titre:'FCPE Atlantique Actions', type:'opcvm', emetteur:'Atlantique Gestion', montant:2000000000, valeur_liquidative:12500, date_seance:'2024-10-15' },
+    { titre:'TPBF 6,75% 2022-2029', type:'obligation', emetteur:'République du Burkina Faso', montant:75000000000, taux:6.75, date_echeance:'2029-03-15', date_seance:'2024-10-12', valeur_nominale:10000 },
+  ];
+  // Fake index history
+  const base = 220;
+  allIndices = Array.from({ length: 300 }, (_, i) => ({
+    date_seance: new Date(Date.now() - (299 - i) * 86400000).toISOString().split('T')[0],
+    brvm_composite: base + Math.sin(i * 0.08) * 12 + i * 0.05 + (Math.random() - 0.45) * 2.5,
+    brvm_30: 185 + Math.sin(i * 0.07) * 8 + i * 0.03 + (Math.random() - 0.45) * 1.8,
+    brvm_prestige: 310 + Math.sin(i * 0.06) * 15 + i * 0.06 + (Math.random() - 0.45) * 3,
+  }));
+}
+
+// ═══════════════════════════════════════
+// RENDER INDICES
+// ═══════════════════════════════════════
+function renderIndices() {
+  const data = allIndices.slice(0, 2);
+  const [latest, prev] = data;
+  if (!latest) {
+    ['composite','30','prestige'].forEach(id => {
+      document.getElementById('idx-'+id).textContent = '—';
+    });
+  } else {
+    const setIdx = (id, val, prev_val) => {
+      document.getElementById('idx-'+id).textContent = fmt(val, 2);
+      const diff = prev_val ? val - prev_val : 0;
+      const cls = diff > 0 ? 'up' : diff < 0 ? 'down' : 'neutral';
+      const ce = document.getElementById('idx-'+id+'-chg');
+      ce.className = 'stat-change ' + cls;
+      ce.innerHTML = (diff > 0 ? '▲' : diff < 0 ? '▼' : '=') + ' ' + Math.abs(diff).toFixed(2) + ' pts (' + Math.abs(diff / (prev_val||val) * 100).toFixed(2) + '%)';
+    };
+    if (latest.brvm_composite) setIdx('composite', latest.brvm_composite, prev?.brvm_composite);
+    if (latest.brvm_30) setIdx('30', latest.brvm_30, prev?.brvm_30);
+    if (latest.brvm_prestige) setIdx('prestige', latest.brvm_prestige, prev?.brvm_prestige);
+  }
+  renderIdxChart();
+}
+
+function renderIdxChart() {
+  const slice = allIndices.slice(0, idxPeriod).reverse();
+  const labels = slice.map(d => fmtDateShort(d.date_seance));
+  const composite = slice.map(d => d.brvm_composite);
+  const brvm30 = slice.map(d => d.brvm_30);
+
+  if (idxChartInst) idxChartInst.destroy();
+  idxChartInst = new Chart(document.getElementById('chartIndices'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { ...mkLineDataset(composite, '#B8964E'), label: 'Composite' },
+        { ...mkLineDataset(brvm30, '#60A5FA'), label: 'BRVM 30', fill: false },
+      ]
+    },
+    options: {
+      ...chartDefaults,
+      plugins: {
+        ...chartDefaults.plugins,
+        legend: {
+          display: true,
+          labels: { color: 'rgba(245,240,232,0.5)', font: { size: 11, family: 'DM Mono' }, boxWidth: 20, padding: 16 }
+        }
+      }
+    }
+  });
+}
+
+function setIdxPeriod(n, btn) {
+  idxPeriod = n;
+  document.querySelectorAll('#idxPeriodBtns .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderIdxChart();
+}
+
+// ═══════════════════════════════════════
+// RENDER COURS
+// ═══════════════════════════════════════
+function renderCours() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  window._coursRows = Object.values(byTicker);
+  const latestDate = allCours[0]?.date_seance;
+  if (latestDate) document.getElementById('coursDate').textContent = fmtDate(latestDate);
+  filterCours();
+}
+
+function setCoursFilter(f, btn) {
+  _coursFilter = f;
+  document.querySelectorAll('#cours .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterCours();
+}
+
+function filterCours() {
+  const q = (document.getElementById('searchCours')?.value || '').toLowerCase();
+  let rows = window._coursRows || [];
+  if (_coursFilter === 'up') rows = rows.filter(r => parseFloat(r.variation) > 0);
+  else if (_coursFilter === 'down') rows = rows.filter(r => parseFloat(r.variation) < 0);
+  else if (_coursFilter !== 'all') rows = rows.filter(r => getSector(r.ticker).toLowerCase().includes(_coursFilter));
+  if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q) || (r.nom||'').toLowerCase().includes(q));
+
+  document.getElementById('coursCount').textContent = rows.length + ' titres';
+  const tbody = document.getElementById('coursTable');
+  tbody.innerHTML = rows.sort((a,b) => (a.ticker||'').localeCompare(b.ticker||'')).map(c =>
+    `<tr>
+      <td><span style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--gold)">${c.ticker}</span></td>
+      <td style="color:var(--cream);font-size:12px">${c.nom || c.ticker}</td>
+      <td class="right">${fmt(c.cours)}</td>
+      <td class="right">${changePill(c.variation)}</td>
+      <td class="right" style="color:var(--dim)">${c.plus_haut ? fmt(c.plus_haut) : '—'}</td>
+      <td class="right" style="color:var(--dim)">${c.plus_bas ? fmt(c.plus_bas) : '—'}</td>
+      <td class="right">${fmt(c.volume)}</td>
+      <td class="right">${c.capitalisation ? fmtM(c.capitalisation) : '—'}</td>
+      <td><span class="sector-tag">${getSector(c.ticker)}</span></td>
+    </tr>`).join('') || '<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--dim)">Aucun titre trouvé</td></tr>';
+}
+
+// ═══════════════════════════════════════
+// RENDER PALMARES
+// ═══════════════════════════════════════
+function renderPalmares() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const all = Object.values(byTicker).filter(c => c.variation != null);
+  const sorted = [...all].sort((a,b) => b.variation - a.variation);
+  const top5up = sorted.filter(c => c.variation > 0).slice(0, 5);
+  const top5down = [...all].sort((a,b) => a.variation - b.variation).filter(c => c.variation < 0).slice(0, 5);
+  const topVol = [...all].sort((a,b) => b.volume - a.volume).slice(0, 5);
+
+  const rowUp = c => `<tr><td><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${c.ticker}</span></td><td class="right">${fmt(c.cours)}</td><td class="right">${changePill(c.variation)}</td><td class="right">${fmt(c.volume)}</td></tr>`;
+  const rowVol = c => `<tr><td><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${c.ticker}</span></td><td class="right">${fmt(c.volume)}</td><td class="right">${fmt(c.cours)}</td><td class="right">${changePill(c.variation)}</td><td class="right">${c.cours && c.volume ? fmtM(c.cours * c.volume) : '—'}</td></tr>`;
+
+  document.getElementById('topHausses').innerHTML = top5up.map(rowUp).join('') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--dim)">—</td></tr>';
+  document.getElementById('topBaisses').innerHTML = top5down.map(rowUp).join('') || '<tr><td colspan="4" style="text-align:center;padding:16px;color:var(--dim)">—</td></tr>';
+  document.getElementById('topVolumes').innerHTML = topVol.map(rowVol).join('') || '<tr><td colspan="5" style="text-align:center;padding:16px;color:var(--dim)">—</td></tr>';
+}
+
+// ═══════════════════════════════════════
+// RENDER DIVIDENDES
+// ═══════════════════════════════════════
+function renderDividendes() {
+  const coursMap = {};
+  allCours.forEach(c => { if (!coursMap[c.ticker]) coursMap[c.ticker] = c; });
+  const rows = allFinancials.filter(f => f.dpa).sort((a,b) => {
+    const rdtA = (coursMap[a.ticker]?.cours && a.dpa) ? a.dpa / coursMap[a.ticker].cours : 0;
+    const rdtB = (coursMap[b.ticker]?.cours && b.dpa) ? b.dpa / coursMap[b.ticker].cours : 0;
+    return rdtB - rdtA;
+  });
+
+  document.getElementById('dividendesTable').innerHTML = rows.map(f => {
+    const c = coursMap[f.ticker];
+    const cp = c?.cours;
+    const rdt = (cp && f.dpa) ? ((f.dpa / cp) * 100).toFixed(2) + '%' : '—';
+    const distrib = (f.bpa && f.dpa) ? ((f.dpa / f.bpa) * 100).toFixed(0) + '%' : '—';
+    const rdtNum = cp && f.dpa ? f.dpa / cp * 100 : 0;
+    const rdtColor = rdtNum > 5 ? 'var(--green)' : rdtNum > 2 ? 'var(--gold)' : 'var(--muted)';
+    return `<tr>
+      <td><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${f.ticker}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${c?.nom || f.ticker}</td>
+      <td class="right">${cp ? fmt(cp) : '—'}</td>
+      <td class="right" style="color:var(--gold-light);font-weight:500">${fmt(f.dpa)}</td>
+      <td class="right" style="color:${rdtColor};font-weight:500">${rdt}</td>
+      <td class="right">${f.bpa ? fmt(f.bpa) : '—'}</td>
+      <td class="right">${distrib}</td>
+      <td class="right" style="color:var(--dim)">${f.annee || '—'}</td>
+    </tr>`;
+  }).join('') || '<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--dim)">Données de dividendes non disponibles</td></tr>';
+}
+
+// ═══════════════════════════════════════
+// RENDER PUBLICATIONS (BOC)
+// ═══════════════════════════════════════
+function renderPublications() {
+  window._pubRows = allBoc;
+  filterPub();
+}
+
+function setPubFilter(f, btn) {
+  _pubFilter = f;
+  document.querySelectorAll('#publications .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterPub();
+}
+
+function filterPub() {
+  const q = (document.getElementById('searchPub')?.value || '').toLowerCase();
+  let rows = window._pubRows || [];
+  if (_pubFilter !== 'all') rows = rows.filter(r => (r.type||'').toLowerCase().includes(_pubFilter));
+  if (q) rows = rows.filter(r => (r.titre||'').toLowerCase().includes(q) || (r.emetteur||'').toLowerCase().includes(q));
+
+  const grid = document.getElementById('pubGrid');
+  grid.innerHTML = rows.length ? rows.map(bocCard).join('') :
+    `<div style="grid-column:1/-1" class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">Aucune publication</div><div class="empty-text">Modifiez vos critères</div></div>`;
+}
+
+function bocCard(boc) {
+  const type = (boc.type || 'obligation').toLowerCase();
+  const typeLabel = { obligation:'Obligation', action:'Action', opcvm:'OPCVM' }[type] || type;
+  const details = [
+    boc.taux && ['Taux', boc.taux.toFixed(2) + '%'],
+    boc.montant && ['Montant', fmtM(boc.montant) + ' FCFA'],
+    boc.valeur_nominale && ['Val. Nominale', fmt(boc.valeur_nominale) + ' FCFA'],
+    boc.prix_offre && ['Prix d\'offre', fmt(boc.prix_offre) + ' FCFA'],
+    boc.valeur_liquidative && ['Val. Liquid.', fmt(boc.valeur_liquidative) + ' FCFA'],
+    boc.date_echeance && ['Échéance', fmtDate(boc.date_echeance)],
+  ].filter(Boolean);
+  return `<div class="boc-card">
+    <div class="boc-header">
+      <div><div class="boc-title">${boc.titre||'—'}</div><div class="boc-emetteur">${boc.emetteur||'—'}</div></div>
+      <span class="boc-type ${type}">${typeLabel}</span>
+    </div>
+    <div class="boc-body">${details.map(([k,v])=>`<div class="boc-row"><span class="boc-key">${k}</span><span class="boc-val">${v}</span></div>`).join('')}</div>
+    <div class="boc-footer">📅 ${fmtDate(boc.date_seance)}</div>
+  </div>`;
+}
+
+// ═══════════════════════════════════════
+// RENDER CALENDRIER
+// ═══════════════════════════════════════
+function renderCalendrier() {
+  // Events fictifs mais réalistes — en production viendront de la DB
+  const events = [
+    { date: '2024-11-05', type: 'ag', titre: 'Assemblée Générale Ordinaire', ticker: 'SGBCI' },
+    { date: '2024-11-12', type: 'div', titre: 'Détachement du dividende', ticker: 'PALMCI' },
+    { date: '2024-11-20', type: 'cot', titre: 'Introduction en bourse', ticker: 'SDCC' },
+    { date: '2024-12-02', type: 'ag', titre: 'Assemblée Générale Ordinaire', ticker: 'ETIT' },
+    { date: '2024-12-10', type: 'div', titre: 'Mise en paiement dividende', ticker: 'BOAB' },
+  ];
+
+  document.getElementById('calendrierList').innerHTML = events.map(e => {
+    const d = new Date(e.date);
+    const day = d.getDate();
+    const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase();
+    const badgeCls = { ag: 'badge-ag', div: 'badge-div', cot: 'badge-cot' }[e.type];
+    const badgeLabel = { ag: 'AG', div: 'Dividende', cot: 'Cotation' }[e.type];
+    return `<div class="event-item">
+      <div class="event-date">
+        <div class="event-day">${day}</div>
+        <div class="event-month">${month}</div>
+      </div>
+      <div>
+        <div class="event-title">
+          ${e.titre}
+          <span class="event-badge ${badgeCls}">${badgeLabel}</span>
+        </div>
+        <div class="event-type" style="font-family:var(--mono);color:var(--gold)">${e.ticker}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// RENDER SEANCE STATS
+// ═══════════════════════════════════════
+function renderSeanceStats() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const rows = Object.values(byTicker);
+  const hausse = rows.filter(c => c.variation > 0).length;
+  const baisse = rows.filter(c => c.variation < 0).length;
+  const stable = rows.filter(c => c.variation == 0).length;
+  const totalVol = rows.reduce((s, c) => s + (c.volume || 0), 0);
+  const totalCap = rows.reduce((s, c) => s + (c.capitalisation || 0), 0);
+  const topGain = rows.reduce((m, c) => (!m || c.variation > m.variation) ? c : m, null);
+
+  const stats = [
+    ['Titres en hausse', hausse + ' titres', 'var(--green)'],
+    ['Titres en baisse', baisse + ' titres', 'var(--red)'],
+    ['Titres stables', stable + ' titres', 'var(--dim)'],
+    ['Volume total échangé', fmt(totalVol) + ' titres', 'var(--cream)'],
+    ['Capitalisation totale', fmtM(totalCap), 'var(--cream)'],
+    ['Meilleure performance', topGain ? topGain.ticker + ' +' + parseFloat(topGain.variation).toFixed(2) + '%' : '—', 'var(--gold)'],
+  ];
+
+  document.getElementById('seanceStats').innerHTML = stats.map(([l, v, c]) =>
+    `<div class="seance-row">
+      <span class="seance-label">${l}</span>
+      <span class="seance-val" style="color:${c}">${v}</span>
+    </div>`
+  ).join('');
+}
+
+// INIT
+loadAll();
+</script>
+</body>
+</html>
