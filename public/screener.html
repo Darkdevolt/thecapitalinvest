@@ -1,0 +1,306 @@
+<!-- SCREENER AVANCÉ BRVM -->
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Screener — The Capital</title>
+<script src="nav.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+<script>initNav('outils');</script>
+
+<div class="page-content">
+  <div class="page-header">
+    <h1>Screener <span style="color:var(--gold)">Avancé</span></h1>
+    <p>Filtrez les 47 sociétés cotées selon vos critères de valorisation et performance</p>
+  </div>
+
+  <!-- Filtres -->
+  <div class="card mb20">
+    <div class="card-body" style="padding:20px">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+        
+        <!-- Valorisation -->
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Valorisation</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-per" onchange="runScreener()"> PER &lt; 15
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-pb" onchange="runScreener()"> P/B &lt; 2
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-rdt" onchange="runScreener()"> Div. Yield &gt; 5%
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-ev" onchange="runScreener()"> EV/EBITDA &lt; 8
+            </label>
+          </div>
+        </div>
+
+        <!-- Rentabilité -->
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Rentabilité</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-roe" onchange="runScreener()"> ROE &gt; 15%
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-roa" onchange="runScreener()"> ROA &gt; 5%
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-marge" onchange="runScreener()"> Marge nette &gt; 10%
+            </label>
+          </div>
+        </div>
+
+        <!-- Performance -->
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Performance</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-var1m" onchange="runScreener()"> Perf. 1M &gt; 5%
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-var3m" onchange="runScreener()"> Perf. 3M &gt; 10%
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-var1a" onchange="runScreener()"> Perf. 1A &gt; 20%
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-volat" onchange="runScreener()"> Volatilité &lt; 30%
+            </label>
+          </div>
+        </div>
+
+        <!-- Qualité -->
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Qualité</div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-sharpe" onchange="runScreener()"> Sharpe &gt; 1
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-beta" onchange="runScreener()"> Bêta &lt; 1
+            </label>
+            <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)">
+              <input type="checkbox" id="filt-dettes" onchange="runScreener()"> Dette/FP &lt; 1
+            </label>
+          </div>
+        </div>
+
+        <!-- Secteur/Pays -->
+        <div>
+          <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:8px">Filtres</div>
+          <select id="filt-secteur" onchange="runScreener()" style="width:100%;padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px;margin-bottom:8px">
+            <option value="">Tous secteurs</option>
+            <option>Banque</option>
+            <option>Agro-Alimentaire</option>
+            <option>Télécommunications</option>
+            <option>Industrie</option>
+            <option>Distribution</option>
+            <option>Finance</option>
+          </select>
+          <select id="filt-pays" onchange="runScreener()" style="width:100%;padding:8px 10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream);font-size:12px">
+            <option value="">Tous pays</option>
+            <option>Côte d'Ivoire</option>
+            <option>Sénégal</option>
+            <option>Burkina Faso</option>
+            <option>Togo</option>
+            <option>Mali</option>
+            <option>Bénin</option>
+          </select>
+        </div>
+
+      </div>
+      
+      <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="runScreener()" style="padding:8px 18px;font-size:12px">▶ Lancer le screener</button>
+        <button class="btn btn-outline" onclick="resetFilters()" style="padding:8px 18px;font-size:12px">↺ Réinitialiser</button>
+        <button class="btn btn-outline" onclick="exportResults()" style="padding:8px 18px;font-size:12px">⬇ Exporter CSV</button>
+        <span id="screener-count" style="margin-left:auto;font-size:13px;color:var(--muted);align-self:center"></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Résultats -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Résultats du screener</div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Ticker</th>
+            <th>Société</th>
+            <th class="right">Cours</th>
+            <th class="right">PER</th>
+            <th class="right">P/B</th>
+            <th class="right">Div.Yield</th>
+            <th class="right">ROE</th>
+            <th class="right">Perf 1A</th>
+            <th class="right">Sharpe</th>
+            <th>Secteur</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody id="screener-results">
+          <tr><td colspan="11" style="text-align:center;padding:40px;color:var(--dim)">Sélectionnez des critères et lancez le screener</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let screenerData = [];
+
+async function runScreener() {
+  // Charger données si pas déjà fait
+  if (!screenerData.length) {
+    const [cours, fins] = await Promise.allSettled([
+      sbQuery('cours', { order: 'date_seance.desc', limit: 300 }),
+      sbQuery('financials', { order: 'annee.desc', limit: 300 }),
+    ]);
+    const allCours = cours.status === 'fulfilled' ? cours.value || [] : [];
+    const allFins = fins.status === 'fulfilled' ? fins.value || [] : [];
+    
+    // Fusionner cours + financials + calculer métriques
+    const byTicker = {};
+    allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = { ...c }; });
+    allFins.forEach(f => {
+      if (byTicker[f.ticker]) {
+        byTicker[f.ticker] = { ...byTicker[f.ticker], ...f };
+      }
+    });
+    screenerData = Object.values(byTicker);
+  }
+
+  // Appliquer filtres
+  const filters = {
+    per: document.getElementById('filt-per').checked,
+    pb: document.getElementById('filt-pb').checked,
+    rdt: document.getElementById('filt-rdt').checked,
+    ev: document.getElementById('filt-ev').checked,
+    roe: document.getElementById('filt-roe').checked,
+    roa: document.getElementById('filt-roa').checked,
+    marge: document.getElementById('filt-marge').checked,
+    var1m: document.getElementById('filt-var1m').checked,
+    var3m: document.getElementById('filt-var3m').checked,
+    var1a: document.getElementById('filt-var1a').checked,
+    volat: document.getElementById('filt-volat').checked,
+    sharpe: document.getElementById('filt-sharpe').checked,
+    beta: document.getElementById('filt-beta').checked,
+    dettes: document.getElementById('filt-dettes').checked,
+    secteur: document.getElementById('filt-secteur').value,
+    pays: document.getElementById('filt-pays').value,
+  };
+
+  let results = screenerData.filter(d => {
+    const cp = parseFloat(d.cours) || 0;
+    const bpa = parseFloat(d.bpa) || 0;
+    const per = bpa > 0 ? cp / bpa : 999;
+    const fp = parseFloat(d.fonds_propres) || 0;
+    const na = parseFloat(d.nombre_actions) || 1;
+    const pan = fp / na;
+    const pb = pan > 0 ? cp / pan : 999;
+    const dpa = parseFloat(d.dpa) || 0;
+    const rdt = cp > 0 ? (dpa / cp) * 100 : 0;
+    const roe = fp > 0 ? (parseFloat(d.resultat_net) || 0) / fp * 100 : 0;
+    const roa = (parseFloat(d.total_actif) || 1) > 0 ? (parseFloat(d.resultat_net) || 0) / parseFloat(d.total_actif) * 100 : 0;
+    const ca = parseFloat(d.chiffre_affaires) || 1;
+    const rn = parseFloat(d.resultat_net) || 0;
+    const marge = ca > 0 ? rn / ca * 100 : 0;
+    const dettes = parseFloat(d.dettes_financieres) || 0;
+    const ratioDette = fp > 0 ? dettes / fp : 999;
+
+    if (filters.per && per >= 15) return false;
+    if (filters.pb && pb >= 2) return false;
+    if (filters.rdt && rdt <= 5) return false;
+    if (filters.ev) return false; // Nécessite EV/EBITDA calculé
+    if (filters.roe && roe <= 15) return false;
+    if (filters.roa && roa <= 5) return false;
+    if (filters.marge && marge <= 10) return false;
+    if (filters.var1m && (parseFloat(d.variation_1m) || 0) <= 5) return false;
+    if (filters.var3m && (parseFloat(d.variation_3m) || 0) <= 10) return false;
+    if (filters.var1a && (parseFloat(d.variation_1a) || 0) <= 20) return false;
+    if (filters.volat && (parseFloat(d.volatilite) || 100) >= 30) return false;
+    if (filters.sharpe && (parseFloat(d.sharpe) || 0) <= 1) return false;
+    if (filters.beta && (parseFloat(d.beta) || 2) >= 1) return false;
+    if (filters.dettes && ratioDette >= 1) return false;
+    if (filters.secteur && getSector(d.ticker) !== filters.secteur) return false;
+    if (filters.pays && (d.pays || '') !== filters.pays) return false;
+
+    return true;
+  });
+
+  // Calculer score qualité
+  results = results.map(d => {
+    const cp = parseFloat(d.cours) || 0;
+    const bpa = parseFloat(d.bpa) || 0;
+    const per = bpa > 0 ? cp / bpa : 999;
+    const fp = parseFloat(d.fonds_propres) || 0;
+    const na = parseFloat(d.nombre_actions) || 1;
+    const pb = (fp / na) > 0 ? cp / (fp / na) : 999;
+    const dpa = parseFloat(d.dpa) || 0;
+    const rdt = cp > 0 ? (dpa / cp) * 100 : 0;
+    const roe = fp > 0 ? (parseFloat(d.resultat_net) || 0) / fp * 100 : 0;
+    
+    let score = 0;
+    if (per < 10) score += 20; else if (per < 15) score += 10;
+    if (pb < 1.5) score += 15; else if (pb < 2) score += 8;
+    if (rdt > 5) score += 15; else if (rdt > 3) score += 8;
+    if (roe > 20) score += 20; else if (roe > 15) score += 12;
+    if (parseFloat(d.variation_1a) > 20) score += 15;
+    if (parseFloat(d.sharpe) > 1) score += 15;
+
+    return { ...d, per: per.toFixed(1), pb: pb.toFixed(2), rdt: rdt.toFixed(2), roe: roe.toFixed(1), score };
+  }).sort((a, b) => b.score - a.score);
+
+  document.getElementById('screener-count').textContent = `${results.length} résultat${results.length > 1 ? 's' : ''}`;
+
+  document.getElementById('screener-results').innerHTML = results.length
+    ? results.map(r => `<tr>
+        <td><span style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:500">${r.ticker}</span></td>
+        <td style="font-size:12px;color:var(--cream)">${r.nom || r.ticker}</td>
+        <td class="right">${fmt(r.cours)}</td>
+        <td class="right">${r.per}</td>
+        <td class="right">${r.pb}</td>
+        <td class="right" style="color:${parseFloat(r.rdt)>5?'var(--green)':'var(--muted)'}">${r.rdt}%</td>
+        <td class="right">${r.roe}%</td>
+        <td class="right">${fmt(r.variation_1a)}%</td>
+        <td class="right">${fmt(r.sharpe)}</td>
+        <td><span class="sector-tag">${getSector(r.ticker)}</span></td>
+        <td><span class="score-badge" style="color:${r.score>=70?'var(--green)':r.score>=40?'var(--gold)':'var(--red)'}">${r.score}</span></td>
+      </tr>`).join('')
+    : '<tr><td colspan="11" style="text-align:center;padding:40px;color:var(--dim)">Aucun titre ne correspond à vos critères</td></tr>';
+}
+
+function resetFilters() {
+  document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+  document.querySelectorAll('select').forEach(s => s.value = '');
+  runScreener();
+}
+
+function exportResults() {
+  // Export CSV des résultats visibles
+  const rows = document.querySelectorAll('#screener-results tr');
+  let csv = 'Ticker,Société,Cours,PER,PB,DivYield,ROE,Perf1A,Sharpe,Secteur,Score\n';
+  rows.forEach(row => {
+    const cells = row.querySelectorAll('td');
+    if (cells.length > 1) {
+      csv += Array.from(cells).map(c => c.textContent.trim()).join(',') + '\n';
+    }
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'screener_brvm.csv'; a.click();
+}
+</script>
+</body>
+</html>
