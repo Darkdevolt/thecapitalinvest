@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Alertes — The Capital</title>
+<script src="nav.js"></script>
+</head>
+<body>
+<script>initNav('outils');</script>
+
+<div class="page-content">
+  <div class="page-header">
+    <h1>Alertes <span style="color:var(--gold)">de Cours</span></h1>
+    <p>Soyez notifié lorsque vos seuils de prix sont atteints</p>
+  </div>
+
+  <div class="grid-2">
+    <!-- Créer alerte -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">Nouvelle alerte</div></div>
+      <div class="card-body">
+        <div class="field" style="margin-bottom:14px">
+          <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Ticker</label>
+          <select id="alert-ticker" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)"></select>
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Type d'alerte</label>
+          <select id="alert-type" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)">
+            <option value="above">Cours dépasse (hausse)</option>
+            <option value="below">Cours descend sous (baisse)</option>
+            <option value="change_pct">Variation % sur 1j</option>
+            <option value="volume">Volume anormal</option>
+          </select>
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Seuil</label>
+          <input type="number" id="alert-seuil" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)" placeholder="Ex: 15000">
+        </div>
+        <div class="field" style="margin-bottom:14px">
+          <label style="font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:0.1em">Note (optionnel)</label>
+          <input type="text" id="alert-note" style="width:100%;padding:10px;background:var(--card);border:1px solid var(--border);border-radius:6px;color:var(--cream)" placeholder="Raison de l'alerte...">
+        </div>
+        <button class="btn btn-primary" onclick="createAlert()" style="width:100%">Créer l'alerte</button>
+      </div>
+    </div>
+
+    <!-- Alertes actives -->
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Alertes actives</div>
+        <span id="alert-count" style="font-size:11px;color:var(--dim)">0 alertes</span>
+      </div>
+      <div id="alert-list" style="padding:8px 0"></div>
+    </div>
+  </div>
+
+  <!-- Historique déclenchées -->
+  <div class="card" style="margin-top:20px">
+    <div class="card-header"><div class="card-title">Alertes déclenchées</div></div>
+    <div id="alert-history" style="padding:8px 0"></div>
+  </div>
+</div>
+
+<script>
+let alerts = JSON.parse(localStorage.getItem('tc_alerts') || '[]');
+let alertHistory = JSON.parse(localStorage.getItem('tc_alert_history') || '[]');
+let allCours = [];
+
+async function loadData() {
+  const r = await sbQuery('cours', { order: 'date_seance.desc', limit: 300 }).catch(() => []);
+  allCours = r || [];
+  const tickers = [...new Set(allCours.map(c => c.ticker))].sort();
+  document.getElementById('alert-ticker').innerHTML = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
+  renderAlerts();
+  checkAlerts();
+}
+
+function createAlert() {
+  const ticker = document.getElementById('alert-ticker').value;
+  const type = document.getElementById('alert-type').value;
+  const seuil = parseFloat(document.getElementById('alert-seuil').value);
+  const note = document.getElementById('alert-note').value;
+  
+  if (!seuil) return;
+  
+  alerts.push({
+    id: Date.now(),
+    ticker, type, seuil, note,
+    created: new Date().toISOString(),
+    active: true
+  });
+  
+  localStorage.setItem('tc_alerts', JSON.stringify(alerts));
+  renderAlerts();
+}
+
+function renderAlerts() {
+  document.getElementById('alert-count').textContent = `${alerts.filter(a => a.active).length} alertes actives`;
+  
+  document.getElementById('alert-list').innerHTML = alerts.filter(a => a.active).map(a => {
+    const cours = allCours.find(c => c.ticker === a.ticker);
+    const current = cours?.cours || 0;
+    const triggered = checkTriggered(a, current);
+    const statusColor = triggered ? 'var(--green)' : 'var(--dim)';
+    
+    return `<div style="display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--border2)">
+      <div>
+        <div style="font-family:var(--mono);font-size:12px;color:var(--gold)">${a.ticker}</div>
+        <div style="font-size:12px;color:var(--muted)">${a.type === 'above' ? '>' : '<'} ${fmt(a.seuil)} FCFA ${a.note ? '· ' + a.note : ''}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:11px;color:${statusColor}">${triggered ? '✓ Déclenchée' : 'En attente'}</span>
+        <button class="btn btn-danger btn-sm" onclick="deleteAlert(${a.id})">✕</button>
+      </div>
+    </div>`;
+  }).join('') || '<div style="padding:20px;color:var(--dim);text-align:center">Aucune alerte active</div>';
+
+  document.getElementById('alert-history').innerHTML = alertHistory.slice(-10).reverse().map(h => `
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--border2);opacity:0.6">
+      <div>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--gold)">${h.ticker}</span>
+        <span style="font-size:11px;color:var(--muted)"> ${h.type} ${fmt(h.seuil)} — ${fmtDate(h.triggeredAt)}</span>
+      </div>
+      <span style="color:var(--green);font-size:11px">✓ Déclenchée</span>
+    </div>
+  `).join('') || '<div style="padding:16px;color:var(--dim);text-align:center">Aucune alerte déclenchée</div>';
+}
+
+function checkTriggered(alert, current) {
+  if (!alert.active) return false;
+  switch(alert.type) {
+    case 'above': return current >= alert.seuil;
+    case 'below': return current <= alert.seuil;
+    case 'change_pct': return Math.abs(parseFloat(current?.variation) || 0) >= alert.seuil;
+    default: return false;
+  }
+}
+
+function checkAlerts() {
+  allCours.forEach(c => {
+    alerts.filter(a => a.active && a.ticker === c.ticker).forEach(a => {
+      if (checkTriggered(a, c.cours)) {
+        a.active = false;
+        alertHistory.push({ ...a, triggeredAt: new Date().toISOString(), triggeredPrice: c.cours });
+        // Ici : envoyer notification push/email
+      }
+    });
+  });
+  localStorage.setItem('tc_alerts', JSON.stringify(alerts));
+  localStorage.setItem('tc_alert_history', JSON.stringify(alertHistory));
+  renderAlerts();
+}
+
+function deleteAlert(id) {
+  alerts = alerts.filter(a => a.id !== id);
+  localStorage.setItem('tc_alerts', JSON.stringify(alerts));
+  renderAlerts();
+}
+
+loadData();
+</script>
+</body>
+</html>
