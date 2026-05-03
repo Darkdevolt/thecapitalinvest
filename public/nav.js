@@ -40,6 +40,13 @@ const NAV_PAGES = [
     ]
   },
   {
+    id: 'screener',
+    label: 'Screener',
+    icon: '⊟',
+    href: 'screener.html',
+    sub: []
+  },
+  {
     id: 'societes',
     label: 'Sociétés',
     icon: '◉',
@@ -63,6 +70,13 @@ const NAV_PAGES = [
       { label: 'Détection des oublis', anchor: '#oublis' },
       { label: 'Détection des erreurs', anchor: '#erreurs' },
     ]
+  },
+  {
+    id: 'alertes',
+    label: 'Alertes',
+    icon: '△',
+    href: 'alertes.html',
+    sub: []
   },
   {
     id: 'outils',
