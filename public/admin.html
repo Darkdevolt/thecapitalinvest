@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
@@ -13,7 +12,7 @@
   --bg:#0A0804;--surface:#13110C;--card:#181410;--border:rgba(184,150,78,0.15);
   --border-s:rgba(245,240,232,0.07);--gold:#B8964E;--gold-light:#D4AF6A;
   --cream:#F5F0E8;--muted:rgba(245,240,232,0.45);--faint:rgba(245,240,232,0.06);
-  --green:#4ADE80;--red:#F87171;--orange:#FB923C;
+  --green:#4ADE80;--red:#F87171;--orange:#FB923C;--blue:#60A5FA;
   --serif:'Playfair Display',serif;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -21,7 +20,6 @@ html{font-size:14px;}
 body{background:var(--bg);color:var(--cream);font-family:var(--sans);font-weight:300;min-height:100vh;}
 input,select,button,textarea{font-family:var(--sans);font-size:13px;}
 
-/* Topbar */
 .topbar{position:sticky;top:0;z-index:100;height:52px;display:flex;align-items:center;padding:0 24px;background:rgba(10,8,4,0.95);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);gap:12px;}
 .topbar-logo{font-family:var(--serif);font-size:16px;font-weight:700;letter-spacing:2px;color:var(--cream);text-decoration:none;}
 .topbar-logo span{color:var(--gold);}
@@ -31,93 +29,120 @@ input,select,button,textarea{font-family:var(--sans);font-size:13px;}
 .btn-logout{background:none;border:1px solid var(--border);color:var(--muted);padding:5px 12px;border-radius:4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
 .btn-logout:hover{color:var(--red);border-color:var(--red);}
 
-/* Tabs nav */
-.admin-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:2px;}
-.admin-tab{padding:12px 16px;background:none;border:none;color:var(--muted);font-size:11px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;}
+.admin-nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:2px;overflow-x:auto;}
+.admin-tab{padding:12px 14px;background:none;border:none;color:var(--muted);font-size:11px;font-weight:400;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;border-bottom:2px solid transparent;transition:all .2s;white-space:nowrap;}
 .admin-tab:hover{color:var(--cream);}
 .admin-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
 
-/* Main */
-.main{max-width:1200px;margin:0 auto;padding:28px 24px 80px;}
-.section-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
-.section-title{font-family:var(--serif);font-size:28px;font-weight:700;color:var(--cream);}
+.main{max-width:1300px;margin:0 auto;padding:28px 24px 80px;}
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
+.section-title{font-family:var(--serif);font-size:26px;font-weight:700;color:var(--cream);}
 .section-title em{font-style:italic;color:var(--gold);}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
 
-/* Cards */
 .card{background:var(--card);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:16px;}
 .card-header{display:flex;align-items:center;gap:8px;padding:12px 18px;border-bottom:1px solid var(--border-s);}
 .card-title{font-size:10px;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);}
 .card-count{margin-left:auto;font-family:var(--mono);font-size:11px;color:var(--muted);}
 
-/* KPI grid */
-.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;}
+.kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;}
 .kpi{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:16px 18px;}
 .kpi-label{font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.kpi-value{font-family:var(--mono);font-size:24px;color:var(--gold);}
+.kpi-value{font-family:var(--mono);font-size:22px;color:var(--gold);}
 .kpi-sub{font-size:11px;color:var(--muted);margin-top:4px;}
 
-/* Tables */
 .tw{overflow-x:auto;}
 table{width:100%;border-collapse:collapse;white-space:nowrap;}
-thead th{padding:10px 14px;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:rgba(0,0,0,0.3);text-align:left;}
+thead th{padding:9px 12px;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);background:rgba(0,0,0,0.3);text-align:left;}
 thead th.r{text-align:right;}
 tbody tr{border-bottom:1px solid var(--border-s);transition:background .15s;}
 tbody tr:hover{background:var(--faint);}
 tbody tr:last-child{border-bottom:none;}
-td{padding:10px 14px;vertical-align:middle;}
+td{padding:9px 12px;vertical-align:middle;}
 td.r{text-align:right;}
 .td-gold{font-family:var(--serif);font-size:14px;font-weight:700;color:var(--gold);}
 .td-muted{color:var(--muted);}
 .td-mono{font-family:var(--mono);}
 
-/* Formulaire */
-.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:14px;padding:20px;}
-.field label{display:block;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.field input,.field select,.field textarea{width:100%;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--cream);outline:none;transition:border-color .2s;}
+.form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding:18px;}
+.field label{display:block;font-size:10px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 11px;background:var(--surface);border:1px solid var(--border);border-radius:4px;color:var(--cream);outline:none;transition:border-color .2s;}
 .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--gold);}
 .field input::placeholder,.field textarea::placeholder{color:var(--muted);}
 .field select option{background:var(--card);}
 .field textarea{resize:vertical;}
 
-/* Boutons */
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border:none;border-radius:4px;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border:none;border-radius:4px;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
 .btn-primary{background:var(--gold);color:var(--bg);}
 .btn-primary:hover{background:var(--gold-light);}
 .btn-outline{background:none;border:1px solid var(--border);color:var(--muted);}
 .btn-outline:hover{border-color:var(--gold);color:var(--gold);}
 .btn-danger{background:none;border:1px solid rgba(248,113,113,0.3);color:var(--red);}
 .btn-danger:hover{background:rgba(248,113,113,0.1);}
-.btn-sm{padding:5px 10px;font-size:10px;}
+.btn-sm{padding:4px 9px;font-size:10px;}
 .btn:disabled{opacity:.5;cursor:not-allowed;}
-.btn-orange{background:rgba(251,146,60,0.15);border:1px solid rgba(251,146,60,0.3);color:var(--orange);}
-.btn-orange:hover{background:rgba(251,146,60,0.25);}
+.btn-orange{background:rgba(251,146,60,0.12);border:1px solid rgba(251,146,60,0.3);color:var(--orange);}
+.btn-orange:hover{background:rgba(251,146,60,0.22);}
+.btn-blue{background:rgba(96,165,250,0.12);border:1px solid rgba(96,165,250,0.3);color:var(--blue);}
+.btn-blue:hover{background:rgba(96,165,250,0.22);}
+.btn-green{background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:var(--green);}
+.btn-green:hover{background:rgba(74,222,128,0.22);}
 
-/* Badges */
 .badge{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:500;}
 .badge-green{background:rgba(74,222,128,0.1);color:var(--green);border:1px solid rgba(74,222,128,0.25);}
 .badge-gold{background:rgba(184,150,78,0.12);color:var(--gold);border:1px solid rgba(184,150,78,0.25);}
 .badge-red{background:rgba(248,113,113,0.1);color:var(--red);border:1px solid rgba(248,113,113,0.25);}
 .badge-orange{background:rgba(251,146,60,0.1);color:var(--orange);border:1px solid rgba(251,146,60,0.25);}
+.badge-blue{background:rgba(96,165,250,0.1);color:var(--blue);border:1px solid rgba(96,165,250,0.25);}
 
-/* Loading / message */
 .loading{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px;}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin-bottom:8px;}
 @keyframes spin{to{transform:rotate(360deg);}}
-.msg{font-size:12px;padding:8px 0;}
+.msg{font-size:12px;padding:6px 0;}
 .msg.ok{color:var(--green);}
 .msg.err{color:var(--red);}
+.msg.info{color:var(--blue);}
 
-/* Log scraper */
-.log-box{background:rgba(0,0,0,0.4);border:1px solid var(--border-s);border-radius:4px;padding:16px;font-family:var(--mono);font-size:12px;color:var(--muted);max-height:240px;overflow-y:auto;line-height:1.8;}
+.log-box{background:rgba(0,0,0,0.4);border:1px solid var(--border-s);border-radius:4px;padding:14px;font-family:var(--mono);font-size:12px;color:var(--muted);max-height:240px;overflow-y:auto;line-height:1.8;}
 .log-box .ok{color:var(--green);}
 .log-box .err{color:var(--red);}
 .log-box .info{color:var(--gold);}
-</style>
 
+/* Import bulk CSV */
+.csv-area{width:100%;min-height:120px;font-family:var(--mono);font-size:12px;padding:12px;background:rgba(0,0,0,0.3);border:1px solid var(--border);border-radius:4px;color:var(--cream);resize:vertical;outline:none;}
+.csv-area:focus{border-color:var(--gold);}
+
+/* Diag */
+.diag-table td,.diag-table th{padding:8px 12px;}
+.diag-ok{color:var(--green);}
+.diag-err{color:var(--red);}
+
+/* Edit inline */
+.inline-edit{display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.7);align-items:center;justify-content:center;}
+.inline-edit.open{display:flex;}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:24px;min-width:380px;max-width:600px;width:90%;}
+.modal-title{font-family:var(--serif);font-size:18px;color:var(--gold);margin-bottom:18px;}
+.modal-actions{display:flex;gap:10px;margin-top:18px;justify-content:flex-end;}
+
+/* Tabs secondaires */
+.sub-tabs{display:flex;gap:4px;margin-bottom:16px;flex-wrap:wrap;}
+.sub-tab{padding:6px 14px;background:var(--surface);border:1px solid var(--border);border-radius:20px;color:var(--muted);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
+.sub-tab.active{background:rgba(184,150,78,0.12);border-color:var(--gold);color:var(--gold);}
+
+/* Toasts */
+#toast-container{position:fixed;bottom:24px;right:24px;z-index:999;display:flex;flex-direction:column;gap:8px;}
+.toast{padding:10px 18px;border-radius:5px;font-size:13px;backdrop-filter:blur(12px);animation:slideIn .25s ease;border:1px solid;}
+.toast.ok{background:rgba(74,222,128,0.12);border-color:rgba(74,222,128,0.3);color:var(--green);}
+.toast.err{background:rgba(248,113,113,0.12);border-color:rgba(248,113,113,0.3);color:var(--red);}
+@keyframes slideIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+.actions-row{padding:14px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;border-top:1px solid var(--border-s);}
+</style>
 </head>
 <body>
+
+<div id="toast-container"></div>
 
 <div class="topbar">
   <a href="index.html" class="topbar-logo">THE <span>·</span> CAPITAL</a>
@@ -130,82 +155,178 @@ td.r{text-align:right;}
 
 <div class="admin-nav">
   <button class="admin-tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
-  <button class="admin-tab" onclick="switchTab('scraper',this)">Scraper</button>
+  <button class="admin-tab" onclick="switchTab('cours',this)">Cours</button>
+  <button class="admin-tab" onclick="switchTab('historique',this)">Historique</button>
   <button class="admin-tab" onclick="switchTab('entreprises',this)">Entreprises</button>
   <button class="admin-tab" onclick="switchTab('financials',this)">Financials</button>
+  <button class="admin-tab" onclick="switchTab('dividendes',this)">Dividendes</button>
   <button class="admin-tab" onclick="switchTab('analyses',this)">Analyses</button>
   <button class="admin-tab" onclick="switchTab('utilisateurs',this)">Utilisateurs</button>
+  <button class="admin-tab" onclick="switchTab('scraper',this)">Scraper</button>
+  <button class="admin-tab" onclick="switchTab('diagnostic',this)">Diagnostic</button>
 </div>
 
 <div class="main">
 
-  <!-- ─── DASHBOARD ─── -->
+<!-- ─── DASHBOARD ─── -->
+<div class="tab-panel active" id="panel-dashboard">
+  <div class="section-header">
+    <div class="section-title">Vue d'ensemble <em>admin</em></div>
+    <button class="btn btn-outline btn-sm" onclick="loadDashboard()">↺ Actualiser</button>
+  </div>
+  <div class="kpi-row" id="admin-kpis">
+    <div class="kpi"><div class="kpi-label">Entreprises</div><div class="kpi-value" id="k-entreprises">—</div></div>
+    <div class="kpi"><div class="kpi-label">Cours</div><div class="kpi-value" id="k-cours">—</div></div>
+    <div class="kpi"><div class="kpi-label">Historique</div><div class="kpi-value" id="k-historique">—</div></div>
+    <div class="kpi"><div class="kpi-label">Financials</div><div class="kpi-value" id="k-financials">—</div></div>
+    <div class="kpi"><div class="kpi-label">Dividendes</div><div class="kpi-value" id="k-dividendes">—</div></div>
+    <div class="kpi"><div class="kpi-label">Utilisateurs</div><div class="kpi-value" id="k-users">—</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Dernières données</span></div>
+    <div style="padding:18px;font-size:13px;color:var(--muted)" id="last-update">Chargement...</div>
+  </div>
+</div>
 
-  <div class="tab-panel active" id="panel-dashboard">
-    <div class="section-header">
-      <div class="section-title">Vue d'ensemble <em>admin</em></div>
+<!-- ─── COURS ─── -->
+<div class="tab-panel" id="panel-cours">
+  <div class="section-header">
+    <div class="section-title">Cours <em>BRVM</em></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">Ajouter / Modifier un cours</span></div>
+    <div class="form-grid">
+      <div class="field"><label>Ticker</label><input type="text" id="c-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="field"><label>Date séance</label><input type="date" id="c-date"></div>
+      <div class="field"><label>Cours clôture (FCFA)</label><input type="number" id="c-cours" placeholder="14500" step="any"></div>
+      <div class="field"><label>Ouverture</label><input type="number" id="c-ouv" placeholder="14400" step="any"></div>
+      <div class="field"><label>Plus haut</label><input type="number" id="c-haut" placeholder="14600" step="any"></div>
+      <div class="field"><label>Plus bas</label><input type="number" id="c-bas" placeholder="14350" step="any"></div>
+      <div class="field"><label>Volume (titres)</label><input type="number" id="c-vol" placeholder="1200" step="1"></div>
+      <div class="field"><label>Variation (%)</label><input type="number" id="c-var" placeholder="0.69" step="any"></div>
+      <div class="field"><label>Capitalisation</label><input type="number" id="c-capi" placeholder="0" step="any"></div>
     </div>
-    <div class="kpi-row" id="admin-kpis">
-      <div class="kpi"><div class="kpi-label">Entreprises actives</div><div class="kpi-value" id="k-entreprises">—</div></div>
-      <div class="kpi"><div class="kpi-label">Cours en base</div><div class="kpi-value" id="k-cours">—</div></div>
-      <div class="kpi"><div class="kpi-label">Historique</div><div class="kpi-value" id="k-historique">—</div></div>
-      <div class="kpi"><div class="kpi-label">Financials</div><div class="kpi-value" id="k-financials">—</div></div>
-      <div class="kpi"><div class="kpi-label">Dividendes</div><div class="kpi-value" id="k-dividendes">—</div></div>
-      <div class="kpi"><div class="kpi-label">Utilisateurs</div><div class="kpi-value" id="k-users">—</div></div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="addCours()">Enregistrer le cours</button>
+      <span id="c-msg" class="msg"></span>
     </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Derniers cours enregistrés</span>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+        <input type="text" id="cours-filter" placeholder="Filtrer ticker..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterCoursTable()">
+        <button class="btn btn-outline btn-sm" onclick="loadCours()">↺</button>
+      </div>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th>
+          <th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th>
+          <th class="r">Var%</th><th></th>
+        </tr></thead>
+        <tbody id="cours-tbody"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── HISTORIQUE ─── -->
+<div class="tab-panel" id="panel-historique">
+  <div class="section-header">
+    <div class="section-title">Historique <em>cours</em></div>
+  </div>
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="switchSubTab('hist','ligne',this)">Ligne unique</button>
+    <button class="sub-tab" onclick="switchSubTab('hist','bulk',this)">Import CSV/bulk</button>
+    <button class="sub-tab" onclick="switchSubTab('hist','view',this)">Consulter</button>
+  </div>
+
+  <div id="hist-panel-ligne">
     <div class="card">
-      <div class="card-header"><span class="card-title">Dernière mise à jour données</span></div>
-      <div style="padding:20px;font-size:13px;color:var(--muted)" id="last-update">Chargement...</div>
+      <div class="card-header"><span class="card-title">Ajouter un cours historique</span></div>
+      <div class="form-grid">
+        <div class="field"><label>Ticker</label><input type="text" id="h-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+        <div class="field"><label>Date séance</label><input type="date" id="h-date"></div>
+        <div class="field"><label>Cours clôture</label><input type="number" id="h-cloture" placeholder="14500" step="any"></div>
+        <div class="field"><label>Cours ouverture</label><input type="number" id="h-ouverture" placeholder="14400" step="any"></div>
+        <div class="field"><label>Plus haut</label><input type="number" id="h-haut" placeholder="14600" step="any"></div>
+        <div class="field"><label>Plus bas</label><input type="number" id="h-bas" placeholder="14350" step="any"></div>
+        <div class="field"><label>Volume</label><input type="number" id="h-vol" placeholder="1200"></div>
+        <div class="field"><label>Variation (%)</label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
+      </div>
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="addHistorique()">Enregistrer</button>
+        <span id="h-msg" class="msg"></span>
+      </div>
     </div>
   </div>
 
-  <!-- ─── SCRAPER ─── -->
-
-  <div class="tab-panel" id="panel-scraper">
-    <div class="section-header">
-      <div class="section-title">Scraper <em>BRVM</em></div>
-    </div>
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-header"><span class="card-title">Contrôle manuel</span></div>
-      <div style="padding:20px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
-        <button class="btn btn-primary" onclick="runScraper()">▶ Lancer le scraper maintenant</button>
-        <button class="btn btn-orange" onclick="runFallback()">↺ Recalculer depuis historique</button>
-        <span id="scraper-msg" class="msg"></span>
-      </div>
-      <div style="padding:0 20px 16px;font-size:11px;color:rgba(245,240,232,0.25);">
-        Cron automatique : chaque soir à 22h00 UTC (lundi–vendredi)
-      </div>
-    </div>
+  <div id="hist-panel-bulk" style="display:none;">
     <div class="card">
-      <div class="card-header"><span class="card-title">Log dernière exécution</span></div>
-      <div style="padding:16px;">
-        <div class="log-box" id="scraper-log">Aucune exécution récente.</div>
+      <div class="card-header"><span class="card-title">Import CSV en masse (max 500 lignes)</span></div>
+      <div style="padding:18px;">
+        <p style="font-size:12px;color:var(--muted);margin-bottom:10px;">
+          Format CSV : <code style="color:var(--gold)">ticker,date_seance,cours_cloture,cours_ouverture,plus_haut,plus_bas,volume,variation_pct</code><br>
+          Les colonnes cours_ouverture, plus_haut, plus_bas, volume, variation_pct sont optionnelles.<br>
+          Utilisez <strong>upsert</strong> : si (ticker, date) existe déjà, il sera mis à jour.
+        </p>
+        <textarea class="csv-area" id="bulk-csv" placeholder="SNTS,2024-01-15,14500,14400,14600,14350,1200,0.69
+ECOBANK,2024-01-15,11250,11200,11300,11150,850,-0.44
+..."></textarea>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">Import BOC (PDF)</span></div>
-      <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;flex-wrap:wrap;">
-        <div class="field"><label>Date de séance</label><input type="date" id="boc-date"></div>
-        <div class="field"><label>Nom du fichier</label><input type="text" id="boc-nom" placeholder="BOC_2026-04-08.pdf"></div>
-        <div class="field"><label>URL du PDF</label><input type="text" id="boc-url" placeholder="https://..."></div>
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="importBulk()">Importer les données</button>
+        <button class="btn btn-outline btn-sm" onclick="parseBulkPreview()">Aperçu</button>
+        <span id="bulk-msg" class="msg"></span>
       </div>
-      <div style="padding:0 20px 16px;display:flex;gap:12px;align-items:center;">
-        <button class="btn btn-primary" onclick="importBOC()">Importer le BOC</button>
-        <span id="boc-msg" class="msg"></span>
+      <div id="bulk-preview" style="display:none;padding:0 18px 14px;">
+        <div class="tw"><table id="bulk-preview-table" style="font-size:12px;">
+          <thead><tr><th>Ticker</th><th>Date</th><th>Clôture</th><th>Vol.</th><th>Var%</th><th>Statut</th></tr></thead>
+          <tbody id="bulk-preview-tbody"></tbody>
+        </table></div>
       </div>
     </div>
   </div>
 
-  <!-- ─── ENTREPRISES ─── -->
-
-  <div class="tab-panel" id="panel-entreprises">
-    <div class="section-header">
-      <div class="section-title">Entreprises <em>BRVM</em></div>
-    </div>
+  <div id="hist-panel-view" style="display:none;">
     <div class="card">
       <div class="card-header">
-        <span class="card-title">Liste des sociétés</span>
+        <span class="card-title">Consulter l'historique</span>
+        <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+          <input type="text" id="hist-ticker-search" placeholder="Ticker ex: SNTS" style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;width:120px;" oninput="this.value=this.value.toUpperCase()">
+          <button class="btn btn-primary btn-sm" onclick="loadHistoriqueTicker()">Charger</button>
+        </div>
+      </div>
+      <div class="tw">
+        <table>
+          <thead><tr>
+            <th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th>
+            <th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Var%</th><th></th>
+          </tr></thead>
+          <tbody id="hist-tbody"><tr><td colspan="9"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ENTREPRISES ─── -->
+<div class="tab-panel" id="panel-entreprises">
+  <div class="section-header">
+    <div class="section-title">Entreprises <em>BRVM</em></div>
+  </div>
+  <div class="sub-tabs">
+    <button class="sub-tab active" onclick="switchSubTab('ent','list',this)">Liste</button>
+    <button class="sub-tab" onclick="switchSubTab('ent','add',this)">Ajouter</button>
+  </div>
+  <div id="ent-panel-list">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">Sociétés cotées</span>
         <span class="card-count" id="ent-count"></span>
+        <button class="btn btn-outline btn-sm" style="margin-left:8px;" onclick="loadEntreprises()">↺</button>
       </div>
       <div class="tw">
         <table>
@@ -218,115 +339,278 @@ td.r{text-align:right;}
       </div>
     </div>
   </div>
-
-  <!-- ─── FINANCIALS ─── -->
-
-  <div class="tab-panel" id="panel-financials">
-    <div class="section-header">
-      <div class="section-title">Données <em>financières</em></div>
-    </div>
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-header"><span class="card-title">Ajouter / Modifier un financial</span></div>
-      <div class="form-grid">
-        <div class="field"><label>Ticker</label><input type="text" id="fin-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-        <div class="field"><label>Année</label><input type="number" id="fin-annee" placeholder="2024"></div>
-        <div class="field"><label>Chiffre d'affaires</label><input type="number" id="fin-ca" placeholder="900000"></div>
-        <div class="field"><label>EBIT</label><input type="number" id="fin-ebit" placeholder="250000"></div>
-        <div class="field"><label>Résultat net</label><input type="number" id="fin-rn" placeholder="168000"></div>
-        <div class="field"><label>BPA (FCFA)</label><input type="number" id="fin-bpa" placeholder="17500" step="any"></div>
-        <div class="field"><label>DPA (FCFA)</label><input type="number" id="fin-dpa" placeholder="12000" step="any"></div>
-        <div class="field"><label>ROE (%)</label><input type="number" id="fin-roe" placeholder="27.1" step="any"></div>
-        <div class="field"><label>Fonds propres</label><input type="number" id="fin-fp" placeholder="620000"></div>
-        <div class="field"><label>Dette nette</label><input type="number" id="fin-dn" placeholder="0"></div>
-        <div class="field"><label>Source</label><input type="text" id="fin-source" placeholder="Rapport annuel 2024"></div>
-      </div>
-      <div style="padding:0 20px 16px;display:flex;gap:12px;align-items:center;">
-        <button class="btn btn-primary" onclick="addFinancial()">Enregistrer</button>
-        <span id="fin-msg" class="msg"></span>
-      </div>
-    </div>
+  <div id="ent-panel-add" style="display:none;">
     <div class="card">
-      <div class="card-header"><span class="card-title">Financials existants</span><span class="card-count" id="fin-count"></span></div>
-      <div class="tw">
-        <table>
-          <thead><tr>
-            <th>Ticker</th><th>Année</th><th class="r">CA</th><th class="r">Rés. net</th>
-            <th class="r">BPA</th><th class="r">DPA</th><th class="r">ROE</th><th>Source</th>
-          </tr></thead>
-          <tbody id="fin-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ─── ANALYSES ─── -->
-
-  <div class="tab-panel" id="panel-analyses">
-    <div class="section-header">
-      <div class="section-title">Recommandations <em>analystes</em></div>
-    </div>
-    <div class="card" style="margin-bottom:16px;">
-      <div class="card-header"><span class="card-title">Ajouter une recommandation</span></div>
+      <div class="card-header"><span class="card-title">Nouvelle société</span></div>
       <div class="form-grid">
-        <div class="field"><label>Ticker</label><input type="text" id="an-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-        <div class="field"><label>Recommandation</label>
-          <select id="an-reco">
-            <option value="Acheter">Acheter</option>
-            <option value="Renforcer">Renforcer</option>
-            <option value="Conserver">Conserver</option>
-            <option value="Alléger">Alléger</option>
-            <option value="Vendre">Vendre</option>
+        <div class="field"><label>Ticker *</label><input type="text" id="ne-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+        <div class="field"><label>Nom *</label><input type="text" id="ne-nom" placeholder="Sonatel SA"></div>
+        <div class="field"><label>Secteur</label><input type="text" id="ne-secteur" placeholder="Télécommunications"></div>
+        <div class="field"><label>Pays</label><input type="text" id="ne-pays" placeholder="Sénégal"></div>
+        <div class="field"><label>Compartiment</label>
+          <select id="ne-compart">
+            <option value="PRINCIPAL">Principal</option>
+            <option value="PRESTIGE">Prestige</option>
           </select>
         </div>
-        <div class="field"><label>Objectif (FCFA)</label><input type="number" id="an-objectif" placeholder="16000" step="any"></div>
-        <div class="field"><label>Cours référence (FCFA)</label><input type="number" id="an-cours" placeholder="14500" step="any"></div>
-        <div class="field"><label>Analyste</label><input type="text" id="an-analyste" placeholder="The Capital Research"></div>
-        <div class="field" style="grid-column:1/-1;"><label>Commentaire</label><textarea id="an-commentaire" rows="3" placeholder="Analyse..."></textarea></div>
+        <div class="field"><label>ISIN</label><input type="text" id="ne-isin" placeholder="SN0000000000"></div>
       </div>
-      <div style="padding:0 20px 16px;display:flex;gap:12px;align-items:center;">
-        <button class="btn btn-primary" onclick="addAnalyse()">Publier la recommandation</button>
-        <span id="an-msg" class="msg"></span>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">Recommandations publiées</span><span class="card-count" id="an-count"></span></div>
-      <div id="an-list"><div class="loading"><div class="spinner"></div></div></div>
-    </div>
-  </div>
-
-  <!-- ─── UTILISATEURS ─── -->
-
-  <div class="tab-panel" id="panel-utilisateurs">
-    <div class="section-header">
-      <div class="section-title">Gestion <em>utilisateurs</em></div>
-    </div>
-    <div class="card">
-      <div class="card-header"><span class="card-title">Comptes inscrits</span><span class="card-count" id="usr-count"></span></div>
-      <div class="tw">
-        <table>
-          <thead><tr>
-            <th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th><th>Admin</th><th>Inscrit le</th><th></th>
-          </tr></thead>
-          <tbody id="usr-tbody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-        </table>
+      <div class="actions-row">
+        <button class="btn btn-primary" onclick="addEntreprise()">Créer la société</button>
+        <span id="ne-msg" class="msg"></span>
       </div>
     </div>
   </div>
+</div>
 
+<!-- ─── FINANCIALS ─── -->
+<div class="tab-panel" id="panel-financials">
+  <div class="section-header">
+    <div class="section-title">Données <em>financières</em></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">Ajouter / Modifier un financial</span></div>
+    <div class="form-grid">
+      <div class="field"><label>Ticker *</label><input type="text" id="fin-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="field"><label>Année *</label><input type="number" id="fin-annee" placeholder="2024"></div>
+      <div class="field"><label>Chiffre d'affaires</label><input type="number" id="fin-ca" placeholder="900000" step="any"></div>
+      <div class="field"><label>EBIT</label><input type="number" id="fin-ebit" placeholder="250000" step="any"></div>
+      <div class="field"><label>Résultat net</label><input type="number" id="fin-rn" placeholder="168000" step="any"></div>
+      <div class="field"><label>BPA (FCFA)</label><input type="number" id="fin-bpa" placeholder="17500" step="any"></div>
+      <div class="field"><label>DPA (FCFA)</label><input type="number" id="fin-dpa" placeholder="12000" step="any"></div>
+      <div class="field"><label>ROE (%)</label><input type="number" id="fin-roe" placeholder="27.1" step="any"></div>
+      <div class="field"><label>Fonds propres</label><input type="number" id="fin-fp" placeholder="620000" step="any"></div>
+      <div class="field"><label>Dette nette</label><input type="number" id="fin-dn" placeholder="0" step="any"></div>
+      <div class="field"><label>Source</label><input type="text" id="fin-source" placeholder="Rapport annuel 2024"></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="addFinancial()">Enregistrer</button>
+      <span id="fin-msg" class="msg"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Financials existants</span>
+      <span class="card-count" id="fin-count"></span>
+      <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+        <input type="text" id="fin-filter" placeholder="Filtrer..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:100px;" oninput="filterFinTable()">
+        <button class="btn btn-outline btn-sm" onclick="loadFinancials()">↺</button>
+      </div>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>Ticker</th><th>Année</th><th class="r">CA</th><th class="r">Rés. net</th>
+          <th class="r">BPA</th><th class="r">DPA</th><th class="r">ROE</th><th>Source</th><th></th>
+        </tr></thead>
+        <tbody id="fin-tbody"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── DIVIDENDES ─── -->
+<div class="tab-panel" id="panel-dividendes">
+  <div class="section-header">
+    <div class="section-title">Dividendes <em>distribués</em></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">Ajouter un dividende</span></div>
+    <div class="form-grid">
+      <div class="field"><label>Ticker *</label><input type="text" id="div-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="field"><label>Année *</label><input type="number" id="div-annee" placeholder="2024"></div>
+      <div class="field"><label>Montant (FCFA) *</label><input type="number" id="div-montant" placeholder="12000" step="any"></div>
+      <div class="field"><label>Taux rendement (%)</label><input type="number" id="div-tx" placeholder="5.2" step="any"></div>
+      <div class="field"><label>Date détachement</label><input type="date" id="div-detach"></div>
+      <div class="field"><label>Date paiement</label><input type="date" id="div-paie"></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="addDividende()">Enregistrer</button>
+      <span id="div-msg" class="msg"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Dividendes enregistrés</span><span class="card-count" id="div-count"></span>
+    <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadDividendes()">↺</button></div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>Ticker</th><th>Année</th><th class="r">Montant</th><th class="r">Rend.</th>
+          <th>Détachement</th><th>Paiement</th><th></th>
+        </tr></thead>
+        <tbody id="div-tbody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ANALYSES ─── -->
+<div class="tab-panel" id="panel-analyses">
+  <div class="section-header">
+    <div class="section-title">Recommandations <em>analystes</em></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">Ajouter une recommandation</span></div>
+    <div class="form-grid">
+      <div class="field"><label>Ticker *</label><input type="text" id="an-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+      <div class="field"><label>Recommandation *</label>
+        <select id="an-reco">
+          <option value="Acheter">Acheter</option><option value="Renforcer">Renforcer</option>
+          <option value="Conserver">Conserver</option><option value="Alléger">Alléger</option>
+          <option value="Vendre">Vendre</option>
+        </select>
+      </div>
+      <div class="field"><label>Objectif (FCFA)</label><input type="number" id="an-objectif" placeholder="16000" step="any"></div>
+      <div class="field"><label>Cours référence (FCFA)</label><input type="number" id="an-cours" placeholder="14500" step="any"></div>
+      <div class="field"><label>Analyste</label><input type="text" id="an-analyste" placeholder="The Capital Research"></div>
+      <div class="field" style="grid-column:1/-1;"><label>Commentaire</label><textarea id="an-commentaire" rows="3" placeholder="Analyse fondamentale..."></textarea></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="addAnalyse()">Publier la recommandation</button>
+      <span id="an-msg" class="msg"></span>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Recommandations publiées</span><span class="card-count" id="an-count"></span>
+    <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadAnalyses()">↺</button></div>
+    <div id="an-list"><div class="loading"><div class="spinner"></div></div></div>
+  </div>
+</div>
+
+<!-- ─── UTILISATEURS ─── -->
+<div class="tab-panel" id="panel-utilisateurs">
+  <div class="section-header">
+    <div class="section-title">Gestion <em>utilisateurs</em></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <span class="card-title">Comptes inscrits</span>
+      <span class="card-count" id="usr-count"></span>
+      <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadUsers()">↺</button>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr>
+          <th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th><th>Admin</th><th>Inscrit le</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="usr-tbody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ─── SCRAPER ─── -->
+<div class="tab-panel" id="panel-scraper">
+  <div class="section-header">
+    <div class="section-title">Scraper <em>BRVM</em></div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">Contrôle manuel</span></div>
+    <div style="padding:18px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+      <button class="btn btn-primary" onclick="runScraper()">▶ Lancer le scraper</button>
+      <button class="btn btn-orange" onclick="runFallback()">↺ Recalculer historique</button>
+      <button class="btn btn-green" onclick="repairTotaux()">⚙ Réparer variation_pct</button>
+      <span id="scraper-msg" class="msg"></span>
+    </div>
+    <div style="padding:0 18px 14px;font-size:11px;color:rgba(245,240,232,0.25);">Cron automatique : chaque soir à 22h00 UTC (lundi–vendredi)</div>
+  </div>
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">Log dernière exécution</span></div>
+    <div style="padding:14px;"><div class="log-box" id="scraper-log">Aucune exécution récente.</div></div>
+  </div>
+  <div class="card">
+    <div class="card-header"><span class="card-title">Import BOC (PDF)</span></div>
+    <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+      <div class="field"><label>Date de séance</label><input type="date" id="boc-date"></div>
+      <div class="field"><label>Nom du fichier</label><input type="text" id="boc-nom" placeholder="BOC_2026-05-01.pdf"></div>
+      <div class="field"><label>URL du PDF</label><input type="text" id="boc-url" placeholder="https://..."></div>
+    </div>
+    <div class="actions-row">
+      <button class="btn btn-primary" onclick="importBOC()">Importer le BOC</button>
+      <span id="boc-msg" class="msg"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ─── DIAGNOSTIC ─── -->
+<div class="tab-panel" id="panel-diagnostic">
+  <div class="section-header">
+    <div class="section-title">Diagnostic <em>Supabase</em></div>
+    <button class="btn btn-primary btn-sm" onclick="runDiagnostic()">▶ Lancer le diagnostic</button>
+  </div>
+  <div id="diag-result">
+    <div class="card"><div style="padding:24px;color:var(--muted);text-align:center;font-size:13px;">Cliquez sur "Lancer le diagnostic" pour analyser l'état de la base de données.</div></div>
+  </div>
+  <div style="margin-top:16px;">
+    <div class="card">
+      <div class="card-header"><span class="card-title">Cours avec valeurs invalides</span>
+      <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadCoursErreurs()">Charger</button></div>
+      <div id="cours-erreurs-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger pour voir les cours invalides.</div></div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<!-- Modal edit entreprise -->
+<div class="inline-edit" id="modal-entreprise">
+  <div class="modal">
+    <div class="modal-title" id="modal-ent-title">Modifier l'entreprise</div>
+    <input type="hidden" id="modal-ent-ticker">
+    <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
+      <div class="field"><label>Nom</label><input type="text" id="modal-ent-nom"></div>
+      <div class="field"><label>Secteur</label><input type="text" id="modal-ent-secteur"></div>
+      <div class="field"><label>Pays</label><input type="text" id="modal-ent-pays"></div>
+      <div class="field"><label>Compartiment</label>
+        <select id="modal-ent-compart">
+          <option value="PRINCIPAL">Principal</option>
+          <option value="PRESTIGE">Prestige</option>
+        </select>
+      </div>
+      <div class="field"><label>ISIN</label><input type="text" id="modal-ent-isin"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-entreprise')">Annuler</button>
+      <button class="btn btn-primary btn-sm" onclick="saveEntreprise()">Enregistrer</button>
+    </div>
+    <span id="modal-ent-msg" class="msg" style="display:block;margin-top:8px;"></span>
+  </div>
+</div>
+
+<!-- Modal edit cours -->
+<div class="inline-edit" id="modal-cours">
+  <div class="modal">
+    <div class="modal-title">Modifier le cours</div>
+    <input type="hidden" id="modal-cours-id">
+    <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
+      <div class="field"><label>Cours clôture</label><input type="number" id="modal-cours-val" step="any"></div>
+      <div class="field"><label>Ouverture</label><input type="number" id="modal-cours-ouv" step="any"></div>
+      <div class="field"><label>Plus haut</label><input type="number" id="modal-cours-haut" step="any"></div>
+      <div class="field"><label>Plus bas</label><input type="number" id="modal-cours-bas" step="any"></div>
+      <div class="field"><label>Volume</label><input type="number" id="modal-cours-vol"></div>
+      <div class="field"><label>Variation (%)</label><input type="number" id="modal-cours-var" step="any"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline btn-sm" onclick="closeModal('modal-cours')">Annuler</button>
+      <button class="btn btn-primary btn-sm" onclick="saveCours()">Enregistrer</button>
+    </div>
+    <span id="modal-cours-msg" class="msg" style="display:block;margin-top:8px;"></span>
+  </div>
 </div>
 
 <script>
 const SK = 'tc_session';
 let TK = '', ME = null;
+let coursData = [], finData = [], divData = [];
 
+// ─── INIT ───────────────────────────────────────────────────────────────
 function init() {
   const s = localStorage.getItem(SK);
   if (!s) { window.location.href = 'app.html'; return; }
   const sess = JSON.parse(s);
   TK = sess?.access_token || '';
   if (!TK) { window.location.href = 'app.html'; return; }
-  // Vérifier is_admin
-  fetch('/api/admin?action=check', { headers: { Authorization: `Bearer ${TK}` } })
+  fetch('/api/admin?action=check', { headers: AH() })
     .then(r => r.json())
     .then(d => {
       if (!d.is_admin) { alert('Accès réservé aux administrateurs.'); window.location.href = 'app.html'; return; }
@@ -341,7 +625,18 @@ function doLogout() { localStorage.removeItem(SK); window.location.href = 'app.h
 const AH = () => ({ Authorization: `Bearer ${TK}`, 'Content-Type': 'application/json' });
 
 let activeTab = 'dashboard';
-const tabLoaders = { dashboard: loadDashboard, scraper: () => {}, entreprises: loadEntreprises, financials: loadFinancials, analyses: loadAnalyses, utilisateurs: loadUsers };
+const tabLoaders = {
+  dashboard: loadDashboard,
+  cours: loadCours,
+  historique: () => {},
+  entreprises: loadEntreprises,
+  financials: loadFinancials,
+  dividendes: loadDividendes,
+  analyses: loadAnalyses,
+  utilisateurs: loadUsers,
+  scraper: () => {},
+  diagnostic: () => {},
+};
 
 function switchTab(name, el) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
@@ -351,191 +646,603 @@ function switchTab(name, el) {
   if (name !== activeTab) { activeTab = name; (tabLoaders[name] || (() => {}))(); }
 }
 
+function switchSubTab(prefix, panel, el) {
+  const container = el.closest('.tab-panel') || document.body;
+  container.querySelectorAll(`.sub-tab`).forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  // hide all sub panels
+  ['ligne','bulk','view','list','add'].forEach(p => {
+    const el2 = document.getElementById(`${prefix}-panel-${p}`);
+    if (el2) el2.style.display = 'none';
+  });
+  const target = document.getElementById(`${prefix}-panel-${panel}`);
+  if (target) target.style.display = '';
+}
+
+// ─── TOASTS ─────────────────────────────────────────────────────────────
+function toast(msg, type='ok') {
+  const c = document.getElementById('toast-container');
+  const t = document.createElement('div');
+  t.className = `toast ${type}`;
+  t.textContent = msg;
+  c.appendChild(t);
+  setTimeout(() => t.remove(), 3500);
+}
+
 const fmt = n => n != null ? parseFloat(n).toLocaleString('fr-FR') : '—';
+const fmtPct = n => n != null ? `${parseFloat(n) >= 0 ? '+' : ''}${parseFloat(n).toFixed(2)}%` : '—';
 
-// ─── DASHBOARD ───
+// ─── DASHBOARD ──────────────────────────────────────────────────────────
 async function loadDashboard() {
-  const r = await fetch('/api/admin?action=stats', { headers: AH() }).then(r => r.json()).catch(() => ({}));
-  document.getElementById('k-entreprises').textContent = r.entreprises ?? '—';
-  document.getElementById('k-cours').textContent = r.cours ?? '—';
-  document.getElementById('k-historique').textContent = r.historique ?? '—';
-  document.getElementById('k-financials').textContent = r.financials ?? '—';
-  document.getElementById('k-dividendes').textContent = r.dividendes ?? '—';
-  document.getElementById('k-users').textContent = r.users ?? '—';
-  document.getElementById('last-update').innerHTML =
-    `Dernière séance cours : <strong>${r.last_seance || '—'}</strong> &nbsp;|&nbsp; Données intraday : <strong>${r.last_scrape || '—'}</strong>`;
+  const r = await api('stats');
+  if (r) {
+    document.getElementById('k-entreprises').textContent = r.entreprises ?? '—';
+    document.getElementById('k-cours').textContent = r.cours ?? '—';
+    document.getElementById('k-historique').textContent = r.historique ?? '—';
+    document.getElementById('k-financials').textContent = r.financials ?? '—';
+    document.getElementById('k-dividendes').textContent = r.dividendes ?? '—';
+    document.getElementById('k-users').textContent = r.users ?? '—';
+    document.getElementById('last-update').innerHTML =
+      `Dernière séance cours : <strong>${r.last_seance || '—'}</strong> &nbsp;|&nbsp; Dernier historique : <strong>${r.last_historique || '—'}</strong>`;
+  }
 }
 
-// ─── SCRAPER ───
-async function runScraper() {
-  const btn = event.target; btn.disabled = true;
-  const msg = document.getElementById('scraper-msg');
-  msg.textContent = 'Scraping en cours...'; msg.className = 'msg';
-  const log = document.getElementById('scraper-log');
-  log.innerHTML = '<span class="info">Lancement du scraper...</span>\n';
-  try {
-    const r = await fetch('/api/scraper', { headers: { Authorization: `Bearer ${process.env.CRON_SECRET || TK}` } });
-    const d = await r.json();
-    msg.textContent = `✓ ${d.inserted || 0} cours mis à jour`; msg.className = 'msg ok';
-    log.innerHTML = `<span class="info">${d.date}</span>\n` +
-      `<span class="${d.scraped > 0 ? 'ok' : 'err'}">${d.scraped} lignes scrapées</span>\n` +
-      `<span class="ok">${d.inserted} insérées</span>\n` +
-      (d.fallback ? '<span class="info">Fallback historique utilisé</span>\n' : '') +
-      (d.errors?.length ? `<span class="err">Erreurs: ${JSON.stringify(d.errors)}</span>\n` : '');
-  } catch(e) {
-    msg.textContent = 'Erreur: ' + e.message; msg.className = 'msg err';
-    log.innerHTML += `<span class="err">Erreur: ${e.message}</span>\n`;
-  } finally { btn.disabled = false; }
+// ─── COURS ──────────────────────────────────────────────────────────────
+async function loadCours() {
+  const tbody = document.getElementById('cours-tbody');
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  const r = await api('cours_latest');
+  coursData = r?.data || [];
+  renderCoursTable(coursData);
 }
 
-async function runFallback() {
-  const msg = document.getElementById('scraper-msg');
-  msg.textContent = 'Recalcul en cours...'; msg.className = 'msg';
-  const r = await fetch('/api/admin?action=fallback', { headers: AH() }).then(r => r.json()).catch(() => ({}));
-  if (r.success) { msg.textContent = `✓ ${r.updated} cours recalculés`; msg.className = 'msg ok'; }
-  else { msg.textContent = r.error || 'Erreur'; msg.className = 'msg err'; }
-}
-
-async function importBOC() {
-  const date = document.getElementById('boc-date').value;
-  const nom = document.getElementById('boc-nom').value.trim();
-  const url = document.getElementById('boc-url').value.trim();
-  const msg = document.getElementById('boc-msg');
-  if (!date || !nom || !url) { msg.textContent = 'Tous les champs sont requis.'; msg.className = 'msg err'; return; }
-  const r = await fetch('/api/admin?action=boc', { method: 'POST', headers: AH(), body: JSON.stringify({ date_seance: date, fichier_nom: nom, fichier_url: url }) }).then(r => r.json()).catch(() => ({}));
-  if (r.success) { msg.textContent = '✓ BOC importé'; msg.className = 'msg ok'; ['boc-date','boc-nom','boc-url'].forEach(id => document.getElementById(id).value = ''); }
-  else { msg.textContent = r.error || 'Erreur'; msg.className = 'msg err'; }
-}
-
-// ─── ENTREPRISES ───
-async function loadEntreprises() {
-  const r = await fetch('/api/admin?action=entreprises', { headers: AH() }).then(r => r.json()).catch(() => ({ data: [] }));
-  const list = r.data || [];
-  document.getElementById('ent-count').textContent = list.length + ' sociétés';
-  document.getElementById('ent-tbody').innerHTML = list.map(e => `<tr>
-    <td class="td-gold">${e.ticker}</td>
-    <td>${e.nom}</td>
-    <td class="td-muted" style="font-size:12px;">${e.secteur || '—'}</td>
-    <td class="td-muted" style="font-size:12px;">${e.pays || '—'}</td>
-    <td>${e.compartiment === 'PRESTIGE' ? '<span class="badge badge-gold">Prestige</span>' : '<span class="badge" style="border:1px solid var(--border-s);color:var(--muted);">Principal</span>'}</td>
-    <td>${e.actif ? '<span class="badge badge-green">Actif</span>' : '<span class="badge badge-red">Inactif</span>'}</td>
-    <td><button class="btn btn-outline btn-sm" onclick="toggleActif('${e.ticker}', ${!e.actif})">${e.actif ? 'Désactiver' : 'Activer'}</button></td>
+function renderCoursTable(list) {
+  const tbody = document.getElementById('cours-tbody');
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--muted);padding:20px;">Aucun cours.</td></tr>'; return; }
+  tbody.innerHTML = list.map(c => `<tr>
+    <td class="td-gold">${c.ticker}</td>
+    <td class="td-mono td-muted">${c.date_seance || '—'}</td>
+    <td class="r td-mono">${fmt(c.cours)}</td>
+    <td class="r td-mono td-muted">${fmt(c.ouverture)}</td>
+    <td class="r td-mono">${fmt(c.plus_haut)}</td>
+    <td class="r td-mono">${fmt(c.plus_bas)}</td>
+    <td class="r td-mono td-muted">${fmt(c.volume)}</td>
+    <td class="r td-mono" style="color:${(c.variation_pct||0)>=0?'var(--green)':'var(--red)'};">${fmtPct(c.variation_pct)}</td>
+    <td style="display:flex;gap:4px;">
+      <button class="btn btn-outline btn-sm" onclick="openEditCours(${JSON.stringify(c).replace(/"/g,'&quot;')})">✏</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteCours('${c.id}')">✕</button>
+    </td>
   </tr>`).join('');
 }
 
-async function toggleActif(ticker, actif) {
-  await fetch('/api/admin?action=toggle_actif', { method: 'POST', headers: AH(), body: JSON.stringify({ ticker, actif }) });
-  loadEntreprises();
+function filterCoursTable() {
+  const q = document.getElementById('cours-filter').value.toUpperCase();
+  renderCoursTable(q ? coursData.filter(c => c.ticker?.includes(q)) : coursData);
 }
 
-// ─── FINANCIALS ───
+async function addCours() {
+  const body = {
+    ticker: v('c-ticker').toUpperCase(),
+    date_seance: v('c-date'),
+    cours: pf('c-cours'),
+    ouverture: pf('c-ouv') || null,
+    plus_haut: pf('c-haut') || null,
+    plus_bas: pf('c-bas') || null,
+    volume: pf('c-vol') || null,
+    variation_pct: pf('c-var') || null,
+    capitalisation: pf('c-capi') || null,
+  };
+  const msg = document.getElementById('c-msg');
+  if (!body.ticker || !body.date_seance || !body.cours) { msg.textContent = 'Ticker, date et cours requis.'; msg.className='msg err'; return; }
+  const r = await apiPost('add_cours', body);
+  if (r?.success) { msg.textContent='✓ Cours enregistré'; msg.className='msg ok'; loadCours(); }
+  else { msg.textContent = r?.error || 'Erreur'; msg.className='msg err'; }
+}
+
+function openEditCours(c) {
+  document.getElementById('modal-cours-id').value = c.id;
+  document.getElementById('modal-cours-val').value = c.cours || '';
+  document.getElementById('modal-cours-ouv').value = c.ouverture || '';
+  document.getElementById('modal-cours-haut').value = c.plus_haut || '';
+  document.getElementById('modal-cours-bas').value = c.plus_bas || '';
+  document.getElementById('modal-cours-vol').value = c.volume || '';
+  document.getElementById('modal-cours-var').value = c.variation_pct || '';
+  document.getElementById('modal-cours-msg').textContent = '';
+  document.getElementById('modal-cours').classList.add('open');
+}
+
+async function saveCours() {
+  const id = v('modal-cours-id');
+  const body = {
+    id,
+    cours: pf('modal-cours-val') || null,
+    ouverture: pf('modal-cours-ouv') || null,
+    plus_haut: pf('modal-cours-haut') || null,
+    plus_bas: pf('modal-cours-bas') || null,
+    volume: pf('modal-cours-vol') || null,
+    variation_pct: pf('modal-cours-var') || null,
+  };
+  const r = await apiPost('update_cours', body);
+  if (r?.success) { toast('Cours mis à jour'); closeModal('modal-cours'); loadCours(); }
+  else { document.getElementById('modal-cours-msg').textContent = r?.error || 'Erreur'; document.getElementById('modal-cours-msg').className='msg err'; }
+}
+
+async function deleteCours(id) {
+  if (!confirm('Supprimer ce cours ?')) return;
+  const r = await apiDel('delete_cours', id);
+  if (r?.success) { toast('Cours supprimé'); loadCours(); }
+  else toast(r?.error || 'Erreur', 'err');
+}
+
+// ─── HISTORIQUE ─────────────────────────────────────────────────────────
+async function addHistorique() {
+  const body = {
+    ticker: v('h-ticker').toUpperCase(),
+    date_seance: v('h-date'),
+    cours_cloture: pf('h-cloture'),
+    cours_ouverture: pf('h-ouverture') || null,
+    plus_haut: pf('h-haut') || null,
+    plus_bas: pf('h-bas') || null,
+    volume: pf('h-vol') || null,
+    variation_pct: pf('h-var') || null,
+  };
+  const msg = document.getElementById('h-msg');
+  if (!body.ticker || !body.date_seance || !body.cours_cloture) { msg.textContent='Ticker, date et clôture requis.'; msg.className='msg err'; return; }
+  const r = await apiPost('add_historique', body);
+  if (r?.success) { msg.textContent='✓ Enregistré'; msg.className='msg ok'; }
+  else { msg.textContent = r?.error || 'Erreur'; msg.className='msg err'; }
+}
+
+function parseBulkPreview() {
+  const csv = document.getElementById('bulk-csv').value.trim();
+  if (!csv) return;
+  const rows = csv.split('\n').filter(r=>r.trim());
+  const tbody = document.getElementById('bulk-preview-tbody');
+  tbody.innerHTML = rows.map((row, i) => {
+    const cols = row.split(',').map(s=>s.trim());
+    const [ticker, date, cloture, ouv, haut, bas, vol, varP] = cols;
+    const ok = ticker && date && cloture && !isNaN(parseFloat(cloture));
+    return `<tr>
+      <td class="td-gold">${ticker||'?'}</td>
+      <td>${date||'?'}</td>
+      <td class="r">${cloture||'?'}</td>
+      <td class="r td-muted">${vol||'—'}</td>
+      <td class="r td-muted">${varP||'—'}</td>
+      <td>${ok?'<span class="badge badge-green">✓ OK</span>':'<span class="badge badge-red">✕ Err</span>'}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('bulk-preview').style.display='';
+}
+
+async function importBulk() {
+  const csv = document.getElementById('bulk-csv').value.trim();
+  const msg = document.getElementById('bulk-msg');
+  if (!csv) { msg.textContent='Aucune donnée.'; msg.className='msg err'; return; }
+  const lines = csv.split('\n').filter(r=>r.trim());
+  const rows = lines.map(line => {
+    const [ticker, date_seance, cours_cloture, cours_ouverture, plus_haut, plus_bas, volume, variation_pct] = line.split(',').map(s=>s.trim());
+    return {
+      ticker: ticker?.toUpperCase(),
+      date_seance,
+      cours_cloture: parseFloat(cours_cloture) || null,
+      cours_ouverture: parseFloat(cours_ouverture) || null,
+      plus_haut: parseFloat(plus_haut) || null,
+      plus_bas: parseFloat(plus_bas) || null,
+      volume: parseFloat(volume) || null,
+      variation_pct: parseFloat(variation_pct) || null,
+    };
+  });
+  msg.textContent = `Import de ${rows.length} lignes...`; msg.className='msg info';
+  const r = await apiPost('add_historique_bulk', { rows });
+  if (r?.success) {
+    msg.textContent = `✓ ${r.inserted} lignes importées${r.skipped>0?`, ${r.skipped} erreurs`:''}`;
+    msg.className='msg ok';
+    if (r.errors?.length) console.warn('Erreurs import:', r.errors);
+  } else { msg.textContent = r?.error || 'Erreur'; msg.className='msg err'; }
+}
+
+async function loadHistoriqueTicker() {
+  const ticker = document.getElementById('hist-ticker-search').value.trim().toUpperCase();
+  if (!ticker) { toast('Entrez un ticker', 'err'); return; }
+  const tbody = document.getElementById('hist-tbody');
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  const r = await api(`historique_ticker&ticker=${ticker}`);
+  const list = r?.data || [];
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--muted);padding:16px;">Aucun historique trouvé.</td></tr>'; return; }
+  tbody.innerHTML = list.map(h => `<tr>
+    <td class="td-gold">${h.ticker}</td>
+    <td class="td-mono">${h.date_seance}</td>
+    <td class="r td-mono">${fmt(h.cours_cloture)}</td>
+    <td class="r td-mono td-muted">${fmt(h.cours_ouverture)}</td>
+    <td class="r td-mono">${fmt(h.plus_haut)}</td>
+    <td class="r td-mono">${fmt(h.plus_bas)}</td>
+    <td class="r td-mono td-muted">${fmt(h.volume)}</td>
+    <td class="r td-mono" style="color:${(h.variation_pct||0)>=0?'var(--green)':'var(--red)'};">${fmtPct(h.variation_pct)}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteHistorique('${h.id}')">✕</button></td>
+  </tr>`).join('');
+}
+
+async function deleteHistorique(id) {
+  if (!confirm('Supprimer cette entrée historique ?')) return;
+  const r = await apiDel('delete_historique', id);
+  if (r?.success) { toast('Entrée supprimée'); loadHistoriqueTicker(); }
+  else toast(r?.error || 'Erreur', 'err');
+}
+
+// ─── ENTREPRISES ────────────────────────────────────────────────────────
+async function loadEntreprises() {
+  const tbody = document.getElementById('ent-tbody');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  const r = await api('entreprises');
+  const list = r?.data || [];
+  document.getElementById('ent-count').textContent = list.length + ' sociétés';
+  tbody.innerHTML = list.map(e => `<tr>
+    <td class="td-gold">${e.ticker}</td>
+    <td>${e.nom}</td>
+    <td class="td-muted" style="font-size:12px;">${e.secteur||'—'}</td>
+    <td class="td-muted" style="font-size:12px;">${e.pays||'—'}</td>
+    <td>${e.compartiment==='PRESTIGE'?'<span class="badge badge-gold">Prestige</span>':'<span class="badge" style="border:1px solid var(--border-s);color:var(--muted);">Principal</span>'}</td>
+    <td>${e.actif?'<span class="badge badge-green">Actif</span>':'<span class="badge badge-red">Inactif</span>'}</td>
+    <td style="display:flex;gap:4px;">
+      <button class="btn btn-outline btn-sm" onclick='openEditEntreprise(${JSON.stringify(e).replace(/'/g,"&#39;")})'>✏ Modifier</button>
+      <button class="btn btn-outline btn-sm" onclick="toggleActif('${e.ticker}', ${!e.actif})">${e.actif?'Désactiver':'Activer'}</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openEditEntreprise(e) {
+  document.getElementById('modal-ent-ticker').value = e.ticker;
+  document.getElementById('modal-ent-title').textContent = `Modifier ${e.ticker}`;
+  document.getElementById('modal-ent-nom').value = e.nom || '';
+  document.getElementById('modal-ent-secteur').value = e.secteur || '';
+  document.getElementById('modal-ent-pays').value = e.pays || '';
+  document.getElementById('modal-ent-compart').value = e.compartiment || 'PRINCIPAL';
+  document.getElementById('modal-ent-isin').value = e.isin || '';
+  document.getElementById('modal-ent-msg').textContent = '';
+  document.getElementById('modal-entreprise').classList.add('open');
+}
+
+async function saveEntreprise() {
+  const ticker = v('modal-ent-ticker');
+  const body = {
+    ticker,
+    nom: v('modal-ent-nom'),
+    secteur: v('modal-ent-secteur') || null,
+    pays: v('modal-ent-pays') || null,
+    compartiment: v('modal-ent-compart'),
+    isin: v('modal-ent-isin') || null,
+  };
+  const r = await apiPost('update_entreprise', body);
+  if (r?.success) { toast(`${ticker} mis à jour`); closeModal('modal-entreprise'); loadEntreprises(); }
+  else { document.getElementById('modal-ent-msg').textContent = r?.error || 'Erreur'; document.getElementById('modal-ent-msg').className='msg err'; }
+}
+
+async function addEntreprise() {
+  const body = {
+    ticker: v('ne-ticker').toUpperCase(),
+    nom: v('ne-nom'),
+    secteur: v('ne-secteur') || null,
+    pays: v('ne-pays') || null,
+    compartiment: v('ne-compart'),
+    isin: v('ne-isin') || null,
+  };
+  const msg = document.getElementById('ne-msg');
+  if (!body.ticker || !body.nom) { msg.textContent='Ticker et nom requis.'; msg.className='msg err'; return; }
+  const r = await apiPost('add_entreprise', body);
+  if (r?.success) { msg.textContent=`✓ ${body.ticker} créée`; msg.className='msg ok'; loadEntreprises(); }
+  else { msg.textContent = r?.error || 'Erreur'; msg.className='msg err'; }
+}
+
+async function toggleActif(ticker, actif) {
+  const r = await apiPost('toggle_actif', { ticker, actif });
+  if (r?.success) { toast(`${ticker} ${actif?'activée':'désactivée'}`); loadEntreprises(); }
+  else toast(r?.error || 'Erreur', 'err');
+}
+
+// ─── FINANCIALS ─────────────────────────────────────────────────────────
 async function loadFinancials() {
-  const r = await fetch('/api/admin?action=financials', { headers: AH() }).then(r => r.json()).catch(() => ({ data: [] }));
-  const list = r.data || [];
-  document.getElementById('fin-count').textContent = list.length + ' entrées';
+  const tbody = document.getElementById('fin-tbody');
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  const r = await api('financials');
+  finData = r?.data || [];
+  document.getElementById('fin-count').textContent = finData.length + ' entrées';
+  renderFinTable(finData);
+}
+
+function renderFinTable(list) {
   document.getElementById('fin-tbody').innerHTML = list.map(f => `<tr>
     <td class="td-gold">${f.ticker}</td>
     <td class="td-mono">${f.annee}</td>
     <td class="r td-mono">${fmt(f.chiffre_affaires)}</td>
-    <td class="r td-mono" style="color:${(f.resultat_net||0)>0?'var(--green)':'var(--red)'}">${fmt(f.resultat_net)}</td>
+    <td class="r td-mono" style="color:${(f.resultat_net||0)>0?'var(--green)':'var(--red)'};">${fmt(f.resultat_net)}</td>
     <td class="r td-mono">${fmt(f.bpa)}</td>
-    <td class="r td-mono" style="color:var(--gold)">${fmt(f.dpa)}</td>
-    <td class="r td-mono">${f.roe ? f.roe + '%' : '—'}</td>
-    <td class="td-muted" style="font-size:11px;">${f.source || '—'}</td>
+    <td class="r td-mono" style="color:var(--gold);">${fmt(f.dpa)}</td>
+    <td class="r td-mono">${f.roe?f.roe+'%':'—'}</td>
+    <td class="td-muted" style="font-size:11px;">${f.source||'—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteFinancial('${f.id}')">✕</button></td>
   </tr>`).join('');
+}
+
+function filterFinTable() {
+  const q = document.getElementById('fin-filter').value.toUpperCase();
+  renderFinTable(q ? finData.filter(f => f.ticker?.includes(q)) : finData);
 }
 
 async function addFinancial() {
   const body = {
-    ticker: document.getElementById('fin-ticker').value.trim().toUpperCase(),
-    annee: parseInt(document.getElementById('fin-annee').value),
-    chiffre_affaires: parseFloat(document.getElementById('fin-ca').value) || null,
-    ebit: parseFloat(document.getElementById('fin-ebit').value) || null,
-    resultat_net: parseFloat(document.getElementById('fin-rn').value) || null,
-    bpa: parseFloat(document.getElementById('fin-bpa').value) || null,
-    dpa: parseFloat(document.getElementById('fin-dpa').value) || null,
-    roe: parseFloat(document.getElementById('fin-roe').value) || null,
-    fonds_propres: parseFloat(document.getElementById('fin-fp').value) || null,
-    dette_nette: parseFloat(document.getElementById('fin-dn').value) || null,
-    source: document.getElementById('fin-source').value.trim() || null
+    ticker: v('fin-ticker').toUpperCase(),
+    annee: parseInt(v('fin-annee')),
+    chiffre_affaires: pf('fin-ca') || null,
+    ebit: pf('fin-ebit') || null,
+    resultat_net: pf('fin-rn') || null,
+    bpa: pf('fin-bpa') || null,
+    dpa: pf('fin-dpa') || null,
+    roe: pf('fin-roe') || null,
+    fonds_propres: pf('fin-fp') || null,
+    dette_nette: pf('fin-dn') || null,
+    source: v('fin-source') || null,
   };
   const msg = document.getElementById('fin-msg');
-  if (!body.ticker || !body.annee) { msg.textContent = 'Ticker et année requis.'; msg.className = 'msg err'; return; }
-  const r = await fetch('/api/admin?action=add_financial', { method: 'POST', headers: AH(), body: JSON.stringify(body) }).then(r => r.json()).catch(() => ({}));
-  if (r.success) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; loadFinancials(); }
-  else { msg.textContent = r.error || 'Erreur'; msg.className = 'msg err'; }
+  if (!body.ticker || !body.annee) { msg.textContent='Ticker et année requis.'; msg.className='msg err'; return; }
+  const r = await apiPost('add_financial', body);
+  if (r?.success) { msg.textContent='✓ Enregistré'; msg.className='msg ok'; loadFinancials(); }
+  else { msg.textContent = r?.error || 'Erreur'; msg.className='msg err'; }
 }
 
-// ─── ANALYSES ───
+async function deleteFinancial(id) {
+  if (!confirm('Supprimer ce financial ?')) return;
+  const r = await apiDel('delete_financial', id);
+  if (r?.success) { toast('Supprimé'); loadFinancials(); }
+  else toast(r?.error || 'Erreur', 'err');
+}
+
+// ─── DIVIDENDES ─────────────────────────────────────────────────────────
+async function loadDividendes() {
+  const tbody = document.getElementById('div-tbody');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  const r = await api('dividendes');
+  divData = r?.data || [];
+  document.getElementById('div-count').textContent = divData.length + ' entrées';
+  tbody.innerHTML = divData.map(d => `<tr>
+    <td class="td-gold">${d.ticker}</td>
+    <td class="td-mono">${d.annee}</td>
+    <td class="r td-mono" style="color:var(--gold);">${fmt(d.montant)} FCFA</td>
+    <td class="r td-mono">${d.taux_rendement?d.taux_rendement+'%':'—'}</td>
+    <td class="td-muted">${d.date_detachement||'—'}</td>
+    <td class="td-muted">${d.date_paiement||'—'}</td>
+    <td><button class="btn btn-danger btn-sm" onclick="deleteDividende('${d.id}')">✕</button></td>
+  </tr>`).join('');
+}
+
+async function addDividende() {
+  const body = {
+    ticker: v('div-ticker').toUpperCase(),
+    annee: parseInt(v('div-annee')),
+    montant: pf('div-montant'),
+    taux_rendement: pf('div-tx') || null,
+    date_detachement: v('div-detach') || null,
+    date_paiement: v('div-paie') || null,
+  };
+  const msg = document.getElementById('div-msg');
+  if (!body.ticker || !body.annee || !body.montant) { msg.textContent='Ticker, année et montant requis.'; msg.className='msg err'; return; }
+  const r = await apiPost('add_dividende', body);
+  if (r?.success) { msg.textContent='✓ Enregistré'; msg.className='msg ok'; loadDividendes(); }
+  else { msg.textContent = r?.error || 'Erreur'; msg.className='msg err'; }
+}
+
+async function deleteDividende(id) {
+  if (!confirm('Supprimer ce dividende ?')) return;
+  const r = await apiDel('delete_dividende', id);
+  if (r?.success) { toast('Supprimé'); loadDividendes(); }
+  else toast(r?.error || 'Erreur', 'err');
+}
+
+// ─── ANALYSES ───────────────────────────────────────────────────────────
 async function loadAnalyses() {
-  const r = await fetch('/api/admin?action=analyses', { headers: AH() }).then(r => r.json()).catch(() => ({ data: [] }));
-  const list = r.data || [];
+  const r = await api('analyses');
+  const list = r?.data || [];
   document.getElementById('an-count').textContent = list.length + ' recommandations';
-  const colors = { Acheter: 'badge-green', Renforcer: 'badge-green', Conserver: 'badge-gold', Alléger: 'badge-orange', Vendre: 'badge-red' };
+  const colors = { Acheter:'badge-green', Renforcer:'badge-green', Conserver:'badge-gold', Alléger:'badge-orange', Vendre:'badge-red' };
   document.getElementById('an-list').innerHTML = !list.length
     ? '<div class="loading">Aucune recommandation.</div>'
-    : list.map(a => `<div style="display:flex;align-items:center;gap:14px;padding:14px 18px;border-bottom:1px solid var(--border-s);">
-      <span class="td-gold" style="min-width:56px;">${a.ticker}</span>
-      <span class="badge ${colors[a.recommandation] || ''}">${a.recommandation}</span>
-      <span class="td-mono">${a.objectif_cours ? fmt(a.objectif_cours) + ' FCFA' : '—'}</span>
+    : list.map(a => `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;border-bottom:1px solid var(--border-s);flex-wrap:wrap;">
+      <span class="td-gold" style="min-width:52px;">${a.ticker}</span>
+      <span class="badge ${colors[a.recommandation]||''}">${a.recommandation}</span>
+      <span class="td-mono">${a.objectif_cours?fmt(a.objectif_cours)+' FCFA':'—'}</span>
       <span style="color:${(a.potentiel_pct||0)>=0?'var(--green)':'var(--red)'};" class="td-mono">
-        ${a.potentiel_pct != null ? ((a.potentiel_pct>=0?'+':'')+parseFloat(a.potentiel_pct).toFixed(1)+'%') : '—'}
+        ${a.potentiel_pct!=null?((a.potentiel_pct>=0?'+':'')+parseFloat(a.potentiel_pct).toFixed(1)+'%'):'—'}
       </span>
-      <span style="flex:1;font-size:12px;color:var(--muted);">${a.commentaire || ''}</span>
-      <span style="font-size:11px;color:rgba(245,240,232,0.25);" class="td-mono">${a.date_analyse || ''}</span>
+      <span style="flex:1;font-size:12px;color:var(--muted);">${a.commentaire||''}</span>
+      <span style="font-size:11px;color:rgba(245,240,232,0.25);" class="td-mono">${a.date_analyse||''}</span>
       <button class="btn btn-danger btn-sm" onclick="deleteAnalyse('${a.id}')">✕</button>
     </div>`).join('');
 }
 
 async function addAnalyse() {
-  const ticker = document.getElementById('an-ticker').value.trim().toUpperCase();
-  const reco = document.getElementById('an-reco').value;
-  const objectif = parseFloat(document.getElementById('an-objectif').value) || null;
-  const cours = parseFloat(document.getElementById('an-cours').value) || null;
-  const analyste = document.getElementById('an-analyste').value.trim() || null;
-  const commentaire = document.getElementById('an-commentaire').value.trim() || null;
-  const potentiel = objectif && cours ? Math.round(((objectif - cours) / cours) * 10000) / 100 : null;
+  const ticker = v('an-ticker').toUpperCase();
+  const reco = v('an-reco');
+  const objectif = pf('an-objectif') || null;
+  const cours = pf('an-cours') || null;
+  const analyste = v('an-analyste') || null;
+  const commentaire = v('an-commentaire') || null;
+  const potentiel = objectif && cours ? Math.round(((objectif-cours)/cours)*10000)/100 : null;
   const msg = document.getElementById('an-msg');
-  if (!ticker || !reco) { msg.textContent = 'Ticker et recommandation requis.'; msg.className = 'msg err'; return; }
-  const r = await fetch('/api/admin?action=add_analyse', { method: 'POST', headers: AH(), body: JSON.stringify({ ticker, recommandation: reco, objectif_cours: objectif, cours_reference: cours, potentiel_pct: potentiel, analyste, commentaire }) }).then(r => r.json()).catch(() => ({}));
-  if (r.success) { msg.textContent = '✓ Publié'; msg.className = 'msg ok'; loadAnalyses(); }
-  else { msg.textContent = r.error || 'Erreur'; msg.className = 'msg err'; }
+  if (!ticker || !reco) { msg.textContent='Ticker et recommandation requis.'; msg.className='msg err'; return; }
+  const r = await apiPost('add_analyse', { ticker, recommandation:reco, objectif_cours:objectif, cours_reference:cours, potentiel_pct:potentiel, analyste, commentaire });
+  if (r?.success) { msg.textContent='✓ Publié'; msg.className='msg ok'; loadAnalyses(); }
+  else { msg.textContent = r?.error || 'Erreur'; msg.className='msg err'; }
 }
 
 async function deleteAnalyse(id) {
   if (!confirm('Supprimer ?')) return;
-  await fetch('/api/admin?action=delete_analyse&id=' + id, { method: 'DELETE', headers: AH() });
+  await apiDel('delete_analyse', id);
   loadAnalyses();
 }
 
-// ─── UTILISATEURS ───
+// ─── UTILISATEURS ───────────────────────────────────────────────────────
 async function loadUsers() {
-  const r = await fetch('/api/admin?action=users', { headers: AH() }).then(r => r.json()).catch(() => ({ data: [] }));
-  const list = r.data || [];
+  const tbody = document.getElementById('usr-tbody');
+  tbody.innerHTML = '<tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  const r = await api('users');
+  const list = r?.data || [];
   document.getElementById('usr-count').textContent = list.length + ' comptes';
-  document.getElementById('usr-tbody').innerHTML = list.map(u => `<tr>
+  tbody.innerHTML = list.map(u => `<tr>
     <td style="font-size:13px;">${u.email}</td>
-    <td class="td-muted">${u.nom || '—'}</td>
-    <td><span class="badge ${u.plan === 'pro' ? 'badge-gold' : u.plan === 'elite' ? 'badge-green' : ''}" style="${u.plan==='free'?'border:1px solid var(--border-s);color:var(--muted);':''}">${u.plan}</span></td>
-    <td class="td-mono td-muted" style="font-size:11px;">${u.plan_expire_at ? new Date(u.plan_expire_at).toLocaleDateString('fr-FR') : '—'}</td>
-    <td>${u.is_admin ? '<span class="badge badge-orange">Admin</span>' : '<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
-    <td class="td-mono td-muted" style="font-size:11px;">${u.created_at ? new Date(u.created_at).toLocaleDateString('fr-FR') : '—'}</td>
-    <td>
-      <select onchange="changePlan('${u.id}', this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--cream);padding:4px 8px;border-radius:3px;font-size:11px;cursor:pointer;">
+    <td class="td-muted">${u.nom||'—'}</td>
+    <td><span class="badge ${u.plan==='pro'?'badge-gold':u.plan==='elite'?'badge-green':''}" style="${u.plan==='free'?'border:1px solid var(--border-s);color:var(--muted);':''}">${u.plan}</span></td>
+    <td class="td-mono td-muted" style="font-size:11px;">${u.plan_expire_at?new Date(u.plan_expire_at).toLocaleDateString('fr-FR'):'—'}</td>
+    <td>${u.is_admin?'<span class="badge badge-orange">Admin</span>':'<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
+    <td class="td-mono td-muted" style="font-size:11px;">${u.created_at?new Date(u.created_at).toLocaleDateString('fr-FR'):'—'}</td>
+    <td style="display:flex;gap:6px;align-items:center;">
+      <select onchange="changePlan('${u.id}',this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--cream);padding:4px 7px;border-radius:3px;font-size:11px;cursor:pointer;">
         <option ${u.plan==='free'?'selected':''} value="free">Free</option>
         <option ${u.plan==='pro'?'selected':''} value="pro">Pro</option>
         <option ${u.plan==='elite'?'selected':''} value="elite">Elite</option>
       </select>
+      <button class="btn ${u.is_admin?'btn-orange':'btn-outline'} btn-sm" onclick="toggleAdmin('${u.id}',${!u.is_admin})" title="${u.is_admin?'Retirer admin':'Donner admin'}">${u.is_admin?'−Admin':'+Admin'}</button>
     </td>
   </tr>`).join('');
 }
 
 async function changePlan(userId, plan) {
-  await fetch('/api/admin?action=set_plan', { method: 'POST', headers: AH(), body: JSON.stringify({ user_id: userId, plan }) });
+  const r = await apiPost('set_plan', { user_id: userId, plan });
+  if (r?.success) toast(`Plan mis à jour : ${plan}`);
+  else toast(r?.error || 'Erreur', 'err');
 }
+
+async function toggleAdmin(userId, is_admin) {
+  const r = await apiPost('set_admin', { user_id: userId, is_admin });
+  if (r?.success) { toast(is_admin ? 'Admin accordé' : 'Admin retiré'); loadUsers(); }
+  else toast(r?.error || 'Erreur', 'err');
+}
+
+// ─── SCRAPER ────────────────────────────────────────────────────────────
+async function runScraper() {
+  const btn = event.target; btn.disabled = true;
+  const msg = document.getElementById('scraper-msg');
+  msg.textContent = 'Scraping en cours...'; msg.className='msg info';
+  const log = document.getElementById('scraper-log');
+  log.innerHTML = '<span class="info">Lancement du scraper...</span>\n';
+  try {
+    const r = await fetch('/api/scraper', { headers: { Authorization: `Bearer ${TK}` } });
+    const d = await r.json();
+    msg.textContent = `✓ ${d.inserted||0} cours mis à jour`; msg.className='msg ok';
+    log.innerHTML = `<span class="info">${d.date}</span>\n<span class="${d.scraped>0?'ok':'err'}">${d.scraped} lignes scrapées</span>\n<span class="ok">${d.inserted} insérées</span>\n${d.fallback?'<span class="info">Fallback utilisé</span>\n':''}${d.errors?.length?`<span class="err">Erreurs: ${JSON.stringify(d.errors)}</span>\n`:''}`;
+  } catch(e) {
+    msg.textContent = 'Erreur: '+e.message; msg.className='msg err';
+    log.innerHTML += `<span class="err">Erreur: ${e.message}</span>\n`;
+  } finally { btn.disabled=false; }
+}
+
+async function runFallback() {
+  const msg = document.getElementById('scraper-msg');
+  msg.textContent='Recalcul en cours...'; msg.className='msg info';
+  const r = await api('fallback');
+  if (r?.success) { msg.textContent=`✓ ${r.updated} cours recalculés`; msg.className='msg ok'; }
+  else { msg.textContent=r?.error||'Erreur'; msg.className='msg err'; }
+}
+
+async function repairTotaux() {
+  const msg = document.getElementById('scraper-msg');
+  msg.textContent='Réparation en cours...'; msg.className='msg info';
+  const r = await api('repair_totaux');
+  if (r?.success) { msg.textContent=`✓ ${r.repaired} variation_pct réparés`; msg.className='msg ok'; }
+  else { msg.textContent=r?.error||'Erreur'; msg.className='msg err'; }
+}
+
+async function importBOC() {
+  const date = v('boc-date'), nom = v('boc-nom').trim(), url = v('boc-url').trim();
+  const msg = document.getElementById('boc-msg');
+  if (!date||!nom||!url) { msg.textContent='Tous les champs requis.'; msg.className='msg err'; return; }
+  const r = await apiPost('boc', { date_seance:date, fichier_nom:nom, fichier_url:url });
+  if (r?.success) { msg.textContent='✓ BOC importé'; msg.className='msg ok'; ['boc-date','boc-nom','boc-url'].forEach(id=>set(id,'')); }
+  else { msg.textContent=r?.error||'Erreur'; msg.className='msg err'; }
+}
+
+// ─── DIAGNOSTIC ─────────────────────────────────────────────────────────
+async function runDiagnostic() {
+  const panel = document.getElementById('diag-result');
+  panel.innerHTML = '<div class="card"><div style="padding:20px;text-align:center;color:var(--muted);"><div class="spinner"></div><p style="margin-top:8px;">Analyse en cours...</p></div></div>';
+  const r = await api('diagnostic');
+  if (!r) { panel.innerHTML = '<div class="card"><div style="padding:20px;color:var(--red);">Erreur lors du diagnostic.</div></div>'; return; }
+
+  const tables = r.tables || {};
+  const tableRows = Object.entries(tables).map(([name, info]) =>
+    `<tr>
+      <td class="td-mono">${name}</td>
+      <td class="${info.ok?'diag-ok':'diag-err'}">${info.ok?'✓ OK':'✗ ERREUR'}</td>
+      <td class="r td-mono">${info.count?.toLocaleString('fr-FR') || '—'}</td>
+      <td style="font-size:11px;color:var(--red);">${info.error||''}</td>
+    </tr>`).join('');
+
+  const orphelins = r.tickers_orphelins || [];
+  panel.innerHTML = `
+    <div class="card" style="margin-bottom:12px;">
+      <div class="card-header"><span class="card-title">État des tables Supabase</span><span class="td-muted" style="font-size:11px;margin-left:auto;">${new Date(r.timestamp).toLocaleString('fr-FR')}</span></div>
+      <div class="tw"><table class="diag-table">
+        <thead><tr><th>Table</th><th>Statut</th><th class="r">Nb lignes</th><th>Erreur</th></tr></thead>
+        <tbody>${tableRows}</tbody>
+      </table></div>
+    </div>
+    ${orphelins.length>0?`<div class="card">
+      <div class="card-header"><span class="card-title">Tickers orphelins (cours sans entreprise)</span></div>
+      <div style="padding:14px;display:flex;flex-wrap:wrap;gap:6px;">
+        ${orphelins.map(t=>`<span class="badge badge-orange">${t}</span>`).join('')}
+      </div>
+    </div>`:'<div class="card"><div style="padding:14px;color:var(--green);font-size:13px;">✓ Aucun ticker orphelin détecté.</div></div>'}
+  `;
+}
+
+async function loadCoursErreurs() {
+  const panel = document.getElementById('cours-erreurs-panel');
+  panel.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  const r = await api('stats_errors');
+  const list = r?.cours_invalides || [];
+  if (!list.length) { panel.innerHTML='<div style="padding:14px;color:var(--green);font-size:13px;">✓ Aucun cours invalide.</div>'; return; }
+  panel.innerHTML = `<div class="tw"><table style="font-size:12px;">
+    <thead><tr><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Variation%</th></tr></thead>
+    <tbody>${list.map(c=>`<tr>
+      <td class="td-gold">${c.ticker}</td>
+      <td>${c.date_seance}</td>
+      <td class="r td-mono" style="color:var(--red);">${c.cours??'NULL'}</td>
+      <td class="r td-mono">${fmtPct(c.variation_pct)}</td>
+    </tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+// ─── MODAL ──────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.inline-edit').forEach(m => m.addEventListener('click', e => { if (e.target===m) closeModal(m.id); }));
+
+// ─── API HELPERS ────────────────────────────────────────────────────────
+async function api(action) {
+  try {
+    const r = await fetch(`/api/admin?action=${action}`, { headers: AH() });
+    const d = await r.json();
+    if (!d.success && d.error) { toast(d.error, 'err'); return null; }
+    return d;
+  } catch(e) { toast('Erreur réseau: '+e.message, 'err'); return null; }
+}
+
+async function apiPost(action, body) {
+  try {
+    const r = await fetch(`/api/admin?action=${action}`, { method:'POST', headers:AH(), body:JSON.stringify(body) });
+    return await r.json();
+  } catch(e) { toast('Erreur réseau', 'err'); return null; }
+}
+
+async function apiDel(action, id) {
+  try {
+    const r = await fetch(`/api/admin?action=${action}&id=${id}`, { method:'DELETE', headers:AH() });
+    return await r.json();
+  } catch(e) { toast('Erreur réseau', 'err'); return null; }
+}
+
+const v = id => (document.getElementById(id)?.value || '').trim();
+const set = (id, val) => { if (document.getElementById(id)) document.getElementById(id).value = val; };
+const pf = id => { const val = parseFloat(v(id)); return isNaN(val) ? null : val; };
 
 init();
 </script>
-
 </body>
 </html>
