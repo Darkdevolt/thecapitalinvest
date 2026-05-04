@@ -436,17 +436,20 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
   const raw = localStorage.getItem(SK);
   if (!raw) { window.location.href = 'login.html'; return; }
   try {
-    const sess = JSON.parse(raw);
-    if (!sess?.access_token) { window.location.href = 'login.html'; return; }
-    const token = sess.access_token;
-    const email = sess.user?.email || sess.email || '';
+    const parsed = JSON.parse(raw);
+    // Supporte l'ancien format {success, session} ET le nouveau format direct
+    const sess = parsed?.session || parsed;
+    const token = sess?.access_token;
+    if (!token) { window.location.href = 'login.html'; return; }
+    const email = sess.user?.email || sess.email || parsed.user?.email || '';
+    const userId = sess.user?.id || sess.id || parsed.user?.id || '';
     const initial = email.charAt(0).toUpperCase() || 'U';
     document.getElementById('userAvatar').textContent = initial;
     document.getElementById('userName').textContent = email;
 
     // Check is_admin
     try {
-      const r = await fetch(`https://otsiwiwlnowxeolbbgvm.supabase.co/rest/v1/users?select=is_admin&id=eq.${sess.user?.id || sess.id}`, {
+      const r = await fetch(`https://otsiwiwlnowxeolbbgvm.supabase.co/rest/v1/users?select=is_admin&id=eq.${userId}`, {
         headers: { 'apikey': SB_ANON, 'Authorization': `Bearer ${token}` }
       });
       const rows = await r.json();
