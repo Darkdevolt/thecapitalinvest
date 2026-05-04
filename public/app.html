@@ -25,6 +25,7 @@
   --red: #F87171;
   --red-bg: rgba(248,113,113,0.08);
   --blue: #60A5FA;
+  --blue-bg: rgba(96,165,250,0.08);
   --serif: 'Playfair Display', serif;
   --sans: 'DM Sans', sans-serif;
   --mono: 'DM Mono', monospace;
@@ -36,7 +37,7 @@ body { background: var(--bg); font-family: var(--sans); color: var(--cream); min
 body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.5; }
 
 /* SIDEBAR */
-.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; transition: transform .3s ease; }
+.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; transition: transform 0.3s ease; }
 .sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid var(--border2); cursor: pointer; }
 .logo-title { font-family: var(--serif); font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--cream); }
 .logo-title span { color: var(--gold); }
@@ -51,25 +52,22 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-light)); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--bg); font-weight: 600; flex-shrink: 0; }
 .user-name { font-size: 12.5px; font-weight: 500; color: var(--cream); line-height: 1.2; }
 .user-role { font-size: 10px; color: var(--dim); font-weight: 400; }
-.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; backdrop-filter: blur(2px); }
 
 /* HEADER */
 .header { position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: var(--header-h); background: rgba(10,8,4,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 32px; gap: 16px; z-index: 90; }
-.burger { display: none; flex-direction: column; gap: 4px; cursor: pointer; padding: 8px; margin-left: -8px; }
-.burger span { display: block; width: 20px; height: 1.5px; background: var(--cream); border-radius: 1px; transition: .2s; }
-.header-title { font-family: var(--serif); font-size: 17px; font-weight: 400; color: var(--cream); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.header-badge { display: flex; align-items: center; gap: 6px; background: var(--green-bg); border: 1px solid rgba(74,222,128,0.2); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 500; color: var(--green); letter-spacing: 0.04em; flex-shrink: 0; }
+.header-title { font-family: var(--serif); font-size: 17px; font-weight: 400; color: var(--cream); flex: 1; }
+.header-badge { display: flex; align-items: center; gap: 6px; background: var(--green-bg); border: 1px solid rgba(74,222,128,0.2); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 500; color: var(--green); letter-spacing: 0.04em; }
 .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
 @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
-.header-time { font-family: var(--mono); font-size: 12px; color: var(--dim); flex-shrink: 0; }
-.breadcrumb { position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0; height: 36px; background: rgba(10,8,4,0.7); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border2); display: flex; align-items: center; padding: 0 32px; gap: 8px; z-index: 89; font-size: 11px; color: var(--dim); letter-spacing: 0.04em; }
-.breadcrumb a { color: var(--muted); text-decoration: none; transition: color .15s; cursor: pointer; }
-.breadcrumb a:hover { color: var(--gold); }
-.breadcrumb .sep { opacity: .4; }
-.breadcrumb .current { color: var(--gold); font-weight: 500; }
+.header-time { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+.burger { display: none; font-size: 20px; color: var(--cream); background: none; border: none; cursor: pointer; padding: 4px; }
+.breadcrumb { position: fixed; top: var(--header-h); left: var(--sidebar-w); right: 0; height: 32px; background: rgba(10,8,4,0.6); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border2); display: flex; align-items: center; padding: 0 32px; gap: 8px; z-index: 85; font-size: 11px; color: var(--dim); }
+.breadcrumb a { color: var(--gold); text-decoration: none; cursor: pointer; }
+.breadcrumb a:hover { text-decoration: underline; }
+.breadcrumb span { color: var(--dim); }
 
 /* MAIN */
-.main { margin-left: var(--sidebar-w); margin-top: calc(var(--header-h) + 36px); min-height: calc(100vh - var(--header-h) - 36px); position: relative; z-index: 1; }
+.main { margin-left: var(--sidebar-w); margin-top: calc(var(--header-h) + 32px); min-height: calc(100vh - var(--header-h) - 32px); position: relative; z-index: 1; }
 .view { display: none; padding: 32px; animation: fadeIn 0.35s ease; }
 .view.active { display: block; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
@@ -90,6 +88,7 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 .grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
 .grid-7030 { display: grid; grid-template-columns: 1fr 300px; gap: 20px; margin-bottom: 20px; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
 
 /* STAT CARDS */
 .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
@@ -119,6 +118,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .pill.up { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
 .pill.down { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
 .pill.neutral { background: rgba(245,240,232,0.05); color: var(--dim); border: 1px solid var(--border2); }
+.pill.blue { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
 .sector-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; background: rgba(184,150,78,0.08); color: var(--gold); border: 1px solid rgba(184,150,78,0.15); }
 
 /* CHART */
@@ -138,7 +138,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .fiche-hero::after { content:''; position:absolute; top:0; right:0; width:200px; height:200px; background:radial-gradient(circle, rgba(184,150,78,0.06) 0%, transparent 70%); pointer-events:none; }
 .fiche-ticker-label { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
 .fiche-company { font-family: var(--serif); font-size: 24px; font-weight: 500; color: var(--cream); margin-bottom: 12px; }
-.fiche-price-row { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 6px; flex-wrap: wrap; }
+.fiche-price-row { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 6px; }
 .fiche-price { font-family: var(--mono); font-size: 34px; font-weight: 500; color: var(--cream); }
 .fiche-meta { font-size: 12px; color: var(--dim); margin-top: 6px; }
 .ratios-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; margin-top: 20px; }
@@ -165,8 +165,8 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .boc-footer { padding: 9px 18px; background: rgba(0,0,0,0.2); font-size: 11px; color: var(--dim); }
 
 /* ANALYSE */
-.analyse-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; cursor: pointer; transition: all .2s; }
-.analyse-card:hover { border-color: var(--gold-dim); transform: translateY(-1px); }
+.analyse-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; }
+.analyse-card:hover { border-color: var(--gold-dim); }
 .analyse-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
 .analyse-ticker { font-family: var(--mono); font-size: 11px; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 3px; }
 .analyse-title { font-size: 15px; font-weight: 500; color: var(--cream); }
@@ -176,20 +176,6 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .rec.hold { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
 .analyse-text { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
 .analyse-meta { display: flex; gap: 16px; font-size: 11px; color: var(--dim); flex-wrap: wrap; }
-
-/* ANALYSE DETAIL */
-.analyse-detail-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 32px; margin-bottom: 20px; position: relative; overflow: hidden; }
-.analyse-detail-hero::after { content:''; position:absolute; top:0; right:0; width:300px; height:300px; background:radial-gradient(circle, rgba(184,150,78,0.05) 0%, transparent 70%); pointer-events:none; }
-.analyse-detail-ticker { font-family: var(--mono); font-size: 12px; color: var(--gold); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
-.analyse-detail-title { font-family: var(--serif); font-size: 28px; font-weight: 500; color: var(--cream); margin-bottom: 16px; line-height: 1.3; }
-.analyse-detail-rec { display: inline-flex; align-items: center; gap: 6px; padding: 6px 16px; border-radius: 20px; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 16px; }
-.analyse-detail-rec.buy { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
-.analyse-detail-rec.sell { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
-.analyse-detail-rec.hold { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
-.analyse-detail-body { font-size: 14px; color: var(--muted); line-height: 1.8; max-width: 780px; }
-.analyse-detail-body p { margin-bottom: 16px; }
-.analyse-detail-meta { display: flex; gap: 24px; font-size: 12px; color: var(--dim); margin-top: 24px; flex-wrap: wrap; }
-.analyse-detail-meta span { display: flex; align-items: center; gap: 6px; }
 
 /* FIN */
 .fin-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid rgba(184,150,78,0.04); }
@@ -204,42 +190,84 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.18s; margin-bottom: 20px; }
 .back-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
 
-/* EMPTY / CONSTRUCTION */
-.empty-state { text-align: center; padding: 80px 20px; color: var(--dim); }
-.empty-icon { font-size: 48px; margin-bottom: 18px; opacity: 0.4; }
-.empty-title { font-family: var(--serif); font-size: 20px; color: var(--muted); margin-bottom: 8px; }
-.empty-text { font-size: 14px; max-width: 400px; margin: 0 auto 24px; line-height: 1.6; }
-.empty-action { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border: 1px solid var(--gold-dim); border-radius: 8px; background: rgba(184,150,78,0.05); color: var(--gold); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.18s; }
-.empty-action:hover { background: rgba(184,150,78,0.1); }
+/* EMPTY */
+.empty-state { text-align: center; padding: 60px 20px; color: var(--dim); }
+.empty-icon { font-size: 36px; margin-bottom: 14px; opacity: 0.5; }
+.empty-title { font-family: var(--serif); font-size: 18px; color: var(--muted); margin-bottom: 6px; }
+.empty-text { font-size: 13px; }
 
-/* SKELETON */
-.skeleton { background: linear-gradient(90deg, rgba(184,150,78,0.03) 25%, rgba(184,150,78,0.08) 50%, rgba(184,150,78,0.03) 75%); background-size: 200% 100%; animation: skeleton 1.5s infinite; border-radius: 4px; }
-@keyframes skeleton { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+/* PORTEFEUILLE */
+.portf-summary { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 20px; }
+.portf-item { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.portf-item-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
+.portf-item-value { font-family: var(--mono); font-size: 20px; font-weight: 500; color: var(--cream); }
+.portf-item-sub { font-size: 11px; color: var(--dim); margin-top: 4px; }
+.portf-form { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.portf-form input, .portf-form select { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 13px; color: var(--cream); outline: none; }
+.portf-form input:focus, .portf-form select:focus { border-color: var(--gold); }
+.portf-form button { padding: 10px 20px; background: var(--gold); border: none; border-radius: 8px; color: var(--bg); font-family: var(--sans); font-size: 13px; font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+.portf-form button:hover { opacity: 0.85; }
+.portf-table-actions { display: flex; gap: 6px; }
+.portf-table-actions button { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--dim); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.portf-table-actions button:hover { border-color: var(--red); color: var(--red); }
+
+/* ALERTES */
+.alert-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 20px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.alert-card.active { border-color: var(--green); background: rgba(74,222,128,0.03); }
+.alert-card.triggered { border-color: var(--gold); background: rgba(184,150,78,0.05); }
+.alert-info { flex: 1; }
+.alert-ticker { font-family: var(--mono); font-size: 12px; color: var(--gold); }
+.alert-desc { font-size: 13px; color: var(--cream); margin-top: 2px; }
+.alert-meta { font-size: 11px; color: var(--dim); margin-top: 4px; }
+.alert-actions { display: flex; gap: 8px; }
+.alert-actions button { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--dim); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+.alert-actions button:hover { border-color: var(--red); color: var(--red); }
+
+/* SCREENER */
+.screener-filters { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px,1fr)); gap: 12px; margin-bottom: 20px; }
+.screener-filters label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); display: block; margin-bottom: 4px; }
+.screener-filters input, .screener-filters select { width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 13px; color: var(--cream); outline: none; }
+.screener-filters input:focus, .screener-filters select:focus { border-color: var(--gold); }
+
+/* TECH ANALYSIS */
+.tech-indicator { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+.tech-indicator-title { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 8px; }
+.tech-indicator-value { font-family: var(--mono); font-size: 20px; font-weight: 500; color: var(--cream); }
+.tech-indicator-signal { font-size: 12px; margin-top: 4px; }
+.tech-signal-buy { color: var(--green); }
+.tech-signal-sell { color: var(--red); }
+.tech-signal-neutral { color: var(--dim); }
+
+/* OVERLAY MOBILE */
+.overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
+.overlay.open { display: block; }
 
 /* RESPONSIVE */
 @media (max-width:1024px) {
 .ratios-grid { grid-template-columns: repeat(2,1fr); }
 .grid-7030 { grid-template-columns: 1fr; }
+.portf-summary { grid-template-columns: repeat(2,1fr); }
+.grid-4 { grid-template-columns: repeat(2,1fr); }
 }
 @media (max-width:768px) {
 :root { --sidebar-w: 0px; }
 .sidebar { transform: translateX(-240px); }
 .sidebar.open { transform: translateX(0); }
-.sidebar-overlay { display: block; opacity: 0; pointer-events: none; transition: opacity .3s; }
-.sidebar-overlay.open { opacity: 1; pointer-events: auto; }
-.burger { display: flex; }
-.header { left: 0; padding: 0 16px; }
-.breadcrumb { left: 0; padding: 0 16px; }
-.main { margin-left: 0; }
+.burger { display: block; }
 .grid-3 { grid-template-columns: 1fr; }
 .view { padding: 20px 16px; }
-.analyse-detail-hero { padding: 20px; }
-.analyse-detail-title { font-size: 22px; }
+.portf-summary { grid-template-columns: 1fr; }
+.grid-4 { grid-template-columns: 1fr; }
+.header { padding: 0 16px; }
+.breadcrumb { padding: 0 16px; left: 0; }
+.main { margin-left: 0; }
 }
 </style>
 <base target="_blank">
 </head>
 <body>
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 
 <!-- SIDEBAR -->
 <aside class="sidebar" id="sidebar">
@@ -249,21 +277,21 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   </div>
 
   <div class="sidebar-section">Marché</div>
-  <div class="nav-item active" data-nav="overview" onclick="nav('overview')"><span class="icon">◈</span> Vue d'ensemble</div>
-  <div class="nav-item" data-nav="titres" onclick="nav('titres')"><span class="icon">▦</span> Titres BRVM</div>
-  <div class="nav-item" data-nav="boc" onclick="nav('boc')"><span class="icon">◉</span> BOC / Emprunts</div>
+  <div class="nav-item active" onclick="nav('overview')"><span class="icon">◈</span> Vue d'ensemble</div>
+  <div class="nav-item" onclick="nav('titres')"><span class="icon">▦</span> Titres BRVM</div>
+  <div class="nav-item" onclick="nav('boc')"><span class="icon">◉</span> BOC / Emprunts</div>
 
   <div class="sidebar-section">Analyse</div>
-  <div class="nav-item" data-nav="analyses" onclick="nav('analyses')"><span class="icon">◎</span> Analyses Fondamentales</div>
-  <div class="nav-item" data-nav="analyse-technique" onclick="nav('analyse-technique')"><span class="icon">📈</span> Analyse Technique</div>
-  <div class="nav-item" data-nav="screener" onclick="nav('screener')"><span class="icon">⊟</span> Screener</div>
+  <div class="nav-item" onclick="nav('analyses')"><span class="icon">◎</span> Analyses Fondamentales</div>
+  <div class="nav-item" onclick="nav('analyse-technique')"><span class="icon">📈</span> Analyse Technique</div>
+  <div class="nav-item" onclick="nav('screener')"><span class="icon">⊟</span> Screener</div>
 
   <div class="sidebar-section">Gestion</div>
-  <div class="nav-item" data-nav="portefeuille" onclick="nav('portefeuille')"><span class="icon">◧</span> Portefeuille</div>
-  <div class="nav-item" data-nav="alertes" onclick="nav('alertes')"><span class="icon">△</span> Alertes</div>
+  <div class="nav-item" onclick="nav('portefeuille')"><span class="icon">◧</span> Portefeuille</div>
+  <div class="nav-item" onclick="nav('alertes')"><span class="icon">△</span> Alertes</div>
 
   <div class="sidebar-section">Données</div>
-  <div class="nav-item" data-nav="financials" onclick="nav('financials')"><span class="icon">≡</span> États Financiers</div>
+  <div class="nav-item" onclick="nav('financials')"><span class="icon">≡</span> États Financiers</div>
 
   <div class="sidebar-bottom">
     <div class="user-info" id="userInfo">
@@ -283,13 +311,10 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
     </button>
   </div>
 </aside>
-<div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
 <!-- HEADER -->
 <header class="header">
-  <div class="burger" id="burger" onclick="toggleSidebar()">
-    <span></span><span></span><span></span>
-  </div>
+  <button class="burger" onclick="toggleSidebar()">☰</button>
   <div class="header-title" id="headerTitle">Vue d'ensemble — BRVM</div>
   <div class="header-badge"><div class="live-dot"></div>Marché ouvert</div>
   <div class="header-time" id="headerTime"></div>
@@ -351,7 +376,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th onclick="sortTable('titresTable',0)">Ticker ↕</th><th onclick="sortTable('titresTable',1)">Société ↕</th><th class="right" onclick="sortTable('titresTable',2)">Cours ↕</th><th class="right" onclick="sortTable('titresTable',3)">Variation ↕</th><th class="right">+ haut 52s</th><th class="right">+ bas 52s</th><th class="right" onclick="sortTable('titresTable',6)">Volume ↕</th><th>Secteur ↕</th></tr></thead>
+        <thead><tr><th onclick="sortTable('titresTable',0)">Ticker ↕</th><th onclick="sortTable('titresTable',1)">Société ↕</th><th class="right" onclick="sortTable('titresTable',2)">Cours ↕</th><th class="right" onclick="sortTable('titresTable',3)">Variation ↕</th><th class="right" onclick="sortTable('titresTable',4)">+ haut 52s ↕</th><th class="right" onclick="sortTable('titresTable',5)">+ bas 52s ↕</th><th class="right" onclick="sortTable('titresTable',6)">Volume ↕</th><th onclick="sortTable('titresTable',7)">Secteur ↕</th></tr></thead>
         <tbody id="titresTable"></tbody>
       </table>
     </div>
@@ -453,7 +478,118 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 <!-- ═══ ANALYSE DETAIL ═══ -->
 <div class="view" id="view-analyse-detail">
   <button class="back-btn" onclick="nav('analyses')">← Retour aux analyses</button>
-  <div id="analyseDetailContainer"></div>
+  <div id="analyseDetailContent"></div>
+</div>
+
+<!-- ═══ ANALYSE TECHNIQUE ═══ -->
+<div class="view" id="view-analyse-technique">
+  <div class="page-header">
+    <h1>Analyse <span style="color:var(--gold)">Technique</span></h1>
+    <p>Indicateurs techniques, moyennes mobiles et signaux de trading</p>
+  </div>
+  <div class="search-bar">
+    <select class="search-input" id="techTickerSelect" onchange="loadTechAnalysis()" style="flex:0 0 220px">
+      <option value="">Choisir un ticker...</option>
+    </select>
+    <button class="filter-btn active" onclick="setTechPeriod(30,this)">1M</button>
+    <button class="filter-btn" onclick="setTechPeriod(90,this)">3M</button>
+    <button class="filter-btn" onclick="setTechPeriod(180,this)">6M</button>
+    <button class="filter-btn" onclick="setTechPeriod(252,this)">1A</button>
+  </div>
+  <div id="techContent">
+    <div class="empty-state">
+      <div class="empty-icon">📈</div>
+      <div class="empty-title">Sélectionnez un titre</div>
+      <div class="empty-text">Choisissez un ticker ci-dessus pour afficher les indicateurs techniques.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREENER ═══ -->
+<div class="view" id="view-screener">
+  <div class="page-header">
+    <h1>Screener <span style="color:var(--gold)">BRVM</span></h1>
+    <p>Filtrer les titres selon vos critères de valorisation et de performance</p>
+  </div>
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="screener-filters">
+        <div><label>Secteur</label><select id="scrSector" onchange="runScreener()"><option value="">Tous</option><option value="Banque">Banque</option><option value="Agro">Agro</option><option value="Industrie">Industrie</option><option value="Telecom">Telecom</option></select></div>
+        <div><label>Cours min</label><input type="number" id="scrMinPrice" placeholder="0" oninput="runScreener()"></div>
+        <div><label>Cours max</label><input type="number" id="scrMaxPrice" placeholder="∞" oninput="runScreener()"></div>
+        <div><label>Variation min %</label><input type="number" id="scrMinVar" placeholder="-100" oninput="runScreener()"></div>
+        <div><label>Variation max %</label><input type="number" id="scrMaxVar" placeholder="100" oninput="runScreener()"></div>
+        <div><label>Volume min</label><input type="number" id="scrMinVol" placeholder="0" oninput="runScreener()"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Résultats</div><div style="font-size:12px;color:var(--dim)" id="scrCount"></div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th><th>Secteur</th></tr></thead>
+        <tbody id="screenerTable"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Ajustez les filtres pour voir les résultats</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PORTEFEUILLE ═══ -->
+<div class="view" id="view-portefeuille">
+  <div class="page-header">
+    <h1>Portefeuille <span style="color:var(--gold)">Simulé</span></h1>
+    <p>Suivez vos positions et votre performance en temps réel</p>
+  </div>
+  <div class="portf-summary" id="portfSummary">
+    <div class="portf-item"><div class="portf-item-label">Valeur totale</div><div class="portf-item-value" id="pfTotal">—</div></div>
+    <div class="portf-item"><div class="portf-item-label">Investi</div><div class="portf-item-value" id="pfInvested">—</div></div>
+    <div class="portf-item"><div class="portf-item-label">P&L</div><div class="portf-item-value" id="pfPL">—</div></div>
+    <div class="portf-item"><div class="portf-item-label">Rendement</div><div class="portf-item-value" id="pfReturn">—</div></div>
+  </div>
+  <div class="card mb20">
+    <div class="card-header"><div class="card-title">Ajouter une position</div></div>
+    <div class="card-body">
+      <div class="portf-form">
+        <select id="pfTicker"><option value="">Ticker...</option></select>
+        <input type="number" id="pfQty" placeholder="Quantité" min="1">
+        <input type="number" id="pfPrice" placeholder="Prix d'achat (FCFA)">
+        <input type="date" id="pfDate" placeholder="Date">
+        <button onclick="addPosition()">Ajouter</button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Positions</div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ticker</th><th class="right">Qté</th><th class="right">Prix achat</th><th class="right">Cours actuel</th><th class="right">Valeur</th><th class="right">P&L</th><th></th></tr></thead>
+        <tbody id="pfTable"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ALERTES ═══ -->
+<div class="view" id="view-alertes">
+  <div class="page-header">
+    <h1>Alertes <span style="color:var(--gold)">de Prix</span></h1>
+    <p>Recevez une notification quand un titre atteint votre seuil</p>
+  </div>
+  <div class="card mb20">
+    <div class="card-header"><div class="card-title">Nouvelle alerte</div></div>
+    <div class="card-body">
+      <div class="portf-form">
+        <select id="alertTicker"><option value="">Ticker...</option></select>
+        <select id="alertCondition">
+          <option value="above">Cours supérieur à</option>
+          <option value="below">Cours inférieur à</option>
+        </select>
+        <input type="number" id="alertPrice" placeholder="Seuil (FCFA)">
+        <button onclick="addAlert()">Créer l'alerte</button>
+      </div>
+    </div>
+  </div>
+  <div id="alertsList"></div>
 </div>
 
 <!-- ═══ FINANCIALS ═══ -->
@@ -466,46 +602,6 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
     <input class="search-input" id="searchFin" placeholder="🔍  Chercher une société (ex: SGBCI, ONAB)..." oninput="filterFin()">
   </div>
   <div id="finGrid"></div>
-</div>
-
-<!-- ═══ ANALYSE TECHNIQUE (construction) ═══ -->
-<div class="view" id="view-analyse-technique">
-  <div class="empty-state">
-    <div class="empty-icon">📈</div>
-    <div class="empty-title">Analyse Technique</div>
-    <div class="empty-text">Cette section est en cours de développement. Vous y retrouverez bientôt les indicateurs techniques, les figures chartistes et les signaux de trading pour les titres BRVM.</div>
-    <button class="empty-action" onclick="nav('overview')">← Retour au tableau de bord</button>
-  </div>
-</div>
-
-<!-- ═══ SCREENER (construction) ═══ -->
-<div class="view" id="view-screener">
-  <div class="empty-state">
-    <div class="empty-icon">⊟</div>
-    <div class="empty-title">Screener</div>
-    <div class="empty-text">Filtrez les titres BRVM selon vos critères (P/E, rendement, capitalisation, secteur...). Cette fonctionnalité arrive prochainement.</div>
-    <button class="empty-action" onclick="nav('overview')">← Retour au tableau de bord</button>
-  </div>
-</div>
-
-<!-- ═══ PORTEFEUILLE (construction) ═══ -->
-<div class="view" id="view-portefeuille">
-  <div class="empty-state">
-    <div class="empty-icon">◧</div>
-    <div class="empty-title">Portefeuille</div>
-    <div class="empty-text">Suivez la performance de vos actifs BRVM en temps réel, consultez vos plus-values et recevez des alertes personnalisées. En construction.</div>
-    <button class="empty-action" onclick="nav('overview')">← Retour au tableau de bord</button>
-  </div>
-</div>
-
-<!-- ═══ ALERTES (construction) ═══ -->
-<div class="view" id="view-alertes">
-  <div class="empty-state">
-    <div class="empty-icon">△</div>
-    <div class="empty-title">Alertes</div>
-    <div class="empty-text">Créez des alertes de prix et de variation pour ne manquer aucune opportunité sur les marchés BRVM. Disponible bientôt.</div>
-    <button class="empty-action" onclick="nav('overview')">← Retour au tableau de bord</button>
-  </div>
 </div>
 
 </main>
@@ -569,10 +665,11 @@ async function sb(table, params = {}) {
 // ═══════════════════════════════════════
 let allCours = [], allBoc = [], allAnalyses = [], allFinancials = [], allEntreprises = [];
 let ficheHistorique = [], ficheChartPeriod = 30;
-let ficheChartInst = null, compositeChartInst = null;
+let ficheChartInst = null, compositeChartInst = null, techChartInst = null;
 let prevView = 'titres';
 let _titreFilter = 'all', _bocFilter = 'all', _analyseFilter = 'all';
-let currentView = 'overview';
+let _techPeriod = 30, _techTicker = '';
+let _sortState = {};
 
 // ═══════════════════════════════════════
 // CLOCK & NAV
@@ -583,93 +680,87 @@ setInterval(() => {
 }, 1000);
 
 const TITLES = {
-  overview: 'Vue d\'ensemble — BRVM',
-  titres: 'Titres BRVM',
-  boc: 'BOC — Bulletin Officiel',
-  analyses: 'Analyses Fondamentales',
-  'analyse-detail': 'Analyse Fondamentale',
-  financials: 'États Financiers',
-  fiche: 'Fiche Titre',
-  'analyse-technique': 'Analyse Technique',
-  screener: 'Screener',
-  portefeuille: 'Portefeuille',
-  alertes: 'Alertes'
+  overview:'Vue d\'ensemble — BRVM',
+  titres:'Titres BRVM',
+  boc:'BOC — Bulletin Officiel',
+  analyses:'Analyses Fondamentales',
+  'analyse-detail':'Détail Analyse',
+  'analyse-technique':'Analyse Technique',
+  screener:'Screener BRVM',
+  portefeuille:'Portefeuille',
+  alertes:'Alertes de Prix',
+  financials:'États Financiers',
+  fiche:'Fiche Titre'
 };
 
 const BREADCRUMBS = {
   overview: [{label:'Tableau de bord', view:'overview'}],
-  titres: [{label:'Marché', view:'overview'}, {label:'Titres BRVM', view:'titres'}],
-  fiche: [{label:'Marché', view:'overview'}, {label:'Titres BRVM', view:'titres'}],
-  boc: [{label:'Marché', view:'overview'}, {label:'BOC', view:'boc'}],
-  analyses: [{label:'Analyse', view:'overview'}, {label:'Analyses Fondamentales', view:'analyses'}],
-  'analyse-detail': [{label:'Analyse', view:'overview'}, {label:'Analyses Fondamentales', view:'analyses'}],
-  financials: [{label:'Données', view:'overview'}, {label:'États Financiers', view:'financials'}],
-  'analyse-technique': [{label:'Analyse', view:'overview'}, {label:'Analyse Technique', view:'analyse-technique'}],
-  screener: [{label:'Analyse', view:'overview'}, {label:'Screener', view:'screener'}],
-  portefeuille: [{label:'Gestion', view:'overview'}, {label:'Portefeuille', view:'portefeuille'}],
-  alertes: [{label:'Gestion', view:'overview'}, {label:'Alertes', view:'alertes'}]
+  titres: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}],
+  fiche: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}, {label:'Fiche', view:'fiche'}],
+  boc: [{label:'Tableau de bord', view:'overview'}, {label:'BOC', view:'boc'}],
+  analyses: [{label:'Tableau de bord', view:'overview'}, {label:'Analyses', view:'analyses'}],
+  'analyse-detail': [{label:'Tableau de bord', view:'overview'}, {label:'Analyses', view:'analyses'}, {label:'Détail', view:'analyse-detail'}],
+  'analyse-technique': [{label:'Tableau de bord', view:'overview'}, {label:'Analyse Technique', view:'analyse-technique'}],
+  screener: [{label:'Tableau de bord', view:'overview'}, {label:'Screener', view:'screener'}],
+  portefeuille: [{label:'Tableau de bord', view:'overview'}, {label:'Portefeuille', view:'portefeuille'}],
+  alertes: [{label:'Tableau de bord', view:'overview'}, {label:'Alertes', view:'alertes'}],
+  financials: [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}]
 };
 
-function toggleSidebar() {
-  document.getElementById('sidebar').classList.toggle('open');
-  document.getElementById('sidebarOverlay').classList.toggle('open');
-}
-
-function updateBreadcrumb(viewId, extra) {
-  const bc = document.getElementById('breadcrumb');
-  const crumbs = BREADCRUMBS[viewId] || BREADCRUMBS.overview;
-  let html = '';
-  crumbs.forEach((c, i) => {
-    if (i > 0) html += '<span class="sep">/</span>';
-    const isLast = i === crumbs.length - 1 && !extra;
-    if (isLast) html += `<span class="current">${c.label}</span>`;
-    else html += `<a onclick="nav('${c.view}')">${c.label}</a>`;
-  });
-  if (extra) {
-    html += `<span class="sep">/</span><span class="current">${extra}</span>`;
-  }
-  bc.innerHTML = html;
-}
-
-function nav(id, options = {}) {
-  currentView = id;
+function nav(id, noHash) {
   document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const v = document.getElementById('view-' + id);
   if (v) v.classList.add('active');
-  const navEl = document.querySelector(`.nav-item[data-nav="${id}"]`);
+  const navEl = document.querySelector(`.nav-item[onclick="nav('${id}')"]`);
   if (navEl) navEl.classList.add('active');
   document.getElementById('headerTitle').textContent = TITLES[id] || id;
-  updateBreadcrumb(id, options.breadcrumbExtra);
-  // Close mobile sidebar
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebarOverlay').classList.remove('open');
-  // Update hash
-  if (options.noHash) return;
-  if (id === 'fiche' && options.ticker) {
-    history.replaceState(null, '', `#fiche=${options.ticker}`);
-  } else if (id === 'analyse-detail' && options.analyseId != null) {
-    history.replaceState(null, '', `#analyse=${options.analyseId}`);
-  } else {
-    history.replaceState(null, '', `#view=${id}`);
-  }
+  updateBreadcrumb(id);
+  if (!noHash) setHashForView(id);
+  if (window.innerWidth <= 768) closeSidebar();
+}
+
+function updateBreadcrumb(viewId) {
+  const bc = document.getElementById('breadcrumb');
+  const items = BREADCRUMBS[viewId] || BREADCRUMBS['overview'];
+  bc.innerHTML = items.map((item, i) => {
+    if (i === items.length - 1) return `<span>${item.label}</span>`;
+    return `<a onclick="nav('${item.view}')">${item.label}</a><span>›</span>`;
+  }).join('');
+}
+
+function setHashForView(id) {
+  const hashMap = { overview:'', titres:'#titres', boc:'#boc', analyses:'#analyses', 'analyse-detail':'#analyse-detail', 'analyse-technique':'#analyse-technique', screener:'#screener', portefeuille:'#portefeuille', alertes:'#alertes', financials:'#financials', fiche:'#fiche' };
+  const h = hashMap[id] || '';
+  if (h !== location.hash) history.replaceState(null, '', h || location.pathname);
 }
 
 function parseHash() {
-  const h = window.location.hash;
+  const h = location.hash;
   if (h.startsWith('#fiche=')) {
-    const ticker = h.split('=')[1];
-    if (ticker) { openFiche(ticker, 'titres', true); return; }
+    const ticker = h.replace('#fiche=', '');
+    openFiche(ticker, 'titres', true);
+    return;
   }
   if (h.startsWith('#analyse=')) {
-    const id = parseInt(h.split('=')[1]);
-    if (!isNaN(id)) { openAnalyseDetail(id, true); return; }
+    const id = h.replace('#analyse=', '');
+    openAnalyseDetail(+id, true);
+    return;
   }
-  if (h.startsWith('#view=')) {
-    const view = h.split('=')[1];
-    if (document.getElementById('view-' + view)) { nav(view, { noHash: true }); return; }
-  }
-  nav('overview', { noHash: true });
+  const map = { '#titres':'titres', '#boc':'boc', '#analyses':'analyses', '#analyse-detail':'analyse-detail', '#analyse-technique':'analyse-technique', '#screener':'screener', '#portefeuille':'portefeuille', '#alertes':'alertes', '#financials':'financials' };
+  const view = map[h] || 'overview';
+  nav(view, true);
+}
+
+function toggleSidebar() {
+  const sb = document.getElementById('sidebar');
+  const ov = document.getElementById('overlay');
+  sb.classList.toggle('open');
+  ov.classList.toggle('open');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
 }
 
 // ═══════════════════════════════════════
@@ -701,25 +792,6 @@ function getSector(t) {
 }
 
 // ═══════════════════════════════════════
-// TABLE SORT
-// ═══════════════════════════════════════
-function sortTable(tbodyId, colIndex) {
-  const tbody = document.getElementById(tbodyId);
-  if (!tbody) return;
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-  const asc = !tbody.dataset.sortAsc || tbody.dataset.sortAsc === 'false';
-  tbody.dataset.sortAsc = asc;
-  rows.sort((a, b) => {
-    let av = a.children[colIndex]?.textContent?.replace(/[^\d\-,.]/g, '').replace(',', '.') || '';
-    let bv = b.children[colIndex]?.textContent?.replace(/[^\d\-,.]/g, '').replace(',', '.') || '';
-    const an = parseFloat(av), bn = parseFloat(bv);
-    if (!isNaN(an) && !isNaN(bn)) return asc ? an - bn : bn - an;
-    return asc ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
-  rows.forEach(r => tbody.appendChild(r));
-}
-
-// ═══════════════════════════════════════
 // CHART DEFAULTS
 // ═══════════════════════════════════════
 const chartOpts = {
@@ -739,8 +811,9 @@ const chartOpts = {
   }
 };
 
-function mkDataset(vals, color = '#B8964E') {
+function mkDataset(vals, color = '#B8964E', label = '') {
   return {
+    label,
     data: vals, borderColor: color, borderWidth: 2,
     pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: color,
     fill: true, tension: 0.3,
@@ -750,6 +823,30 @@ function mkDataset(vals, color = '#B8964E') {
       return g;
     }
   };
+}
+
+function mkLineDataset(vals, color, label, width = 1.5) {
+  return { label, data: vals, borderColor: color, borderWidth: width, pointRadius: 0, pointHoverRadius: 3, fill: false, tension: 0.3 };
+}
+
+// ═══════════════════════════════════════
+// TABLE SORT
+// ═══════════════════════════════════════
+function sortTable(tbodyId, colIndex) {
+  const tbody = document.getElementById(tbodyId);
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  const key = tbodyId + '-' + colIndex;
+  const dir = _sortState[key] === 'asc' ? 'desc' : 'asc';
+  _sortState[key] = dir;
+  rows.sort((a, b) => {
+    let av = a.cells[colIndex]?.textContent.trim() || '';
+    let bv = b.cells[colIndex]?.textContent.trim() || '';
+    const an = parseFloat(av.replace(/[^\d\-,.]/g, '').replace(',', '.'));
+    const bn = parseFloat(bv.replace(/[^\d\-,.]/g, '').replace(',', '.'));
+    if (!isNaN(an) && !isNaN(bn)) return dir === 'asc' ? an - bn : bn - an;
+    return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
+  });
+  rows.forEach(r => tbody.appendChild(r));
 }
 
 // ═══════════════════════════════════════
@@ -778,23 +875,25 @@ async function loadAll() {
   renderBoc();
   renderAnalyses();
   renderFinancials();
-
-  // Restore hash state after data loaded
+  populateTickerSelects();
+  runScreener();
+  renderPortfolio();
+  renderAlerts();
   parseHash();
 }
 
 function injectDemo() {
   allCours = [
-    { ticker:'SGBCI', cours:14500, variation:1.23, volume:42000, capitalisation:504000000000, date_seance:'2024-10-15' },
-    { ticker:'ETIT', cours:19, variation:-0.52, volume:180000, capitalisation:96000000000, date_seance:'2024-10-15' },
-    { ticker:'PALMCI', cours:6500, variation:2.11, volume:8400, capitalisation:45000000000, date_seance:'2024-10-15' },
-    { ticker:'BICCICI', cours:9800, variation:-1.01, volume:12000, capitalisation:128000000000, date_seance:'2024-10-15' },
-    { ticker:'ONAB', cours:3200, variation:0.00, volume:3500, capitalisation:38000000000, date_seance:'2024-10-15' },
-    { ticker:'SIVCOCI', cours:700, variation:3.20, volume:95000, capitalisation:21000000000, date_seance:'2024-10-15' },
-    { ticker:'NTLC', cours:1250, variation:-2.34, volume:22000, capitalisation:40000000000, date_seance:'2024-10-15' },
-    { ticker:'CABC', cours:2100, variation:0.48, volume:6700, capitalisation:18000000000, date_seance:'2024-10-15' },
-    { ticker:'BOAB', cours:4650, variation:0.65, volume:9800, capitalisation:185000000000, date_seance:'2024-10-15' },
-    { ticker:'TTLS', cours:1800, variation:-0.83, volume:4100, capitalisation:14000000000, date_seance:'2024-10-15' },
+    { ticker:'SGBCI', cours:14500, variation:1.23, volume:42000, capitalisation:504000000000, date_seance:'2024-10-15', plus_haut_52:15200, plus_bas_52:12800 },
+    { ticker:'ETIT', cours:19, variation:-0.52, volume:180000, capitalisation:96000000000, date_seance:'2024-10-15', plus_haut_52:22, plus_bas_52:16 },
+    { ticker:'PALMCI', cours:6500, variation:2.11, volume:8400, capitalisation:45000000000, date_seance:'2024-10-15', plus_haut_52:7100, plus_bas_52:5800 },
+    { ticker:'BICCICI', cours:9800, variation:-1.01, volume:12000, capitalisation:128000000000, date_seance:'2024-10-15', plus_haut_52:10500, plus_bas_52:8900 },
+    { ticker:'ONAB', cours:3200, variation:0.00, volume:3500, capitalisation:38000000000, date_seance:'2024-10-15', plus_haut_52:3600, plus_bas_52:2900 },
+    { ticker:'SIVCOCI', cours:700, variation:3.20, volume:95000, capitalisation:21000000000, date_seance:'2024-10-15', plus_haut_52:780, plus_bas_52:620 },
+    { ticker:'NTLC', cours:1250, variation:-2.34, volume:22000, capitalisation:40000000000, date_seance:'2024-10-15', plus_haut_52:1450, plus_bas_52:1100 },
+    { ticker:'CABC', cours:2100, variation:0.48, volume:6700, capitalisation:18000000000, date_seance:'2024-10-15', plus_haut_52:2400, plus_bas_52:1900 },
+    { ticker:'BOAB', cours:4650, variation:0.65, volume:9800, capitalisation:185000000000, date_seance:'2024-10-15', plus_haut_52:4900, plus_bas_52:4200 },
+    { ticker:'TTLS', cours:1800, variation:-0.83, volume:4100, capitalisation:14000000000, date_seance:'2024-10-15', plus_haut_52:2100, plus_bas_52:1600 },
   ];
   allBoc = [
     { titre:'TPCI 6,50% 2023-2033', type:'obligation', emetteur:'République de Côte d\'Ivoire', montant:150000000000, taux:6.50, date_echeance:'2033-12-31', date_seance:'2024-10-15', valeur_nominale:10000 },
@@ -805,23 +904,39 @@ function injectDemo() {
     { titre:'TPML 6,40% 2023-2031', type:'obligation', emetteur:'République du Mali', montant:60000000000, taux:6.40, date_echeance:'2031-09-30', date_seance:'2024-10-11', valeur_nominale:10000 },
   ];
   allAnalyses = [
-    { id:1, ticker:'SGBCI', titre:'SGBCI : Croissance solide malgré la conjoncture', recommandation:'Achat', resume:'La SGBCI affiche une progression notable de son résultat net sur l\'exercice 2023, portée par une augmentation du PNB et une maîtrise des charges d\'exploitation. Nous relevons notre objectif de cours à 16 000 FCFA. Le ROE atteint 12,5% et le coefficient d\'exploitation s\'améliore à 58%. La qualité du portefeuille de crédits reste satisfaisante avec un taux de défaillance contenu à 4,2%.', cours_cible:16000, date_analyse:'2024-09-15', analyste:'Research BRVM' },
-    { id:2, ticker:'ETIT', titre:'ECOBANK Transnational : Dividende en hausse', recommandation:'Conserver', resume:'ETIT continue de dégager une rentabilité satisfaisante à l\'échelle panafricaine. La diversification géographique constitue un avantage compétitif mais les risques pays pèsent sur la valorisation actuelle. Le dividende par action proposé pour 2023 est en hausse de 8%, reflétant la confiance de la direction dans la génération de cash-flows.', cours_cible:20, date_analyse:'2024-10-01', analyste:'Capital Research' },
-    { id:3, ticker:'PALMCI', titre:'PALMCI : Bonne tenue des cours du palmier', recommandation:'Achat', resume:'Les cours mondiaux de l\'huile de palme restent orientés à la hausse. PALMCI bénéficie d\'une production en augmentation et de marges en amélioration. Le dividende 2023 devrait se consolider autour de 1 200 FCFA par action. L\'extension des palmeraies et l\'amélioration des rendements à l\'hectare soutiennent la croissance du chiffre d\'affaires à moyen terme.', cours_cible:7200, date_analyse:'2024-08-20', analyste:'West Africa Finance' },
-    { id:4, ticker:'NTLC', titre:'NTEL : Pression concurrentielle sur le mobile', recommandation:'Vendre', resume:'L\'intensification de la concurrence dans le secteur télécom ivoirien pèse sur les marges de NTEL. Les investissements en infrastructure 4G/5G alourdissent la structure des coûts à court terme. Le ARPU (revenu moyen par utilisateur) est en déclin depuis trois trimestres consécutifs, ce qui limite la visibilité sur la reprise des marges.', cours_cible:1000, date_analyse:'2024-09-30', analyste:'Research BRVM' },
+    { id:1, ticker:'SGBCI', titre:'SGBCI : Croissance solide malgré la conjoncture', recommandation:'Achat', resume:'La SGBCI affiche une progression notable de son résultat net sur l\'exercice 2023, portée par une augmentation du PNB et une maîtrise des charges d\'exploitation. Nous relevons notre objectif de cours à 16 000 FCFA. Le PER de 11,2x reste attractif comparé à la moyenne sectorielle de 13,5x. La qualité du portefeuille de crédits s\'améliore avec un taux de créances douteuses en baisse à 6,8%.', cours_cible:16000, date_analyse:'2024-09-15', analyste:'Research BRVM' },
+    { id:2, ticker:'ETIT', titre:'ECOBANK Transnational : Dividende en hausse', recommandation:'Conserver', resume:'ETIT continue de dégager une rentabilité satisfaisante à l\'échelle panafricaine. La diversification géographique constitue un avantage compétitif mais les risques pays pèsent sur la valorisation actuelle. Le rendement du dividende de 4,2% reste confortable.', cours_cible:20, date_analyse:'2024-10-01', analyste:'Capital Research' },
+    { id:3, ticker:'PALMCI', titre:'PALMCI : Bonne tenue des cours du palmier', recommandation:'Achat', resume:'Les cours mondiaux de l\'huile de palme restent orientés à la hausse. PALMCI bénéficie d\'une production en augmentation et de marges en amélioration. Le dividende 2023 devrait se consolider autour de 1 200 FCFA par action.', cours_cible:7200, date_analyse:'2024-08-20', analyste:'West Africa Finance' },
+    { id:4, ticker:'NTLC', titre:'NTEL : Pression concurrentielle sur le mobile', recommandation:'Vendre', resume:'L\'intensification de la concurrence dans le secteur télécom ivoirien pèse sur les marges de NTEL. Les investissements en infrastructure 4G/5G alourdissent la structure des coûts à court terme. Le free cash flow devrait rester négatif en 2024.', cours_cible:1000, date_analyse:'2024-09-30', analyste:'Research BRVM' },
   ];
   allFinancials = [
-    { ticker:'SGBCI', annee:2023, chiffre_affaires:185000000000, resultat_net:32000000000, fonds_propres:280000000000, total_actif:2100000000000, bpa:9200, dpa:6000, nombre_actions:34620000 },
-    { ticker:'SGBCI', annee:2022, chiffre_affaires:172000000000, resultat_net:28000000000, fonds_propres:260000000000, total_actif:1980000000000, bpa:8050, dpa:5500, nombre_actions:34620000 },
-    { ticker:'ETIT', annee:2023, chiffre_affaires:320000000000, resultat_net:18000000000, fonds_propres:150000000000, total_actif:3200000000000, bpa:1.2, dpa:0.8, nombre_actions:5060000000 },
-    { ticker:'PALMCI', annee:2023, chiffre_affaires:95000000000, resultat_net:12000000000, fonds_propres:80000000000, total_actif:180000000000, bpa:1800, dpa:1200, nombre_actions:6938000 },
-    { ticker:'PALMCI', annee:2022, chiffre_affaires:87000000000, resultat_net:9500000000, fonds_propres:70000000000, total_actif:165000000000, bpa:1370, dpa:900, nombre_actions:6938000 },
+    { ticker:'SGBCI', annee:2023, chiffre_affaires:185000000000, resultat_net:32000000000, fonds_propres:280000000000, total_actif:2100000000000, bpa:9200, dpa:6000, nombre_actions:34620000, rbe:52000000000, dettes_financieres:120000000000, cash_flow_operationnel:45000000000, capex:8000000000 },
+    { ticker:'SGBCI', annee:2022, chiffre_affaires:172000000000, resultat_net:28000000000, fonds_propres:260000000000, total_actif:1980000000000, bpa:8050, dpa:5500, nombre_actions:34620000, rbe:48000000000, dettes_financieres:115000000000, cash_flow_operationnel:41000000000, capex:7500000000 },
+    { ticker:'ETIT', annee:2023, chiffre_affaires:320000000000, resultat_net:18000000000, fonds_propres:150000000000, total_actif:3200000000000, bpa:1.2, dpa:0.8, nombre_actions:5060000000, rbe:25000000000, dettes_financieres:80000000000, cash_flow_operationnel:22000000000, capex:5000000000 },
+    { ticker:'PALMCI', annee:2023, chiffre_affaires:95000000000, resultat_net:12000000000, fonds_propres:80000000000, total_actif:180000000000, bpa:1800, dpa:1200, nombre_actions:6938000, rbe:18000000000, dettes_financieres:25000000000, cash_flow_operationnel:15000000000, capex:4000000000 },
+    { ticker:'PALMCI', annee:2022, chiffre_affaires:87000000000, resultat_net:9500000000, fonds_propres:70000000000, total_actif:165000000000, bpa:1370, dpa:900, nombre_actions:6938000, rbe:15000000000, dettes_financieres:28000000000, cash_flow_operationnel:12000000000, capex:3500000000 },
   ];
   allEntreprises = [
     { ticker:'SGBCI', nom:'Société Générale de Banques en Côte d\'Ivoire', secteur:'Banque', pays:'Côte d\'Ivoire', description:'La SGBCI est l\'une des premières banques de Côte d\'Ivoire. Filiale du Groupe Société Générale, elle propose une gamme complète de services bancaires aux particuliers, aux professionnels et aux entreprises.', nombre_actions:34620000 },
     { ticker:'ETIT', nom:'Ecobank Transnational Incorporated', secteur:'Banque', pays:'Togo', description:'ETI est le holding du groupe Ecobank, premier réseau bancaire panafricain opérant dans 35 pays africains. La banque offre des services bancaires de détail, commerciaux et d\'investissement à travers l\'Afrique.', nombre_actions:5060000000 },
     { ticker:'PALMCI', nom:'Société de Palmeraies de la Côte d\'Ivoire', secteur:'Agro-Alimentaire', pays:'Côte d\'Ivoire', description:'PALMCI est le premier producteur d\'huile de palme en Côte d\'Ivoire. La société exploite plusieurs palmeraies sur le territoire national et transforme les fruits en huile de palme brute destinée à l\'exportation et à l\'industrie locale.', nombre_actions:6938000 },
+    { ticker:'BICCICI', nom:'Banque Internationale pour le Commerce et l\'Industrie', secteur:'Banque', pays:'Côte d\'Ivoire', description:'BICICI est une banque commerciale majeure en Côte d\'Ivoire, filiale du groupe BNP Paribas.', nombre_actions:13061224 },
+    { ticker:'ONAB', nom:'Office National de l\'Aviation Civile', secteur:'Transport', pays:'Côte d\'Ivoire', description:'ONAB gère les infrastructures aéroportuaires et assure la régulation du trafic aérien en Côte d\'Ivoire.', nombre_actions:11875000 },
+    { ticker:'SIVCOCI', nom:'Société Ivoirienne de Construction', secteur:'Industrie', pays:'Côte d\'Ivoire', description:'SIVCOCI est un acteur majeur du BTP et de la construction en Côte d\'Ivoire.', nombre_actions:30000000 },
+    { ticker:'NTLC', nom:'Nigerian Telecom Côte d\'Ivoire', secteur:'Telecom', pays:'Côte d\'Ivoire', description:'NTEL est un opérateur de téléphonie mobile en Côte d\'Ivoire.', nombre_actions:32000000 },
+    { ticker:'BOAB', nom:'Bank of Africa Bénin', secteur:'Banque', pays:'Bénin', description:'BOA Bénin est une banque universelle présente dans plusieurs pays de l\'UEMOA.', nombre_actions:39784946 },
+    { ticker:'TTLS', nom:'Tractafric Equipment', secteur:'Industrie', pays:'Côte d\'Ivoire', description:'Tractafric est distributeur exclusif de véhicules et équipements industriels.', nombre_actions:7777778 },
   ];
+}
+
+function populateTickerSelects() {
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const tickers = Object.keys(byTicker).sort();
+  const opts = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
+  document.getElementById('techTickerSelect').innerHTML = '<option value="">Choisir un ticker...</option>' + opts;
+  document.getElementById('pfTicker').innerHTML = '<option value="">Ticker...</option>' + opts;
+  document.getElementById('alertTicker').innerHTML = '<option value="">Ticker...</option>' + opts;
 }
 
 // ═══════════════════════════════════════
@@ -950,7 +1065,8 @@ function filterTitres() {
 async function openFiche(ticker, from, noHash) {
   prevView = from;
   document.getElementById('ficheBackBtn').onclick = () => nav(from);
-  nav('fiche', { ticker, breadcrumbExtra: ticker, noHash });
+  nav('fiche', noHash);
+  if (!noHash) history.replaceState(null, '', '#fiche=' + ticker);
 
   const cours = allCours.find(c => c.ticker === ticker) || {};
   const ent = allEntreprises.find(e => e.ticker === ticker) || {};
@@ -984,7 +1100,7 @@ async function openFiche(ticker, from, noHash) {
     `<div class="fin-row"><span class="fin-label">${k}</span><span class="fin-value">${v}</span></div>`).join('');
 
   document.getElementById('ficheAnalyseList').innerHTML = ans.length
-    ? ans.slice(0,3).map(renderAnalyseCard).join('')
+    ? ans.slice(0,3).map(a => renderAnalyseCard(a, true)).join('')
     : '<div style="color:var(--dim);font-size:13px">Aucune analyse disponible pour ce titre.</div>';
 
   renderFicheFin(fins, cours);
@@ -994,12 +1110,16 @@ async function openFiche(ticker, from, noHash) {
   try {
     ficheHistorique = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
   } catch {
-    ficheHistorique = Array.from({length:252}, (_,i) => ({
-      date_seance: new Date(Date.now() - (251-i)*86400000).toISOString().split('T')[0],
-      cloture: (cours.cours||5000) * (1 + Math.sin(i*0.08)*0.06 + (Math.random()-0.5)*0.02)
-    }));
+    ficheHistorique = generateDemoHistory(cours.cours || 5000);
   }
   renderFicheChart();
+}
+
+function generateDemoHistory(basePrice) {
+  return Array.from({length:252}, (_,i) => ({
+    date_seance: new Date(Date.now() - (251-i)*86400000).toISOString().split('T')[0],
+    cloture: basePrice * (1 + Math.sin(i*0.08)*0.06 + (Math.random()-0.5)*0.02)
+  }));
 }
 
 function renderFicheFin(fins, cours) {
@@ -1099,12 +1219,13 @@ function filterBoc() {
 // ═══════════════════════════════════════
 // ANALYSES
 // ═══════════════════════════════════════
-function renderAnalyseCard(a) {
+function renderAnalyseCard(a, clickable) {
   const rec = (a.recommandation||'').toLowerCase();
   const rc = rec.includes('achat')||rec.includes('buy') ? 'buy' : rec.includes('vend')||rec.includes('sell') ? 'sell' : 'hold';
   const rl = { buy:'Achat', sell:'Vendre', hold:'Conserver' }[rc];
   const text = (a.resume || a.contenu || '');
-  return `<div class="analyse-card" onclick="openAnalyseDetail(${a.id})">
+  const clickAttr = clickable ? `onclick="openAnalyseDetail(${a.id})"` : '';
+  return `<div class="analyse-card" ${clickAttr}>
     <div class="analyse-header">
       <div><div class="analyse-ticker">${a.ticker||'—'}</div><div class="analyse-title">${a.titre||'Analyse fondamentale'}</div></div>
       <span class="rec ${rc}">${rl}</span>
@@ -1116,34 +1237,6 @@ function renderAnalyseCard(a) {
       ${a.cours_cible ? `<span>🎯 Cible : ${fmt(a.cours_cible)} FCFA</span>` : ''}
     </div>
   </div>`;
-}
-
-function openAnalyseDetail(id, noHash) {
-  const a = allAnalyses.find(x => x.id === id);
-  if (!a) return;
-  const rec = (a.recommandation||'').toLowerCase();
-  const rc = rec.includes('achat')||rec.includes('buy') ? 'buy' : rec.includes('vend')||rec.includes('sell') ? 'sell' : 'hold';
-  const rl = { buy:'Achat', sell:'Vendre', hold:'Conserver' }[rc];
-  const container = document.getElementById('analyseDetailContainer');
-  container.innerHTML = `
-    <div class="analyse-detail-hero">
-      <div class="analyse-detail-ticker">${a.ticker} · ${fmtDate(a.date_analyse)}</div>
-      <div class="analyse-detail-title">${a.titre}</div>
-      <div class="analyse-detail-rec ${rc}">${rl}</div>
-      <div class="analyse-detail-body">
-        <p>${(a.resume||a.contenu||'Aucun contenu disponible.').replace(/\n/g, '</p><p>')}</p>
-      </div>
-      <div class="analyse-detail-meta">
-        ${a.analyste ? `<span>✍ Analyste : ${a.analyste}</span>` : ''}
-        ${a.cours_cible ? `<span>🎯 Objectif de cours : ${fmt(a.cours_cible)} FCFA</span>` : ''}
-        ${a.date_analyse ? `<span>📅 Publié le ${fmtDate(a.date_analyse)}</span>` : ''}
-      </div>
-    </div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap">
-      <button class="back-btn" onclick="openFiche('${a.ticker}','analyse-detail')">Voir la fiche ${a.ticker} →</button>
-    </div>
-  `;
-  nav('analyse-detail', { analyseId: id, breadcrumbExtra: a.ticker, noHash });
 }
 
 function renderAnalyses() { window._analyseRows = allAnalyses; filterAnalyses(); }
@@ -1168,8 +1261,408 @@ function filterAnalyses() {
   }
   if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q) || (r.titre||'').toLowerCase().includes(q) || (r.resume||'').toLowerCase().includes(q));
   document.getElementById('analysesList').innerHTML = rows.length
-    ? rows.map(renderAnalyseCard).join('')
+    ? rows.map(a => renderAnalyseCard(a, true)).join('')
     : '<div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Aucune analyse</div></div>';
+}
+
+function openAnalyseDetail(id, noHash) {
+  const a = allAnalyses.find(x => x.id === id);
+  if (!a) return;
+  nav('analyse-detail', noHash);
+  if (!noHash) history.replaceState(null, '', '#analyse=' + id);
+  const rec = (a.recommandation||'').toLowerCase();
+  const rc = rec.includes('achat')||rec.includes('buy') ? 'buy' : rec.includes('vend')||rec.includes('sell') ? 'sell' : 'hold';
+  const rl = { buy:'ACHAT', sell:'VENTE', hold:'CONSERVER' }[rc];
+  document.getElementById('analyseDetailContent').innerHTML = `
+    <div class="fiche-hero" style="margin-bottom:20px">
+      <div class="fiche-ticker-label">${a.ticker}</div>
+      <div class="fiche-company">${a.titre}</div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
+        <span class="rec ${rc}" style="font-size:13px;padding:6px 16px">${rl}</span>
+        ${a.cours_cible ? `<span style="font-family:var(--mono);font-size:16px;color:var(--gold)">🎯 Cible : ${fmt(a.cours_cible)} FCFA</span>` : ''}
+      </div>
+      <div class="fiche-meta" style="margin-top:8px">📅 ${fmtDate(a.date_analyse)} · ✍ ${a.analyste || 'Research BRVM'}</div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Synthèse</div></div>
+        <div class="card-body" style="font-size:14px;color:var(--muted);line-height:1.8">${a.resume || 'Aucun résumé disponible.'}</div>
+      </div>
+      <div>
+        <div class="card mb20">
+          <div class="card-header"><div class="card-title">Actions rapides</div></div>
+          <div class="card-body">
+            <button class="back-btn" onclick="openFiche('${a.ticker}','analyse-detail')" style="margin-bottom:0">Voir la fiche ${a.ticker} →</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div class="card-title">Autres analyses ${a.ticker}</div></div>
+          <div class="card-body">
+            ${allAnalyses.filter(x => x.ticker === a.ticker && x.id !== a.id).map(x => `<div style="padding:8px 0;border-bottom:1px solid var(--border2);cursor:pointer" onclick="openAnalyseDetail(${x.id})"><div style="font-size:12px;color:var(--gold);font-family:var(--mono)">${x.titre}</div><div style="font-size:11px;color:var(--dim)">${fmtDate(x.date_analyse)}</div></div>`).join('') || '<div style="color:var(--dim);font-size:13px">Aucune autre analyse.</div>'}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ═══════════════════════════════════════
+// ANALYSE TECHNIQUE
+// ═══════════════════════════════════════
+function setTechPeriod(n, btn) {
+  _techPeriod = n;
+  document.querySelectorAll('#view-analyse-technique .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadTechAnalysis();
+}
+
+async function loadTechAnalysis() {
+  const ticker = document.getElementById('techTickerSelect').value;
+  if (!ticker) return;
+  _techTicker = ticker;
+  let hist;
+  try {
+    hist = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
+  } catch {
+    hist = generateDemoHistory(allCours.find(c => c.ticker === ticker)?.cours || 5000);
+  }
+  hist = hist.slice(-_techPeriod);
+  const closes = hist.map(d => d.cloture || d.cours || 0);
+  const labels = hist.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
+
+  // SMA
+  const sma20 = calcSMA(closes, 20);
+  const sma50 = calcSMA(closes, 50);
+  // EMA
+  const ema12 = calcEMA(closes, 12);
+  const ema26 = calcEMA(closes, 26);
+  // RSI
+  const rsi = calcRSI(closes, 14);
+  // MACD
+  const macd = calcMACD(closes);
+  // Bollinger
+  const bb = calcBollinger(closes, 20);
+
+  const lastClose = closes[closes.length-1];
+  const lastRSI = rsi[rsi.length-1];
+  const lastMACD = macd.macdLine[macd.macdLine.length-1];
+  const lastSignal = macd.signalLine[macd.signalLine.length-1];
+  const lastSMA20 = sma20[sma20.length-1];
+
+  let signal = 'NEUTRE', signalClass = 'tech-signal-neutral';
+  let score = 0;
+  if (lastRSI < 30) { score += 1; }
+  else if (lastRSI > 70) { score -= 1; }
+  if (lastMACD > lastSignal) { score += 1; }
+  else { score -= 1; }
+  if (lastClose > lastSMA20) { score += 1; }
+  else { score -= 1; }
+  if (score >= 2) { signal = 'ACHAT'; signalClass = 'tech-signal-buy'; }
+  else if (score <= -2) { signal = 'VENTE'; signalClass = 'tech-signal-sell'; }
+
+  document.getElementById('techContent').innerHTML = `
+    <div class="grid-4" style="margin-bottom:20px">
+      <div class="tech-indicator">
+        <div class="tech-indicator-title">Signal global</div>
+        <div class="tech-indicator-value ${signalClass}">${signal}</div>
+        <div class="tech-indicator-signal">Score : ${score}/3</div>
+      </div>
+      <div class="tech-indicator">
+        <div class="tech-indicator-title">RSI (14)</div>
+        <div class="tech-indicator-value">${lastRSI?.toFixed(1) || '—'}</div>
+        <div class="tech-indicator-signal ${lastRSI>70?'tech-signal-sell':lastRSI<30?'tech-signal-buy':'tech-signal-neutral'}">${lastRSI>70?'Surachat':lastRSI<30?'Survente':'Neutre'}</div>
+      </div>
+      <div class="tech-indicator">
+        <div class="tech-indicator-title">MACD</div>
+        <div class="tech-indicator-value">${lastMACD?.toFixed(2) || '—'}</div>
+        <div class="tech-indicator-signal ${lastMACD>lastSignal?'tech-signal-buy':'tech-signal-sell'}">${lastMACD>lastSignal?'Haussier':'Baissier'}</div>
+      </div>
+      <div class="tech-indicator">
+        <div class="tech-indicator-title">SMA 20</div>
+        <div class="tech-indicator-value">${lastSMA20?.toFixed(0) || '—'}</div>
+        <div class="tech-indicator-signal ${lastClose>lastSMA20?'tech-signal-buy':'tech-signal-sell'}">${lastClose>lastSMA20?'Au-dessus':'En-dessous'}</div>
+      </div>
+    </div>
+    <div class="card mb20">
+      <div class="card-header"><div class="card-title">Cours & Moyennes — ${ticker}</div></div>
+      <div class="card-body"><div class="chart-container tall"><canvas id="chartTech"></canvas></div></div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">MACD</div></div>
+        <div class="card-body"><div class="chart-container"><canvas id="chartMACD"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">RSI</div></div>
+        <div class="card-body"><div class="chart-container"><canvas id="chartRSI"></canvas></div></div>
+      </div>
+    </div>
+  `;
+
+  // Price chart
+  if (techChartInst) techChartInst.destroy();
+  techChartInst = new Chart(document.getElementById('chartTech'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        mkDataset(closes, '#B8964E', 'Cours'),
+        mkLineDataset(sma20, '#60A5FA', 'SMA 20'),
+        mkLineDataset(sma50, '#F87171', 'SMA 50'),
+        mkLineDataset(bb.upper, 'rgba(184,150,78,0.3)', 'BB Upper', 1),
+        mkLineDataset(bb.lower, 'rgba(184,150,78,0.3)', 'BB Lower', 1),
+      ]
+    },
+    options: chartOpts
+  });
+
+  // MACD chart
+  new Chart(document.getElementById('chartMACD'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'MACD', data: macd.macdLine, borderColor: '#60A5FA', borderWidth: 1.5, pointRadius: 0, fill: false },
+        { label: 'Signal', data: macd.signalLine, borderColor: '#F87171', borderWidth: 1.5, pointRadius: 0, fill: false },
+        { label: 'Histogramme', data: macd.histogram, backgroundColor: macd.histogram.map(v => v >= 0 ? 'rgba(74,222,128,0.5)' : 'rgba(248,113,113,0.5)'), type: 'bar', borderWidth: 0 }
+      ]
+    },
+    options: { ...chartOpts, plugins: { ...chartOpts.plugins, legend: { display: true, labels: { color: 'rgba(245,240,232,0.5)', font: { size: 10 } } } } }
+  });
+
+  // RSI chart
+  new Chart(document.getElementById('chartRSI'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { data: rsi, borderColor: '#B8964E', borderWidth: 1.5, pointRadius: 0, fill: false },
+        { data: Array(rsi.length).fill(70), borderColor: 'rgba(248,113,113,0.4)', borderWidth: 1, pointRadius: 0, borderDash: [4,4], fill: false },
+        { data: Array(rsi.length).fill(30), borderColor: 'rgba(74,222,128,0.4)', borderWidth: 1, pointRadius: 0, borderDash: [4,4], fill: false }
+      ]
+    },
+    options: { ...chartOpts, scales: { ...chartOpts.scales, y: { min: 0, max: 100, position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 } } } } }
+  });
+}
+
+// Technical indicators
+function calcSMA(data, period) {
+  const out = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) { out.push(null); continue; }
+    let sum = 0;
+    for (let j = 0; j < period; j++) sum += data[i - j];
+    out.push(sum / period);
+  }
+  return out;
+}
+function calcEMA(data, period) {
+  const out = []; const k = 2 / (period + 1);
+  for (let i = 0; i < data.length; i++) {
+    if (i === 0) { out.push(data[0]); continue; }
+    out.push(data[i] * k + out[i-1] * (1 - k));
+  }
+  return out;
+}
+function calcRSI(data, period) {
+  const out = [];
+  for (let i = 0; i < data.length; i++) {
+    if (i < period) { out.push(null); continue; }
+    let gains = 0, losses = 0;
+    for (let j = 1; j <= period; j++) {
+      const diff = data[i - j + 1] - data[i - j];
+      if (diff > 0) gains += diff; else losses -= diff;
+    }
+    const avgGain = gains / period;
+    const avgLoss = losses / period;
+    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
+    out.push(100 - (100 / (1 + rs)));
+  }
+  return out;
+}
+function calcMACD(data) {
+  const ema12 = calcEMA(data, 12);
+  const ema26 = calcEMA(data, 26);
+  const macdLine = ema12.map((v, i) => v - ema26[i]);
+  const signalLine = calcEMA(macdLine.filter(v => v !== null), 9);
+  const hist = macdLine.slice(-signalLine.length).map((v, i) => v - signalLine[i]);
+  return { macdLine: macdLine.slice(-signalLine.length), signalLine, histogram: hist };
+}
+function calcBollinger(data, period) {
+  const upper = [], lower = [], mid = calcSMA(data, period);
+  for (let i = 0; i < data.length; i++) {
+    if (i < period - 1) { upper.push(null); lower.push(null); continue; }
+    let sum = 0;
+    for (let j = 0; j < period; j++) sum += Math.pow(data[i-j] - mid[i], 2);
+    const sd = Math.sqrt(sum / period);
+    upper.push(mid[i] + 2 * sd);
+    lower.push(mid[i] - 2 * sd);
+  }
+  return { upper, lower, mid };
+}
+
+// ═══════════════════════════════════════
+// SCREENER
+// ═══════════════════════════════════════
+function runScreener() {
+  const sector = document.getElementById('scrSector').value;
+  const minP = parseFloat(document.getElementById('scrMinPrice').value) || 0;
+  const maxP = parseFloat(document.getElementById('scrMaxPrice').value) || Infinity;
+  const minV = parseFloat(document.getElementById('scrMinVar').value) || -Infinity;
+  const maxV = parseFloat(document.getElementById('scrMaxVar').value) || Infinity;
+  const minVol = parseFloat(document.getElementById('scrMinVol').value) || 0;
+
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  let rows = Object.values(byTicker);
+
+  rows = rows.filter(r => {
+    const s = getSector(r.ticker);
+    if (sector && !s.toLowerCase().includes(sector.toLowerCase())) return false;
+    if (r.cours < minP || r.cours > maxP) return false;
+    const varVal = parseFloat(r.variation) || 0;
+    if (varVal < minV || varVal > maxV) return false;
+    if ((r.volume || 0) < minVol) return false;
+    return true;
+  });
+
+  document.getElementById('scrCount').textContent = rows.length + ' résultat(s)';
+  const ent = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
+  document.getElementById('screenerTable').innerHTML = rows.sort((a,b) => (a.ticker||'').localeCompare(b.ticker||'')).map(c =>
+    `<tr onclick="openFiche('${c.ticker}','screener')">
+      <td><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${c.ticker}</span></td>
+      <td>${ent[c.ticker]?.nom || c.ticker}</td>
+      <td class="right">${fmt(c.cours)}</td>
+      <td class="right">${changePill(c.variation)}</td>
+      <td class="right">${fmt(c.volume)}</td>
+      <td><span class="sector-tag">${getSector(c.ticker)}</span></td>
+    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Aucun titre ne correspond aux critères</td></tr>';
+}
+
+// ═══════════════════════════════════════
+// PORTEFEUILLE
+// ═══════════════════════════════════════
+function getPortfolio() {
+  try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); } catch { return []; }
+}
+function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
+
+function addPosition() {
+  const ticker = document.getElementById('pfTicker').value;
+  const qty = parseInt(document.getElementById('pfQty').value);
+  const price = parseFloat(document.getElementById('pfPrice').value);
+  const date = document.getElementById('pfDate').value;
+  if (!ticker || !qty || !price) { alert('Remplissez tous les champs'); return; }
+  const pf = getPortfolio();
+  pf.push({ id: Date.now(), ticker, qty, price, date: date || new Date().toISOString().split('T')[0] });
+  savePortfolio(pf);
+  renderPortfolio();
+  document.getElementById('pfQty').value = ''; document.getElementById('pfPrice').value = '';
+}
+
+function removePosition(id) {
+  const pf = getPortfolio().filter(p => p.id !== id);
+  savePortfolio(pf);
+  renderPortfolio();
+}
+
+function renderPortfolio() {
+  const pf = getPortfolio();
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+
+  let totalValue = 0, totalInvested = 0;
+  const rows = pf.map(p => {
+    const current = byTicker[p.ticker];
+    const currentPrice = current?.cours || p.price;
+    const value = p.qty * currentPrice;
+    const invested = p.qty * p.price;
+    const pl = value - invested;
+    totalValue += value;
+    totalInvested += invested;
+    const plClass = pl >= 0 ? 'up' : 'down';
+    return `<tr>
+      <td><span style="font-family:var(--mono);font-size:12px;color:var(--gold)">${p.ticker}</span></td>
+      <td class="right">${fmt(p.qty)}</td>
+      <td class="right">${fmt(p.price)}</td>
+      <td class="right">${fmt(currentPrice)}</td>
+      <td class="right">${fmtM(value)}</td>
+      <td class="right"><span class="pill ${plClass}">${pl>=0?'+':''}${fmt(pl)}</span></td>
+      <td><div class="portf-table-actions"><button onclick="removePosition(${p.id})">✕</button></div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('pfTable').innerHTML = rows || '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>';
+  document.getElementById('pfTotal').textContent = fmtM(totalValue) + ' FCFA';
+  document.getElementById('pfInvested').textContent = fmtM(totalInvested) + ' FCFA';
+  const pl = totalValue - totalInvested;
+  const ret = totalInvested > 0 ? (pl / totalInvested * 100) : 0;
+  document.getElementById('pfPL').innerHTML = `<span style="color:${pl>=0?'var(--green)':'var(--red)'}">${pl>=0?'+':''}${fmtM(pl)} FCFA</span>`;
+  document.getElementById('pfReturn').innerHTML = `<span style="color:${ret>=0?'var(--green)':'var(--red)'}">${ret>=0?'+':''}${ret.toFixed(2)}%</span>`;
+}
+
+// ═══════════════════════════════════════
+// ALERTES
+// ═══════════════════════════════════════
+function getAlerts() {
+  try { return JSON.parse(localStorage.getItem('tc_alerts') || '[]'); } catch { return []; }
+}
+function saveAlerts(data) { localStorage.setItem('tc_alerts', JSON.stringify(data)); }
+
+function addAlert() {
+  const ticker = document.getElementById('alertTicker').value;
+  const condition = document.getElementById('alertCondition').value;
+  const price = parseFloat(document.getElementById('alertPrice').value);
+  if (!ticker || !price) { alert('Remplissez tous les champs'); return; }
+  const alerts = getAlerts();
+  alerts.push({ id: Date.now(), ticker, condition, price, active: true, triggered: false, created: new Date().toISOString() });
+  saveAlerts(alerts);
+  renderAlerts();
+  document.getElementById('alertPrice').value = '';
+}
+
+function removeAlert(id) {
+  const alerts = getAlerts().filter(a => a.id !== id);
+  saveAlerts(alerts);
+  renderAlerts();
+}
+
+function toggleAlert(id) {
+  const alerts = getAlerts();
+  const a = alerts.find(x => x.id === id);
+  if (a) { a.active = !a.active; saveAlerts(alerts); renderAlerts(); }
+}
+
+function renderAlerts() {
+  const alerts = getAlerts();
+  const byTicker = {};
+  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+
+  alerts.forEach(a => {
+    const current = byTicker[a.ticker]?.cours;
+    if (a.active && current != null) {
+      if (a.condition === 'above' && current >= a.price) a.triggered = true;
+      if (a.condition === 'below' && current <= a.price) a.triggered = true;
+    }
+  });
+  saveAlerts(alerts);
+
+  document.getElementById('alertsList').innerHTML = alerts.map(a => {
+    const current = byTicker[a.ticker]?.cours;
+    const cls = a.triggered ? 'triggered' : a.active ? 'active' : '';
+    const condLabel = a.condition === 'above' ? 'supérieur à' : 'inférieur à';
+    return `<div class="alert-card ${cls}">
+      <div class="alert-info">
+        <div class="alert-ticker">${a.ticker}</div>
+        <div class="alert-desc">Cours ${condLabel} ${fmt(a.price)} FCFA</div>
+        <div class="alert-meta">${a.triggered ? '🔔 Déclenchée' : a.active ? '✅ Active' : '⏸️ Désactivée'} · Cours actuel : ${current ? fmt(current) : '—'}</div>
+      </div>
+      <div class="alert-actions">
+        <button onclick="toggleAlert(${a.id})">${a.active ? 'Désactiver' : 'Activer'}</button>
+        <button onclick="removeAlert(${a.id})">Supprimer</button>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state"><div class="empty-icon">△</div><div class="empty-title">Aucune alerte</div><div class="empty-text">Créez votre première alerte de prix ci-dessus.</div></div>';
 }
 
 // ═══════════════════════════════════════
@@ -1227,8 +1720,8 @@ function filterFin() {
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
+window.addEventListener('hashchange', parseHash);
 loadAll();
 </script>
-
 </body>
 </html>
