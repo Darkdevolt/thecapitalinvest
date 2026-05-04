@@ -241,6 +241,18 @@ text-decoration:underline;text-underline-offset:3px;
 <script>
 const SK = 'tc_session';
 
+// Nettoyer l'ancienne session si elle est dans un mauvais format
+try {
+  const raw = localStorage.getItem(SK);
+  if (raw) {
+    const p = JSON.parse(raw);
+    // Ancien format: {success, session} → supprimer pour forcer reconnexion propre
+    if (p.success !== undefined && !p.access_token) {
+      localStorage.removeItem(SK);
+    }
+  }
+} catch(e) { localStorage.removeItem(SK); }
+
 // Rediriger si déjà connecté
 (function() {
   const s = localStorage.getItem(SK);
