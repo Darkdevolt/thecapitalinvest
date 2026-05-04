@@ -1154,7 +1154,7 @@ async function runScraper() {
   const log = document.getElementById('scraper-log');
   log.innerHTML = '<span class="info">Lancement du scraper...</span>\n';
   try {
-    const r = await fetch('/api/scraper', { headers: { Authorization: `Bearer ${TK}` } });
+    toast('Scraper non disponible en mode direct', 'err'); return;
     const d = await r.json();
     msg.textContent = `✓ ${d.inserted||0} cours mis à jour`; msg.className='msg ok';
     log.innerHTML = `<span class="info">${d.date}</span>\n<span class="${d.scraped>0?'ok':'err'}">${d.scraped} lignes scrapées</span>\n<span class="ok">${d.inserted} insérées</span>\n${d.fallback?'<span class="info">Fallback utilisé</span>\n':''}${d.errors?.length?`<span class="err">Erreurs: ${JSON.stringify(d.errors)}</span>\n`:''}`;
@@ -1244,28 +1244,172 @@ async function loadCoursErreurs() {
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.inline-edit').forEach(m => m.addEventListener('click', e => { if (e.target===m) closeModal(m.id); }));
 
-// ─── API HELPERS ────────────────────────────────────────────────────────
-async function api(action) {
+// ─── SUPABASE DIRECT HELPERS ────────────────────────────────────────────
+const SB_BASE = 'https://otsiwiwlnowxeolbbgvm.supabase.co/rest/v1';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
+
+function sbHeaders() {
+  return { 'apikey': SB_ANON, 'Authorization': `Bearer ${TK}`, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+}
+
+async function sbGet(table, params='') {
   try {
-    const r = await fetch(`/api/admin?action=${action}`, { headers: AH() });
-    const d = await r.json();
-    if (!d.success && d.error) { toast(d.error, 'err'); return null; }
-    return d;
+    const r = await fetch(`${SB_BASE}/${table}?${params}`, { headers: sbHeaders() });
+    if (!r.ok) { const e = await r.json(); toast(e.message||'Erreur lecture', 'err'); return null; }
+    return r.json();
   } catch(e) { toast('Erreur réseau: '+e.message, 'err'); return null; }
 }
 
-async function apiPost(action, body) {
+async function sbPost(table, body) {
   try {
-    const r = await fetch(`/api/admin?action=${action}`, { method:'POST', headers:AH(), body:JSON.stringify(body) });
-    return await r.json();
-  } catch(e) { toast('Erreur réseau', 'err'); return null; }
+    const r = await fetch(`${SB_BASE}/${table}`, { method:'POST', headers: sbHeaders(), body: JSON.stringify(body) });
+    if (!r.ok) { const e = await r.json(); toast(e.message||'Erreur écriture', 'err'); return null; }
+    return r.json();
+  } catch(e) { toast('Erreur réseau: '+e.message, 'err'); return null; }
+}
+
+async function sbPatch(table, filter, body) {
+  try {
+    const r = await fetch(`${SB_BASE}/${table}?${filter}`, { method:'PATCH', headers: sbHeaders(), body: JSON.stringify(body) });
+    if (!r.ok) { const e = await r.json(); toast(e.message||'Erreur mise à jour', 'err'); return null; }
+    return r.json();
+  } catch(e) { toast('Erreur réseau: '+e.message, 'err'); return null; }
+}
+
+async function sbDel(table, filter) {
+  try {
+    const r = await fetch(`${SB_BASE}/${table}?${filter}`, { method:'DELETE', headers: sbHeaders() });
+    if (!r.ok) { const e = await r.json(); toast(e.message||'Erreur suppression', 'err'); return null; }
+    return true;
+  } catch(e) { toast('Erreur réseau: '+e.message, 'err'); return null; }
+}
+
+// Compatibilité avec l'ancien code — mappe les actions sur les appels Supabase
+async function api(action) {
+  if (action === 'stats') {
+    async function countTable(t) {
+      try {
+        const r = await fetch(`${SB_BASE}/${t}?select=id`, { 
+          headers: { ...sbHeaders(), 'Prefer': 'count=exact', 'Range': '0-0' }
+        });
+        return r.headers.get('content-range')?.split('/')?.[1] ?? '—';
+      } catch(e) { return '—'; }
+    }
+    const [ent, cours, hist, fin, div, users] = await Promise.all([
+      countTable('entreprises'), countTable('cours'), countTable('historique'),
+      countTable('financials'), countTable('dividendes_calendrier'), countTable('users'),
+    ]);
+    const c = v => v;
+    const lastCours = await sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1');
+    const lastHist = await sbGet('historique', 'select=date_seance&order=date_seance.desc&limit=1');
+    return { 
+      entreprises: c(ent), cours: c(cours), historique: c(hist),
+      financials: c(fin), dividendes: c(div), users: c(users),
+      last_seance: lastCours?.[0]?.date_seance || '—',
+      last_historique: lastHist?.[0]?.date_seance || '—'
+    };
+  }
+  if (action === 'cours_latest') {
+    const data = await sbGet('cours', 'select=*,entreprises(nom)&order=date_seance.desc,ticker.asc&limit=500');
+    return { data: data || [] };
+  }
+  if (action === 'entreprises') {
+    const data = await sbGet('entreprises', 'select=*&order=ticker.asc');
+    return { data: data || [] };
+  }
+  if (action === 'financials') {
+    const data = await sbGet('financials', 'select=*&order=ticker.asc,annee.desc');
+    return { data: data || [] };
+  }
+  if (action === 'dividendes') {
+    const data = await sbGet('dividendes_calendrier', 'select=*&order=ex_date.desc');
+    return { data: data || [] };
+  }
+  if (action === 'analyses') {
+    const data = await sbGet('analyses', 'select=*&order=date_analyse.desc');
+    return { data: data || [] };
+  }
+  if (action === 'users') {
+    const data = await sbGet('users', 'select=*&order=created_at.desc');
+    return { data: data || [] };
+  }
+  if (action === 'boc') {
+    const data = await sbGet('boc', 'select=*&order=date_seance.desc');
+    return { data: data || [] };
+  }
+  if (action === 'contacts') {
+    const data = await sbGet('contacts', 'select=*&order=created_at.desc');
+    return { data: data || [] };
+  }
+  toast('Action non reconnue: '+action, 'err'); return null;
+}
+
+async function apiPost(action, body) {
+  if (action === 'add_cours') {
+    const r = await sbPost('cours', body);
+    return r ? { success: true } : null;
+  }
+  if (action === 'update_cours') {
+    const { id, ...rest } = body;
+    const r = await sbPatch('cours', `id=eq.${id}`, rest);
+    return r ? { success: true } : null;
+  }
+  if (action === 'add_historique') {
+    const r = await sbPost('historique', body);
+    return r ? { success: true } : null;
+  }
+  if (action === 'add_historique_bulk') {
+    const r = await sbPost('historique', body.rows);
+    return r ? { success: true } : null;
+  }
+  if (action === 'update_entreprise') {
+    const { ticker, ...rest } = body;
+    const r = await sbPatch('entreprises', `ticker=eq.${ticker}`, rest);
+    return r ? { success: true } : null;
+  }
+  if (action === 'add_entreprise') {
+    const r = await sbPost('entreprises', body);
+    return r ? { success: true } : null;
+  }
+  if (action === 'toggle_actif') {
+    const r = await sbPatch('entreprises', `ticker=eq.${body.ticker}`, { actif: body.actif });
+    return r ? { success: true } : null;
+  }
+  if (action === 'add_financial') {
+    const r = await sbPost('financials', body);
+    return r ? { success: true } : null;
+  }
+  if (action === 'add_dividende') {
+    const r = await sbPost('dividendes_calendrier', body);
+    return r ? { success: true } : null;
+  }
+  if (action === 'add_analyse') {
+    const r = await sbPost('analyses', body);
+    return r ? { success: true } : null;
+  }
+  if (action === 'set_plan') {
+    const r = await sbPatch('users', `id=eq.${body.user_id}`, { plan: body.plan });
+    return r ? { success: true } : null;
+  }
+  if (action === 'set_admin') {
+    const r = await sbPatch('users', `id=eq.${body.user_id}`, { is_admin: body.is_admin });
+    return r ? { success: true } : null;
+  }
+  if (action === 'boc') {
+    const r = await sbPost('boc', { date_seance: body.date_seance, fichier_nom: body.fichier_nom, fichier_url: body.fichier_url });
+    return r ? { success: true } : null;
+  }
+  toast('Action POST non reconnue: '+action, 'err'); return null;
 }
 
 async function apiDel(action, id) {
-  try {
-    const r = await fetch(`/api/admin?action=${action}&id=${id}`, { method:'DELETE', headers:AH() });
-    return await r.json();
-  } catch(e) { toast('Erreur réseau', 'err'); return null; }
+  if (action === 'del_cours') { await sbDel('cours', `id=eq.${id}`); return { success: true }; }
+  if (action === 'del_historique') { await sbDel('historique', `id=eq.${id}`); return { success: true }; }
+  if (action === 'del_financial') { await sbDel('financials', `id=eq.${id}`); return { success: true }; }
+  if (action === 'del_dividende') { await sbDel('dividendes_calendrier', `id=eq.${id}`); return { success: true }; }
+  if (action === 'del_analyse') { await sbDel('analyses', `id=eq.${id}`); return { success: true }; }
+  if (action === 'del_boc') { await sbDel('boc', `id=eq.${id}`); return { success: true }; }
+  toast('Action DELETE non reconnue: '+action, 'err'); return null;
 }
 
 const v = id => (document.getElementById(id)?.value || '').trim();
