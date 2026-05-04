@@ -1029,9 +1029,12 @@ async function init() {
     console.log('[Admin] Utilisateur trouvé:', { email: user.email, is_admin: user.is_admin });
 
     if (!user.is_admin) {
-      console.warn('[Admin] is_admin est false/null pour cet utilisateur. Valeur actuelle:', user.is_admin);
-      alert(`Accès refusé.\n\nVotre compte (${user.email}) existe mais is_admin = ${user.is_admin}.\n\nAllez dans Supabase → Table Editor → users → trouvez votre ligne → mettez is_admin = true.`);
-      location.href = 'app.html';
+      showDebugPanel({
+        etape: 'is_admin manquant',
+        userId, userEmail,
+        is_admin_actuel: user.is_admin,
+        solution: 'Supabase → Table Editor → users → votre ligne → is_admin → true'
+      });
       return;
     }
 
@@ -1041,8 +1044,75 @@ async function init() {
 
   } catch(e) {
     console.error('[Admin] Erreur inattendue:', e);
-    alert(`Erreur d'authentification : ${e.message}\n\nVérifiez la console pour plus de détails.`);
-    location.href = 'app.html';
+    showDebugPanel({ etape: 'exception JS', erreur: e.message });
+  }
+}
+
+function showDebugPanel(info) {
+  const sess = (() => { try { return JSON.parse(localStorage.getItem(SK)||'{}'); } catch(e){ return {}; } })();
+  const sessDisplay = JSON.stringify(sess, null, 2);
+  const rows = Object.entries(info).map(([k,v2])=>`
+    <tr style="border-bottom:1px solid rgba(245,240,232,0.06);">
+      <td style="color:rgba(245,240,232,0.45);padding:6px 8px 6px 0;white-space:nowrap;font-size:12px;">${k}</td>
+      <td style="color:#F5F0E8;padding:6px 0;word-break:break-all;font-family:monospace;font-size:12px;">${JSON.stringify(v2)}</td>
+    </tr>`).join('');
+
+  document.body.innerHTML = `
+    <style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap');</style>
+    <div style="min-height:100vh;background:#0A0804;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;padding:24px;">
+      <div style="background:#181410;border:1px solid rgba(184,150,78,0.3);border-radius:8px;padding:32px;max-width:620px;width:100%;">
+        <div style="font-family:'Playfair Display',serif;font-size:20px;color:#B8964E;margin-bottom:4px;">THE · CAPITAL</div>
+        <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#FB923C;border:1px solid rgba(251,146,60,0.4);display:inline-block;padding:2px 8px;border-radius:3px;margin-bottom:24px;">Diagnostic admin</div>
+
+        <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:6px;padding:16px;margin-bottom:16px;">
+          <div style="color:#F87171;font-size:13px;font-weight:500;margin-bottom:10px;">Blocage détecté : ${info.etape||'inconnu'}</div>
+          <table style="width:100%;border-collapse:collapse;">${rows}</table>
+        </div>
+
+        <div style="background:rgba(96,165,250,0.07);border:1px solid rgba(96,165,250,0.2);border-radius:6px;padding:14px;margin-bottom:16px;">
+          <div style="color:#60A5FA;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Session stockée (localStorage)</div>
+          <pre style="color:rgba(245,240,232,0.55);font-size:11px;overflow-x:auto;white-space:pre-wrap;margin:0;max-height:180px;overflow-y:auto;">${sessDisplay}</pre>
+        </div>
+
+        <div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:6px;padding:14px;margin-bottom:20px;">
+          <div style="color:#4ADE80;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Solution rapide</div>
+          <div style="font-size:13px;color:rgba(245,240,232,0.7);">Cliquez <strong style="color:#B8964E;">Forcer is_admin</strong> ci-dessous, ou allez dans<br>
+          <code style="color:#B8964E;font-size:12px;">Supabase → Table Editor → users → votre ligne → is_admin → true</code></div>
+        </div>
+
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button onclick="forceIsAdmin()" style="background:#B8964E;border:none;color:#0A0804;padding:9px 18px;border-radius:4px;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">🔧 Forcer is_admin = true</button>
+          <button onclick="location.href='login.html'" style="background:none;border:1px solid rgba(245,240,232,0.15);color:rgba(245,240,232,0.5);padding:9px 18px;border-radius:4px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Se reconnecter</button>
+          <button onclick="location.reload()" style="background:none;border:1px solid rgba(96,165,250,0.3);color:#60A5FA;padding:9px 18px;border-radius:4px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">↺ Réessayer</button>
+        </div>
+        <div id="fix-msg" style="margin-top:14px;font-size:13px;"></div>
+      </div>
+    </div>`;
+}
+
+async function forceIsAdmin() {
+  const msg = document.getElementById('fix-msg');
+  if (msg) { msg.style.color='#60A5FA'; msg.textContent='Mise à jour en cours...'; }
+  try {
+    const sess = JSON.parse(localStorage.getItem(SK)||'{}');
+    const tk = sess?.access_token || '';
+    const userId = sess?.user?.id || sess?.id;
+    if (!userId || !tk) { if(msg){msg.style.color='#F87171'; msg.textContent='Session invalide — reconnectez-vous.';} return; }
+    const r = await fetch(SB_REST+'/users?id=eq.'+userId, {
+      method: 'PATCH',
+      headers: { apikey: SB_ANON, Authorization: 'Bearer '+tk, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({ is_admin: true })
+    });
+    const data = await r.json();
+    if (r.ok && Array.isArray(data) && data.length > 0) {
+      if(msg){msg.style.color='#4ADE80'; msg.textContent='✓ is_admin activé ! Rechargement dans 1 seconde...';}
+      setTimeout(() => location.reload(), 1200);
+    } else {
+      // RLS bloque la mise à jour auto — guider vers Supabase
+      if(msg){msg.style.color='#FB923C'; msg.innerHTML='La mise à jour automatique est bloquée par les règles RLS de Supabase.<br><strong style="color:#F5F0E8;">Faites-le manuellement :</strong> Supabase → Table Editor → users → votre ligne → is_admin → <code>true</code> → Save.';}
+    }
+  } catch(e) {
+    if(msg){msg.style.color='#F87171'; msg.textContent='Erreur : '+e.message;}
   }
 }
 
