@@ -8,9 +8,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════════════════════
-   DESIGN TOKENS — tous les -- sont corrects (double tiret)
-═══════════════════════════════════════════════════════════ */
 :root {
   --bg:         #0A0804;
   --surface:    #13110C;
@@ -37,50 +34,27 @@ html { font-size:14px; scroll-behavior:smooth; }
 body { background:var(--bg); color:var(--cream); font-family:var(--sans); font-weight:300; min-height:100vh; }
 input,select,button,textarea { font-family:var(--sans); font-size:13px; }
 
-/* ── TOPBAR ─────────────────────────────────────────────── */
 .topbar {
   position:sticky; top:0; z-index:100; height:52px;
   display:flex; align-items:center; padding:0 24px;
   background:rgba(10,8,4,0.96); backdrop-filter:blur(20px);
   border-bottom:1px solid var(--border); gap:12px;
 }
-.topbar-logo {
-  font-family:var(--serif); font-size:16px; font-weight:700;
-  letter-spacing:2px; color:var(--cream); text-decoration:none;
-}
+.topbar-logo { font-family:var(--serif); font-size:16px; font-weight:700; letter-spacing:2px; color:var(--cream); text-decoration:none; }
 .topbar-logo span { color:var(--gold); }
-.admin-badge {
-  font-size:10px; letter-spacing:0.14em; text-transform:uppercase;
-  padding:3px 10px; border:1px solid rgba(251,146,60,0.4);
-  color:var(--orange); border-radius:3px;
-}
+.admin-badge { font-size:10px; letter-spacing:0.14em; text-transform:uppercase; padding:3px 10px; border:1px solid rgba(251,146,60,0.4); color:var(--orange); border-radius:3px; }
 .topbar-right { margin-left:auto; display:flex; align-items:center; gap:12px; }
 .topbar-user  { font-size:12px; color:var(--muted); }
-.btn-logout {
-  background:none; border:1px solid var(--border); color:var(--muted);
-  padding:5px 12px; border-radius:4px; font-size:11px;
-  letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all .2s;
-}
+.btn-logout { background:none; border:1px solid var(--border); color:var(--muted); padding:5px 12px; border-radius:4px; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all .2s; }
 .btn-logout:hover { color:var(--red); border-color:var(--red); }
 
-/* ── NAV TABS ───────────────────────────────────────────── */
-.admin-nav {
-  background:var(--surface); border-bottom:1px solid var(--border);
-  padding:0 24px; display:flex; gap:2px; overflow-x:auto;
-}
+.admin-nav { background:var(--surface); border-bottom:1px solid var(--border); padding:0 24px; display:flex; gap:2px; overflow-x:auto; }
 .admin-nav::-webkit-scrollbar { height:3px; }
-.admin-nav::-webkit-scrollbar-track { background:transparent; }
 .admin-nav::-webkit-scrollbar-thumb { background:var(--border); border-radius:3px; }
-.admin-tab {
-  padding:12px 14px; background:none; border:none;
-  color:var(--muted); font-size:11px; font-weight:400;
-  letter-spacing:0.1em; text-transform:uppercase; cursor:pointer;
-  border-bottom:2px solid transparent; transition:all .2s; white-space:nowrap;
-}
+.admin-tab { padding:12px 14px; background:none; border:none; color:var(--muted); font-size:11px; font-weight:400; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; border-bottom:2px solid transparent; transition:all .2s; white-space:nowrap; }
 .admin-tab:hover { color:var(--cream); }
 .admin-tab.active { color:var(--gold); border-bottom-color:var(--gold); }
 
-/* ── LAYOUT ─────────────────────────────────────────────── */
 .main { max-width:1400px; margin:0 auto; padding:28px 24px 100px; }
 .section-header { display:flex; align-items:center; gap:12px; margin-bottom:24px; flex-wrap:wrap; }
 .section-title { font-family:var(--serif); font-size:26px; font-weight:700; color:var(--cream); }
@@ -89,22 +63,11 @@ input,select,button,textarea { font-family:var(--sans); font-size:13px; }
 .tab-panel.active { display:block; }
 @keyframes fadeIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:none} }
 
-/* ── CARDS ──────────────────────────────────────────────── */
-.card {
-  background:var(--card); border:1px solid var(--border);
-  border-radius:6px; overflow:hidden; margin-bottom:16px;
-}
-.card-header {
-  display:flex; align-items:center; gap:8px;
-  padding:12px 18px; border-bottom:1px solid var(--border-s);
-}
-.card-title {
-  font-size:10px; font-weight:500; letter-spacing:0.14em;
-  text-transform:uppercase; color:var(--muted);
-}
+.card { background:var(--card); border:1px solid var(--border); border-radius:6px; overflow:hidden; margin-bottom:16px; }
+.card-header { display:flex; align-items:center; gap:8px; padding:12px 18px; border-bottom:1px solid var(--border-s); }
+.card-title { font-size:10px; font-weight:500; letter-spacing:0.14em; text-transform:uppercase; color:var(--muted); }
 .card-count { margin-left:auto; font-family:var(--mono); font-size:11px; color:var(--muted); }
 
-/* ── KPI GRID ───────────────────────────────────────────── */
 .kpi-row { display:grid; grid-template-columns:repeat(auto-fit,minmax(130px,1fr)); gap:10px; margin-bottom:20px; }
 .kpi { background:var(--card); border:1px solid var(--border); border-radius:6px; padding:16px 18px; transition:border-color .2s; }
 .kpi:hover { border-color:var(--gold); }
@@ -112,14 +75,9 @@ input,select,button,textarea { font-family:var(--sans); font-size:13px; }
 .kpi-value { font-family:var(--mono); font-size:22px; color:var(--gold); }
 .kpi-sub   { font-size:11px; color:var(--muted); margin-top:4px; }
 
-/* ── TABLES ─────────────────────────────────────────────── */
 .tw { overflow-x:auto; }
 table { width:100%; border-collapse:collapse; white-space:nowrap; }
-thead th {
-  padding:9px 12px; font-size:10px; font-weight:500; letter-spacing:0.1em;
-  text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border);
-  background:rgba(0,0,0,0.3); text-align:left;
-}
+thead th { padding:9px 12px; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); border-bottom:1px solid var(--border); background:rgba(0,0,0,0.3); text-align:left; }
 thead th.r { text-align:right; }
 tbody tr { border-bottom:1px solid var(--border-s); transition:background .15s; }
 tbody tr:hover { background:var(--faint); }
@@ -130,27 +88,19 @@ td.r { text-align:right; }
 .td-muted { color:var(--muted); }
 .td-mono  { font-family:var(--mono); }
 
-/* ── FORMS ──────────────────────────────────────────────── */
 .form-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; padding:18px; }
 .field label { display:block; font-size:10px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); margin-bottom:5px; }
-.field input,
-.field select,
-.field textarea {
-  width:100%; padding:9px 11px; background:var(--surface);
-  border:1px solid var(--border); border-radius:4px; color:var(--cream);
-  outline:none; transition:border-color .2s;
-}
+.field input,.field select,.field textarea { width:100%; padding:9px 11px; background:var(--surface); border:1px solid var(--border); border-radius:4px; color:var(--cream); outline:none; transition:border-color .2s; }
 .field input:focus,.field select:focus,.field textarea:focus { border-color:var(--gold); }
 .field input::placeholder,.field textarea::placeholder { color:var(--muted); }
 .field select option { background:var(--card); }
 .field textarea { resize:vertical; }
 
-/* ── BUTTONS ────────────────────────────────────────────── */
-.btn {
-  display:inline-flex; align-items:center; gap:6px; padding:8px 16px;
-  border:none; border-radius:4px; font-size:11px; font-weight:500;
-  letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all .2s;
-}
+/* Info box pour expliquer les colonnes */
+.info-box { background:rgba(184,150,78,0.06); border:1px solid rgba(184,150,78,0.2); border-radius:4px; padding:10px 14px; margin:0 18px 4px; font-size:12px; color:var(--muted); }
+.info-box strong { color:var(--gold); }
+
+.btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border:none; border-radius:4px; font-size:11px; font-weight:500; letter-spacing:0.1em; text-transform:uppercase; cursor:pointer; transition:all .2s; }
 .btn-primary   { background:var(--gold); color:var(--bg); }
 .btn-primary:hover { background:var(--gold-light); }
 .btn-outline   { background:none; border:1px solid var(--border); color:var(--muted); }
@@ -166,7 +116,6 @@ td.r { text-align:right; }
 .btn-green     { background:rgba(74,222,128,0.12); border:1px solid rgba(74,222,128,0.3); color:var(--green); }
 .btn-green:hover  { background:rgba(74,222,128,0.22); }
 
-/* ── BADGES ─────────────────────────────────────────────── */
 .badge { display:inline-block; padding:2px 8px; border-radius:3px; font-size:10px; font-weight:500; }
 .badge-green  { background:rgba(74,222,128,0.1);  color:var(--green);  border:1px solid rgba(74,222,128,0.25); }
 .badge-gold   { background:rgba(184,150,78,0.12); color:var(--gold);   border:1px solid rgba(184,150,78,0.25); }
@@ -174,97 +123,56 @@ td.r { text-align:right; }
 .badge-orange { background:rgba(251,146,60,0.1);  color:var(--orange); border:1px solid rgba(251,146,60,0.25); }
 .badge-blue   { background:rgba(96,165,250,0.1);  color:var(--blue);   border:1px solid rgba(96,165,250,0.25); }
 
-/* ── STATUS / MSG ───────────────────────────────────────── */
 .loading { padding:40px 20px; text-align:center; color:var(--muted); font-size:13px; }
-.spinner {
-  display:inline-block; width:16px; height:16px;
-  border:2px solid var(--border); border-top-color:var(--gold);
-  border-radius:50%; animation:spin .8s linear infinite; margin-bottom:8px;
-}
+.spinner { display:inline-block; width:16px; height:16px; border:2px solid var(--border); border-top-color:var(--gold); border-radius:50%; animation:spin .8s linear infinite; margin-bottom:8px; }
 @keyframes spin { to{transform:rotate(360deg)} }
 .msg     { font-size:12px; padding:6px 0; }
 .msg.ok  { color:var(--green); }
 .msg.err { color:var(--red); }
 .msg.info{ color:var(--blue); }
 
-/* ── LOG BOX ─────────────────────────────────────────────── */
-.log-box {
-  background:rgba(0,0,0,0.4); border:1px solid var(--border-s);
-  border-radius:4px; padding:14px; font-family:var(--mono);
-  font-size:12px; color:var(--muted); max-height:240px;
-  overflow-y:auto; line-height:1.8;
-}
+.log-box { background:rgba(0,0,0,0.4); border:1px solid var(--border-s); border-radius:4px; padding:14px; font-family:var(--mono); font-size:12px; color:var(--muted); max-height:240px; overflow-y:auto; line-height:1.8; }
 .log-box .ok  { color:var(--green); }
 .log-box .err { color:var(--red); }
 .log-box .info{ color:var(--gold); }
 
-/* ── CSV AREA ────────────────────────────────────────────── */
-.csv-area {
-  width:100%; min-height:120px; font-family:var(--mono); font-size:12px;
-  padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border);
-  border-radius:4px; color:var(--cream); resize:vertical; outline:none;
-}
+.csv-area { width:100%; min-height:120px; font-family:var(--mono); font-size:12px; padding:12px; background:rgba(0,0,0,0.3); border:1px solid var(--border); border-radius:4px; color:var(--cream); resize:vertical; outline:none; }
 .csv-area:focus { border-color:var(--gold); }
 
-/* ── SUB-TABS ────────────────────────────────────────────── */
 .sub-tabs { display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap; }
-.sub-tab {
-  padding:6px 14px; background:var(--surface); border:1px solid var(--border);
-  border-radius:20px; color:var(--muted); font-size:11px; letter-spacing:0.08em;
-  text-transform:uppercase; cursor:pointer; transition:all .2s;
-}
+.sub-tab { padding:6px 14px; background:var(--surface); border:1px solid var(--border); border-radius:20px; color:var(--muted); font-size:11px; letter-spacing:0.08em; text-transform:uppercase; cursor:pointer; transition:all .2s; }
 .sub-tab.active { background:var(--gold-dim); border-color:var(--gold); color:var(--gold); }
 
-/* ── TOASTS ──────────────────────────────────────────────── */
 #toast-container { position:fixed; bottom:24px; right:24px; z-index:999; display:flex; flex-direction:column; gap:8px; }
-.toast {
-  padding:10px 18px; border-radius:5px; font-size:13px;
-  backdrop-filter:blur(12px); animation:slideIn .25s ease; border:1px solid;
-  max-width:320px; word-break:break-word;
-}
+.toast { padding:10px 18px; border-radius:5px; font-size:13px; backdrop-filter:blur(12px); animation:slideIn .25s ease; border:1px solid; max-width:320px; word-break:break-word; }
 .toast.ok  { background:rgba(74,222,128,0.12); border-color:rgba(74,222,128,0.3); color:var(--green); }
 .toast.err { background:rgba(248,113,113,0.12); border-color:rgba(248,113,113,0.3); color:var(--red); }
 .toast.info{ background:rgba(96,165,250,0.12); border-color:rgba(96,165,250,0.3); color:var(--blue); }
 @keyframes slideIn { from{transform:translateX(40px);opacity:0} to{transform:none;opacity:1} }
 
-/* ── ACTIONS ROW ─────────────────────────────────────────── */
 .actions-row { padding:14px 18px; display:flex; gap:10px; align-items:center; flex-wrap:wrap; border-top:1px solid var(--border-s); }
 
-/* ── MODALS ──────────────────────────────────────────────── */
 .inline-edit { display:none; position:fixed; inset:0; z-index:200; background:rgba(0,0,0,0.72); align-items:center; justify-content:center; }
 .inline-edit.open { display:flex; }
-.modal {
-  background:var(--card); border:1px solid var(--border); border-radius:8px;
-  padding:24px; min-width:380px; max-width:620px; width:90%;
-  max-height:90vh; overflow-y:auto;
-}
+.modal { background:var(--card); border:1px solid var(--border); border-radius:8px; padding:24px; min-width:380px; max-width:620px; width:90%; max-height:90vh; overflow-y:auto; }
 .modal-title { font-family:var(--serif); font-size:18px; color:var(--gold); margin-bottom:18px; }
 .modal-actions { display:flex; gap:10px; margin-top:18px; justify-content:flex-end; }
 
-/* ── DIAGNOSTIC ──────────────────────────────────────────── */
 .diag-table td,.diag-table th { padding:8px 12px; }
 .diag-ok  { color:var(--green); }
 .diag-err { color:var(--red); }
 .diag-warn{ color:var(--orange); }
 
-/* ── PROGRESS BAR ────────────────────────────────────────── */
 .progress-bar { height:4px; background:var(--border); border-radius:2px; overflow:hidden; margin:8px 0; }
 .progress-fill { height:100%; background:var(--gold); transition:width .4s ease; border-radius:2px; }
 
-/* ── ANALYSE CARD ────────────────────────────────────────── */
-.analyse-item {
-  display:flex; align-items:center; gap:12px;
-  padding:12px 16px; border-bottom:1px solid var(--border-s); flex-wrap:wrap;
-}
+.analyse-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border-s); flex-wrap:wrap; }
 .analyse-item:last-child { border-bottom:none; }
 
-/* ── RESPONSIVE ──────────────────────────────────────────── */
 @media(max-width:600px) {
   .kpi-row { grid-template-columns:repeat(2,1fr); }
   .form-grid { grid-template-columns:1fr; }
   .main { padding:16px 12px 80px; }
-  .topbar { padding:0 12px; }
-  .admin-nav { padding:0 12px; }
 }
 </style>
 </head>
@@ -272,7 +180,6 @@ td.r { text-align:right; }
 
 <div id="toast-container"></div>
 
-<!-- ─── TOPBAR ──────────────────────────────────────────────────────── -->
 <div class="topbar">
   <a href="index.html" class="topbar-logo">THE <span>·</span> CAPITAL</a>
   <span class="admin-badge">Admin</span>
@@ -282,7 +189,6 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ─── NAV ─────────────────────────────────────────────────────────── -->
 <div class="admin-nav">
   <button class="admin-tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
   <button class="admin-tab" onclick="switchTab('cours',this)">Cours</button>
@@ -298,39 +204,42 @@ td.r { text-align:right; }
 
 <div class="main">
 
-<!-- ═══════════════════════════════ DASHBOARD ══════════════════════════ -->
+<!-- ═══ DASHBOARD ══════════════════════════════════════════════════════ -->
 <div class="tab-panel active" id="panel-dashboard">
   <div class="section-header">
     <div class="section-title">Vue d'ensemble <em>admin</em></div>
     <button class="btn btn-outline btn-sm" onclick="loadDashboard()">↺ Actualiser</button>
   </div>
-  <div class="kpi-row" id="admin-kpis">
-    <div class="kpi"><div class="kpi-label">Entreprises</div><div class="kpi-value" id="k-entreprises">—</div><div class="kpi-sub" id="ks-entreprises"></div></div>
-    <div class="kpi"><div class="kpi-label">Cours (séance)</div><div class="kpi-value" id="k-cours">—</div><div class="kpi-sub" id="ks-cours"></div></div>
-    <div class="kpi"><div class="kpi-label">Historique</div><div class="kpi-value" id="k-historique">—</div><div class="kpi-sub" id="ks-historique"></div></div>
+  <div class="kpi-row">
+    <div class="kpi"><div class="kpi-label">Entreprises</div><div class="kpi-value" id="k-entreprises">—</div></div>
+    <div class="kpi"><div class="kpi-label">Cours</div><div class="kpi-value" id="k-cours">—</div><div class="kpi-sub" id="ks-cours"></div></div>
+    <div class="kpi"><div class="kpi-label">Historique</div><div class="kpi-value" id="k-historique">—</div></div>
     <div class="kpi"><div class="kpi-label">Financials</div><div class="kpi-value" id="k-financials">—</div></div>
     <div class="kpi"><div class="kpi-label">Dividendes</div><div class="kpi-value" id="k-dividendes">—</div></div>
     <div class="kpi"><div class="kpi-label">Utilisateurs</div><div class="kpi-value" id="k-users">—</div><div class="kpi-sub" id="ks-users"></div></div>
   </div>
   <div class="card">
-    <div class="card-header"><span class="card-title">État de la base</span><span id="dash-ts" class="td-muted" style="font-size:11px;margin-left:auto;font-family:var(--mono)"></span></div>
-    <div style="padding:18px;" id="dash-info">
-      <div class="loading"><div class="spinner"></div><p>Chargement...</p></div>
-    </div>
+    <div class="card-header"><span class="card-title">État de la base</span><span id="dash-ts" style="font-size:11px;margin-left:auto;font-family:var(--mono);color:var(--muted)"></span></div>
+    <div style="padding:18px;" id="dash-info"><div class="loading"><div class="spinner"></div><p>Chargement...</p></div></div>
   </div>
   <div class="card">
     <div class="card-header"><span class="card-title">Alertes & anomalies</span></div>
-    <div style="padding:18px;" id="dash-alerts">
-      <div class="loading"><div class="spinner"></div></div>
-    </div>
+    <div style="padding:18px;" id="dash-alerts"><div class="loading"><div class="spinner"></div></div></div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ COURS ══════════════════════════════ -->
+<!-- ═══ COURS ══════════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-cours">
   <div class="section-header">
     <div class="section-title">Cours <em>BRVM</em></div>
   </div>
+
+  <!-- ⚠ Info colonnes -->
+  <div class="info-box" style="margin-bottom:16px;">
+    <strong>Colonnes alignées avec app.html :</strong>
+    ticker · date_seance · cours · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong> · capitalisation · plus_haut_52 · plus_bas_52
+  </div>
+
   <div class="card" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">Ajouter / Modifier un cours</span></div>
     <div class="form-grid">
@@ -341,12 +250,15 @@ td.r { text-align:right; }
       <div class="field"><label>Plus haut</label><input type="number" id="c-haut" placeholder="14600" step="any"></div>
       <div class="field"><label>Plus bas</label><input type="number" id="c-bas" placeholder="14350" step="any"></div>
       <div class="field"><label>Volume (titres)</label><input type="number" id="c-vol" placeholder="1200" step="1"></div>
-      <div class="field"><label>Variation (%)</label><input type="number" id="c-var" placeholder="0.69" step="any"></div>
+      <!-- ✅ CORRIGÉ: variation (pas variation_pct) — nom lu par app.html -->
+      <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ colonne "variation"</span></label><input type="number" id="c-var" placeholder="0.69" step="any"></div>
       <div class="field"><label>Capitalisation</label><input type="number" id="c-capi" placeholder="0" step="any"></div>
+      <div class="field"><label>+ haut 52 semaines</label><input type="number" id="c-h52" placeholder="15000" step="any"></div>
+      <div class="field"><label>+ bas 52 semaines</label><input type="number" id="c-b52" placeholder="12000" step="any"></div>
     </div>
     <div class="actions-row">
       <button class="btn btn-primary" onclick="addCours()">Enregistrer le cours</button>
-      <button class="btn btn-outline btn-sm" onclick="clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi'])">Effacer</button>
+      <button class="btn btn-outline btn-sm" onclick="clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi','c-h52','c-b52'])">Effacer</button>
       <span id="c-msg" class="msg"></span>
     </div>
   </div>
@@ -364,22 +276,29 @@ td.r { text-align:right; }
         <thead><tr>
           <th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th>
           <th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th>
-          <th class="r">Var%</th><th class="r">Capi.</th><th></th>
+          <!-- ✅ CORRIGÉ: colonne "variation" -->
+          <th class="r">Variation%</th><th class="r">Capi.</th><th class="r">H52</th><th class="r">B52</th><th></th>
         </tr></thead>
-        <tbody id="cours-tbody"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        <tbody id="cours-tbody"><tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
       </table>
     </div>
-    <div class="actions-row">
-      <span id="cours-count" style="font-size:11px;color:var(--muted);"></span>
-    </div>
+    <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ HISTORIQUE ══════════════════════════ -->
+<!-- ═══ HISTORIQUE ══════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-historique">
   <div class="section-header">
     <div class="section-title">Historique <em>cours</em></div>
   </div>
+
+  <!-- ⚠ Info colonnes -->
+  <div class="info-box" style="margin-bottom:16px;">
+    <strong>Colonnes alignées avec app.html :</strong>
+    ticker · date_seance · <strong>cours_cloture</strong> · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong>
+    <br><em style="font-size:11px;">app.html lit aussi "cours_normal" comme fallback si cours_cloture est null</em>
+  </div>
+
   <div class="sub-tabs">
     <button class="sub-tab active" onclick="switchSubTab('hist','ligne',this)">Ligne unique</button>
     <button class="sub-tab" onclick="switchSubTab('hist','bulk',this)">Import CSV</button>
@@ -392,12 +311,14 @@ td.r { text-align:right; }
       <div class="form-grid">
         <div class="field"><label>Ticker *</label><input type="text" id="h-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field"><label>Date séance *</label><input type="date" id="h-date"></div>
-        <div class="field"><label>Cours clôture *</label><input type="number" id="h-cloture" placeholder="14500" step="any"></div>
-        <div class="field"><label>Cours ouverture</label><input type="number" id="h-ouverture" placeholder="14400" step="any"></div>
+        <!-- ✅ cours_cloture — nom exact lu par app.html -->
+        <div class="field"><label>Cours clôture * <span style="color:var(--gold);font-size:9px;">→ "cours_cloture"</span></label><input type="number" id="h-cloture" placeholder="14500" step="any"></div>
+        <div class="field"><label>Ouverture</label><input type="number" id="h-ouverture" placeholder="14400" step="any"></div>
         <div class="field"><label>Plus haut</label><input type="number" id="h-haut" placeholder="14600" step="any"></div>
         <div class="field"><label>Plus bas</label><input type="number" id="h-bas" placeholder="14350" step="any"></div>
         <div class="field"><label>Volume</label><input type="number" id="h-vol" placeholder="1200"></div>
-        <div class="field"><label>Variation (%)</label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
+        <!-- ✅ CORRIGÉ: variation (pas variation_pct) -->
+        <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
       </div>
       <div class="actions-row">
         <button class="btn btn-primary" onclick="addHistorique()">Enregistrer</button>
@@ -410,10 +331,10 @@ td.r { text-align:right; }
     <div class="card">
       <div class="card-header"><span class="card-title">Import CSV en masse</span></div>
       <div style="padding:18px;">
-        <div style="background:rgba(184,150,78,0.06);border:1px solid var(--border);border-radius:4px;padding:12px;margin-bottom:12px;font-size:12px;color:var(--muted);">
-          <strong style="color:var(--gold);">Format CSV :</strong><br>
-          <code style="color:var(--cream);">ticker,date_seance,cours_cloture,cours_ouverture,plus_haut,plus_bas,volume,variation_pct</code><br>
-          <span style="margin-top:6px;display:block;">Les colonnes après <em>cours_cloture</em> sont optionnelles. Upsert automatique sur (ticker, date_seance).<br>Max 500 lignes par import. La date doit être au format YYYY-MM-DD.</span>
+        <div class="info-box" style="margin:0 0 12px;">
+          <strong>Format CSV (colonnes dans cet ordre) :</strong><br>
+          <code style="color:var(--cream);">ticker,date_seance,cours_cloture,ouverture,plus_haut,plus_bas,volume,variation</code><br>
+          <span style="margin-top:4px;display:block;">Date au format YYYY-MM-DD. Max 500 lignes. Upsert sur (ticker, date_seance).</span>
         </div>
         <textarea class="csv-area" id="bulk-csv" placeholder="SNTS,2024-01-15,14500,14400,14600,14350,1200,0.69&#10;ECOBANK,2024-01-15,11250,11200,11300,11150,850,-0.44"></textarea>
       </div>
@@ -426,7 +347,7 @@ td.r { text-align:right; }
       <div id="bulk-preview" style="display:none;padding:0 18px 14px;">
         <div class="progress-bar"><div class="progress-fill" id="bulk-progress" style="width:0%"></div></div>
         <div class="tw"><table id="bulk-preview-table" style="font-size:12px;">
-          <thead><tr><th>Ticker</th><th>Date</th><th>Clôture</th><th>Vol.</th><th>Var%</th><th>Statut</th></tr></thead>
+          <thead><tr><th>Ticker</th><th>Date</th><th>Clôture</th><th>Vol.</th><th>Variation%</th><th>Statut</th></tr></thead>
           <tbody id="bulk-preview-tbody"></tbody>
         </table></div>
       </div>
@@ -448,7 +369,7 @@ td.r { text-align:right; }
         <table>
           <thead><tr>
             <th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th>
-            <th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Var%</th><th></th>
+            <th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th></th>
           </tr></thead>
           <tbody id="hist-tbody"><tr><td colspan="9"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
         </table>
@@ -461,7 +382,7 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ═══════════════════════════════ ENTREPRISES ══════════════════════════ -->
+<!-- ═══ ENTREPRISES ══════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-entreprises">
   <div class="section-header">
     <div class="section-title">Entreprises <em>BRVM</em></div>
@@ -482,10 +403,7 @@ td.r { text-align:right; }
       </div>
       <div class="tw">
         <table>
-          <thead><tr>
-            <th>Ticker</th><th>Nom</th><th>Secteur</th><th>Pays</th>
-            <th>Compartiment</th><th>ISIN</th><th>Statut</th><th>Actions</th>
-          </tr></thead>
+          <thead><tr><th>Ticker</th><th>Nom</th><th>Secteur</th><th>Pays</th><th>Compartiment</th><th>ISIN</th><th>Statut</th><th>Actions</th></tr></thead>
           <tbody id="ent-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
         </table>
       </div>
@@ -507,14 +425,12 @@ td.r { text-align:right; }
           </select>
         </div>
         <div class="field"><label>Compartiment</label>
-          <select id="ne-compart">
-            <option value="PRINCIPAL">Principal</option>
-            <option value="PRESTIGE">Prestige</option>
-          </select>
+          <select id="ne-compart"><option value="PRINCIPAL">Principal</option><option value="PRESTIGE">Prestige</option></select>
         </div>
         <div class="field"><label>ISIN</label><input type="text" id="ne-isin" placeholder="SN0000000000"></div>
         <div class="field"><label>Description</label><input type="text" id="ne-desc" placeholder="Courte description"></div>
-        <div class="field"><label>Nb. actions</label><input type="number" id="ne-actions" placeholder="9600000"></div>
+        <!-- ✅ nombre_actions — lu par app.html pour calculer capitalisation -->
+        <div class="field"><label>Nb. actions <span style="color:var(--gold);font-size:9px;">→ "nombre_actions"</span></label><input type="number" id="ne-actions" placeholder="9600000"></div>
       </div>
       <div class="actions-row">
         <button class="btn btn-primary" onclick="addEntreprise()">Créer la société</button>
@@ -524,44 +440,51 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ═══════════════════════════════ FINANCIALS ══════════════════════════ -->
+<!-- ═══ FINANCIALS ══════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-financials">
   <div class="section-header">
     <div class="section-title">Données <em>financières</em></div>
   </div>
+
+  <!-- ⚠ Info colonnes -->
+  <div class="info-box" style="margin-bottom:16px;">
+    <strong>Colonnes alignées avec app.html :</strong>
+    ticker · annee · periode · chiffre_affaires · <strong>rbe</strong> · resultat_net · bpa · dpa · fonds_propres · nombre_actions · <strong>dettes_financieres</strong> · <strong>cash_flow_operationnel</strong> · capex · total_actif
+    <br><em style="font-size:11px;">ROE/ROA sont calculés automatiquement par app.html, inutile de les stocker.</em>
+  </div>
+
   <div class="sub-tabs">
     <button class="sub-tab active" onclick="switchSubTab('fin','add',this)">Ajouter</button>
     <button class="sub-tab" onclick="switchSubTab('fin','list',this)">Consulter</button>
   </div>
   <div id="fin-panel-add">
     <div class="card">
-      <div class="card-header"><span class="card-title">Ajouter / Modifier un financial (upsert sur ticker+année)</span></div>
+      <div class="card-header"><span class="card-title">Ajouter / Modifier un financial (upsert ticker+année+période)</span></div>
       <div class="form-grid">
         <div class="field"><label>Ticker *</label><input type="text" id="fin-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
         <div class="field"><label>Année *</label><input type="number" id="fin-annee" placeholder="2024"></div>
-        <div class="field"><label>Chiffre d'affaires</label><input type="number" id="fin-ca" placeholder="900000" step="any"></div>
-        <div class="field"><label>EBIT</label><input type="number" id="fin-ebit" placeholder="250000" step="any"></div>
-        <div class="field"><label>Résultat net</label><input type="number" id="fin-rn" placeholder="168000" step="any"></div>
-        <div class="field"><label>BPA (FCFA/action)</label><input type="number" id="fin-bpa" placeholder="17500" step="any"></div>
-        <div class="field"><label>DPA (FCFA/action)</label><input type="number" id="fin-dpa" placeholder="12000" step="any"></div>
-        <div class="field"><label>ROE (%)</label><input type="number" id="fin-roe" placeholder="27.1" step="any"></div>
-        <div class="field"><label>ROA (%)</label><input type="number" id="fin-roa" placeholder="10.2" step="any"></div>
-        <div class="field"><label>Fonds propres</label><input type="number" id="fin-fp" placeholder="620000" step="any"></div>
-        <div class="field"><label>Dette nette</label><input type="number" id="fin-dn" placeholder="0" step="any"></div>
-        <div class="field"><label>Total actif</label><input type="number" id="fin-actif" placeholder="0" step="any"></div>
-        <div class="field"><label>Nb. actions</label><input type="number" id="fin-nb-actions" placeholder="9600000"></div>
-        <div class="field"><label>Source</label><input type="text" id="fin-source" placeholder="Rapport annuel 2024"></div>
         <div class="field"><label>Période</label>
           <select id="fin-periode">
             <option value="annuel">Annuel</option>
-            <option value="S1">Semestriel S1</option>
-            <option value="S2">Semestriel S2</option>
-            <option value="T1">Trimestriel T1</option>
-            <option value="T2">Trimestriel T2</option>
-            <option value="T3">Trimestriel T3</option>
-            <option value="T4">Trimestriel T4</option>
+            <option value="S1">Semestriel S1</option><option value="S2">Semestriel S2</option>
+            <option value="T1">Trimestriel T1</option><option value="T2">T2</option><option value="T3">T3</option><option value="T4">T4</option>
           </select>
         </div>
+        <div class="field"><label>Chiffre d'affaires</label><input type="number" id="fin-ca" placeholder="900000" step="any"></div>
+        <!-- ✅ CORRIGÉ: rbe (pas ebit) — nom exact lu par app.html -->
+        <div class="field"><label>RBE <span style="color:var(--gold);font-size:9px;">→ colonne "rbe"</span></label><input type="number" id="fin-rbe" placeholder="250000" step="any"></div>
+        <div class="field"><label>Résultat net</label><input type="number" id="fin-rn" placeholder="168000" step="any"></div>
+        <div class="field"><label>BPA (FCFA/action)</label><input type="number" id="fin-bpa" placeholder="17500" step="any"></div>
+        <div class="field"><label>DPA (FCFA/action)</label><input type="number" id="fin-dpa" placeholder="12000" step="any"></div>
+        <div class="field"><label>Fonds propres</label><input type="number" id="fin-fp" placeholder="620000" step="any"></div>
+        <!-- ✅ CORRIGÉ: dettes_financieres (pas dette_nette) — nom exact lu par app.html -->
+        <div class="field"><label>Dettes financières <span style="color:var(--gold);font-size:9px;">→ "dettes_financieres"</span></label><input type="number" id="fin-dettes" placeholder="0" step="any"></div>
+        <div class="field"><label>Total actif</label><input type="number" id="fin-actif" placeholder="0" step="any"></div>
+        <div class="field"><label>Nb. actions</label><input type="number" id="fin-nb-actions" placeholder="9600000"></div>
+        <!-- ✅ AJOUTÉ: cash_flow_operationnel et capex — lus par app.html -->
+        <div class="field"><label>Cash-flow opérationnel <span style="color:var(--gold);font-size:9px;">→ "cash_flow_operationnel"</span></label><input type="number" id="fin-cfo" placeholder="0" step="any"></div>
+        <div class="field"><label>CAPEX</label><input type="number" id="fin-capex" placeholder="0" step="any"></div>
+        <div class="field"><label>Source</label><input type="text" id="fin-source" placeholder="Rapport annuel 2024"></div>
       </div>
       <div class="actions-row">
         <button class="btn btn-primary" onclick="addFinancial()">Enregistrer</button>
@@ -587,29 +510,37 @@ td.r { text-align:right; }
         <table>
           <thead><tr>
             <th>Ticker</th><th>Année</th><th>Période</th><th class="r">CA</th>
-            <th class="r">Rés. net</th><th class="r">BPA</th><th class="r">DPA</th>
-            <th class="r">ROE</th><th>Source</th><th></th>
+            <th class="r">RBE</th><th class="r">Rés. net</th><th class="r">BPA</th><th class="r">DPA</th>
+            <th class="r">Dettes fin.</th><th>Source</th><th></th>
           </tr></thead>
-          <tbody id="fin-tbody"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+          <tbody id="fin-tbody"><tr><td colspan="11"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
         </table>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ DIVIDENDES ══════════════════════════ -->
+<!-- ═══ DIVIDENDES ══════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-dividendes">
   <div class="section-header">
     <div class="section-title">Dividendes <em>distribués</em></div>
   </div>
+
+  <!-- ⚠ Info colonnes -->
+  <div class="info-box" style="margin-bottom:16px;">
+    <strong>Colonnes alignées avec app.html :</strong>
+    ticker · annee · montant · taux_rendement · <strong>date_detachement</strong> · date_paiement · statut · notes
+  </div>
+
   <div class="card" style="margin-bottom:16px;">
-    <div class="card-header"><span class="card-title">Ajouter / modifier un dividende (upsert ticker+année)</span></div>
+    <div class="card-header"><span class="card-title">Ajouter / modifier un dividende</span></div>
     <div class="form-grid">
       <div class="field"><label>Ticker *</label><input type="text" id="div-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
       <div class="field"><label>Année *</label><input type="number" id="div-annee" placeholder="2024"></div>
       <div class="field"><label>Montant (FCFA) *</label><input type="number" id="div-montant" placeholder="12000" step="any"></div>
       <div class="field"><label>Taux rendement (%)</label><input type="number" id="div-tx" placeholder="5.2" step="any"></div>
-      <div class="field"><label>Date ex-dividende</label><input type="date" id="div-detach"></div>
+      <!-- ✅ CORRIGÉ: date_detachement (pas ex_date) — nom lu par app.html -->
+      <div class="field"><label>Date ex-dividende <span style="color:var(--gold);font-size:9px;">→ "date_detachement"</span></label><input type="date" id="div-detach"></div>
       <div class="field"><label>Date paiement</label><input type="date" id="div-paie"></div>
       <div class="field"><label>Statut</label>
         <select id="div-statut">
@@ -638,7 +569,7 @@ td.r { text-align:right; }
       <table>
         <thead><tr>
           <th>Ticker</th><th>Année</th><th class="r">Montant</th><th class="r">Rend.</th>
-          <th>Ex-div.</th><th>Paiement</th><th>Statut</th><th></th>
+          <th>Ex-div. (date_detachement)</th><th>Paiement</th><th>Statut</th><th></th>
         </tr></thead>
         <tbody id="div-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
       </table>
@@ -646,15 +577,25 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ═══════════════════════════════ ANALYSES ═══════════════════════════ -->
+<!-- ═══ ANALYSES ═══════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-analyses">
   <div class="section-header">
     <div class="section-title">Recommandations <em>analystes</em></div>
   </div>
+
+  <!-- ⚠ Info colonnes -->
+  <div class="info-box" style="margin-bottom:16px;">
+    <strong>Colonnes alignées avec app.html :</strong>
+    ticker · <strong>titre</strong> · recommandation · <strong>resume</strong> · date_analyse · analyste · <strong>cours_cible</strong>
+    <br><em style="font-size:11px;">app.html lit a.titre, a.resume, a.cours_cible — ces noms sont maintenant utilisés.</em>
+  </div>
+
   <div class="card" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">Publier une recommandation</span></div>
     <div class="form-grid">
       <div class="field"><label>Ticker *</label><input type="text" id="an-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+      <!-- ✅ AJOUTÉ: titre — lu par app.html -->
+      <div class="field"><label>Titre <span style="color:var(--gold);font-size:9px;">→ "titre"</span></label><input type="text" id="an-titre" placeholder="Analyse fondamentale SNTS 2024"></div>
       <div class="field"><label>Recommandation *</label>
         <select id="an-reco">
           <option value="Acheter">Acheter</option>
@@ -664,19 +605,16 @@ td.r { text-align:right; }
           <option value="Vendre">Vendre</option>
         </select>
       </div>
-      <div class="field"><label>Objectif (FCFA)</label><input type="number" id="an-objectif" placeholder="16000" step="any"></div>
-      <div class="field"><label>Cours référence</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
-      <div class="field"><label>Potentiel (auto)</label><input type="text" id="an-potentiel-display" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+      <!-- ✅ CORRIGÉ: cours_cible (pas objectif_cours) — nom exact lu par app.html -->
+      <div class="field"><label>Cours cible (FCFA) <span style="color:var(--gold);font-size:9px;">→ "cours_cible"</span></label><input type="number" id="an-cible" placeholder="16000" step="any" oninput="calcPotentiel()"></div>
+      <div class="field"><label>Cours de référence</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
+      <div class="field"><label>Potentiel (calculé)</label><input type="text" id="an-potentiel-display" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
       <div class="field"><label>Analyste</label><input type="text" id="an-analyste" placeholder="The Capital Research"></div>
-      <div class="field"><label>Horizon</label>
-        <select id="an-horizon">
-          <option value="">— Sélectionner —</option>
-          <option>3 mois</option><option>6 mois</option><option>12 mois</option><option>24 mois</option>
-        </select>
-      </div>
+      <div class="field"><label>Date analyse</label><input type="date" id="an-date"></div>
+      <!-- ✅ CORRIGÉ: resume (pas commentaire) — nom exact lu par app.html -->
       <div class="field" style="grid-column:1/-1;">
-        <label>Commentaire</label>
-        <textarea id="an-commentaire" rows="3" placeholder="Analyse fondamentale, contexte macro, catalyseurs..."></textarea>
+        <label>Résumé / Analyse <span style="color:var(--gold);font-size:9px;">→ colonne "resume"</span></label>
+        <textarea id="an-resume" rows="4" placeholder="Analyse fondamentale, contexte macro, catalyseurs, risques..."></textarea>
       </div>
     </div>
     <div class="actions-row">
@@ -694,7 +632,7 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ═══════════════════════════════ UTILISATEURS ══════════════════════════ -->
+<!-- ═══ UTILISATEURS ══════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-utilisateurs">
   <div class="section-header">
     <div class="section-title">Gestion <em>utilisateurs</em></div>
@@ -707,26 +645,21 @@ td.r { text-align:right; }
         <input type="text" id="usr-search" placeholder="Chercher email/nom..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:160px;" oninput="filterUsrTable()">
         <select id="usr-plan-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="filterUsrTable()">
           <option value="">Tous plans</option>
-          <option value="free">Free</option>
-          <option value="pro">Pro</option>
-          <option value="elite">Elite</option>
+          <option value="free">Free</option><option value="pro">Pro</option><option value="elite">Elite</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="loadUsers()">↺</button>
       </div>
     </div>
     <div class="tw">
       <table>
-        <thead><tr>
-          <th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th>
-          <th>Admin</th><th>Inscrit le</th><th>Dernière co.</th><th>Actions</th>
-        </tr></thead>
-        <tbody id="usr-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+        <thead><tr><th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th><th>Admin</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+        <tbody id="usr-tbody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ SCRAPER ══════════════════════════════ -->
+<!-- ═══ SCRAPER ══════════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-scraper">
   <div class="section-header">
     <div class="section-title">Scraper <em>BRVM</em></div>
@@ -736,24 +669,20 @@ td.r { text-align:right; }
       <div class="card-header"><span class="card-title">Contrôle manuel</span></div>
       <div style="padding:18px;display:flex;flex-direction:column;gap:10px;">
         <button class="btn btn-primary" onclick="runScraper()">▶ Lancer le scraper BRVM</button>
-        <button class="btn btn-orange" onclick="runFallback()">↺ Recalculer variation_pct</button>
-        <button class="btn btn-green" onclick="repairTotaux()">⚙ Réparer cours orphelins</button>
+        <!-- ✅ CORRIGÉ: recalcule variation (pas variation_pct) -->
+        <button class="btn btn-orange" onclick="runFallback()">↺ Recalculer variation</button>
         <button class="btn btn-blue" onclick="syncHistFromCours()">⇅ Sync cours → historique</button>
         <span id="scraper-msg" class="msg"></span>
       </div>
-      <div style="padding:0 18px 12px;font-size:11px;color:rgba(245,240,232,0.25);">
-        Cron auto : lundi–vendredi à 22h00 UTC
-      </div>
+      <div style="padding:0 18px 12px;font-size:11px;color:rgba(245,240,232,0.25);">Cron auto : lundi–vendredi à 22h00 UTC</div>
     </div>
     <div class="card">
       <div class="card-header"><span class="card-title">Statut dernière exécution</span></div>
-      <div style="padding:14px;">
-        <div class="log-box" id="scraper-log">Aucune exécution récente.</div>
-      </div>
+      <div style="padding:14px;"><div class="log-box" id="scraper-log">Aucune exécution récente.</div></div>
     </div>
   </div>
   <div class="card">
-    <div class="card-header"><span class="card-title">Import BOC (Bulletin Officiel de Cotation)</span></div>
+    <div class="card-header"><span class="card-title">Import BOC</span></div>
     <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
       <div class="field"><label>Date de séance *</label><input type="date" id="boc-date"></div>
       <div class="field"><label>Nom du fichier *</label><input type="text" id="boc-nom" placeholder="BOC_2026-05-01.pdf"></div>
@@ -766,19 +695,17 @@ td.r { text-align:right; }
   </div>
   <div class="card">
     <div class="card-header"><span class="card-title">BOC enregistrés</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadBOC()">↺ Charger</button></div>
-    <div id="boc-list"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger pour afficher les BOC enregistrés.</div></div>
+    <div id="boc-list"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger pour afficher les BOC.</div></div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ DIAGNOSTIC ══════════════════════════ -->
+<!-- ═══ DIAGNOSTIC ══════════════════════════════════════════════════════ -->
 <div class="tab-panel" id="panel-diagnostic">
   <div class="section-header">
     <div class="section-title">Diagnostic <em>plateforme</em></div>
-    <button class="btn btn-primary btn-sm" onclick="runDiagnostic()">▶ Lancer le diagnostic complet</button>
+    <button class="btn btn-primary btn-sm" onclick="runDiagnostic()">▶ Lancer le diagnostic</button>
     <button class="btn btn-outline btn-sm" onclick="exportDiagnostic()">⬇ Exporter rapport</button>
   </div>
-
-  <!-- Résumé santé globale -->
   <div id="diag-health-bar" style="margin-bottom:16px;display:none;">
     <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:6px;">
       <span style="font-size:22px;" id="diag-health-icon">—</span>
@@ -789,65 +716,24 @@ td.r { text-align:right; }
       <div style="margin-left:auto;font-family:var(--mono);font-size:24px;" id="diag-score">—</div>
     </div>
   </div>
-
   <div id="diag-result">
-    <div class="card">
-      <div style="padding:24px;color:var(--muted);text-align:center;font-size:13px;">
-        Cliquez sur "Lancer le diagnostic" pour analyser l'état complet de la base de données.
-      </div>
-    </div>
-  </div>
-
-  <!-- Sections détail -->
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Cours invalides (NULL ou 0)</span>
-        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadCoursErreurs()">Charger</button>
-      </div>
-      <div id="cours-erreurs-panel">
-        <div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Tickers sans données financières</span>
-        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadTickersSansFinancials()">Charger</button>
-      </div>
-      <div id="tickers-sans-fin-panel">
-        <div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div>
-      </div>
-    </div>
+    <div class="card"><div style="padding:24px;color:var(--muted);text-align:center;font-size:13px;">Cliquez sur "Lancer le diagnostic" pour analyser l'état complet.</div></div>
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
     <div class="card">
-      <div class="card-header">
-        <span class="card-title">Doublons cours (ticker+date)</span>
-        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadDoublons()">Charger</button>
-      </div>
-      <div id="doublons-panel">
-        <div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div>
-      </div>
+      <div class="card-header"><span class="card-title">Cours invalides (NULL ou ≤ 0)</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadCoursErreurs()">Charger</button></div>
+      <div id="cours-erreurs-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
     </div>
     <div class="card">
-      <div class="card-header">
-        <span class="card-title">Historique vs cours — cohérence</span>
-        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="checkHistCoherence()">Vérifier</button>
-      </div>
-      <div id="hist-coherence-panel">
-        <div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Vérifier.</div>
-      </div>
+      <div class="card-header"><span class="card-title">Tickers sans données financières</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadTickersSansFinancials()">Charger</button></div>
+      <div id="tickers-sans-fin-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
     </div>
-  </div>
-  <div class="card" style="margin-top:16px;">
-    <div class="card-header"><span class="card-title">Journal des actions admin</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadAdminLog()">Charger</button></div>
-    <div id="admin-log-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
   </div>
 </div>
 
 </div><!-- /main -->
 
-<!-- ════ MODAL EDIT ENTREPRISE ════ -->
+<!-- ════ MODALS ════ -->
 <div class="inline-edit" id="modal-entreprise">
   <div class="modal">
     <div class="modal-title" id="modal-ent-title">Modifier l'entreprise</div>
@@ -857,10 +743,7 @@ td.r { text-align:right; }
       <div class="field"><label>Secteur</label><input type="text" id="modal-ent-secteur"></div>
       <div class="field"><label>Pays</label><input type="text" id="modal-ent-pays"></div>
       <div class="field"><label>Compartiment</label>
-        <select id="modal-ent-compart">
-          <option value="PRINCIPAL">Principal</option>
-          <option value="PRESTIGE">Prestige</option>
-        </select>
+        <select id="modal-ent-compart"><option value="PRINCIPAL">Principal</option><option value="PRESTIGE">Prestige</option></select>
       </div>
       <div class="field"><label>ISIN</label><input type="text" id="modal-ent-isin"></div>
       <div class="field"><label>Nb. actions</label><input type="number" id="modal-ent-actions"></div>
@@ -874,7 +757,6 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ════ MODAL EDIT COURS ════ -->
 <div class="inline-edit" id="modal-cours">
   <div class="modal">
     <div class="modal-title">Modifier le cours</div>
@@ -886,8 +768,11 @@ td.r { text-align:right; }
       <div class="field"><label>Plus haut</label><input type="number" id="modal-cours-haut" step="any"></div>
       <div class="field"><label>Plus bas</label><input type="number" id="modal-cours-bas" step="any"></div>
       <div class="field"><label>Volume</label><input type="number" id="modal-cours-vol"></div>
-      <div class="field"><label>Variation (%)</label><input type="number" id="modal-cours-var" step="any"></div>
+      <!-- ✅ CORRIGÉ: variation -->
+      <div class="field"><label>Variation % (col. "variation")</label><input type="number" id="modal-cours-var" step="any"></div>
       <div class="field"><label>Capitalisation</label><input type="number" id="modal-cours-capi" step="any"></div>
+      <div class="field"><label>+ haut 52s</label><input type="number" id="modal-cours-h52" step="any"></div>
+      <div class="field"><label>+ bas 52s</label><input type="number" id="modal-cours-b52" step="any"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline btn-sm" onclick="closeModal('modal-cours')">Annuler</button>
@@ -897,20 +782,23 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ════ MODAL EDIT FINANCIAL ════ -->
 <div class="inline-edit" id="modal-financial">
   <div class="modal">
     <div class="modal-title" id="modal-fin-title">Modifier le financial</div>
     <input type="hidden" id="modal-fin-id">
     <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
       <div class="field"><label>CA</label><input type="number" id="modal-fin-ca" step="any"></div>
-      <div class="field"><label>EBIT</label><input type="number" id="modal-fin-ebit" step="any"></div>
+      <!-- ✅ CORRIGÉ: rbe -->
+      <div class="field"><label>RBE (col. "rbe")</label><input type="number" id="modal-fin-rbe" step="any"></div>
       <div class="field"><label>Résultat net</label><input type="number" id="modal-fin-rn" step="any"></div>
       <div class="field"><label>BPA</label><input type="number" id="modal-fin-bpa" step="any"></div>
       <div class="field"><label>DPA</label><input type="number" id="modal-fin-dpa" step="any"></div>
-      <div class="field"><label>ROE (%)</label><input type="number" id="modal-fin-roe" step="any"></div>
       <div class="field"><label>Fonds propres</label><input type="number" id="modal-fin-fp" step="any"></div>
-      <div class="field"><label>Dette nette</label><input type="number" id="modal-fin-dn" step="any"></div>
+      <!-- ✅ CORRIGÉ: dettes_financieres -->
+      <div class="field"><label>Dettes financières</label><input type="number" id="modal-fin-dettes" step="any"></div>
+      <div class="field"><label>Total actif</label><input type="number" id="modal-fin-actif" step="any"></div>
+      <div class="field"><label>Cash-flow opér.</label><input type="number" id="modal-fin-cfo" step="any"></div>
+      <div class="field"><label>CAPEX</label><input type="number" id="modal-fin-capex" step="any"></div>
       <div class="field"><label>Source</label><input type="text" id="modal-fin-source"></div>
     </div>
     <div class="modal-actions">
@@ -921,26 +809,18 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ════ MODAL EDIT USER ════ -->
 <div class="inline-edit" id="modal-user">
   <div class="modal">
     <div class="modal-title" id="modal-usr-title">Modifier l'utilisateur</div>
     <input type="hidden" id="modal-usr-id">
     <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
       <div class="field"><label>Plan</label>
-        <select id="modal-usr-plan">
-          <option value="free">Free</option>
-          <option value="pro">Pro</option>
-          <option value="elite">Elite</option>
-        </select>
+        <select id="modal-usr-plan"><option value="free">Free</option><option value="pro">Pro</option><option value="elite">Elite</option></select>
       </div>
       <div class="field"><label>Expiration plan</label><input type="date" id="modal-usr-expiry"></div>
       <div class="field"><label>Nom</label><input type="text" id="modal-usr-nom"></div>
       <div class="field"><label>Admin</label>
-        <select id="modal-usr-admin">
-          <option value="false">Non</option>
-          <option value="true">Oui</option>
-        </select>
+        <select id="modal-usr-admin"><option value="false">Non</option><option value="true">Oui</option></select>
       </div>
     </div>
     <div class="modal-actions">
@@ -951,13 +831,9 @@ td.r { text-align:right; }
   </div>
 </div>
 
-<!-- ════════════════════════════════════════════════════════════════════
-     JAVASCRIPT
-═════════════════════════════════════════════════════════════════════ -->
 <script>
 'use strict';
 
-/* ── CONFIG ──────────────────────────────────────────────────────── */
 const SK = 'tc_session';
 const SB_URL  = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_REST = SB_URL + '/rest/v1';
@@ -965,10 +841,10 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 
 let TK = '', ME = null;
 let coursData = [], finData = [], divData = [], entData = [], usrData = [];
-let diagData = null; // pour export
+let diagData = null;
 let activeTab = 'dashboard';
 
-/* ── INIT ────────────────────────────────────────────────────────── */
+/* ── INIT ─────────────────────────────────────────────────────── */
 async function init() {
   const s = localStorage.getItem(SK);
   if (!s) { location.href = 'login.html'; return; }
@@ -976,153 +852,39 @@ async function init() {
   try { sess = JSON.parse(s); } catch(e) { location.href = 'login.html'; return; }
   TK = sess?.access_token || '';
   if (!TK) { location.href = 'login.html'; return; }
-
-  // Extraire l'ID utilisateur — plusieurs formats de session possibles
-  const userId = sess.user?.id || sess.id || null;
-  const userEmail = sess.user?.email || sess.email || '';
-
-  console.log('[Admin] Session trouvée:', { userId, userEmail, hasToken: !!TK });
-
-  if (!userId) {
-    console.error('[Admin] Impossible de trouver l\'ID utilisateur dans la session:', sess);
-    alert('Session invalide. Reconnectez-vous.');
-    location.href = 'login.html';
-    return;
-  }
-
+  const userId   = sess.user?.id || sess.id || null;
+  const userEmail= sess.user?.email || sess.email || '';
+  if (!userId) { alert('Session invalide. Reconnectez-vous.'); location.href = 'login.html'; return; }
   try {
-    // Requête 1 : chercher par ID
     const r = await fetch(`${SB_REST}/users?select=id,is_admin,email,nom&id=eq.${userId}`, {
       headers: { apikey: SB_ANON, Authorization: `Bearer ${TK}` }
     });
-
-    if (!r.ok) {
-      const errText = await r.text();
-      console.error('[Admin] Erreur HTTP lors de la vérification admin:', r.status, errText);
-      // Si 401 : token expiré
-      if (r.status === 401) { alert('Session expirée. Reconnectez-vous.'); location.href = 'login.html'; return; }
-      // Autre erreur réseau : on tente par email comme fallback
-    }
-
     let rows = await r.json().catch(() => []);
-    console.log('[Admin] Résultat requête users par ID:', rows);
-
-    // Fallback : si pas trouvé par ID, chercher par email
     if (!rows?.length && userEmail) {
-      console.warn('[Admin] Utilisateur non trouvé par ID, tentative par email...');
       const r2 = await fetch(`${SB_REST}/users?select=id,is_admin,email,nom&email=eq.${encodeURIComponent(userEmail)}`, {
         headers: { apikey: SB_ANON, Authorization: `Bearer ${TK}` }
       });
       rows = await r2.json().catch(() => []);
-      console.log('[Admin] Résultat requête users par email:', rows);
     }
-
     const user = rows?.[0];
-
-    if (!user) {
-      console.error('[Admin] Aucun utilisateur trouvé. Vérifiez que la table "users" contient bien un enregistrement pour:', { userId, userEmail });
-      alert(`Compte introuvable dans la base.\n\nID cherché : ${userId}\nEmail : ${userEmail}\n\nVérifiez dans Supabase que votre email est bien dans la table "users" avec is_admin = true.`);
-      location.href = 'app.html';
-      return;
-    }
-
-    console.log('[Admin] Utilisateur trouvé:', { email: user.email, is_admin: user.is_admin });
-
-    if (!user.is_admin) {
-      showDebugPanel({
-        etape: 'is_admin manquant',
-        userId, userEmail,
-        is_admin_actuel: user.is_admin,
-        solution: 'Supabase → Table Editor → users → votre ligne → is_admin → true'
-      });
-      return;
-    }
-
+    if (!user) { alert('Compte introuvable. Vérifiez la table users dans Supabase.'); location.href = 'app.html'; return; }
+    if (!user.is_admin) { alert('Accès refusé. Activez is_admin dans Supabase.'); location.href = 'app.html'; return; }
     ME = { is_admin: true, email: user.email || userEmail };
     document.getElementById('admin-user').textContent = ME.email;
     loadDashboard();
-
   } catch(e) {
-    console.error('[Admin] Erreur inattendue:', e);
-    showDebugPanel({ etape: 'exception JS', erreur: e.message });
-  }
-}
-
-function showDebugPanel(info) {
-  const sess = (() => { try { return JSON.parse(localStorage.getItem(SK)||'{}'); } catch(e){ return {}; } })();
-  const sessDisplay = JSON.stringify(sess, null, 2);
-  const rows = Object.entries(info).map(([k,v2])=>`
-    <tr style="border-bottom:1px solid rgba(245,240,232,0.06);">
-      <td style="color:rgba(245,240,232,0.45);padding:6px 8px 6px 0;white-space:nowrap;font-size:12px;">${k}</td>
-      <td style="color:#F5F0E8;padding:6px 0;word-break:break-all;font-family:monospace;font-size:12px;">${JSON.stringify(v2)}</td>
-    </tr>`).join('');
-
-  document.body.innerHTML = `
-    <style>@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@300;400;500&family=DM+Mono&display=swap');</style>
-    <div style="min-height:100vh;background:#0A0804;display:flex;align-items:center;justify-content:center;font-family:'DM Sans',sans-serif;padding:24px;">
-      <div style="background:#181410;border:1px solid rgba(184,150,78,0.3);border-radius:8px;padding:32px;max-width:620px;width:100%;">
-        <div style="font-family:'Playfair Display',serif;font-size:20px;color:#B8964E;margin-bottom:4px;">THE · CAPITAL</div>
-        <div style="font-size:10px;letter-spacing:0.14em;text-transform:uppercase;color:#FB923C;border:1px solid rgba(251,146,60,0.4);display:inline-block;padding:2px 8px;border-radius:3px;margin-bottom:24px;">Diagnostic admin</div>
-
-        <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.25);border-radius:6px;padding:16px;margin-bottom:16px;">
-          <div style="color:#F87171;font-size:13px;font-weight:500;margin-bottom:10px;">Blocage détecté : ${info.etape||'inconnu'}</div>
-          <table style="width:100%;border-collapse:collapse;">${rows}</table>
-        </div>
-
-        <div style="background:rgba(96,165,250,0.07);border:1px solid rgba(96,165,250,0.2);border-radius:6px;padding:14px;margin-bottom:16px;">
-          <div style="color:#60A5FA;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Session stockée (localStorage)</div>
-          <pre style="color:rgba(245,240,232,0.55);font-size:11px;overflow-x:auto;white-space:pre-wrap;margin:0;max-height:180px;overflow-y:auto;">${sessDisplay}</pre>
-        </div>
-
-        <div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:6px;padding:14px;margin-bottom:20px;">
-          <div style="color:#4ADE80;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:6px;">Solution rapide</div>
-          <div style="font-size:13px;color:rgba(245,240,232,0.7);">Cliquez <strong style="color:#B8964E;">Forcer is_admin</strong> ci-dessous, ou allez dans<br>
-          <code style="color:#B8964E;font-size:12px;">Supabase → Table Editor → users → votre ligne → is_admin → true</code></div>
-        </div>
-
-        <div style="display:flex;gap:10px;flex-wrap:wrap;">
-          <button onclick="forceIsAdmin()" style="background:#B8964E;border:none;color:#0A0804;padding:9px 18px;border-radius:4px;font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">🔧 Forcer is_admin = true</button>
-          <button onclick="location.href='login.html'" style="background:none;border:1px solid rgba(245,240,232,0.15);color:rgba(245,240,232,0.5);padding:9px 18px;border-radius:4px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">Se reconnecter</button>
-          <button onclick="location.reload()" style="background:none;border:1px solid rgba(96,165,250,0.3);color:#60A5FA;padding:9px 18px;border-radius:4px;font-size:11px;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;">↺ Réessayer</button>
-        </div>
-        <div id="fix-msg" style="margin-top:14px;font-size:13px;"></div>
-      </div>
-    </div>`;
-}
-
-async function forceIsAdmin() {
-  const msg = document.getElementById('fix-msg');
-  if (msg) { msg.style.color='#60A5FA'; msg.textContent='Mise à jour en cours...'; }
-  try {
-    const sess = JSON.parse(localStorage.getItem(SK)||'{}');
-    const tk = sess?.access_token || '';
-    const userId = sess?.user?.id || sess?.id;
-    if (!userId || !tk) { if(msg){msg.style.color='#F87171'; msg.textContent='Session invalide — reconnectez-vous.';} return; }
-    const r = await fetch(SB_REST+'/users?id=eq.'+userId, {
-      method: 'PATCH',
-      headers: { apikey: SB_ANON, Authorization: 'Bearer '+tk, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-      body: JSON.stringify({ is_admin: true })
-    });
-    const data = await r.json();
-    if (r.ok && Array.isArray(data) && data.length > 0) {
-      if(msg){msg.style.color='#4ADE80'; msg.textContent='✓ is_admin activé ! Rechargement dans 1 seconde...';}
-      setTimeout(() => location.reload(), 1200);
-    } else {
-      // RLS bloque la mise à jour auto — guider vers Supabase
-      if(msg){msg.style.color='#FB923C'; msg.innerHTML='La mise à jour automatique est bloquée par les règles RLS de Supabase.<br><strong style="color:#F5F0E8;">Faites-le manuellement :</strong> Supabase → Table Editor → users → votre ligne → is_admin → <code>true</code> → Save.';}
-    }
-  } catch(e) {
-    if(msg){msg.style.color='#F87171'; msg.textContent='Erreur : '+e.message;}
+    alert('Erreur de connexion: ' + e.message);
+    location.href = 'login.html';
   }
 }
 
 function doLogout() { localStorage.removeItem(SK); location.href = 'login.html'; }
 
-/* ── HELPERS ──────────────────────────────────────────────────────── */
-const v  = id => (document.getElementById(id)?.value || '').trim();
+/* ── HELPERS ──────────────────────────────────────────────────── */
+const v   = id => (document.getElementById(id)?.value || '').trim();
 const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
-const pf = id => { const val = parseFloat(v(id)); return isNaN(val) ? null : val; };
-const pi = id => { const val = parseInt(v(id)); return isNaN(val) ? null : val; };
+const pf  = id => { const n = parseFloat(v(id)); return isNaN(n) ? null : n; };
+const pi  = id => { const n = parseInt(v(id)); return isNaN(n) ? null : n; };
 const fmt     = n => n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR') : '—';
 const fmtPct  = n => n != null && !isNaN(n) ? `${Number(n)>=0?'+':''}${Number(n).toFixed(2)}%` : '—';
 const clrPct  = n => Number(n)>=0 ? 'var(--green)' : 'var(--red)';
@@ -1137,7 +899,7 @@ function sbHeaders(extra={}) {
 async function sbGet(table, params='') {
   try {
     const r = await fetch(`${SB_REST}/${table}?${params}`, { headers: sbHeaders() });
-    if (!r.ok) { const e = await r.json().catch(()=>{}); toast((e?.message||e?.error_description||'Erreur lecture')+` [${table}]`,'err'); return null; }
+    if (!r.ok) { const e = await r.json().catch(()=>{}); toast((e?.message||'Erreur lecture')+` [${table}]`,'err'); return null; }
     return r.json();
   } catch(e) { toast('Réseau: '+e.message,'err'); return null; }
 }
@@ -1153,7 +915,7 @@ async function sbCount(table, params='') {
 
 async function sbPost(table, body, onConflict='') {
   try {
-    const prefer = onConflict ? `return=representation,resolution=merge-duplicates` : 'return=representation';
+    const prefer = onConflict ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
     const url = onConflict ? `${SB_REST}/${table}?on_conflict=${onConflict}` : `${SB_REST}/${table}`;
     const r = await fetch(url, { method:'POST', headers: sbHeaders({Prefer:prefer}), body: JSON.stringify(body) });
     if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur écriture','err'); return null; }
@@ -1177,7 +939,7 @@ async function sbDel(table, filter) {
   } catch(e) { toast('Réseau: '+e.message,'err'); return false; }
 }
 
-/* ── NAVIGATION ───────────────────────────────────────────────────── */
+/* ── NAVIGATION ───────────────────────────────────────────────── */
 const tabLoaders = {
   dashboard: loadDashboard,
   cours: loadCours,
@@ -1199,7 +961,7 @@ function switchTab(name, el) {
 function switchSubTab(prefix, panel, el) {
   el.closest('.tab-panel').querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
-  ['ligne','bulk','view','list','add','import'].forEach(p => {
+  ['ligne','bulk','view','list','add'].forEach(p => {
     const e2 = document.getElementById(`${prefix}-panel-${p}`);
     if (e2) e2.style.display = 'none';
   });
@@ -1207,7 +969,7 @@ function switchSubTab(prefix, panel, el) {
   if (target) target.style.display = '';
 }
 
-/* ── TOASTS ───────────────────────────────────────────────────────── */
+/* ── TOASTS ───────────────────────────────────────────────────── */
 function toast(msg, type='ok') {
   const c = document.getElementById('toast-container');
   const t = document.createElement('div');
@@ -1222,17 +984,10 @@ function toast(msg, type='ok') {
 ══════════════════════════════════════════════════════ */
 async function loadDashboard() {
   document.getElementById('dash-ts').textContent = new Date().toLocaleString('fr-FR');
-
-  // KPI counts en parallèle
   const [nEnt, nCours, nHist, nFin, nDiv, nUsers] = await Promise.all([
-    sbCount('entreprises'),
-    sbCount('cours'),
-    sbCount('historique'),
-    sbCount('financials'),
-    sbCount('dividendes_calendrier'),
-    sbCount('users'),
+    sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
+    sbCount('financials'), sbCount('dividendes_calendrier'), sbCount('users'),
   ]);
-
   document.getElementById('k-entreprises').textContent = nEnt;
   document.getElementById('k-cours').textContent = nCours;
   document.getElementById('k-historique').textContent = nHist;
@@ -1240,61 +995,41 @@ async function loadDashboard() {
   document.getElementById('k-dividendes').textContent = nDiv;
   document.getElementById('k-users').textContent = nUsers;
 
-  // Dernières dates
-  const [lastCours, lastHist, usersPlans] = await Promise.all([
+  const [lastCours, usersPlans] = await Promise.all([
     sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1'),
-    sbGet('historique', 'select=date_seance&order=date_seance.desc&limit=1'),
     sbGet('users', 'select=plan'),
   ]);
-
   const plans = { free:0, pro:0, elite:0 };
   (usersPlans||[]).forEach(u => { if (plans[u.plan] !== undefined) plans[u.plan]++; });
   document.getElementById('ks-users').textContent = `Free:${plans.free} Pro:${plans.pro} Elite:${plans.elite}`;
   document.getElementById('ks-cours').textContent = `Dernière: ${lastCours?.[0]?.date_seance||'—'}`;
-  document.getElementById('ks-historique').textContent = `Dernière: ${lastHist?.[0]?.date_seance||'—'}`;
 
   document.getElementById('dash-info').innerHTML = `
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
       <div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance cours :</span> <strong>${lastCours?.[0]?.date_seance||'—'}</strong></div>
-      <div style="font-size:13px;"><span style="color:var(--muted);">Dernier historique :</span> <strong>${lastHist?.[0]?.date_seance||'—'}</strong></div>
       <div style="font-size:13px;"><span style="color:var(--muted);">Entreprises actives :</span> <strong>${nEnt}</strong></div>
       <div style="font-size:13px;"><span style="color:var(--muted);">Points historique :</span> <strong>${nHist.toLocaleString('fr-FR')}</strong></div>
     </div>`;
 
-  // Alertes rapides
   await loadDashboardAlerts();
 }
 
 async function loadDashboardAlerts() {
   const panel = document.getElementById('dash-alerts');
   const alerts = [];
-
-  // Cours avec variation_pct NULL
-  const nullVar = await sbCount('cours', 'variation_pct=is.null');
-  if (nullVar > 0) alerts.push({ type:'warn', msg: `${nullVar} cours sans variation_pct — pensez à recalculer (onglet Scraper)` });
-
-  // Cours avec cours = 0 ou null
+  // ✅ CORRIGÉ: cherche variation IS NULL (pas variation_pct)
+  const nullVar   = await sbCount('cours', 'variation=is.null');
   const nullCours = await sbCount('cours', 'cours=lte.0');
-  if (nullCours > 0) alerts.push({ type:'err', msg: `${nullCours} cours avec valeur ≤ 0 — vérifier l'onglet Diagnostic` });
-
-  // Users avec plan pro/elite sans date d'expiration
-  const noExpiry = await sbCount('users', 'plan=neq.free&plan_expire_at=is.null');
-  if (noExpiry > 0) alerts.push({ type:'warn', msg: `${noExpiry} compte(s) Pro/Elite sans date d'expiration` });
-
-  // Entreprises sans cours
-  const entList = await sbGet('entreprises', 'select=ticker&actif=eq.true');
-  const coursTickers = await sbGet('cours', 'select=ticker');
-  if (entList && coursTickers) {
-    const tickersAvecCours = new Set(coursTickers.map(c => c.ticker));
-    const orphans = (entList||[]).filter(e => !tickersAvecCours.has(e.ticker));
-    if (orphans.length > 0) alerts.push({ type:'info', msg: `${orphans.length} entreprise(s) active(s) sans cours : ${orphans.map(e=>e.ticker).join(', ')}` });
-  }
+  if (nullVar > 0)   alerts.push({ type:'warn', msg: `${nullVar} cours sans variation — pensez à recalculer (onglet Scraper)` });
+  if (nullCours > 0) alerts.push({ type:'err',  msg: `${nullCours} cours avec valeur ≤ 0 — vérifier l'onglet Diagnostic` });
+  // Historique sans cours_cloture
+  const nullClot = await sbCount('historique', 'cours_cloture=is.null');
+  if (nullClot > 0) alerts.push({ type:'warn', msg: `${nullClot} entrées historique sans cours_cloture` });
 
   if (!alerts.length) {
-    panel.innerHTML = '<div style="color:var(--green);font-size:13px;padding:4px 0;">✓ Aucune anomalie détectée — tout semble en ordre.</div>';
+    panel.innerHTML = '<div style="color:var(--green);font-size:13px;padding:4px 0;">✓ Aucune anomalie détectée.</div>';
     return;
   }
-
   panel.innerHTML = alerts.map(a => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-s);">
       <span style="font-size:16px;">${a.type==='err'?'⚠':'ℹ'}</span>
@@ -1307,17 +1042,20 @@ async function loadDashboardAlerts() {
 ══════════════════════════════════════════════════════ */
 async function loadCours() {
   const tbody = document.getElementById('cours-tbody');
-  tbody.innerHTML = '<tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  // ✅ CORRIGÉ: sélectionne la colonne "variation" (pas variation_pct)
   const data = await sbGet('cours', 'select=*&order=date_seance.desc,ticker.asc&limit=1000');
   coursData = data || [];
   renderCoursTable(coursData);
 }
 
 function renderCoursTable(list) {
-  const tbody = document.getElementById('cours-tbody');
   document.getElementById('cours-count').textContent = `${list.length} entrées`;
-  if (!list.length) { tbody.innerHTML='<tr><td colspan="10" style="color:var(--muted);padding:20px;text-align:center;">Aucun cours.</td></tr>'; return; }
-  tbody.innerHTML = list.map(c => `<tr>
+  if (!list.length) {
+    document.getElementById('cours-tbody').innerHTML = '<tr><td colspan="12" style="color:var(--muted);padding:20px;text-align:center;">Aucun cours.</td></tr>';
+    return;
+  }
+  document.getElementById('cours-tbody').innerHTML = list.map(c => `<tr>
     <td class="td-gold">${c.ticker}</td>
     <td class="td-mono td-muted">${c.date_seance||'—'}</td>
     <td class="r td-mono">${fmt(c.cours)}</td>
@@ -1325,8 +1063,11 @@ function renderCoursTable(list) {
     <td class="r td-mono">${fmt(c.plus_haut)}</td>
     <td class="r td-mono">${fmt(c.plus_bas)}</td>
     <td class="r td-mono td-muted">${fmt(c.volume)}</td>
-    <td class="r td-mono" style="color:${clrPct(c.variation_pct)};">${fmtPct(c.variation_pct)}</td>
+    <!-- ✅ CORRIGÉ: c.variation -->
+    <td class="r td-mono" style="color:${clrPct(c.variation)};">${fmtPct(c.variation)}</td>
     <td class="r td-mono td-muted" style="font-size:11px;">${fmt(c.capitalisation)}</td>
+    <td class="r td-mono td-muted">${fmt(c.plus_haut_52)}</td>
+    <td class="r td-mono td-muted">${fmt(c.plus_bas_52)}</td>
     <td style="display:flex;gap:4px;">
       <button class="btn btn-outline btn-sm" onclick='openEditCours(${JSON.stringify(c).replace(/'/g,"&#39;")})'>✏</button>
       <button class="btn btn-danger btn-sm" onclick="deleteCours('${c.id}')">✕</button>
@@ -1344,16 +1085,19 @@ function filterCoursTable() {
 }
 
 async function addCours() {
+  // ✅ CORRIGÉ: colonne "variation" (pas variation_pct), ajout plus_haut_52/plus_bas_52
   const body = {
-    ticker: v('c-ticker').toUpperCase(),
-    date_seance: v('c-date'),
-    cours: pf('c-cours'),
-    ouverture: pf('c-ouv'),
-    plus_haut: pf('c-haut'),
-    plus_bas: pf('c-bas'),
-    volume: pf('c-vol'),
-    variation_pct: pf('c-var'),
+    ticker:       v('c-ticker').toUpperCase(),
+    date_seance:  v('c-date'),
+    cours:        pf('c-cours'),
+    ouverture:    pf('c-ouv'),
+    plus_haut:    pf('c-haut'),
+    plus_bas:     pf('c-bas'),
+    volume:       pf('c-vol'),
+    variation:    pf('c-var'),
     capitalisation: pf('c-capi'),
+    plus_haut_52: pf('c-h52'),
+    plus_bas_52:  pf('c-b52'),
   };
   const msg = document.getElementById('c-msg');
   if (!body.ticker||!body.date_seance||!body.cours) { msg.textContent='Ticker, date et cours requis.'; msg.className='msg err'; return; }
@@ -1369,15 +1113,25 @@ function openEditCours(c) {
   set('modal-cours-haut', c.plus_haut);
   set('modal-cours-bas', c.plus_bas);
   set('modal-cours-vol', c.volume);
-  set('modal-cours-var', c.variation_pct);
+  // ✅ CORRIGÉ: c.variation
+  set('modal-cours-var', c.variation);
   set('modal-cours-capi', c.capitalisation);
+  set('modal-cours-h52', c.plus_haut_52);
+  set('modal-cours-b52', c.plus_bas_52);
   set('modal-cours-msg', '');
   document.getElementById('modal-cours').classList.add('open');
 }
 
 async function saveCours() {
   const id = v('modal-cours-id');
-  const body = { cours:pf('modal-cours-val'), ouverture:pf('modal-cours-ouv'), plus_haut:pf('modal-cours-haut'), plus_bas:pf('modal-cours-bas'), volume:pf('modal-cours-vol'), variation_pct:pf('modal-cours-var'), capitalisation:pf('modal-cours-capi') };
+  // ✅ CORRIGÉ: variation
+  const body = {
+    cours: pf('modal-cours-val'), ouverture: pf('modal-cours-ouv'),
+    plus_haut: pf('modal-cours-haut'), plus_bas: pf('modal-cours-bas'),
+    volume: pf('modal-cours-vol'), variation: pf('modal-cours-var'),
+    capitalisation: pf('modal-cours-capi'),
+    plus_haut_52: pf('modal-cours-h52'), plus_bas_52: pf('modal-cours-b52'),
+  };
   const r = await sbPatch('cours', `id=eq.${id}`, body);
   if (r) { toast('Cours mis à jour'); closeModal('modal-cours'); loadCours(); }
 }
@@ -1392,15 +1146,16 @@ async function deleteCours(id) {
    HISTORIQUE
 ══════════════════════════════════════════════════════ */
 async function addHistorique() {
+  // ✅ CORRIGÉ: cours_cloture, ouverture, variation (noms lus par app.html)
   const body = {
-    ticker: v('h-ticker').toUpperCase(),
-    date_seance: v('h-date'),
+    ticker:        v('h-ticker').toUpperCase(),
+    date_seance:   v('h-date'),
     cours_cloture: pf('h-cloture'),
-    cours_ouverture: pf('h-ouverture'),
-    plus_haut: pf('h-haut'),
-    plus_bas: pf('h-bas'),
-    volume: pf('h-vol'),
-    variation_pct: pf('h-var'),
+    ouverture:     pf('h-ouverture'),
+    plus_haut:     pf('h-haut'),
+    plus_bas:      pf('h-bas'),
+    volume:        pf('h-vol'),
+    variation:     pf('h-var'),
   };
   const msg = document.getElementById('h-msg');
   if (!body.ticker||!body.date_seance||!body.cours_cloture) { msg.textContent='Ticker, date et clôture requis.'; msg.className='msg err'; return; }
@@ -1412,7 +1167,7 @@ function parseBulkPreview() {
   const csv = v('bulk-csv'); if (!csv) return;
   const rows = csv.split('\n').filter(r=>r.trim());
   const tbody = document.getElementById('bulk-preview-tbody');
-  tbody.innerHTML = rows.map((row) => {
+  tbody.innerHTML = rows.map(row => {
     const cols = row.split(',').map(s=>s.trim());
     const [ticker,date,cloture,,,,vol,varP] = cols;
     const ok = ticker && date && /^\d{4}-\d{2}-\d{2}$/.test(date) && cloture && !isNaN(parseFloat(cloture));
@@ -1434,25 +1189,22 @@ async function importBulk() {
   if (!csv) { msg.textContent='Aucune donnée.'; msg.className='msg err'; return; }
   const lines = csv.split('\n').filter(r=>r.trim());
   if (lines.length > 500) { msg.textContent='Maximum 500 lignes par import.'; msg.className='msg err'; return; }
-
+  // ✅ CORRIGÉ: colonnes alignées avec app.html
   const rows = lines.map(line => {
-    const [ticker,date_seance,cours_cloture,cours_ouverture,plus_haut,plus_bas,volume,variation_pct] = line.split(',').map(s=>s.trim());
+    const [ticker,date_seance,cours_cloture,ouverture,plus_haut,plus_bas,volume,variation] = line.split(',').map(s=>s.trim());
     return {
-      ticker: ticker?.toUpperCase(),
+      ticker:        ticker?.toUpperCase(),
       date_seance,
       cours_cloture: parseFloat(cours_cloture)||null,
-      cours_ouverture: parseFloat(cours_ouverture)||null,
-      plus_haut: parseFloat(plus_haut)||null,
-      plus_bas: parseFloat(plus_bas)||null,
-      volume: parseFloat(volume)||null,
-      variation_pct: parseFloat(variation_pct)||null,
+      ouverture:     parseFloat(ouverture)||null,
+      plus_haut:     parseFloat(plus_haut)||null,
+      plus_bas:      parseFloat(plus_bas)||null,
+      volume:        parseFloat(volume)||null,
+      variation:     parseFloat(variation)||null,
     };
   }).filter(r => r.ticker && r.date_seance && r.cours_cloture);
-
   if (!rows.length) { msg.textContent='Aucune ligne valide.'; msg.className='msg err'; return; }
   msg.textContent = `Import de ${rows.length} lignes...`; msg.className='msg info';
-
-  // Import par batch de 100
   const batchSize = 100;
   let inserted = 0, errors = 0;
   for (let i = 0; i < rows.length; i += batchSize) {
@@ -1464,33 +1216,32 @@ async function importBulk() {
   }
   msg.textContent = `✓ ${inserted} lignes importées${errors?`, ${errors} erreurs`:''}`;
   msg.className = errors ? 'msg err' : 'msg ok';
-  document.getElementById('bulk-progress').style.width='100%';
   if (inserted) toast(`Import terminé : ${inserted} lignes`);
 }
 
 async function loadHistoriqueTicker() {
   const ticker = v('hist-ticker-search').toUpperCase();
   if (!ticker) { toast('Entrez un ticker','err'); return; }
-  const dateFrom = v('hist-date-from');
-  const dateTo   = v('hist-date-to');
+  const dateFrom = v('hist-date-from'), dateTo = v('hist-date-to');
   const tbody = document.getElementById('hist-tbody');
-  tbody.innerHTML='<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
+  tbody.innerHTML = '<tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr>';
   let params = `select=*&ticker=eq.${ticker}&order=date_seance.desc&limit=500`;
   if (dateFrom) params += `&date_seance=gte.${dateFrom}`;
   if (dateTo)   params += `&date_seance=lte.${dateTo}`;
   const list = await sbGet('historique', params) || [];
   document.getElementById('hist-count').textContent = `${list.length} points`;
   document.getElementById('btn-del-all-hist').style.display = list.length ? '' : 'none';
-  if (!list.length) { tbody.innerHTML='<tr><td colspan="9" style="color:var(--muted);padding:16px;text-align:center;">Aucun historique trouvé.</td></tr>'; return; }
-  tbody.innerHTML = list.map(h=>`<tr>
+  if (!list.length) { tbody.innerHTML = '<tr><td colspan="9" style="color:var(--muted);padding:16px;text-align:center;">Aucun historique trouvé.</td></tr>'; return; }
+  tbody.innerHTML = list.map(h => `<tr>
     <td class="td-gold">${h.ticker}</td>
     <td class="td-mono">${h.date_seance}</td>
     <td class="r td-mono">${fmt(h.cours_cloture)}</td>
-    <td class="r td-mono td-muted">${fmt(h.cours_ouverture)}</td>
+    <td class="r td-mono td-muted">${fmt(h.ouverture)}</td>
     <td class="r td-mono">${fmt(h.plus_haut)}</td>
     <td class="r td-mono">${fmt(h.plus_bas)}</td>
     <td class="r td-mono td-muted">${fmt(h.volume)}</td>
-    <td class="r td-mono" style="color:${clrPct(h.variation_pct)};">${fmtPct(h.variation_pct)}</td>
+    <!-- ✅ CORRIGÉ: h.variation -->
+    <td class="r td-mono" style="color:${clrPct(h.variation)};">${fmtPct(h.variation)}</td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteHistorique('${h.id}')">✕</button></td>
   </tr>`).join('');
 }
@@ -1503,8 +1254,7 @@ async function deleteHistorique(id) {
 
 async function deleteAllHistoriqueTicker() {
   const ticker = v('hist-ticker-search').toUpperCase();
-  if (!ticker) return;
-  if (!confirm(`Supprimer TOUT l'historique de ${ticker} ? Cette action est irréversible.`)) return;
+  if (!ticker || !confirm(`Supprimer TOUT l'historique de ${ticker} ?`)) return;
   const ok = await sbDel('historique', `ticker=eq.${ticker}`);
   if (ok) { toast(`Historique de ${ticker} supprimé`); loadHistoriqueTicker(); }
 }
@@ -1513,15 +1263,13 @@ async function deleteAllHistoriqueTicker() {
    ENTREPRISES
 ══════════════════════════════════════════════════════ */
 async function loadEntreprises() {
-  const tbody = document.getElementById('ent-tbody');
-  tbody.innerHTML='<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
   entData = await sbGet('entreprises','select=*&order=ticker.asc') || [];
   document.getElementById('ent-count').textContent = entData.length+' sociétés';
   renderEntTable(entData);
 }
 
 function renderEntTable(list) {
-  document.getElementById('ent-tbody').innerHTML = list.map(e=>`<tr>
+  document.getElementById('ent-tbody').innerHTML = list.map(e => `<tr>
     <td class="td-gold">${e.ticker}</td>
     <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;">${e.nom}</td>
     <td class="td-muted" style="font-size:12px;">${e.secteur||'—'}</td>
@@ -1538,20 +1286,16 @@ function renderEntTable(list) {
 
 function filterEntTable() {
   const q = v('ent-search').toUpperCase();
-  renderEntTable(q ? entData.filter(e => e.ticker?.includes(q)||e.nom?.toUpperCase().includes(q)||e.secteur?.toUpperCase().includes(q)) : entData);
+  renderEntTable(q ? entData.filter(e => e.ticker?.includes(q)||e.nom?.toUpperCase().includes(q)) : entData);
 }
 
 function openEditEntreprise(e) {
   set('modal-ent-ticker', e.ticker);
   document.getElementById('modal-ent-title').textContent = `Modifier ${e.ticker}`;
-  set('modal-ent-nom', e.nom);
-  set('modal-ent-secteur', e.secteur);
-  set('modal-ent-pays', e.pays);
-  set('modal-ent-compart', e.compartiment||'PRINCIPAL');
-  set('modal-ent-isin', e.isin);
-  set('modal-ent-desc', e.description);
-  set('modal-ent-actions', e.nombre_actions);
-  set('modal-ent-msg', '');
+  set('modal-ent-nom', e.nom); set('modal-ent-secteur', e.secteur);
+  set('modal-ent-pays', e.pays); set('modal-ent-compart', e.compartiment||'PRINCIPAL');
+  set('modal-ent-isin', e.isin); set('modal-ent-desc', e.description);
+  set('modal-ent-actions', e.nombre_actions); set('modal-ent-msg', '');
   document.getElementById('modal-entreprise').classList.add('open');
 }
 
@@ -1579,11 +1323,8 @@ async function toggleActif(ticker, actif) {
    FINANCIALS
 ══════════════════════════════════════════════════════ */
 async function loadFinancials() {
-  const tbody = document.getElementById('fin-tbody');
-  tbody.innerHTML='<tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr>';
   finData = await sbGet('financials','select=*&order=ticker.asc,annee.desc,periode.asc') || [];
   document.getElementById('fin-count').textContent = finData.length+' entrées';
-  // Populate year filter
   const years = [...new Set(finData.map(f=>f.annee))].sort((a,b)=>b-a);
   const sel = document.getElementById('fin-year-filter');
   const cur = sel.value;
@@ -1592,15 +1333,18 @@ async function loadFinancials() {
 }
 
 function renderFinTable(list) {
-  document.getElementById('fin-tbody').innerHTML = list.map(f=>`<tr>
+  document.getElementById('fin-tbody').innerHTML = list.map(f => `<tr>
     <td class="td-gold">${f.ticker}</td>
     <td class="td-mono">${f.annee}</td>
     <td class="td-muted" style="font-size:11px;">${f.periode||'annuel'}</td>
     <td class="r td-mono">${fmt(f.chiffre_affaires)}</td>
+    <!-- ✅ CORRIGÉ: f.rbe -->
+    <td class="r td-mono">${fmt(f.rbe)}</td>
     <td class="r td-mono" style="color:${(f.resultat_net||0)>=0?'var(--green)':'var(--red)'};">${fmt(f.resultat_net)}</td>
     <td class="r td-mono">${fmt(f.bpa)}</td>
     <td class="r td-mono" style="color:var(--gold);">${fmt(f.dpa)}</td>
-    <td class="r td-mono">${f.roe!=null?f.roe+'%':'—'}</td>
+    <!-- ✅ CORRIGÉ: f.dettes_financieres -->
+    <td class="r td-mono">${fmt(f.dettes_financieres)}</td>
     <td class="td-muted" style="font-size:11px;">${f.source||'—'}</td>
     <td style="display:flex;gap:4px;">
       <button class="btn btn-outline btn-sm" onclick='openEditFinancial(${JSON.stringify(f).replace(/'/g,"&#39;")})'>✏</button>
@@ -1619,22 +1363,23 @@ function filterFinTable() {
 }
 
 async function addFinancial() {
+  // ✅ CORRIGÉ: rbe, dettes_financieres, cash_flow_operationnel, capex — noms exacts lus par app.html
   const body = {
-    ticker: v('fin-ticker').toUpperCase(),
-    annee: pi('fin-annee'),
-    periode: v('fin-periode')||'annuel',
-    chiffre_affaires: pf('fin-ca'),
-    ebit: pf('fin-ebit'),
-    resultat_net: pf('fin-rn'),
-    bpa: pf('fin-bpa'),
-    dpa: pf('fin-dpa'),
-    roe: pf('fin-roe'),
-    roa: pf('fin-roa'),
-    fonds_propres: pf('fin-fp'),
-    dette_nette: pf('fin-dn'),
-    total_actif: pf('fin-actif'),
-    nombre_actions: pi('fin-nb-actions'),
-    source: v('fin-source')||null,
+    ticker:                  v('fin-ticker').toUpperCase(),
+    annee:                   pi('fin-annee'),
+    periode:                 v('fin-periode')||'annuel',
+    chiffre_affaires:        pf('fin-ca'),
+    rbe:                     pf('fin-rbe'),
+    resultat_net:            pf('fin-rn'),
+    bpa:                     pf('fin-bpa'),
+    dpa:                     pf('fin-dpa'),
+    fonds_propres:           pf('fin-fp'),
+    dettes_financieres:      pf('fin-dettes'),
+    total_actif:             pf('fin-actif'),
+    nombre_actions:          pi('fin-nb-actions'),
+    cash_flow_operationnel:  pf('fin-cfo'),
+    capex:                   pf('fin-capex'),
+    source:                  v('fin-source')||null,
   };
   const msg = document.getElementById('fin-msg');
   if (!body.ticker||!body.annee) { msg.textContent='Ticker et année requis.'; msg.className='msg err'; return; }
@@ -1648,26 +1393,37 @@ async function prefillFinancialFromTicker() {
   const data = await sbGet('financials', `select=*&ticker=eq.${ticker}&order=annee.desc&limit=1`);
   if (!data?.length) { toast('Aucune donnée existante pour ce ticker','info'); return; }
   const f = data[0];
-  set('fin-ca', f.chiffre_affaires); set('fin-ebit', f.ebit); set('fin-rn', f.resultat_net);
-  set('fin-bpa', f.bpa); set('fin-dpa', f.dpa); set('fin-roe', f.roe);
-  set('fin-fp', f.fonds_propres); set('fin-dn', f.dette_nette); set('fin-source', f.source);
+  set('fin-ca', f.chiffre_affaires); set('fin-rbe', f.rbe); set('fin-rn', f.resultat_net);
+  set('fin-bpa', f.bpa); set('fin-dpa', f.dpa); set('fin-fp', f.fonds_propres);
+  set('fin-dettes', f.dettes_financieres); set('fin-actif', f.total_actif);
+  set('fin-cfo', f.cash_flow_operationnel); set('fin-capex', f.capex);
+  set('fin-nb-actions', f.nombre_actions); set('fin-source', f.source);
   toast(`Données ${f.annee} chargées — ajustez l'année`,'info');
 }
 
 function openEditFinancial(f) {
   document.getElementById('modal-fin-title').textContent = `${f.ticker} — ${f.annee}`;
   set('modal-fin-id', f.id);
-  set('modal-fin-ca', f.chiffre_affaires); set('modal-fin-ebit', f.ebit);
+  set('modal-fin-ca', f.chiffre_affaires); set('modal-fin-rbe', f.rbe);
   set('modal-fin-rn', f.resultat_net); set('modal-fin-bpa', f.bpa);
-  set('modal-fin-dpa', f.dpa); set('modal-fin-roe', f.roe);
-  set('modal-fin-fp', f.fonds_propres); set('modal-fin-dn', f.dette_nette);
+  set('modal-fin-dpa', f.dpa); set('modal-fin-fp', f.fonds_propres);
+  set('modal-fin-dettes', f.dettes_financieres); set('modal-fin-actif', f.total_actif);
+  set('modal-fin-cfo', f.cash_flow_operationnel); set('modal-fin-capex', f.capex);
   set('modal-fin-source', f.source); set('modal-fin-msg', '');
   document.getElementById('modal-financial').classList.add('open');
 }
 
 async function saveFinancial() {
   const id = v('modal-fin-id');
-  const body = { chiffre_affaires:pf('modal-fin-ca'), ebit:pf('modal-fin-ebit'), resultat_net:pf('modal-fin-rn'), bpa:pf('modal-fin-bpa'), dpa:pf('modal-fin-dpa'), roe:pf('modal-fin-roe'), fonds_propres:pf('modal-fin-fp'), dette_nette:pf('modal-fin-dn'), source:v('modal-fin-source')||null };
+  // ✅ CORRIGÉ: tous les noms de colonnes alignés
+  const body = {
+    chiffre_affaires: pf('modal-fin-ca'), rbe: pf('modal-fin-rbe'),
+    resultat_net: pf('modal-fin-rn'), bpa: pf('modal-fin-bpa'),
+    dpa: pf('modal-fin-dpa'), fonds_propres: pf('modal-fin-fp'),
+    dettes_financieres: pf('modal-fin-dettes'), total_actif: pf('modal-fin-actif'),
+    cash_flow_operationnel: pf('modal-fin-cfo'), capex: pf('modal-fin-capex'),
+    source: v('modal-fin-source')||null,
+  };
   const r = await sbPatch('financials', `id=eq.${id}`, body);
   if (r) { toast('Financial mis à jour'); closeModal('modal-financial'); loadFinancials(); }
 }
@@ -1682,20 +1438,19 @@ async function deleteFinancial(id) {
    DIVIDENDES
 ══════════════════════════════════════════════════════ */
 async function loadDividendes() {
-  const tbody = document.getElementById('div-tbody');
-  tbody.innerHTML='<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
   divData = await sbGet('dividendes_calendrier','select=*&order=annee.desc,ticker.asc') || [];
   document.getElementById('div-count').textContent = divData.length+' entrées';
   renderDivTable(divData);
 }
 
 function renderDivTable(list) {
-  document.getElementById('div-tbody').innerHTML = list.map(d=>`<tr>
+  document.getElementById('div-tbody').innerHTML = list.map(d => `<tr>
     <td class="td-gold">${d.ticker}</td>
     <td class="td-mono">${d.annee}</td>
     <td class="r td-mono" style="color:var(--gold);">${fmt(d.montant)} FCFA</td>
     <td class="r td-mono">${d.taux_rendement!=null?d.taux_rendement+'%':'—'}</td>
-    <td class="td-muted">${d.ex_date||d.date_detachement||'—'}</td>
+    <!-- ✅ CORRIGÉ: d.date_detachement -->
+    <td class="td-muted">${d.date_detachement||'—'}</td>
     <td class="td-muted">${d.date_paiement||'—'}</td>
     <td><span class="badge ${d.statut==='payé'?'badge-green':d.statut==='prévisionnel'?'badge-orange':'badge-blue'}">${d.statut||'—'}</span></td>
     <td><button class="btn btn-danger btn-sm" onclick="deleteDividende('${d.id}')">✕</button></td>
@@ -1708,15 +1463,16 @@ function filterDivTable() {
 }
 
 async function addDividende() {
+  // ✅ CORRIGÉ: date_detachement (pas ex_date)
   const body = {
-    ticker: v('div-ticker').toUpperCase(),
-    annee: pi('div-annee'),
-    montant: pf('div-montant'),
-    taux_rendement: pf('div-tx'),
-    ex_date: v('div-detach')||null,
-    date_paiement: v('div-paie')||null,
-    statut: v('div-statut')||'confirmé',
-    notes: v('div-notes')||null,
+    ticker:           v('div-ticker').toUpperCase(),
+    annee:            pi('div-annee'),
+    montant:          pf('div-montant'),
+    taux_rendement:   pf('div-tx'),
+    date_detachement: v('div-detach')||null,
+    date_paiement:    v('div-paie')||null,
+    statut:           v('div-statut')||'confirmé',
+    notes:            v('div-notes')||null,
   };
   const msg = document.getElementById('div-msg');
   if (!body.ticker||!body.annee||!body.montant) { msg.textContent='Ticker, année et montant requis.'; msg.className='msg err'; return; }
@@ -1738,23 +1494,20 @@ async function loadAnalyses() {
   document.getElementById('an-count').textContent = list.length+' recommandations';
   const colors = { Acheter:'badge-green', Renforcer:'badge-green', Conserver:'badge-gold', Alléger:'badge-orange', Vendre:'badge-red' };
   document.getElementById('an-list').innerHTML = !list.length
-    ? '<div class="loading">Aucune recommandation.</div>'
-    : list.map(a=>`<div class="analyse-item">
+    ? '<div style="padding:20px;color:var(--muted);font-size:13px;">Aucune recommandation.</div>'
+    : list.map(a => `<div class="analyse-item">
         <span class="td-gold" style="min-width:52px;">${a.ticker}</span>
         <span class="badge ${colors[a.recommandation]||''}">${a.recommandation}</span>
-        ${a.horizon?`<span class="badge badge-blue" style="font-size:9px;">${a.horizon}</span>`:''}
-        <span class="td-mono">${a.objectif_cours?fmt(a.objectif_cours)+' FCFA':'—'}</span>
-        <span class="td-mono" style="color:${clrPct(a.potentiel_pct)};">
-          ${a.potentiel_pct!=null?((a.potentiel_pct>=0?'+':'')+Number(a.potentiel_pct).toFixed(1)+'%'):'—'}
-        </span>
-        <span style="flex:1;font-size:12px;color:var(--muted);white-space:normal;">${a.commentaire||''}</span>
+        <!-- ✅ CORRIGÉ: a.titre, a.cours_cible, a.resume -->
+        <span style="flex:1;font-size:12px;color:var(--muted);white-space:normal;">${a.titre||''} ${a.resume?'— '+a.resume.slice(0,80)+'…':''}</span>
+        <span class="td-mono" style="color:var(--gold);font-size:12px;">${a.cours_cible?fmt(a.cours_cible)+' FCFA':''}</span>
         <span style="font-size:11px;color:rgba(245,240,232,0.25);" class="td-mono">${a.date_analyse||''}</span>
         <button class="btn btn-danger btn-sm" onclick="deleteAnalyse('${a.id}')">✕</button>
       </div>`).join('');
 }
 
 function calcPotentiel() {
-  const obj = parseFloat(v('an-objectif'));
+  const obj = parseFloat(v('an-cible'));
   const crs = parseFloat(v('an-cours'));
   const disp = document.getElementById('an-potentiel-display');
   if (obj && crs && crs!==0) {
@@ -1764,15 +1517,23 @@ function calcPotentiel() {
   } else { disp.value='—'; disp.style.color='var(--muted)'; }
 }
 
-document.getElementById('an-objectif').addEventListener('input', calcPotentiel);
-document.getElementById('an-cours').addEventListener('input', calcPotentiel);
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('an-cible')?.addEventListener('input', calcPotentiel);
+  document.getElementById('an-cours')?.addEventListener('input', calcPotentiel);
+});
 
 async function addAnalyse() {
   const ticker = v('an-ticker').toUpperCase();
-  const objectif = pf('an-objectif');
-  const cours = pf('an-cours');
-  const potentiel = objectif&&cours ? Math.round(((objectif-cours)/cours)*10000)/100 : null;
-  const body = { ticker, recommandation:v('an-reco'), objectif_cours:objectif, cours_reference:cours, potentiel_pct:potentiel, analyste:v('an-analyste')||null, commentaire:v('an-commentaire')||null, horizon:v('an-horizon')||null };
+  // ✅ CORRIGÉ: cours_cible, resume, titre — noms exacts lus par app.html
+  const body = {
+    ticker,
+    titre:           v('an-titre') || `Analyse ${ticker}`,
+    recommandation:  v('an-reco'),
+    cours_cible:     pf('an-cible'),
+    resume:          v('an-resume')||null,
+    analyste:        v('an-analyste')||null,
+    date_analyse:    v('an-date') || new Date().toISOString().split('T')[0],
+  };
   const msg = document.getElementById('an-msg');
   if (!ticker||!body.recommandation) { msg.textContent='Ticker et recommandation requis.'; msg.className='msg err'; return; }
   const r = await sbPost('analyses', body);
@@ -1789,25 +1550,20 @@ async function deleteAnalyse(id) {
    UTILISATEURS
 ══════════════════════════════════════════════════════ */
 async function loadUsers() {
-  const tbody = document.getElementById('usr-tbody');
-  tbody.innerHTML='<tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr>';
   usrData = await sbGet('users','select=*&order=created_at.desc') || [];
   document.getElementById('usr-count').textContent = usrData.length+' comptes';
   renderUsrTable(usrData);
 }
 
 function renderUsrTable(list) {
-  document.getElementById('usr-tbody').innerHTML = list.map(u=>`<tr>
+  document.getElementById('usr-tbody').innerHTML = list.map(u => `<tr>
     <td style="font-size:13px;">${u.email}</td>
     <td class="td-muted">${u.nom||'—'}</td>
     <td><span class="badge ${u.plan==='pro'?'badge-gold':u.plan==='elite'?'badge-green':''}" style="${u.plan==='free'?'border:1px solid var(--border-s);color:var(--muted);':''}">${u.plan}</span></td>
     <td class="td-mono td-muted" style="font-size:11px;">${u.plan_expire_at?fmtDate(u.plan_expire_at):'—'}</td>
     <td>${u.is_admin?'<span class="badge badge-orange">Admin</span>':'<span style="color:var(--muted);font-size:11px;">—</span>'}</td>
     <td class="td-mono td-muted" style="font-size:11px;">${fmtDate(u.created_at)}</td>
-    <td class="td-mono td-muted" style="font-size:11px;">${fmtDate(u.last_sign_in_at)}</td>
-    <td>
-      <button class="btn btn-outline btn-sm" onclick='openEditUser(${JSON.stringify(u).replace(/'/g,"&#39;")})'>✏</button>
-    </td>
+    <td><button class="btn btn-outline btn-sm" onclick='openEditUser(${JSON.stringify(u).replace(/'/g,"&#39;")})'>✏</button></td>
   </tr>`).join('');
 }
 
@@ -1842,38 +1598,32 @@ async function saveUser() {
    SCRAPER
 ══════════════════════════════════════════════════════ */
 async function runScraper() {
-  toast('Le scraper doit être déclenché via la Edge Function Supabase. Vérifiez votre configuration cron.','info');
+  toast('Le scraper doit être déclenché via la Edge Function Supabase.','info');
 }
 
 async function runFallback() {
   const msg = document.getElementById('scraper-msg');
   msg.textContent='Recalcul en cours...'; msg.className='msg info';
-  // Recalcul variation_pct pour les cours sans variation
-  const cours = await sbGet('cours','select=id,ticker,cours,date_seance&variation_pct=is.null&order=ticker,date_seance');
-  if (!cours?.length) { msg.textContent='Aucun cours sans variation_pct.'; msg.className='msg ok'; return; }
-  let updated = 0;
-  // Regrouper par ticker
+  // ✅ CORRIGÉ: cherche variation IS NULL (pas variation_pct)
+  const cours = await sbGet('cours','select=id,ticker,cours,date_seance&variation=is.null&order=ticker,date_seance');
+  if (!cours?.length) { msg.textContent='Aucun cours sans variation.'; msg.className='msg ok'; return; }
   const byTicker = {};
-  cours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker]=[];  byTicker[c.ticker].push(c); });
+  cours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker]=[]; byTicker[c.ticker].push(c); });
+  let updated = 0;
   for (const [ticker, entries] of Object.entries(byTicker)) {
-    // Charger tous les cours pour ce ticker trié par date
     const all = await sbGet('cours', `select=id,cours,date_seance&ticker=eq.${ticker}&order=date_seance.asc`);
     if (!all) continue;
     for (let i = 1; i < all.length; i++) {
       const prev = all[i-1], cur = all[i];
       if (cur.cours && prev.cours && prev.cours > 0) {
-        const var_pct = ((cur.cours - prev.cours)/prev.cours*100);
-        await sbPatch('cours', `id=eq.${cur.id}`, { variation_pct: Math.round(var_pct*100)/100 });
+        // ✅ CORRIGÉ: écriture dans colonne "variation"
+        await sbPatch('cours', `id=eq.${cur.id}`, { variation: Math.round(((cur.cours - prev.cours)/prev.cours*100)*100)/100 });
         updated++;
       }
     }
   }
-  msg.textContent=`✓ ${updated} variation_pct calculés`; msg.className='msg ok';
-  toast(`${updated} variation_pct recalculés`);
-}
-
-async function repairTotaux() {
-  toast('Fonction de réparation avancée — implémentez via Edge Function Supabase pour de meilleures performances.','info');
+  msg.textContent=`✓ ${updated} variation calculés`; msg.className='msg ok';
+  toast(`${updated} variation recalculés`);
 }
 
 async function syncHistFromCours() {
@@ -1881,19 +1631,19 @@ async function syncHistFromCours() {
   msg.textContent='Synchronisation cours → historique...'; msg.className='msg info';
   const cours = await sbGet('cours','select=*&order=ticker,date_seance.desc');
   if (!cours?.length) { msg.textContent='Aucun cours.'; msg.className='msg err'; return; }
-  const rows = cours.map(c=>({
-    ticker: c.ticker,
-    date_seance: c.date_seance,
+  // ✅ CORRIGÉ: colonnes alignées avec la table historique lue par app.html
+  const rows = cours.map(c => ({
+    ticker:        c.ticker,
+    date_seance:   c.date_seance,
     cours_cloture: c.cours,
-    cours_ouverture: c.ouverture,
-    plus_haut: c.plus_haut,
-    plus_bas: c.plus_bas,
-    volume: c.volume,
-    variation_pct: c.variation_pct,
+    ouverture:     c.ouverture,
+    plus_haut:     c.plus_haut,
+    plus_bas:      c.plus_bas,
+    volume:        c.volume,
+    variation:     c.variation,
   }));
-  // batch insert
   let synced = 0;
-  for (let i=0;i<rows.length;i+=100) {
+  for (let i=0; i<rows.length; i+=100) {
     const r = await sbPost('historique', rows.slice(i,i+100), 'ticker,date_seance');
     if (r) synced += Math.min(100, rows.length-i);
   }
@@ -1928,12 +1678,11 @@ async function loadBOC() {
 ══════════════════════════════════════════════════════ */
 async function runDiagnostic() {
   const panel = document.getElementById('diag-result');
-  panel.innerHTML='<div class="card"><div class="loading"><div class="spinner"></div><p style="margin-top:8px;">Analyse complète en cours...</p></div></div>';
+  panel.innerHTML='<div class="card"><div class="loading"><div class="spinner"></div><p style="margin-top:8px;">Analyse en cours...</p></div></div>';
   document.getElementById('diag-health-bar').style.display='none';
 
-  const tables = ['entreprises','cours','historique','financials','dividendes_calendrier','analyses','users','boc'];
+  const tables = ['entreprises','cours','historique','financials','dividendes_calendrier','analyses','users'];
   const results = {};
-
   await Promise.all(tables.map(async t => {
     try {
       const r = await fetch(`${SB_REST}/${t}?select=id&limit=1`, {
@@ -1944,96 +1693,48 @@ async function runDiagnostic() {
     } catch(e) { results[t] = { ok:false, count:0, error: e.message }; }
   }));
 
-  // Checks avancés
-  const nullCours  = await sbCount('cours','variation_pct=is.null');
-  const nullClot   = await sbCount('historique','cours_cloture=is.null');
-  const zeroCours  = await sbCount('cours','cours=lte.0');
-  const noExpPro   = await sbCount('users','plan=neq.free&plan_expire_at=is.null');
+  // ✅ CORRIGÉ: cherche variation IS NULL
+  const nullVar  = await sbCount('cours', 'variation=is.null');
+  const nullClot = await sbCount('historique', 'cours_cloture=is.null');
+  const zeroCours = await sbCount('cours', 'cours=lte.0');
 
-  // Orphelins
-  const entTickers = await sbGet('entreprises','select=ticker&actif=eq.true');
-  const coursTk    = await sbGet('cours','select=ticker');
-  const entSet = new Set((entTickers||[]).map(e=>e.ticker));
-  const courSet = new Set((coursTk||[]).map(c=>c.ticker));
-  const orphanCours = [...courSet].filter(t=>!entSet.has(t));
-  const entSansCours = [...entSet].filter(t=>!courSet.has(t));
-
-  // Calcul score santé
   let issues = 0;
-  if (nullCours>0) issues++;
-  if (nullClot>0) issues++;
-  if (zeroCours>0) issues += 2;
-  if (orphanCours.length>0) issues++;
-  if (noExpPro>0) issues++;
-  Object.values(results).forEach(r => { if (!r.ok) issues += 3; });
+  if (nullVar>0) issues++; if (nullClot>0) issues++; if (zeroCours>0) issues+=2;
+  Object.values(results).forEach(r => { if (!r.ok) issues+=3; });
 
   const score = Math.max(0, 100 - issues*8);
   const healthIcon = score>=90?'✅':score>=70?'⚠️':'❌';
-  const healthTitle = score>=90?'Plateforme saine':score>=70?'Anomalies mineures':'Problèmes critiques';
-  const healthSub = score>=90?'Toutes les tables répondent correctement.':score>=70?'Des ajustements sont recommandés.':'Des corrections urgentes sont nécessaires.';
-
   document.getElementById('diag-health-bar').style.display='';
   document.getElementById('diag-health-icon').textContent = healthIcon;
-  document.getElementById('diag-health-title').textContent = healthTitle;
-  document.getElementById('diag-health-sub').textContent = healthSub;
+  document.getElementById('diag-health-title').textContent = score>=90?'Plateforme saine':score>=70?'Anomalies mineures':'Problèmes critiques';
+  document.getElementById('diag-health-sub').textContent = `Score ${score}/100`;
   document.getElementById('diag-score').textContent = score+'/100';
   document.getElementById('diag-score').style.color = score>=90?'var(--green)':score>=70?'var(--orange)':'var(--red)';
 
-  diagData = { tables:results, nullCours, nullClot, zeroCours, noExpPro, orphanCours, entSansCours, score, timestamp:new Date().toISOString() };
+  diagData = { tables:results, nullVar, nullClot, zeroCours, score, timestamp:new Date().toISOString() };
 
-  const tableRows = Object.entries(results).map(([name,info])=>`<tr>
-    <td class="td-mono">${name}</td>
-    <td class="${info.ok?'diag-ok':'diag-err'}">${info.ok?'✓ OK':'✗ ERREUR'}</td>
-    <td class="r td-mono">${info.count?.toLocaleString('fr-FR')||'—'}</td>
-    <td style="font-size:11px;color:var(--red);">${info.error||''}</td>
-  </tr>`).join('');
-
-  const checksRows = [
-    { label:'Cours sans variation_pct',  val:nullCours,  ok:nullCours===0,  action:'runFallback()' },
-    { label:'Historique sans clôture',   val:nullClot,   ok:nullClot===0,   action:null },
-    { label:'Cours avec valeur ≤ 0',     val:zeroCours,  ok:zeroCours===0,  action:null },
-    { label:'Tickers orphelins (cours sans entreprise)', val:orphanCours.length, ok:orphanCours.length===0, action:null },
-    { label:'Entreprises actives sans cours', val:entSansCours.length, ok:entSansCours.length===0, action:null },
-    { label:'Pro/Elite sans expiration', val:noExpPro,   ok:noExpPro===0,   action:null },
-  ].map(c=>`<tr>
-    <td>${c.label}</td>
-    <td class="${c.ok?'diag-ok':'diag-err'}">${c.ok?'✓':'✗'}</td>
-    <td class="r td-mono" style="color:${c.ok?'var(--green)':c.val>0?'var(--red)':'var(--muted)'};">${c.val}</td>
-    <td>${c.ok?'':'<span style="color:var(--orange);font-size:11px;">→ Action requise</span>'}</td>
-  </tr>`).join('');
-
-  panel.innerHTML = `
-    <div class="card" style="margin-bottom:12px;">
-      <div class="card-header"><span class="card-title">État des tables Supabase</span>
-        <span class="td-muted" style="font-size:11px;margin-left:auto;">${new Date().toLocaleString('fr-FR')}</span>
-      </div>
-      <div class="tw"><table class="diag-table">
-        <thead><tr><th>Table</th><th>Statut</th><th class="r">Nb lignes</th><th>Erreur</th></tr></thead>
-        <tbody>${tableRows}</tbody>
-      </table></div>
-    </div>
-    <div class="card" style="margin-bottom:12px;">
-      <div class="card-header"><span class="card-title">Contrôles qualité des données</span></div>
-      <div class="tw"><table class="diag-table">
-        <thead><tr><th>Contrôle</th><th>Statut</th><th class="r">Nb</th><th>Recommandation</th></tr></thead>
-        <tbody>${checksRows}</tbody>
-      </table></div>
-    </div>
-    ${orphanCours.length?`<div class="card" style="margin-bottom:12px;">
-      <div class="card-header"><span class="card-title">Tickers orphelins — cours sans fiche entreprise</span></div>
-      <div style="padding:14px;display:flex;flex-wrap:wrap;gap:6px;">
-        ${orphanCours.map(t=>`<span class="badge badge-orange">${t}</span>`).join('')}
-      </div>
-      <div style="padding:0 14px 12px;font-size:12px;color:var(--muted);">→ Créez ces entreprises dans l'onglet Entreprises ou supprimez les cours orphelins.</div>
-    </div>`:''}
-    ${entSansCours.length?`<div class="card">
-      <div class="card-header"><span class="card-title">Entreprises actives sans cours</span></div>
-      <div style="padding:14px;display:flex;flex-wrap:wrap;gap:6px;">
-        ${entSansCours.map(t=>`<span class="badge badge-blue">${t}</span>`).join('')}
-      </div>
-      <div style="padding:0 14px 12px;font-size:12px;color:var(--muted);">→ Lancez le scraper ou ajoutez un cours manuel pour ces tickers.</div>
-    </div>`:''}
-  `;
+  panel.innerHTML = `<div class="card" style="margin-bottom:12px;">
+    <div class="card-header"><span class="card-title">État des tables Supabase</span></div>
+    <div class="tw"><table class="diag-table">
+      <thead><tr><th>Table</th><th>Statut</th><th class="r">Nb lignes</th><th>Erreur</th></tr></thead>
+      <tbody>${Object.entries(results).map(([name,info])=>`<tr>
+        <td class="td-mono">${name}</td>
+        <td class="${info.ok?'diag-ok':'diag-err'}">${info.ok?'✓ OK':'✗ ERREUR'}</td>
+        <td class="r td-mono">${info.count?.toLocaleString('fr-FR')||'—'}</td>
+        <td style="font-size:11px;color:var(--red);">${info.error||''}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>
+  <div class="card"><div class="card-header"><span class="card-title">Contrôles qualité</span></div>
+    <div class="tw"><table class="diag-table">
+      <thead><tr><th>Contrôle</th><th>Statut</th><th class="r">Nb</th></tr></thead>
+      <tbody>
+        <tr><td>Cours sans "variation" (colonne alignée app.html)</td><td class="${nullVar===0?'diag-ok':'diag-err'}">${nullVar===0?'✓':'✗'}</td><td class="r td-mono">${nullVar}</td></tr>
+        <tr><td>Historique sans "cours_cloture"</td><td class="${nullClot===0?'diag-ok':'diag-err'}">${nullClot===0?'✓':'✗'}</td><td class="r td-mono">${nullClot}</td></tr>
+        <tr><td>Cours avec valeur ≤ 0</td><td class="${zeroCours===0?'diag-ok':'diag-err'}">${zeroCours===0?'✓':'✗'}</td><td class="r td-mono">${zeroCours}</td></tr>
+      </tbody>
+    </table></div>
+  </div>`;
 }
 
 function exportDiagnostic() {
@@ -2049,18 +1750,16 @@ function exportDiagnostic() {
 async function loadCoursErreurs() {
   const panel = document.getElementById('cours-erreurs-panel');
   panel.innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  const list = await sbGet('cours','select=ticker,date_seance,cours,variation_pct&or=(cours.is.null,cours.lte.0)&order=date_seance.desc&limit=100') || [];
+  // ✅ CORRIGÉ: filtre sur "cours" (pas variation_pct)
+  const list = await sbGet('cours','select=ticker,date_seance,cours,variation&or=(cours.is.null,cours.lte.0)&order=date_seance.desc&limit=100') || [];
   if (!list.length) { panel.innerHTML='<div style="padding:14px;color:var(--green);font-size:13px;">✓ Aucun cours invalide.</div>'; return; }
-  panel.innerHTML=`<div style="padding:10px 14px;font-size:11px;color:var(--orange);">${list.length} cours avec valeur nulle ou ≤ 0</div>
-    <div class="tw"><table style="font-size:12px;">
-    <thead><tr><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Variation%</th></tr></thead>
+  panel.innerHTML=`<div style="padding:10px 14px;font-size:11px;color:var(--orange);">${list.length} cours invalides</div>
+    <div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Variation</th></tr></thead>
     <tbody>${list.map(c=>`<tr>
-      <td class="td-gold">${c.ticker}</td>
-      <td>${c.date_seance}</td>
+      <td class="td-gold">${c.ticker}</td><td>${c.date_seance}</td>
       <td class="r td-mono" style="color:var(--red);">${c.cours??'NULL'}</td>
-      <td class="r td-mono">${fmtPct(c.variation_pct)}</td>
-    </tr>`).join('')}</tbody>
-  </table></div>`;
+      <td class="r td-mono">${fmtPct(c.variation)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
 }
 
 async function loadTickersSansFinancials() {
@@ -2072,71 +1771,17 @@ async function loadTickersSansFinancials() {
   ]);
   const finTickers = new Set((fins||[]).map(f=>f.ticker));
   const missing = (ents||[]).filter(e=>!finTickers.has(e.ticker)).map(e=>e.ticker);
-  if (!missing.length) { panel.innerHTML='<div style="padding:14px;color:var(--green);font-size:13px;">✓ Toutes les entreprises ont des données financières.</div>'; return; }
-  panel.innerHTML=`<div style="padding:10px 14px;font-size:11px;color:var(--orange);">${missing.length} entreprise(s) sans données financières</div>
+  if (!missing.length) { panel.innerHTML='<div style="padding:14px;color:var(--green);font-size:13px;">✓ Toutes les entreprises ont des financials.</div>'; return; }
+  panel.innerHTML=`<div style="padding:10px 14px;font-size:11px;color:var(--orange);">${missing.length} entreprise(s) sans financials</div>
     <div style="padding:0 14px 14px;display:flex;flex-wrap:wrap;gap:6px;">${missing.map(t=>`<span class="badge badge-orange">${t}</span>`).join('')}</div>`;
 }
 
-async function loadDoublons() {
-  const panel = document.getElementById('doublons-panel');
-  panel.innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  // Détection côté client (Supabase ne supporte pas GROUP BY directement via REST)
-  const all = await sbGet('cours','select=ticker,date_seance&order=ticker,date_seance') || [];
-  const seen = new Map(), dups = [];
-  all.forEach(c => {
-    const k = c.ticker+'_'+c.date_seance;
-    if (seen.has(k)) dups.push(c);
-    else seen.set(k,true);
-  });
-  if (!dups.length) { panel.innerHTML='<div style="padding:14px;color:var(--green);font-size:13px;">✓ Aucun doublon détecté.</div>'; return; }
-  panel.innerHTML=`<div style="padding:10px 14px;font-size:11px;color:var(--red);">${dups.length} doublon(s) détecté(s) — action recommandée</div>
-    <div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Date</th></tr></thead>
-    <tbody>${dups.slice(0,50).map(c=>`<tr><td class="td-gold">${c.ticker}</td><td>${c.date_seance}</td></tr>`).join('')}</tbody></table></div>`;
-}
-
-async function checkHistCoherence() {
-  const panel = document.getElementById('hist-coherence-panel');
-  panel.innerHTML='<div class="loading"><div class="spinner"></div></div>';
-  const [cours, hist] = await Promise.all([
-    sbGet('cours','select=ticker,date_seance,cours'),
-    sbGet('historique','select=ticker,date_seance,cours_cloture'),
-  ]);
-  const histMap = new Map();
-  (hist||[]).forEach(h => histMap.set(h.ticker+'_'+h.date_seance, h.cours_cloture));
-  const mismatches = (cours||[]).filter(c => {
-    const hv = histMap.get(c.ticker+'_'+c.date_seance);
-    return hv != null && Math.abs(hv - c.cours) > 1;
-  });
-  if (!mismatches.length) { panel.innerHTML='<div style="padding:14px;color:var(--green);font-size:13px;">✓ Cours et historique cohérents.</div>'; return; }
-  panel.innerHTML=`<div style="padding:10px 14px;font-size:11px;color:var(--orange);">${mismatches.length} écart(s) entre cours et historique</div>
-    <div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Historique</th></tr></thead>
-    <tbody>${mismatches.slice(0,20).map(c=>`<tr>
-      <td class="td-gold">${c.ticker}</td><td>${c.date_seance}</td>
-      <td class="r">${fmt(c.cours)}</td>
-      <td class="r" style="color:var(--orange);">${fmt(histMap.get(c.ticker+'_'+c.date_seance))}</td>
-    </tr>`).join('')}</tbody></table></div>`;
-}
-
-async function loadAdminLog() {
-  const panel = document.getElementById('admin-log-panel');
-  // Si vous avez une table admin_log, chargez-la ici
-  // Sinon, on affiche un message
-  const list = await sbGet('admin_log','select=*&order=created_at.desc&limit=50').catch(()=>null) || [];
-  if (!list.length) {
-    panel.innerHTML='<div style="padding:16px;color:var(--muted);font-size:12px;">Aucun journal disponible — créez une table <code>admin_log</code> dans Supabase pour activer cette fonctionnalité.</div>';
-    return;
-  }
-  panel.innerHTML='<div class="tw"><table style="font-size:12px;"><thead><tr><th>Date</th><th>Admin</th><th>Action</th><th>Détail</th></tr></thead><tbody>'
-    + list.map(l=>`<tr><td class="td-mono td-muted">${fmtDate(l.created_at)}</td><td>${l.admin_email||'—'}</td><td>${l.action||'—'}</td><td class="td-muted">${l.detail||'—'}</td></tr>`).join('')
-    + '</tbody></table></div>';
-}
-
-/* ── MODALS ───────────────────────────────────────────────────────── */
+/* ── MODALS ────────────────────────────────────────────────────── */
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 document.querySelectorAll('.inline-edit').forEach(m => m.addEventListener('click', e => { if (e.target===m) closeModal(m.id); }));
 document.addEventListener('keydown', e => { if (e.key==='Escape') document.querySelectorAll('.inline-edit.open').forEach(m=>closeModal(m.id)); });
 
-/* ── START ────────────────────────────────────────────────────────── */
+/* ── START ─────────────────────────────────────────────────────── */
 init();
 </script>
 </body>
