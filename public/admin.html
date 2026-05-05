@@ -8,6 +8,29 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
+input[type="file"]#boc-file {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: var(--cream);
+}
+input[type="file"]#boc-file::file-selector-button {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--cream);
+  padding: 8px 14px;
+  border-radius: 4px;
+  margin-right: 10px;
+  cursor: pointer;
+  font-family: var(--sans);
+  transition: all .2s;
+}
+input[type="file"]#boc-file::file-selector-button:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+</style>
+<style>
 :root {
   --bg:         #0A0804;
   --surface:    #13110C;
