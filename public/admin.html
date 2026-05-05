@@ -1701,6 +1701,69 @@ async function syncHistFromCours() {
   msg.textContent=`✓ ${synced} entrées synchronisées`; msg.className='msg ok';
   toast(`Sync terminé : ${synced} entrées`);
 }
+/* ── NOUVELLE FONCTION IMPORT BOC AVEC UPLOAD PDF ── */
+async function importBOC() {
+  const date = v('boc-date');
+  const nom = v('boc-nom') || null;
+  const urlManuelle = v('boc-url') || null;
+  const fileInput = document.getElementById('boc-file');
+  const file = fileInput.files[0];
+  const msg = document.getElementById('boc-msg');
+
+  if (!date) { msg.textContent='Date obligatoire.'; msg.className='msg err'; return; }
+  if (!file && !urlManuelle) { msg.textContent='Veuillez fournir un fichier PDF ou une URL.'; msg.className='msg err'; return; }
+
+  let fichierUrl = urlManuelle;
+  let fichierNom = nom || (file ? file.name : urlManuelle?.split('/').pop());
+
+  if (file) {
+    if (file.type !== 'application/pdf') { msg.textContent='Seuls les PDF sont acceptés.'; msg.className='msg err'; return; }
+    msg.textContent='Upload du PDF en cours...'; msg.className='msg info';
+
+    const fileName = `boc-${Date.now()}-${file.name}`;
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const uploadRes = await fetch(`${SB_URL}/storage/v1/object/boc/${fileName}`, {
+      method: 'POST',
+      headers: {
+        apikey: SB_ANON,
+        Authorization: `Bearer ${TK}`,
+      },
+      body: formData,
+    });
+
+    if (!uploadRes.ok) {
+      const err = await uploadRes.json().catch(() => ({}));
+      msg.textContent = 'Échec upload : ' + (err.message || uploadRes.status);
+      msg.className = 'msg err';
+      return;
+    }
+
+    fichierUrl = `${SB_URL}/storage/v1/object/public/boc/${fileName}`;
+    fichierNom = fichierNom || file.name;
+  }
+
+  const body = {
+    date_seance: date,
+    fichier_nom: fichierNom || 'boc.pdf',
+    fichier_url: fichierUrl,
+  };
+
+  // Upsert : met à jour si la date existe déjà
+  const r = await sbPost('boc', body, 'date_seance');
+  if (r) {
+    msg.textContent = '✓ BOC enregistré';
+    msg.className = 'msg ok';
+    toast('BOC enregistré');
+    clearForm(['boc-date','boc-nom','boc-url']);
+    document.getElementById('boc-file').value = '';
+    loadBOC();  // rafraîchit la liste des BOC
+  } else {
+    msg.textContent = 'Erreur enregistrement DB';
+    msg.className = 'msg err';
+  }
+}
 
 async function loadBOC() {
   const list = await sbGet('boc','select=*&order=date_seance.desc&limit=20') || [];
