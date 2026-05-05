@@ -1376,7 +1376,7 @@ async function loadTechAnalysis() {
   _techTicker = ticker;
   let hist;
   try {
-    hist = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
+    hist = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc',select: 'date_seance,cours_cloture,cours_normal,volume,plus_haut,plus_bas',limit: 252});
   } catch(e) {
     toast('Historique indisponible pour ' + ticker, 'error');
     return;
@@ -1384,7 +1384,7 @@ async function loadTechAnalysis() {
   if (!hist.length) { toast('Aucun historique pour ' + ticker, 'warn'); return; }
 
   hist = hist.slice(-_techPeriod);
-  const closes = hist.map(d => d.cours_cloture || d.cloture || d.cours_normal || 0);
+  const closes = hist.map(d => d.cours_cloture || d.cours_normal || 0);
   const volumes = hist.map(d => d.volume || 0);
   const labels = hist.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
 
@@ -1413,8 +1413,8 @@ async function loadTechAnalysis() {
   else if (score <= -2) { signal = 'VENTE'; signalClass = 'tech-signal-sell'; }
 
   // Support / Résistance
-  const highs = hist.map(d => d.haut || d.cloture || 0);
-  const lows = hist.map(d => d.bas || d.cloture || 0);
+  const highs = hist.map(d => d.plus_haut || d.cours_cloture || d.cours_normal || 0);
+  const lows = hist.map(d => d.plus_bas || d.cours_cloture || d.cours_normal || 0);
   const resistance = Math.max(...highs.slice(-20));
   const support = Math.min(...lows.slice(-20));
 
@@ -1473,9 +1473,10 @@ async function loadTechAnalysis() {
         ...chartOpts.plugins.tooltip,
         callbacks: {
           title: items => {
-            const idx = items[0].dataIndex;
-            const d = hist[idx];
-            return `${labels[idx]} — Ouverture: ${fmt(d.ouverture||d.cloture||0)} · Haut: ${fmt(d.haut||d.cloture||0)} · Bas: ${fmt(d.bas||d.cloture||0)} · Clôture: ${fmt(d.cloture||0)}`;
+           const idx = items[0].dataIndex;
+           const d = hist[idx];
+           const prix = d.cours_cloture || d.cours_normal || 0;
+           return `${labels[idx]} — Haut: ${fmt(d.plus_haut||prix)} · Bas: ${fmt(d.plus_bas||prix)} · Clôture: ${fmt(prix)}`;
           },
           label: ctx => {
             let val = fmt(ctx.parsed.y, 2);
