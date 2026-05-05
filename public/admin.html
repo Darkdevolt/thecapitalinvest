@@ -696,21 +696,23 @@ td.r { text-align:right; }
       <div style="padding:14px;"><div class="log-box" id="scraper-log">Aucune exécution récente.</div></div>
     </div>
   </div>
-  <div class="card">
-    <div class="card-header"><span class="card-title">Import BOC</span></div>
-    <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-      <div class="field"><label>Date de séance *</label><input type="date" id="boc-date"></div>
-      <div class="field"><label>Nom du fichier *</label><input type="text" id="boc-nom" placeholder="BOC_2026-05-01.pdf"></div>
-      <div class="field"><label>URL du PDF *</label><input type="text" id="boc-url" placeholder="https://brvm.org/..."></div>
-    </div>
-    <div class="actions-row">
-      <button class="btn btn-primary" onclick="importBOC()">Enregistrer la référence BOC</button>
-      <span id="boc-msg" class="msg"></span>
-    </div>
+<div class="card">
+  <div class="card-header"><span class="card-title">Import BOC</span></div>
+  <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+    <div class="field"><label>Date de séance *</label><input type="date" id="boc-date"></div>
+    <div class="field"><label>Nom du fichier</label><input type="text" id="boc-nom" placeholder="BOC_2026-05-01.pdf"></div>
+    <!-- 👇 Ce champ permet d’uploader un PDF -->
+    <div class="field"><label>Fichier PDF (upload)</label><input type="file" id="boc-file" accept=".pdf"></div>
   </div>
-  <div class="card">
-    <div class="card-header"><span class="card-title">BOC enregistrés</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadBOC()">↺ Charger</button></div>
-    <div id="boc-list"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger pour afficher les BOC.</div></div>
+  <div style="padding:0 18px 12px;font-size:11px;color:var(--muted);">
+    Vous pouvez soit indiquer une URL, soit téléverser un PDF. L'upload remplacera l'URL.
+  </div>
+  <div style="padding:0 18px 12px;">
+    <div class="field"><label>URL du PDF (alternative)</label><input type="text" id="boc-url" placeholder="https://..."></div>
+  </div>
+  <div class="actions-row">
+    <button class="btn btn-primary" onclick="importBOC()">Enregistrer le BOC</button>
+    <span id="boc-msg" class="msg"></span>
   </div>
 </div>
 
