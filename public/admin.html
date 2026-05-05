@@ -737,6 +737,15 @@ td.r { text-align:right; }
     <button class="btn btn-primary" onclick="importBOC()">Enregistrer le BOC</button>
     <span id="boc-msg" class="msg"></span>
   </div>
+  <div class="card">
+  <div class="card-header">
+    <span class="card-title">BOC enregistrés</span>
+    <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadBOC()">↺ Charger</button>
+  </div>
+  <div id="boc-list">
+    <div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger pour afficher les BOC.</div>
+  </div>
+</div>
 </div>
 
 <!-- ═══ DIAGNOSTIC ══════════════════════════════════════════════════════ -->
@@ -1693,12 +1702,18 @@ async function syncHistFromCours() {
   toast(`Sync terminé : ${synced} entrées`);
 }
 
-async function importBOC() {
-  const date=v('boc-date'), nom=v('boc-nom'), url=v('boc-url');
-  const msg = document.getElementById('boc-msg');
-  if (!date||!nom||!url) { msg.textContent='Tous les champs requis.'; msg.className='msg err'; return; }
-  const r = await sbPost('boc', { date_seance:date, fichier_nom:nom, fichier_url:url });
-  if (r) { msg.textContent='✓ BOC enregistré'; msg.className='msg ok'; toast('BOC enregistré'); clearForm(['boc-date','boc-nom','boc-url']); loadBOC(); }
+async function loadBOC() {
+  const list = await sbGet('boc','select=*&order=date_seance.desc&limit=20') || [];
+  document.getElementById('boc-list').innerHTML = !list.length
+    ? '<div style="padding:16px;color:var(--muted);font-size:12px;">Aucun BOC enregistré.</div>'
+    : '<div class="tw"><table><thead><tr><th>Date</th><th>Nom fichier</th><th>URL</th><th></th></tr></thead><tbody>'
+    + list.map(b=>`<tr>
+      <td class="td-mono">${b.date_seance}</td>
+      <td style="font-size:12px;">${b.fichier_nom}</td>
+      <td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;"><a href="${b.fichier_url}" target="_blank" style="color:var(--blue);">${b.fichier_url}</a></td>
+      <td><button class="btn btn-danger btn-sm" onclick="sbDel('boc','id=eq.${b.id}').then(()=>loadBOC())">✕</button></td>
+    </tr>`).join('')
+    + '</tbody></table></div>';
 }
 
 async function loadBOC() {
