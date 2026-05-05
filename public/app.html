@@ -1133,7 +1133,8 @@ async function openFiche(ticker, from, noHash) {
     ficheHistorique = await sb('historique', { 
   ticker: `eq.${ticker}`, 
   order: 'date_seance.asc',
-  limit: 2000
+  select: 'date_seance,cours_cloture,cours_normal,volume',
+  limit: 5000
 });
   } catch(e) {
     ficheHistorique = [];
@@ -1187,7 +1188,7 @@ function renderFicheChart() {
     return;
   }
   const labels = data.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
-  const vals = data.map(d => d.cours_cloture || d.cloture || d.cours_normal || d.cours || 0);
+  const vals = data.map(d => d.cours_cloture || d.cours_normal || 0);
   if (ficheChartInst) ficheChartInst.destroy();
   ficheChartInst = new Chart(document.getElementById('chartFiche'), {
     type: 'line', data: { labels, datasets: [mkDataset(vals)] }, options: chartOpts
