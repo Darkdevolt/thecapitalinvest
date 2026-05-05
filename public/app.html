@@ -908,7 +908,7 @@ function sortTable(tbodyId, colIndex) {
 async function loadAll() {
   try {
     const results = await Promise.allSettled([
-      sb('cours', { order: 'date_seance.desc', limit: 500 }),
+      sb('cours_latest', {}),
       sb('boc', { order: 'date_seance.desc', limit: 200 }),
       sb('analyses', { order: 'date_analyse.desc', limit: 100 }),
       sb('financials', { order: 'annee.desc,periode.desc', limit: 500 }),
