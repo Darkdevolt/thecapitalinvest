@@ -1185,17 +1185,38 @@ function showFinYear(idx, btn) {
 function renderFicheChart() {
   const data = ficheHistorique.slice(-ficheChartPeriod);
   if (!data.length) {
-    document.getElementById('chartFiche').parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--dim);font-size:13px">Aucun historique disponible</div>';
+    document.getElementById('chartFiche').parentElement.innerHTML = 
+      '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--dim);font-size:13px">Aucun historique disponible</div>';
     return;
   }
   const labels = data.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
   const vals = data.map(d => d.cours_cloture || d.cours_normal || 0);
+  
+  // Calcul haut/bas sur la période
+  const validVals = vals.filter(v => v > 0);
+  const periodHigh = Math.max(...validVals);
+  const periodLow = Math.min(...validVals);
+  const periodChange = validVals.length > 1 
+    ? ((validVals[validVals.length-1] - validVals[0]) / validVals[0] * 100).toFixed(2) 
+    : 0;
+  const changeColor = periodChange >= 0 ? 'var(--green)' : 'var(--red)';
+
+  // Afficher les stats de période
+  document.getElementById('ficheMeta').innerHTML = `
+    Dernière séance : ${fmtDate(ficheHistorique[ficheHistorique.length-1]?.date_seance)} · 
+    Volume : ${fmt(ficheHistorique[ficheHistorique.length-1]?.volume)} · 
+    <span style="color:var(--green)">▲ Haut : ${fmt(periodHigh)}</span> · 
+    <span style="color:var(--red)">▼ Bas : ${fmt(periodLow)}</span> · 
+    <span style="color:${changeColor}">Perf : ${periodChange >= 0 ? '+' : ''}${periodChange}%</span>
+  `;
+
   if (ficheChartInst) ficheChartInst.destroy();
   ficheChartInst = new Chart(document.getElementById('chartFiche'), {
-    type: 'line', data: { labels, datasets: [mkDataset(vals)] }, options: chartOpts
+    type: 'line', 
+    data: { labels, datasets: [mkDataset(vals)] }, 
+    options: chartOpts
   });
 }
-
 function setChartPeriod(n, btn) {
   ficheChartPeriod = n;
   document.querySelectorAll('#view-fiche .year-tab').forEach(b => b.classList.remove('active'));
