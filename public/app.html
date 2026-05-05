@@ -1129,7 +1129,11 @@ async function openFiche(ticker, from, noHash) {
   ficheChartPeriod = 30;
   document.querySelectorAll('#view-fiche .year-tab').forEach((b,i) => b.classList.toggle('active', i===0));
   try {
-    ficheHistorique = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
+    ficheHistorique = await sb('historique', { 
+  ticker: `eq.${ticker}`, 
+  order: 'date_seance.asc',
+  limit: 2000
+});
   } catch(e) {
     ficheHistorique = [];
     toast('Historique indisponible pour ' + ticker, 'warn');
