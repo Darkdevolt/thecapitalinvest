@@ -1132,10 +1132,11 @@ async function openFiche(ticker, from, noHash) {
   try {
     ficheHistorique = await sb('historique', { 
   ticker: `eq.${ticker}`, 
-  order: 'date_seance.asc',
-  select: 'date_seance,cours_cloture,cours_normal,volume',
+  order: 'date_seance.desc',
+  select: 'date_seance,cours_cloture,cours_normal,volume,plus_haut,plus_bas',
   limit: 5000
 });
+ficheHistorique = ficheHistorique.reverse();
   } catch(e) {
     ficheHistorique = [];
     toast('Historique indisponible pour ' + ticker, 'warn');
