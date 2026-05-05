@@ -1187,7 +1187,7 @@ function renderFicheChart() {
     return;
   }
   const labels = data.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
-  const vals = data.map(d => d.cloture || d.cours || 0);
+  const vals = data.map(d => d.cours_cloture || d.cloture || d.cours_normal || d.cours || 0);
   if (ficheChartInst) ficheChartInst.destroy();
   ficheChartInst = new Chart(document.getElementById('chartFiche'), {
     type: 'line', data: { labels, datasets: [mkDataset(vals)] }, options: chartOpts
@@ -1361,7 +1361,7 @@ async function loadTechAnalysis() {
   if (!hist.length) { toast('Aucun historique pour ' + ticker, 'warn'); return; }
 
   hist = hist.slice(-_techPeriod);
-  const closes = hist.map(d => d.cloture || d.cours || 0);
+  const closes = hist.map(d => d.cours_cloture || d.cloture || d.cours_normal || 0);
   const volumes = hist.map(d => d.volume || 0);
   const labels = hist.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
 
