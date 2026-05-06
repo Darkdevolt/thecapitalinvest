@@ -266,6 +266,19 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .fin-detail-card { background: var(--card); border: 1px solid var(--border2); border-radius: 10px; padding: 16px; }
 .fin-detail-card h4 { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--gold); margin-bottom: 12px; }
 
+/* PUBLICATIONS */
+.pub-period { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 16px; overflow: hidden; }
+.pub-period-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border2); gap: 10px; }
+.pub-period-title { font-family: var(--serif); font-size: 18px; font-weight: 500; color: var(--cream); }
+.pub-period-badge { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; border: 1px solid rgba(184,150,78,0.2); color: var(--gold); }
+.pub-tickers-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px,1fr)); gap: 1px; background: var(--border2); padding: 0; }
+.pub-ticker-card { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--card); cursor: pointer; transition: background 0.15s; }
+.pub-ticker-card:hover { background: rgba(184,150,78,0.05); }
+.pub-check { color: var(--green); font-weight: bold; font-size: 14px; min-width: 16px; text-align: center; }
+.pub-ticker { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--gold); min-width: 45px; }
+.pub-name { font-size: 13px; color: var(--cream); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pub-count { font-family: var(--mono); font-size: 12px; color: var(--dim); }
+
 /* OVERLAY MOBILE */
 .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 99; }
 .overlay.open { display: block; }
@@ -323,6 +336,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 
   <div class="sidebar-section">Données</div>
   <div class="nav-item" onclick="nav('financials')"><span class="icon">≡</span> États Financiers</div>
+  <div class="nav-item" onclick="nav('publications')"><span class="icon">📅</span> Calendrier</div>
 
   <div class="sidebar-bottom">
     <div class="user-info" id="userInfo">
@@ -642,6 +656,24 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   <div id="finDetailContent"></div>
 </div>
 
+<!-- ═══ PUBLICATIONS ═══ -->
+<div class="view" id="view-publications">
+  <div class="page-header">
+    <h1>Calendrier de <span style="color:var(--gold)">Publication</span></h1>
+    <p>États financiers publiés – détectés automatiquement dès que les données sont renseignées</p>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="searchPubs" placeholder="🔍  Filtrer par ticker, société..." oninput="filterPublications()">
+    <button class="filter-btn active" onclick="setPubFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setPubFilter('annuel',this)">Annuel</button>
+    <button class="filter-btn" onclick="setPubFilter('s1',this)">Semestriel</button>
+    <button class="filter-btn" onclick="setPubFilter('t1',this)">T1</button>
+    <button class="filter-btn" onclick="setPubFilter('t2',this)">T2</button>
+    <button class="filter-btn" onclick="setPubFilter('t3',this)">T3</button>
+  </div>
+  <div id="publicationsGrid"><div class="empty-state"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></div></div>
+</div>
+
 </main>
 
 <script>
@@ -717,10 +749,11 @@ let allCours = [], allBoc = [], allAnalyses = [], allFinancials = [], allEntrepr
 let ficheHistorique = [], ficheChartPeriod = 30;
 let ficheChartInst = null, compositeChartInst = null, techChartInst = null, techVolInst = null;
 let prevView = 'titres';
-let _titreFilter = 'all', _bocFilter = 'all', _analyseFilter = 'all';
+let _titreFilter = 'all', _bocFilter = 'all', _analyseFilter = 'all', _pubFilter = 'all';
 let _techPeriod = 30, _techTicker = '';
 let _sortState = {};
 let _techConfig = { sma20: true, sma50: true, ema12: false, ema26: false, bb: true, volume: true };
+let entMap = {}; // ticker -> entreprise
 
 // ═══════════════════════════════════════
 // CLOCK & NAV
@@ -742,7 +775,8 @@ const TITLES = {
   alertes:'Alertes de Prix',
   financials:'États Financiers',
   'financials-detail':'Détail Financier',
-  fiche:'Fiche Titre'
+  fiche:'Fiche Titre',
+  publications:'Calendrier des Publications'
 };
 
 const BREADCRUMBS = {
@@ -757,7 +791,8 @@ const BREADCRUMBS = {
   portefeuille: [{label:'Tableau de bord', view:'overview'}, {label:'Portefeuille', view:'portefeuille'}],
   alertes: [{label:'Tableau de bord', view:'overview'}, {label:'Alertes', view:'alertes'}],
   financials: [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}],
-  'financials-detail': [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}, {label:'Détail', view:'financials-detail'}]
+  'financials-detail': [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}, {label:'Détail', view:'financials-detail'}],
+  publications: [{label:'Tableau de bord', view:'overview'}, {label:'Calendrier', view:'publications'}]
 };
 
 function nav(id, noHash) {
@@ -783,7 +818,7 @@ function updateBreadcrumb(viewId) {
 }
 
 function setHashForView(id) {
-  const hashMap = { overview:'', titres:'#titres', boc:'#boc', analyses:'#analyses', 'analyse-detail':'#analyse-detail', 'analyse-technique':'#analyse-technique', screener:'#screener', portefeuille:'#portefeuille', alertes:'#alertes', financials:'#financials', 'financials-detail':'#financials-detail', fiche:'#fiche' };
+  const hashMap = { overview:'', titres:'#titres', boc:'#boc', analyses:'#analyses', 'analyse-detail':'#analyse-detail', 'analyse-technique':'#analyse-technique', screener:'#screener', portefeuille:'#portefeuille', alertes:'#alertes', financials:'#financials', 'financials-detail':'#financials-detail', fiche:'#fiche', publications:'#publications' };
   const h = hashMap[id] || '';
   if (h !== location.hash) history.replaceState(null, '', h || location.pathname);
 }
@@ -800,7 +835,7 @@ function parseHash() {
     openAnalyseDetail(+id, true);
     return;
   }
-  const map = { '#titres':'titres', '#boc':'boc', '#analyses':'analyses', '#analyse-detail':'analyse-detail', '#analyse-technique':'analyse-technique', '#screener':'screener', '#portefeuille':'portefeuille', '#alertes':'alertes', '#financials':'financials', '#financials-detail':'financials-detail' };
+  const map = { '#titres':'titres', '#boc':'boc', '#analyses':'analyses', '#analyse-detail':'analyse-detail', '#analyse-technique':'analyse-technique', '#screener':'screener', '#portefeuille':'portefeuille', '#alertes':'alertes', '#financials':'financials', '#financials-detail':'financials-detail', '#publications':'publications' };
   const view = map[h] || 'overview';
   nav(view, true);
 }
@@ -932,11 +967,15 @@ async function loadAll() {
     if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
     else toast('Erreur chargement entreprises: ' + results[4].reason, 'error');
 
+    // Créer la map entreprise pour usage ultérieur
+    entMap = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
+
     renderOverview(results[5].status === 'fulfilled' ? results[5].value || [] : []);
     renderTitres();
     renderBoc();
     renderAnalyses();
     renderFinancials();
+    renderPublications();
     populateTickerSelects();
     runScreener();
     renderPortfolio();
@@ -1875,6 +1914,74 @@ function openFinDetail(ticker) {
             return `<div class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</div>`;
           }).join('')}
         </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════
+// PUBLICATIONS
+// ═══════════════════════════════════════
+function renderPublications() {
+  filterPublications();
+}
+
+function setPubFilter(f, btn) {
+  _pubFilter = f;
+  document.querySelectorAll('#view-publications .filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  filterPublications();
+}
+
+function filterPublications() {
+  const q = (document.getElementById('searchPubs')?.value || '').toLowerCase();
+  const pubs = {}; // key: "2025 T1" -> array of {ticker, name}
+  allFinancials.forEach(f => {
+    // On considère publié si le résultat net est renseigné
+    if (f.resultat_net == null) return;
+    const periode = f.periode || 'annuel';
+    if (_pubFilter !== 'all' && periode !== _pubFilter && !(_pubFilter === 'annuel' && periode === 'annuel')) return;
+    const keyPeriod = periode === 'annuel' ? 'Annuel' : periode.toUpperCase();
+    const key = f.annee + ' ' + keyPeriod;
+    if (!pubs[key]) pubs[key] = [];
+    pubs[key].push({ ticker: f.ticker, name: entMap[f.ticker]?.nom || f.ticker });
+  });
+
+  // Filtrer par recherche
+  if (q) {
+    Object.keys(pubs).forEach(key => {
+      pubs[key] = pubs[key].filter(e => e.ticker.toLowerCase().includes(q) || e.name.toLowerCase().includes(q));
+      if (pubs[key].length === 0) delete pubs[key];
+    });
+  }
+
+  const periodOrder = (p) => { const m = {'T1':1,'T2':2,'T3':3,'S1':4,'Annuel':5}; return m[p]||0; };
+  const sorted = Object.entries(pubs).sort((a,b) => {
+    const [yA, pA] = a[0].split(' ');
+    const [yB, pB] = b[0].split(' ');
+    if (yA !== yB) return yB - yA;
+    return periodOrder(pA) - periodOrder(pB);
+  });
+
+  const container = document.getElementById('publicationsGrid');
+  if (!sorted.length) {
+    container.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div><div class="empty-title">Aucune publication détectée</div><div class="empty-text">Ajoutez des données financières avec le résultat net renseigné.</div></div>';
+    return;
+  }
+
+  container.innerHTML = sorted.map(([period, entries]) => {
+    const periodLabel = period.replace(/(\d{4}) (.+)/, '$1 — $2');
+    return `<div class="pub-period">
+      <div class="pub-period-header">
+        <span class="pub-period-title">${periodLabel}</span>
+        <span class="pub-count">${entries.length} publication(s)</span>
+      </div>
+      <div class="pub-tickers-grid">
+        ${entries.map(e => `<div class="pub-ticker-card" onclick="openFiche('${e.ticker}','publications')">
+          <span class="pub-check">✓</span>
+          <span class="pub-ticker">${e.ticker}</span>
+          <span class="pub-name" title="${e.name}">${e.name}</span>
+        </div>`).join('')}
       </div>
     </div>`;
   }).join('');
