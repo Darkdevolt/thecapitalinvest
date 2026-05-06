@@ -305,6 +305,11 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .breadcrumb { padding: 0 16px; left: 0; }
 .main { margin-left: 0; }
 }
+/* Publications : badge en attente */
+.pub-ticker-card.waiting .pub-check { color: var(--red); }
+.pub-ticker-card.waiting .pub-ticker { color: var(--dim); }
+.pub-ticker-card.waiting { opacity: 0.65; }
+.pub-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); padding: 12px 16px 8px; border-top: 1px solid var(--border2); }
 </style>
 <base target="_blank">
 </head>
@@ -660,7 +665,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 <div class="view" id="view-publications">
   <div class="page-header">
     <h1>Calendrier de <span style="color:var(--gold)">Publication</span></h1>
-    <p>États financiers publiés – détectés automatiquement dès que les données sont renseignées</p>
+    <p>États financiers publiés vs en attente — détection automatique via le résultat net</p>
   </div>
   <div class="search-bar">
     <input class="search-input" id="searchPubs" placeholder="🔍  Filtrer par ticker, société..." oninput="filterPublications()">
@@ -1926,41 +1931,42 @@ function renderPublications() {
   filterPublications();
 }
 
-function setPubFilter(f, btn) {
-  _pubFilter = f;
-  document.querySelectorAll('#view-publications .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  filterPublications();
-}
-
 function filterPublications() {
   const q = (document.getElementById('searchPubs')?.value || '').toLowerCase();
-  const pubs = {}; // key: "2025 T1" -> array of {ticker, name}
+  
+  // Tous les tickers disponibles (depuis cours ou entreprises)
+  const allTickersSet = new Set();
+  allCours.forEach(c => allTickersSet.add(c.ticker));
+  allEntreprises.forEach(e => allTickersSet.add(e.ticker));
+  const allTickers = Array.from(allTickersSet).sort();
+
+  // Construire les publications détectées : { "2025 T1": [ticker, ...] }
+  const pubs = {};
   allFinancials.forEach(f => {
-    // On considère publié si le résultat net est renseigné
     if (f.resultat_net == null) return;
     const periode = f.periode || 'annuel';
     if (_pubFilter !== 'all' && periode !== _pubFilter && !(_pubFilter === 'annuel' && periode === 'annuel')) return;
     const keyPeriod = periode === 'annuel' ? 'Annuel' : periode.toUpperCase();
     const key = f.annee + ' ' + keyPeriod;
     if (!pubs[key]) pubs[key] = [];
-    pubs[key].push({ ticker: f.ticker, name: entMap[f.ticker]?.nom || f.ticker });
+    if (!pubs[key].includes(f.ticker)) pubs[key].push(f.ticker);
   });
 
-  // Filtrer par recherche
+  // Filtrer par recherche sur les tickers publiés
   if (q) {
     Object.keys(pubs).forEach(key => {
-      pubs[key] = pubs[key].filter(e => e.ticker.toLowerCase().includes(q) || e.name.toLowerCase().includes(q));
+      pubs[key] = pubs[key].filter(t => t.toLowerCase().includes(q) || (entMap[t]?.nom || t).toLowerCase().includes(q));
       if (pubs[key].length === 0) delete pubs[key];
     });
   }
 
-  const periodOrder = (p) => { const m = {'T1':1,'T2':2,'T3':3,'S1':4,'Annuel':5}; return m[p]||0; };
+  // Trier les périodes : année décroissante, puis T1,T2,T3,S1,Annuel
+  const periodOrder = { 'T1':1, 'T2':2, 'T3':3, 'S1':4, 'Annuel':5 };
   const sorted = Object.entries(pubs).sort((a,b) => {
     const [yA, pA] = a[0].split(' ');
     const [yB, pB] = b[0].split(' ');
     if (yA !== yB) return yB - yA;
-    return periodOrder(pA) - periodOrder(pB);
+    return (periodOrder[pA]||0) - (periodOrder[pB]||0);
   });
 
   const container = document.getElementById('publicationsGrid');
@@ -1969,22 +1975,47 @@ function filterPublications() {
     return;
   }
 
-  container.innerHTML = sorted.map(([period, entries]) => {
+  container.innerHTML = sorted.map(([period, publishedTickers]) => {
+    const waitingTickers = allTickers.filter(t => !publishedTickers.includes(t)).sort();
+    // Si recherche active, filtrer aussi les "en attente"
+    const filteredWaiting = q ? waitingTickers.filter(t => t.toLowerCase().includes(q) || (entMap[t]?.nom || t).toLowerCase().includes(q)) : waitingTickers;
+    
     const periodLabel = period.replace(/(\d{4}) (.+)/, '$1 — $2');
+    const total = publishedTickers.length + filteredWaiting.length;
+    
     return `<div class="pub-period">
       <div class="pub-period-header">
         <span class="pub-period-title">${periodLabel}</span>
-        <span class="pub-count">${entries.length} publication(s)</span>
+        <span class="pub-count">${publishedTickers.length} publié(s) / ${total} sociétés</span>
       </div>
+      <!-- Publiés -->
       <div class="pub-tickers-grid">
-        ${entries.map(e => `<div class="pub-ticker-card" onclick="openFiche('${e.ticker}','publications')">
-          <span class="pub-check">✓</span>
-          <span class="pub-ticker">${e.ticker}</span>
-          <span class="pub-name" title="${e.name}">${e.name}</span>
-        </div>`).join('')}
+        ${publishedTickers.map(t => {
+          const name = entMap[t]?.nom || t;
+          return `<div class="pub-ticker-card" onclick="openFiche('${t}','publications')">
+            <span class="pub-check">✓</span>
+            <span class="pub-ticker">${t}</span>
+            <span class="pub-name" title="${name}">${name}</span>
+          </div>`;
+        }).join('')}
       </div>
+      <!-- En attente -->
+      ${filteredWaiting.length > 0 ? `
+        <div class="pub-section-title">En attente</div>
+        <div class="pub-tickers-grid">
+          ${filteredWaiting.map(t => {
+            const name = entMap[t]?.nom || t;
+            return `<div class="pub-ticker-card waiting" onclick="openFiche('${t}','publications')">
+              <span class="pub-check">✕</span>
+              <span class="pub-ticker">${t}</span>
+              <span class="pub-name" title="${name}">${name}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      ` : ''}
     </div>`;
   }).join('');
+}
 }
 
 // ═══════════════════════════════════════
