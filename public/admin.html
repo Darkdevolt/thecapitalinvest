@@ -1724,7 +1724,7 @@ async function importBOC() {
     const formData = new FormData();
     formData.append('file', file);
 
-    const uploadRes = await fetch(`${SB_URL}/storage/v1/object/boc/${fileName}`, {
+    const uploadRes = await fetch(`${SB_URL}/storage/v1/object/boc_pdfs/${fileName}`, {
       method: 'POST',
       headers: {
         apikey: SB_ANON,
@@ -1740,7 +1740,7 @@ async function importBOC() {
       return;
     }
 
-    fichierUrl = `${SB_URL}/storage/v1/object/public/boc/${fileName}`;
+    fichierUrl = `${SB_URL}/storage/v1/object/public/boc_pdfs/${fileName}`;
     fichierNom = fichierNom || file.name;
   }
 
