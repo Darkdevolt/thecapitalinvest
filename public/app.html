@@ -736,14 +736,48 @@ function toast(msg, type='info') {
 const SK = 'tc_session';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
-(function() {
-  document.getElementById('userAvatar').textContent = 'T';
-  document.getElementById('userName').textContent = 'test@exemple.com';
-  document.getElementById('userRole').textContent = 'Pro · BRVM';
-  window._userPlan = 'pro';
-  document.getElementById('adminLink').style.display = 'none';
-})();
+const SK = 'tc_session';
 
+(async function initApp() {
+  const raw = localStorage.getItem(SK);
+  if (!raw) {
+    window.location.href = 'login.html';
+    return;
+  }
+
+  let session;
+  try {
+    session = JSON.parse(raw);
+    if (!session.access_token) throw new Error('pas de token');
+  } catch (e) {
+    localStorage.removeItem(SK);
+    window.location.href = 'login.html';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${SB_URL}/auth/v1/user`, {
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': SB_KEY
+      }
+    });
+    if (!res.ok) throw new Error('session invalide');
+    const user = await res.json();
+
+    // Afficher le vrai utilisateur
+    document.getElementById('userAvatar').textContent = (user.email || 'U')[0].toUpperCase();
+    document.getElementById('userName').textContent = user.email || 'Utilisateur';
+    document.getElementById('userRole').textContent = 'BRVM';
+    window._userPlan = 'pro';
+
+    // Lancer le chargement des données
+    loadAll();
+  } catch (e) {
+    localStorage.removeItem(SK);
+    window.location.href = 'login.html';
+  }
+})();
 function doLogout() {
   localStorage.removeItem(SK);
   window.location.href = 'login.html';
@@ -2333,7 +2367,6 @@ function evaluateRelevance(tcamRN, tcamCA, r2, rnSeries) {
 // INIT
 // ═══════════════════════════════════════
 window.addEventListener('hashchange', parseHash);
-document.addEventListener('DOMContentLoaded', loadAll);
 </script>
 </body>
 </html>
