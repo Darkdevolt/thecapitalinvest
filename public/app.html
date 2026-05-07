@@ -734,30 +734,12 @@ function toast(msg, type='info') {
 const SK = 'tc_session';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
-(async function initSession() {
-  const raw = localStorage.getItem(SK);
-  if (!raw) { window.location.href = 'login.html'; return; }
-  try {
-    const parsed = JSON.parse(raw);
-    const sess = parsed?.session || parsed;
-    const token = sess?.access_token;
-    if (!token) { window.location.href = 'login.html'; return; }
-    const email = sess.user?.email || sess.email || parsed.user?.email || '';
-    const userId = sess.user?.id || sess.id || parsed.user?.id || '';
-    const initial = email.charAt(0).toUpperCase() || 'U';
-    document.getElementById('userAvatar').textContent = initial;
-    document.getElementById('userName').textContent = email;
-    try {
-      const r = await fetch(`https://otsiwiwlnowxeolbbgvm.supabase.co/rest/v1/users?select=is_admin&id=eq.${userId}`, {
-        headers: { 'apikey': SB_ANON, 'Authorization': `Bearer ${token}` }
-      });
-      const rows = await r.json();
-      if (rows?.[0]?.is_admin) {
-        document.getElementById('adminLink').style.display = 'block';
-        document.getElementById('userRole').textContent = 'Admin · BRVM';
-      }
-    } catch(e) {}
-  } catch(e) { window.location.href = 'login.html'; }
+(function() {
+  document.getElementById('userAvatar').textContent = 'T';
+  document.getElementById('userName').textContent = 'test@exemple.com';
+  document.getElementById('userRole').textContent = 'Pro · BRVM';
+  window._userPlan = 'pro';
+  document.getElementById('adminLink').style.display = 'none';
 })();
 
 function doLogout() {
