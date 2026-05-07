@@ -738,73 +738,191 @@ function toast(msg, type='info') {
 // ═══════════════════════════════════════
 // SESSION & AUTH
 // ═══════════════════════════════════════
-// ═══ SESSION & AUTH ═══
-// ═══ CONFIG SUPABASE ═══
+// ═══════════════════════════════════════
+// CONFIG SUPABASE (UNIQUE)
+// ═══════════════════════════════════════
 const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
-
 const SK = 'tc_session';
 
-// ═══ VÉRIF RAPIDE SESSION ═══
+// ═══════════════════════════════════════
+// AUTH & INIT
+// ═══════════════════════════════════════
 (async function initApp() {
-  // 1) Si aucune session stockée → redirection immédiate, pas d'appel réseau
+  // 1. Nettoyer le body quoi qu'il arrive (anti-blocage)
+  document.body.classList.remove('init-hidden');
+
   const raw = localStorage.getItem(SK);
+  
+  // 2. Pas de session : afficher l'UI en mode "déconnecté" au lieu de bloquer
   if (!raw) {
-    window.location.href = 'login.html';
+    showLoginPrompt();
+    loadAll(); // Charge quand même les données publiques si tu veux
     return;
   }
 
-  // 2) Si une session existe, on cache tout le temps de la vérification
-  document.body.classList.add('init-hidden'); // (optionnel, sécurise l’affichage)
-
-  // 3) Vérifier que le JSON est valide et contient un token
+  // 3. Vérifier la session avec timeout (évite le blocage infini)
   let session;
   try {
     session = JSON.parse(raw);
-    if (!session.access_token) throw new Error('no token');
+    if (!session?.access_token) throw new Error('no token');
   } catch (e) {
     localStorage.removeItem(SK);
-    window.location.href = 'login.html';
+    showLoginPrompt();
+    loadAll();
     return;
   }
 
-  // 4) Confirmer la session avec Supabase (un seul appel réseau)
   try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8s max
+
     const res = await fetch(`${SB_URL}/auth/v1/user`, {
+      signal: controller.signal,
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
         'apikey': SB_KEY
       }
     });
-    if (!res.ok) throw new Error('session invalide');
-    const user = await res.json();
+    clearTimeout(timeout);
 
-    // Afficher le vrai utilisateur
+    if (!res.ok) throw new Error('session invalide');
+
+    const user = await res.json();
+    
+    // Afficher l'utilisateur connecté
     document.getElementById('userAvatar').textContent = (user.email || 'U')[0].toUpperCase();
     document.getElementById('userName').textContent = user.email || 'Utilisateur';
     document.getElementById('userRole').textContent = 'BRVM';
     window._userPlan = 'pro';
+    
+    // Masquer le bouton login, afficher logout
+    const loginPrompt = document.getElementById('loginPrompt');
+    if (loginPrompt) loginPrompt.style.display = 'none';
 
-    // Afficher l’interface et charger les données
-    document.body.classList.remove('init-hidden');
-    loadAll();
   } catch (e) {
-    localStorage.removeItem(SK);
-    window.location.href = 'login.html';
+    console.warn('Session invalide ou réseau défaillant :', e);
+    // On ne redirige pas brutalement, on affiche un message
+    showLoginPrompt(true); // true = session expirée
   }
+
+  // 4. Charger les données dans tous les cas (même offline/déconnecté)
+  loadAll();
 })();
+
+function showLoginPrompt(expired = false) {
+  // Crée un bandeau si l'utilisateur n'est pas connecté
+  let banner = document.getElementById('loginPrompt');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'loginPrompt';
+    banner.style.cssText = 'position:fixed;top:64px;left:260px;right:0;z-index:95;background:rgba(184,150,78,0.1);border-bottom:1px solid var(--gold);padding:10px 32px;font-size:13px;color:var(--gold);display:flex;align-items:center;justify-content:space-between;';
+    document.body.appendChild(banner);
+  }
+  const msg = expired 
+    ? '⏱ Session expirée. <a href="login.html" style="color:var(--cream);text-decoration:underline">Reconnectez-vous</a>'
+    : '🔒 Mode visiteur. <a href="login.html" style="color:var(--cream);text-decoration:underline">Se connecter</a>';
+  banner.innerHTML = msg + '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:16px">×</button>';
+  banner.style.display = 'flex';
+}
 
 function doLogout() {
   localStorage.removeItem(SK);
+  window.location.reload(); // Plus sûr que href = login.html
+}
+  localStorage.removeItem(SK);
   window.location.href = 'login.html';
 }
-// ═══════════════════════════════════════
-// SUPABASE CONFIG
+  // ═══════════════════════════════════════
+// CONFIG SUPABASE (UNIQUE)
 // ═══════════════════════════════════════
 const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
+const SK = 'tc_session';
 
-async function sb(table, params = {}) {
+// ═══════════════════════════════════════
+// AUTH & INIT
+// ═══════════════════════════════════════
+(async function initApp() {
+  // 1. Nettoyer le body quoi qu'il arrive (anti-blocage)
+  document.body.classList.remove('init-hidden');
+
+  const raw = localStorage.getItem(SK);
+  
+  // 2. Pas de session : afficher l'UI en mode "déconnecté" au lieu de bloquer
+  if (!raw) {
+    showLoginPrompt();
+    loadAll();
+    return;
+  }
+
+  // 3. Vérifier la session avec timeout (évite le blocage infini)
+  let session;
+  try {
+    session = JSON.parse(raw);
+    if (!session?.access_token) throw new Error('no token');
+  } catch (e) {
+    localStorage.removeItem(SK);
+    showLoginPrompt();
+    loadAll();
+    return;
+  }
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000); // 8s max
+
+    const res = await fetch(`${SB_URL}/auth/v1/user`, {
+      signal: controller.signal,
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'apikey': SB_KEY
+      }
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) throw new Error('session invalide');
+
+    const user = await res.json();
+    
+    // Afficher l'utilisateur connecté
+    document.getElementById('userAvatar').textContent = (user.email || 'U')[0].toUpperCase();
+    document.getElementById('userName').textContent = user.email || 'Utilisateur';
+    document.getElementById('userRole').textContent = 'BRVM';
+    window._userPlan = 'pro';
+    
+    // Masquer le bandeau login s'il existe
+    const loginPrompt = document.getElementById('loginPrompt');
+    if (loginPrompt) loginPrompt.style.display = 'none';
+
+  } catch (e) {
+    console.warn('Session invalide ou réseau défaillant :', e);
+    showLoginPrompt(true); // true = session expirée
+  }
+
+  // 4. Charger les données dans tous les cas (même offline/déconnecté)
+  loadAll();
+})();
+
+function showLoginPrompt(expired = false) {
+  let banner = document.getElementById('loginPrompt');
+  if (!banner) {
+    banner = document.createElement('div');
+    banner.id = 'loginPrompt';
+    banner.style.cssText = 'position:fixed;top:64px;left:260px;right:0;z-index:95;background:rgba(184,150,78,0.1);border-bottom:1px solid var(--gold);padding:10px 32px;font-size:13px;color:var(--gold);display:flex;align-items:center;justify-content:space-between;';
+    document.body.appendChild(banner);
+  }
+  const msg = expired 
+    ? '⏱ Session expirée. <a href="login.html" style="color:var(--cream);text-decoration:underline">Reconnectez-vous</a>'
+    : '🔒 Mode visiteur. <a href="login.html" style="color:var(--cream);text-decoration:underline">Se connecter</a>';
+  banner.innerHTML = msg + '<button onclick="this.parentElement.remove()" style="background:none;border:none;color:var(--gold);cursor:pointer;font-size:16px">×</button>';
+  banner.style.display = 'flex';
+}
+
+function doLogout() {
+  localStorage.removeItem(SK);
+  window.location.reload();
+}
   const url = new URL(`${SB_URL}/rest/v1/${table}`);
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null) url.searchParams.set(k, v);
