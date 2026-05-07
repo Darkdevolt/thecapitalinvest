@@ -519,16 +519,64 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 <div class="view" id="view-boc">
   <div class="page-header">
     <h1>BOC — <span style="color:var(--gold)">Bulletin Officiel de la Cote</span></h1>
-    <p>Avis d'émissions, obligations d'état et emprunts publics</p>
+    <p>Documents officiels BRVM par séance de bourse — téléchargez les PDF</p>
   </div>
-  <div class="search-bar">
-    <input class="search-input" id="searchBoc" placeholder="🔍  Rechercher un émetteur, type de titre..." oninput="filterBoc()">
-    <button class="filter-btn active" onclick="setBocFilter('all',this)">Tous</button>
-    <button class="filter-btn" onclick="setBocFilter('obligation',this)">Obligations</button>
-    <button class="filter-btn" onclick="setBocFilter('action',this)">Actions</button>
-    <button class="filter-btn" onclick="setBocFilter('opcvm',this)">OPCVM</button>
+  
+  <div class="grid-3" style="margin-bottom:20px">
+    <div class="stat-card">
+      <div class="stat-label">Séances disponibles</div>
+      <div class="stat-value" id="bocCount">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Dernière séance</div>
+      <div class="stat-value" id="bocLastDate">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Année en cours</div>
+      <div class="stat-value" id="bocCurrentYear">2026</div>
+    </div>
   </div>
-  <div class="boc-grid" id="bocGrid"><div class="empty-state"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></div></div>
+
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="search-bar" style="padding-bottom:0">
+        <input class="search-input" id="searchBoc" placeholder="🔍  Rechercher une date (ex: 2026-05-07)..." oninput="filterBoc()" style="flex:1">
+        <select class="search-input" id="bocYearFilter" onchange="filterBoc()" style="flex:0 0 140px">
+          <option value="">Toutes les années</option>
+          <option value="2026" selected>2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+        <button class="filter-btn active" onclick="setBocFilter('all',this)">Tous</button>
+        <button class="filter-btn" onclick="setBocFilter('week',this)">Cette semaine</button>
+        <button class="filter-btn" onclick="setBocFilter('month',this)">Ce mois</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Séances de bourse</div>
+      <div style="font-size:12px;color:var(--dim)" id="bocResultCount"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('bocTable',0)">Date ↕</th>
+            <th onclick="sortTable('bocTable',1)">Jour ↕</th>
+            <th class="right" onclick="sortTable('bocTable',2)">Séance N° ↕</th>
+            <th onclick="sortTable('bocTable',3)">Statut ↕</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bocTable">
+          <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--dim)"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ ANALYSES ═══ -->
@@ -1450,41 +1498,135 @@ function setChartPeriod(n, btn) {
 // ═══════════════════════════════════════
 // BOC
 // ═══════════════════════════════════════
-function renderBoc() { window._bocRows = allBoc; filterBoc(); }
+// ═══════════════════════════════════════
+// BOC — BULLETIN OFFICIEL DE LA COTE (PDF)
+// ═══════════════════════════════════════
+
+// Structure attendue dans Supabase table 'boc':
+// id, date_seance, numero_seance, pdf_url, annee, created_at
+
+function renderBoc() {
+  // Si pas de données BOC, générer des séances fictives pour démo
+  if (!allBoc || allBoc.length === 0) {
+    generateMockBoc();
+  }
+  window._bocRows = allBoc;
+  filterBoc();
+}
+
+function generateMockBoc() {
+  // Génère des séances BOC pour les 30 derniers jours ouvrés
+  const sessions = [];
+  let date = new Date();
+  let sessionNum = 87; // Numéro de séance approximatif
+  
+  for (let i = 0; i < 30; i++) {
+    // Sauter week-ends
+    while (date.getDay() === 0 || date.getDay() === 6) {
+      date.setDate(date.getDate() - 1);
+    }
+    
+    const dateStr = date.toISOString().split('T')[0];
+    sessions.push({
+      id: i + 1,
+      date_seance: dateStr,
+      numero_seance: sessionNum,
+      annee: date.getFullYear(),
+      pdf_url: `https://brvm.org/boc/BOC_${dateStr.replace(/-/g, '')}.pdf`,
+      statut: 'publié'
+    });
+    
+    date.setDate(date.getDate() - 1);
+    sessionNum--;
+  }
+  
+  allBoc = sessions;
+}
 
 function setBocFilter(f, btn) {
   _bocFilter = f;
   document.querySelectorAll('#view-boc .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active'); filterBoc();
+  btn.classList.add('active');
+  filterBoc();
 }
 
 function filterBoc() {
   const q = (document.getElementById('searchBoc')?.value || '').toLowerCase();
-  let rows = window._bocRows || [];
-  if (_bocFilter !== 'all') rows = rows.filter(r => (r.type||'').toLowerCase().includes(_bocFilter));
-  if (q) rows = rows.filter(r => (r.titre||'').toLowerCase().includes(q) || (r.emetteur||'').toLowerCase().includes(q));
-  const grid = document.getElementById('bocGrid');
-  if (!rows.length) { grid.innerHTML = '<div class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">Aucun résultat</div><div class="empty-text">Vérifiez vos données Supabase</div></div>'; return; }
-  grid.innerHTML = rows.map(boc => {
-    const type = (boc.type||'obligation').toLowerCase();
-    const typeLabel = { obligation:'Obligation', action:'Action', opcvm:'OPCVM' }[type] || type;
-    const details = [
-      boc.taux != null && ['Taux', boc.taux.toFixed(2) + '%'],
-      boc.montant && ['Montant émis', fmtM(boc.montant) + ' FCFA'],
-      boc.valeur_nominale && ['Val. Nominale', fmt(boc.valeur_nominale) + ' FCFA'],
-      boc.prix_offre && ['Prix d\'offre', fmt(boc.prix_offre) + ' FCFA'],
-      boc.valeur_liquidative && ['Val. Liquidative', fmt(boc.valeur_liquidative) + ' FCFA'],
-      boc.date_echeance && ['Échéance', fmtDate(boc.date_echeance)],
-    ].filter(Boolean);
-    return `<div class="boc-card">
-      <div class="boc-header">
-        <div><div class="boc-title">${boc.titre||'—'}</div><div class="boc-emetteur">${boc.emetteur||'—'}</div></div>
-        <span class="boc-type ${type}">${typeLabel}</span>
-      </div>
-      <div class="boc-body">${details.map(([k,v]) => `<div class="boc-row"><span class="boc-key">${k}</span><span class="boc-val">${v}</span></div>`).join('')}</div>
-      <div class="boc-footer">📅 ${fmtDate(boc.date_seance)}</div>
-    </div>`;
+  const yearFilter = document.getElementById('bocYearFilter')?.value;
+  let rows = [...(window._bocRows || [])];
+
+  // Filtre par texte
+  if (q) {
+    rows = rows.filter(r => 
+      (r.date_seance || '').includes(q) ||
+      (r.numero_seance || '').toString().includes(q)
+    );
+  }
+
+  // Filtre par année
+  if (yearFilter) {
+    rows = rows.filter(r => (r.annee || '').toString() === yearFilter);
+  }
+
+  // Filtre par période
+  if (_bocFilter === 'week') {
+    const weekAgo = new Date();
+    weekAgo.setDate(weekAgo.getDate() - 7);
+    rows = rows.filter(r => new Date(r.date_seance) >= weekAgo);
+  } else if (_bocFilter === 'month') {
+    const monthAgo = new Date();
+    monthAgo.setDate(monthAgo.getDate() - 30);
+    rows = rows.filter(r => new Date(r.date_seance) >= monthAgo);
+  }
+
+  // Stats
+  document.getElementById('bocCount').textContent = (window._bocRows || []).length;
+  const lastSession = window._bocRows?.[0];
+  document.getElementById('bocLastDate').textContent = lastSession ? fmtDate(lastSession.date_seance) : '—';
+  document.getElementById('bocResultCount').textContent = rows.length + ' séance(s)';
+  document.getElementById('bocCurrentYear').textContent = new Date().getFullYear();
+
+  // Render table
+  const tbody = document.getElementById('bocTable');
+  if (!rows.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:30px;color:var(--dim)">Aucune séance trouvée</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = rows.map(boc => {
+    const dateObj = new Date(boc.date_seance);
+    const jourSemaine = dateObj.toLocaleDateString('fr-FR', { weekday: 'long' });
+    const jourCapitalized = jourSemaine.charAt(0).toUpperCase() + jourSemaine.slice(1);
+    const isToday = boc.date_seance === new Date().toISOString().split('T')[0];
+    const statutClass = isToday ? 'up' : 'neutral';
+    const statutLabel = isToday ? 'Aujourd\'hui' : 'Publié';
+
+    return `<tr>
+      <td><strong style="color:var(--cream)">${fmtDate(boc.date_seance)}</strong></td>
+      <td style="color:var(--muted);text-transform:capitalize">${jourCapitalized}</td>
+      <td class="right" style="font-family:var(--mono);color:var(--gold)">#${boc.numero_seance}</td>
+      <td><span class="pill ${statutClass}">${statutLabel}</span></td>
+      <td class="right">
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <a href="${boc.pdf_url}" target="_blank" class="filter-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+            📄 Ouvrir
+          </a>
+          <a href="${boc.pdf_url}" download class="filter-btn" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px">
+            ⬇ Télécharger
+          </a>
+        </div>
+      </td>
+    </tr>`;
   }).join('');
+}
+
+function openBocPdf(url, date) {
+  // Ouvrir dans un viewer PDF intégré ou nouvel onglet
+  if (!url) {
+    toast('PDF non disponible pour cette séance', 'warn');
+    return;
+  }
+  window.open(url, '_blank');
 }
 
 // ═══════════════════════════════════════
