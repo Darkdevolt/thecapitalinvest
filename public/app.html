@@ -755,11 +755,23 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 async function sb(table, params = {}) {
   const url = new URL(`${SB_URL}/rest/v1/${table}`);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-  const r = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'apikey': SB_KEY, 'Accept': 'application/json' }
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) url.searchParams.set(k, v);
   });
-  if (!r.ok) throw new Error(`${table}: ${r.status}`);
+  
+  const r = await fetch(url.toString(), {
+    headers: { 
+      'Authorization': `Bearer ${SB_KEY}`, 
+      'apikey': SB_KEY, 
+      'Accept': 'application/json',
+      'Content-Type': 'application/json'
+    }
+  });
+  
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    throw new Error(`${table}: ${r.status} ${r.statusText} ${text}`);
+  }
   return r.json();
 }
 
@@ -1023,47 +1035,82 @@ function populateTickerSelects() {
 // OVERVIEW
 // ═══════════════════════════════════════
 function renderOverview(indices) {
+  // Protection contre données absentes
+  if (!Array.isArray(indices)) {
+    console.error('indices n\'est pas un tableau:', indices);
+    indices = [];
+  }
+
   const setIdx = (id, val, chgId, chg) => {
-    const el = document.getElementById(id); const ce = document.getElementById(chgId);
-    if (el) el.textContent = fmt(val, 2);
+    const el = document.getElementById(id); 
+    const ce = document.getElementById(chgId);
+    if (el) el.textContent = (val != null && !isNaN(+val)) ? fmt(+val, 2) : '—';
     if (ce) {
-      const n = parseFloat(chg); const cls = n > 0 ? 'up' : n < 0 ? 'down' : 'neutral';
+      const n = parseFloat(chg);
+      const cls = isNaN(n) ? 'neutral' : n > 0 ? 'up' : n < 0 ? 'down' : 'neutral';
       ce.className = `stat-change ${cls}`;
-      ce.innerHTML = (n > 0 ? '▲' : n < 0 ? '▼' : '=') + ' ' + Math.abs(n).toFixed(2) + ' pts';
+      ce.innerHTML = isNaN(n) ? '—' : (n > 0 ? '▲' : n < 0 ? '▼' : '=') + ' ' + Math.abs(n).toFixed(2) + ' pts';
     }
   };
 
-  let chartLabels, chartVals;
-  if (indices.length > 1) {
+  let chartLabels = [], chartVals = [];
+  
+  if (indices.length >= 2) {
     const [l, p] = [indices[0], indices[1]];
-    if (l.brvm_composite != null) setIdx('idx-composite', l.brvm_composite, 'idx-composite-chg', l.brvm_composite - (p.brvm_composite||0));
-    if (l.brvm_30 != null) setIdx('idx-30', l.brvm_30, 'idx-30-chg', l.brvm_30 - (p.brvm_30||0));
-    if (l.brvm_prestige != null) setIdx('idx-prestige', l.brvm_prestige, 'idx-prestige-chg', l.brvm_prestige - (p.brvm_prestige||0));
-    document.getElementById('lastSession').textContent = 'Séance ' + fmtDate(l.date_seance);
-    const rev = indices.slice(0,30).reverse();
-    chartLabels = rev.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
-    chartVals = rev.map(d => d.brvm_composite);
+    setIdx('idx-composite', l?.brvm_composite, 'idx-composite-chg', (l?.brvm_composite ?? 0) - (p?.brvm_composite ?? 0));
+    setIdx('idx-30', l?.brvm_30, 'idx-30-chg', (l?.brvm_30 ?? 0) - (p?.brvm_30 ?? 0));
+    setIdx('idx-prestige', l?.brvm_prestige, 'idx-prestige-chg', (l?.brvm_prestige ?? 0) - (p?.brvm_prestige ?? 0));
+    
+    const lastSessionEl = document.getElementById('lastSession');
+    if (lastSessionEl) lastSessionEl.textContent = l?.date_seance ? 'Séance ' + fmtDate(l.date_seance) : '—';
+    
+    const rev = [...indices].slice(0, 30).reverse();
+    chartLabels = rev.map(d => d?.date_seance ? new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '?');
+    chartVals = rev.map(d => d?.brvm_composite ?? 0);
+  } else if (indices.length === 1) {
+    const l = indices[0];
+    setIdx('idx-composite', l?.brvm_composite, 'idx-composite-chg', 0);
+    setIdx('idx-30', l?.brvm_30, 'idx-30-chg', 0);
+    setIdx('idx-prestige', l?.brvm_prestige, 'idx-prestige-chg', 0);
+    
+    const lastSessionEl = document.getElementById('lastSession');
+    if (lastSessionEl) lastSessionEl.textContent = l?.date_seance ? 'Séance ' + fmtDate(l.date_seance) : '—';
   } else {
-    document.getElementById('idx-composite').textContent = '—';
-    document.getElementById('idx-30').textContent = '—';
-    document.getElementById('idx-prestige').textContent = '—';
-    document.getElementById('lastSession').textContent = 'Aucune donnée indice';
-    chartLabels = []; chartVals = [];
+    ['idx-composite', 'idx-30', 'idx-prestige'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '—';
+    });
+    const lastSessionEl = document.getElementById('lastSession');
+    if (lastSessionEl) lastSessionEl.textContent = 'Aucune donnée indice';
   }
 
-  if (compositeChartInst) compositeChartInst.destroy();
-  if (chartLabels.length > 1) {
-    compositeChartInst = new Chart(document.getElementById('chartComposite'), {
+  // Graphique composite
+  if (compositeChartInst) {
+    compositeChartInst.destroy();
+    compositeChartInst = null;
+  }
+  
+  const canvas = document.getElementById('chartComposite');
+  if (canvas && chartLabels.length > 1 && chartVals.some(v => v > 0)) {
+    compositeChartInst = new Chart(canvas, {
       type: 'line',
       data: { labels: chartLabels, datasets: [mkDataset(chartVals)] },
       options: chartOpts
     });
+  } else if (canvas) {
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = 'rgba(245,240,232,0.3)';
+      ctx.font = '13px DM Sans';
+      ctx.textAlign = 'center';
+      ctx.fillText('Aucune donnée historique', canvas.width / 2, canvas.height / 2);
+    }
   }
 
   renderCoursTable();
   renderTopMovers();
 }
-
 function renderCoursTable() {
   const byTicker = {};
   allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
@@ -2264,9 +2311,11 @@ function evaluateRelevance(tcamRN, tcamCA, r2, rnSeries) {
   else if (score === -2) return { label: 'Moyenne', color: 'var(--gold)', reason: reasons.join('; ') };
   else return { label: 'Faible', color: 'var(--red)', reason: reasons.join('; ') };
 }
-
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
 window.addEventListener('hashchange', parseHash);
-loadAll();
+document.addEventListener('DOMContentLoaded', loadAll);
+</script>
+</body>
+</html>
