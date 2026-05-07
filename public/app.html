@@ -325,6 +325,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 .pub-section-title { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--dim); padding: 12px 16px 8px; border-top: 1px solid var(--border2); }
 </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -1113,11 +1114,15 @@ function renderOverview(indices) {
 }
 function renderCoursTable() {
   const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const rows = Object.values(byTicker).sort((a,b) => (a.ticker||'').localeCompare(b.ticker||''));
-  document.getElementById('coursCount').textContent = rows.length + ' titres';
+  allCours.forEach(c => { if (c?.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const rows = Object.values(byTicker).sort((a, b) => (a?.ticker || '').localeCompare(b?.ticker || ''));
+  document.getElementById('coursCount').textContent = rows.length + ' titre' + (rows.length > 1 ? 's' : '');
   if (!rows.length) {
-    document.getElementById('coursTable').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Aucune donnée disponible dans Supabase</td></tr>';
+    const isConnected = allCours.length === 0 && allEntreprises.length === 0;
+    const message = isConnected 
+      ? '⚠️ Connexion Supabase OK mais aucune donnée dans la table cours_latest. Vérifiez que vos données sont bien insérées.'
+      : 'Aucune donnée de cours disponible.';
+    document.getElementById('coursTable').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">' + message + '</td></tr>';
     return;
   }
   document.getElementById('coursTable').innerHTML = rows.map(c =>
@@ -1132,11 +1137,20 @@ function renderCoursTable() {
 }
 
 function renderTopMovers() {
+  if (!Array.isArray(allCours) || allCours.length === 0) {
+    document.getElementById('topMovers').innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Aucune donnée de cours disponible</div>';
+    return;
+  }
   const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const sorted = Object.values(byTicker).filter(c => c.variation != null)
-    .sort((a,b) => Math.abs(b.variation) - Math.abs(a.variation)).slice(0,8);
-  if (!sorted.length) { document.getElementById('topMovers').innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Aucune donnée</div>'; return; }
+  allCours.forEach(c => { if (c?.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const sorted = Object.values(byTicker)
+    .filter(c => c?.variation != null && !isNaN(parseFloat(c.variation)))
+    .sort((a, b) => Math.abs(parseFloat(b.variation || 0)) - Math.abs(parseFloat(a.variation || 0)))
+    .slice(0, 8);
+  if (!sorted.length) { 
+    document.getElementById('topMovers').innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Aucune variation disponible</div>'; 
+    return; 
+  }
   document.getElementById('topMovers').innerHTML = sorted.map(c => {
     const v = parseFloat(c.variation);
     const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
@@ -1239,16 +1253,19 @@ async function openFiche(ticker, from, noHash) {
   ficheChartPeriod = 30;
   document.querySelectorAll('#view-fiche .year-tab').forEach((b,i) => b.classList.toggle('active', i===0));
   try {
-    ficheHistorique = await sb('historique', { 
-  ticker: `eq.${ticker}`, 
-  order: 'date_seance.desc',
-  select: 'date_seance,cours_cloture,cours_normal,volume,plus_haut,plus_bas',
-  limit: 5000
-});
-ficheHistorique = ficheHistorique.reverse();
+    const histResult = await sb('historique', { 
+      ticker: `eq.${ticker}`, 
+      order: 'date_seance.desc',
+      limit: 5000
+    });
+    ficheHistorique = Array.isArray(histResult) ? histResult.reverse() : [];
+    if (!ficheHistorique.length) {
+      toast('Aucun historique disponible pour ' + ticker, 'warn');
+    }
   } catch(e) {
     ficheHistorique = [];
-    toast('Historique indisponible pour ' + ticker, 'warn');
+    toast('Erreur historique ' + ticker + ': ' + e.message, 'warn');
+    console.error('Historique error:', e);
   }
   renderFicheChart();
 }
