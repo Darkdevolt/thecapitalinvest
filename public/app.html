@@ -824,7 +824,7 @@ const BREADCRUMBS = {
   titres: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}],
   fiche: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}, {label:'Fiche', view:'fiche'}],
   boc: [{label:'Tableau de bord', view:'overview'}, {label:'BOC', view:'boc'}],
-  analyses: [{label:'Tableau de bord', view:'overview'}, {label:'Analyses', view:'analyses'}],
+  analyses: [{label:'Tableau de bord', view:'overview'}, {label:'Recommandations', view:'analyses'}],
   'analyse-detail': [{label:'Tableau de bord', view:'overview'}, {label:'Analyses', view:'analyses'}, {label:'Détail', view:'analyse-detail'}],
   'analyse-technique': [{label:'Tableau de bord', view:'overview'}, {label:'Analyse Technique', view:'analyse-technique'}],
   screener: [{label:'Tableau de bord', view:'overview'}, {label:'Screener', view:'screener'}],
@@ -2053,7 +2053,6 @@ function filterPublications() {
   }).join('');
 }
 // ═══════════════════════════════════════
-// ═══════════════════════════════════════
 // ANALYSE FONDAMENTALE AVANCÉE
 // ═══════════════════════════════════════
 function setFundMethod(method, btn) {
@@ -2064,6 +2063,10 @@ function setFundMethod(method, btn) {
 }
 
 async function loadFundAnalysis() {
+    // Re-remplit le select si vide (au cas où les données n'étaient pas prêtes)
+  if (document.getElementById('fundTickerSelect').options.length <= 1) {
+    populateTickerSelects();
+  }
   const ticker = document.getElementById('fundTickerSelect').value;
   if (!ticker) return;
 
