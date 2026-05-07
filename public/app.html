@@ -738,7 +738,19 @@ const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 (function() {
   const sess = JSON.parse(localStorage.getItem(SK) || 'null');
   if (!sess || !sess.email) {
-    window.location.href = 'login.html';
+    // Mode visiteur — affiche le dashboard sans redirection forcée
+    document.getElementById('userAvatar').textContent = '?';
+    document.getElementById('userName').textContent = 'Visiteur';
+    document.getElementById('userRole').textContent = 'Non connecté · BRVM';
+    window._userPlan = 'free';
+    // Ajouter un bouton Connexion à la place du bouton Déconnexion
+    const sidebarBottom = document.querySelector('.sidebar-bottom');
+    if (sidebarBottom) {
+      const decoBtn = sidebarBottom.querySelector('button[onclick="doLogout()"]');
+      if (decoBtn) {
+        decoBtn.outerHTML = '<a href="login.html" style="display:block;width:100%;margin-top:8px;padding:8px;background:none;border:1px solid var(--border2);border-radius:6px;color:var(--gold);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;text-align:center;text-decoration:none;cursor:pointer;transition:all .2s;" onmouseover="this.style.borderColor='var(--gold)'" onmouseout="this.style.borderColor='var(--border2)'">⎋ Connexion</a>';
+      }
+    }
     return;
   }
   document.getElementById('userAvatar').textContent = (sess.email || 'U').charAt(0).toUpperCase();
