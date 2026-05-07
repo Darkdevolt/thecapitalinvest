@@ -734,29 +734,36 @@ function toast(msg, type='info') {
 // SESSION & AUTH
 // ═══════════════════════════════════════
 // ═══ SESSION & AUTH ═══
-const SK = 'tc_session';
-
-// ═══ CONFIG SUPABASE ═══ (doit être défini AVANT d’être utilisé)
+// ═══ CONFIG SUPABASE ═══
 const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
+const SK = 'tc_session';
+
+// ═══ VÉRIF RAPIDE SESSION ═══
 (async function initApp() {
+  // 1) Si aucune session stockée → redirection immédiate, pas d'appel réseau
   const raw = localStorage.getItem(SK);
   if (!raw) {
     window.location.href = 'login.html';
     return;
   }
 
+  // 2) Si une session existe, on cache tout le temps de la vérification
+  document.body.classList.add('init-hidden'); // (optionnel, sécurise l’affichage)
+
+  // 3) Vérifier que le JSON est valide et contient un token
   let session;
   try {
     session = JSON.parse(raw);
-    if (!session.access_token) throw new Error('pas de token');
+    if (!session.access_token) throw new Error('no token');
   } catch (e) {
     localStorage.removeItem(SK);
     window.location.href = 'login.html';
     return;
   }
 
+  // 4) Confirmer la session avec Supabase (un seul appel réseau)
   try {
     const res = await fetch(`${SB_URL}/auth/v1/user`, {
       headers: {
@@ -773,7 +780,8 @@ const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
     document.getElementById('userRole').textContent = 'BRVM';
     window._userPlan = 'pro';
 
-    // Charger les données
+    // Afficher l’interface et charger les données
+    document.body.classList.remove('init-hidden');
     loadAll();
   } catch (e) {
     localStorage.removeItem(SK);
@@ -785,7 +793,6 @@ function doLogout() {
   localStorage.removeItem(SK);
   window.location.href = 'login.html';
 }
-
 // ═══════════════════════════════════════
 // SUPABASE CONFIG
 // ═══════════════════════════════════════
