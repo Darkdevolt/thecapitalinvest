@@ -6,11 +6,307 @@
     visibility: hidden;
   }
 </style>
+/* ═══ FORMATION TABS ═══ */
+.formation-tab {
+  display: none;
+  animation: fadeIn 0.35s ease;
+}
+.formation-tab.active {
+  display: block;
+}
+
+/* ═══ LEXIQUE ═══ */
+.lexique-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.lexique-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border2);
+}
+.lexique-item:last-child {
+  border-bottom: none;
+}
+.lexique-term {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gold);
+  margin-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+.lexique-def {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* ═══ FORMATION CONTENT ═══ */
+.formation-content h3 {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--cream);
+  margin: 20px 0 10px;
+}
+.formation-content h3:first-child {
+  margin-top: 0;
+}
+.formation-content p {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.8;
+  margin-bottom: 12px;
+}
+.formation-content strong {
+  color: var(--cream);
+  font-weight: 500;
+}
+
+/* ═══ FIGURES CHARTISTES ═══ */
+.figure-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 16px 0;
+}
+.figure-card {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 14px;
+}
+.figure-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+  margin-bottom: 6px;
+}
+.figure-signal {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.figure-signal.signal-buy {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid rgba(74,222,128,0.2);
+}
+.figure-signal.signal-sell {
+  background: var(--red-bg);
+  color: var(--red);
+  border: 1px solid rgba(248,113,113,0.2);
+}
+.figure-card p {
+  font-size: 12px;
+  color: var(--dim);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ═══ CHECKLIST ═══ */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--muted);
+  transition: color 0.15s;
+  padding: 4px 0;
+}
+.checklist-item:hover {
+  color: var(--cream);
+}
+.checklist-item input[type="checkbox"] {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.checklist-item input[type="checkbox"]:checked {
+  background: var(--green);
+  border-color: var(--green);
+}
+.checklist-item input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--bg);
+  font-weight: 700;
+}
+.checklist-item input[type="checkbox"]:checked + span {
+  color: var(--cream);
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* ═══ RESPONSIVE FORMATION ═══ */
+@media (max-width: 768px) {
+  .figure-grid {
+    grid-template-columns: 1fr;
+  }
+  .tech-indicators-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital — Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+/* ═══ TECH TOOLBAR ═══ */
+.tech-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.tech-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.tech-toolbar-label {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-right: 4px;
+}
+
+/* ═══ INDICATORS PANEL ═══ */
+.tech-indicators-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+.indicator-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.indicator-group-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--gold);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border2);
+  margin-bottom: 4px;
+}
+.indicator-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--muted);
+  transition: color 0.15s;
+}
+.indicator-checkbox:hover { color: var(--cream); }
+.indicator-checkbox input[type="checkbox"] {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--card);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s;
+}
+.indicator-checkbox input[type="checkbox"]:checked {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+.indicator-checkbox input[type="checkbox"]:checked::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  color: var(--bg);
+  font-weight: 700;
+}
+
+/* ═══ CHART ZONE ═══ */
+.chart-zone-normal {
+  height: 520px;
+  transition: all 0.4s ease;
+}
+.chart-zone-focus {
+  position: fixed !important;
+  inset: 0;
+  z-index: 1000;
+  height: 100vh !important;
+  background: var(--bg);
+  padding: 0;
+}
+.chart-zone-focus .card {
+  border-radius: 0;
+  border: none;
+  height: 100vh !important;
+}
+.chart-zone-focus .card-header {
+  border-radius: 0;
+}
+.focus-exit-btn {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1001;
+  padding: 8px 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--cream);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.focus-exit-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+/* ═══ CANDLESTICK STYLES (custom drawing) ═══ */
+.candle-up { fill: var(--green); stroke: var(--green); }
+.candle-down { fill: var(--red); stroke: var(--red); }
+.candle-wick { stroke-width: 1; }
+
+/* Responsive indicators grid */
+@media (max-width: 1200px) {
+  .tech-indicators-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 768px) {
+  .tech-indicators-grid { grid-template-columns: repeat(2, 1fr); }
+  .tech-toolbar { gap: 12px; }
+  .tech-toolbar-group { flex-wrap: wrap; }
+}
 <style>
 :root {
   --bg: #0A0804;
@@ -899,7 +1195,350 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 </div>
 
 </main>
+<!-- ═══ FORMATION ═══ -->
+<div class="view" id="view-formation">
+  <div class="page-header">
+    <h1>Centre de <span style="color:var(--gold)">Formation</span></h1>
+    <p>Lexique boursier, guides d'analyse & ressources pédagogiques BRVM</p>
+  </div>
 
+  <!-- Navigation formation -->
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="tech-toolbar">
+        <button class="filter-btn active" onclick="showFormationTab('lexique',this)">📖 Lexique</button>
+        <button class="filter-btn" onclick="showFormationTab('analyse-tech',this)">📈 Analyse Technique</button>
+        <button class="filter-btn" onclick="showFormationTab('analyse-fond',this)">📊 Analyse Fondamentale</button>
+        <button class="filter-btn" onclick="showFormationTab('strategies',this)">🎯 Stratégies</button>
+        <button class="filter-btn" onclick="showFormationTab('brvm',this)">🏛️ Guide BRVM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEXIQUE -->
+  <div id="tab-lexique" class="formation-tab active">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Termes Essentiels</div></div>
+        <div class="card-body" style="max-height:500px;overflow-y:auto">
+          <div class="lexique-list">
+            <div class="lexique-item">
+              <div class="lexique-term">Action</div>
+              <div class="lexique-def">Titre de propriété représentant une fraction du capital d'une société. Donne droit au dividende et au vote en assemblée générale.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">BRVM</div>
+              <div class="lexique-def">Bourse Régionale des Valeurs Mobilières. Marché boursier commun à 8 pays de l'UEMOA : Bénin, Burkina Faso, Côte d'Ivoire, Guinée-Bissau, Mali, Niger, Sénégal, Togo.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Cours / Cotation</div>
+              <div class="lexique-def">Prix auquel un titre s'échange sur le marché. Exprimé en FCFA (XOF) à la BRVM.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Volume</div>
+              <div class="lexique-def">Nombre de titres échangés durant une séance. Indique la liquidité et l'intérêt des investisseurs.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Capitalisation Boursière</div>
+              <div class="lexique-def">Valeur totale d'une entreprise sur le marché = Cours × Nombre d'actions en circulation.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">P/E Ratio (PER)</div>
+              <div class="lexique-def">Price to Earnings Ratio. Rapport cours/BPA. Un PER élevé suggère une valorisation chère, un PER faible une valorisation attractive.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Dividende</div>
+              <div class="lexique-def">Part des bénéfices distribuée aux actionnaires. Le rendement = Dividende / Cours × 100.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">BOC</div>
+              <div class="lexique-def">Bulletin Officiel de la Cote. Document quotidien de la BRVM récapitulant toutes les opérations de la séance.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Indicateurs Techniques</div></div>
+        <div class="card-body" style="max-height:500px;overflow-y:auto">
+          <div class="lexique-list">
+            <div class="lexique-item">
+              <div class="lexique-term">SMA — Moyenne Mobile Simple</div>
+              <div class="lexique-def">Moyenne arithmétique des cours sur N périodes. La SMA 20 et 50 sont les plus utilisées pour identifier la tendance.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">EMA — Moyenne Mobile Exponentielle</div>
+              <div class="lexique-def">Moyenne mobile pondérée donnant plus d'importance aux cours récents. Plus réactive que la SMA.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">RSI — Relative Strength Index</div>
+              <div class="lexique-def">Indicateur de momentum de 0 à 100. >70 = surachat (vente), <30 = survente (achat).</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">MACD</div>
+              <div class="lexique-def">Moving Average Convergence Divergence. Croisement de deux EMA. Signal d'achat quand la ligne MACD croise à la hausse sa ligne de signal.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Bollinger Bands</div>
+              <div class="lexique-def">Bandes de volatilité (SMA ± 2 écarts-types). Le prix touche la bande haute = surachat, bande basse = survente.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Ichimoku Kinko Hyo</div>
+              <div class="lexique-def">Indicateur japonais complet analysant tendance, momentum, supports/résistances en un seul graphique.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">VWAP</div>
+              <div class="lexique-def">Volume Weighted Average Price. Prix moyen pondéré par le volume. Référence clé pour les traders institutionnels.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Stochastique</div>
+              <div class="lexique-def">Compare le cours de clôture à la fourchette de prix sur N périodes. %K et %D entre 0 et 100.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSE TECHNIQUE -->
+  <div id="tab-analyse-tech" class="formation-tab">
+    <div class="grid-7030">
+      <div>
+        <div class="card mb20">
+          <div class="card-header"><div class="card-title">Les Bases de l'Analyse Technique</div></div>
+          <div class="card-body">
+            <div class="formation-content">
+              <h3>1. La Tendance est votre amie</h3>
+              <p>Identifiez la tendance principale avant tout trade. Une tendance haussière se caractérise par des sommets et des creux ascendants. Une tendance baissière par des sommets et creux descendants.</p>
+              
+              <h3>2. Supports & Résistances</h3>
+              <p><strong>Support</strong> : niveau où les acheteurs interviennent (plancher). <strong>Résistance</strong> : niveau où les vendeurs reprennent le dessus (plafond). Une rupture de support = signal de vente. Une cassure de résistance = signal d'achat.</p>
+              
+              <h3>3. Les Figures Chartistes</h3>
+              <div class="figure-grid">
+                <div class="figure-card">
+                  <div class="figure-name">Triangle Ascendant</div>
+                  <div class="figure-signal signal-buy">Signal: Achat</div>
+                  <p>Consolidation avec résistance horizontale et support ascendant. Cassure haussière attendue.</p>
+                </div>
+                <div class="figure-card">
+                  <div class="figure-name">Tête & Épaules</div>
+                  <div class="figure-signal signal-sell">Signal: Vente</div>
+                  <p>Figure de retournement baissier. Trois sommets avec le central plus haut. Objectif = hauteur de la tête projetée sous le neckline.</p>
+                </div>
+                <div class="figure-card">
+                  <div class="figure-name">Double Fond</div>
+                  <div class="figure-signal signal-buy">Signal: Achat</div>
+                  <p>Deux creux au même niveau. Confirmation par rupture de la ligne de cou. Figure de retournement haussier.</p>
+                </div>
+                <div class="figure-card">
+                  <div class="figure-name">Drapeau</div>
+                  <div class="figure-signal signal-buy">Signal: Continuation</div>
+                  <p>Pause dans une tendance forte. Rectangle incliné contre la tendance. Reprise dans le sens initial après cassure.</p>
+                </div>
+              </div>
+              
+              <h3>4. Gestion des Risques</h3>
+              <p>Ne risquez jamais plus de 2% de votre capital par trade. Placez toujours un stop-loss sous le support le plus proche. Le ratio gain/perte minimum recommandé est de 2:1.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card mb20">
+          <div class="card-header"><div class="card-title">Checklist Trade</div></div>
+          <div class="card-body">
+            <div class="checklist">
+              <label class="checklist-item"><input type="checkbox"><span>Tendance identifiée (H4/Daily)</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Support/Résistance marqués</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Signal confirmé par 2+ indicateurs</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Volume en hausse sur le signal</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Stop-loss défini</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Objectif de profit clair</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Ratio R:R ≥ 2:1</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>News économiques vérifiées</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSE FONDAMENTALE -->
+  <div id="tab-analyse-fond" class="formation-tab">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Ratios Fondamentaux Clés</div></div>
+        <div class="card-body">
+          <div class="lexique-list">
+            <div class="lexique-item">
+              <div class="lexique-term">ROE — Return on Equity</div>
+              <div class="lexique-def">Résultat Net / Fonds Propres. Mesure la rentabilité des capitaux investis par les actionnaires. >15% = excellent.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">ROA — Return on Assets</div>
+              <div class="lexique-def">Résultat Net / Total Actif. Efficacité de l'utilisation des actifs. >5% est satisfaisant.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Marge Nette</div>
+              <div class="lexique-def">Résultat Net / Chiffre d'Affaires. Part des ventes transformée en profit. Varie fortement selon le secteur.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Dette / Fonds Propres</div>
+              <div class="lexique-def">Endettement financier relatif. <0.5 = conservateur, >1.5 = risqué.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">BPA — Bénéfice par Action</div>
+              <div class="lexique-def">Résultat Net / Nombre d'actions. Permet de calculer le PER et de suivre la croissance.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Méthode DCF Simplifiée</div></div>
+        <div class="card-body">
+          <div class="formation-content">
+            <h3>Étapes du Discounted Cash Flow</h3>
+            <ol style="margin-left:20px;color:var(--muted);line-height:2">
+              <li>Projeter les Free Cash Flows sur 5 ans</li>
+              <li>Déterminer le WACC (coût du capital)</li>
+              <li>Actualiser les FCF futurs</li>
+              <li>Calculer la Valeur Terminale</li>
+              <li>Sommer = Valeur d'Entreprise</li>
+              <li>Déduire la dette nette = Valeur des capitaux propres</li>
+              <li>Diviser par le nombre d'actions = Valeur intrinsèque par action</li>
+            </ol>
+            <div style="margin-top:16px;padding:12px;background:rgba(184,150,78,0.05);border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:11px;color:var(--gold);margin-bottom:4px">💡 Formule clé</div>
+              <div style="font-family:var(--mono);font-size:12px;color:var(--cream)">
+                Valeur = Σ(FCFₜ / (1+WACC)ᵗ) + VT/(1+WACC)ⁿ
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRATÉGIES -->
+  <div id="tab-strategies" class="formation-tab">
+    <div class="boc-grid">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">🎯 Swing Trading</div></div>
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Positions de quelques jours à quelques semaines. Capture les mouvements intermédiaires entre les swings du marché.</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: Daily/H4</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: EMA 20/50, RSI, Volume</div>
+            <div><span style="color:var(--green)">✓</span> Objectif: 5-15% par trade</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">📈 Trend Following</div></div>
+        <div class Je vais compléter le code de la section Formation et ajouter les styles manquants. Voici la suite :
+
+---
+
+## 5. COMPLETION DE LA SECTION FORMATION (suite du HTML)
+
+```html
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Suivre la tendance dominante sans essayer de prédire les retournements. "La tendance est votre amie jusqu'à ce qu'elle se termine."</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: Weekly/Daily</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: SMA 50/200, ADX, MACD</div>
+            <div><span style="color:var(--green)">✓</span> Objectif: Capturer 60-80% du mouvement</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">⚡ Scalping BRVM</div></div>
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Trades intraday rapides. La BRVM étant moins liquide, cette stratégie est réservée aux titres à fort volume (SGBC, ETIT, etc.).</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: M15/H1</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: VWAP, Bollinger, Volume Profile</div>
+            <div><span style="color:var(--red)">⚠</span> Risque élevé — réservé aux experts</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">🏦 Dividend Growth</div></div>
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Investir dans les entreprises à dividende croissant. Stratégie patrimoniale adaptée à la BRVM avec ses sociétés cotées à fort rendement.</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Sélection: DPA croissant 5 ans, PER < 15</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Secteurs: Banques, Distribution, Agro</div>
+            <div><span style="color:var(--green)">✓</span> Objectif: Rendement + croissance du capital</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GUIDE BRVM -->
+  <div id="tab-brvm" class="formation-tab">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Fonctionnement de la BRVM</div></div>
+        <div class="card-body">
+          <div class="formation-content">
+            <h3>Les Marchés BRVM</h3>
+            <p><strong>Marché Primaire:</strong> Émissions d'actions et obligations (IPO, augmentations de capital). Nécessite un DSN (Distributeur de Services Numériques).</p>
+            <p><strong>Marché Secondaire:</strong> Cotation continue des titres. Sessions de 9h30 à 15h30 GMT, du lundi au vendredi.</p>
+            
+            <h3>Les Indices</h3>
+            <ul style="margin-left:20px;color:var(--muted);line-height:2">
+              <li><strong>BRVM Composite:</strong> Tous les titres cotés</li>
+              <li><strong>BRVM 30:</strong> Les 30 valeurs les plus liquides</li>
+              <li><strong>BRVM Prestige:</strong> Sélection de qualité</li>
+              <li><strong>BRVM 10:</strong> Top 10 par capitalisation</li>
+            </ul>
+            
+            <h3>Fiscalité</h3>
+            <p>Impôt sur les revenus de capitaux mobiliers (IRCM): 15% sur les dividendes. Exonération possible après 3 ans de détention pour les résidents UEMOA.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Comment Investir</div></div>
+        <div class="card-body">
+          <div class="formation-content">
+            <h3>Étapes pour Débuter</h3>
+            <ol style="margin-left:20px;color:var(--muted);line-height:2.2">
+              <li>Choisir un Intermédiaire Financier (SGB, NSIA, CORIS, etc.)</li>
+              <li>Ouvrir un compte-titres et un compte espèces</li>
+              <li>Déposer vos fonds en FCFA</li>
+              <li>Passer vos ordres via le SGO (Système de Gestion d'Ordres)</li>
+              <li>Suivre votre portefeuille via The Capital 😉</li>
+            </ol>
+            
+            <div style="margin-top:20px;padding:16px;background:rgba(74,222,128,0.05);border-radius:10px;border:1px solid rgba(74,222,128,0.2)">
+              <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px">💡 Conseil Pro</div>
+              <p style="font-size:13px;color:var(--muted);margin:0">Commencez par un portefeuille fictif (comme celui de The Capital) pour tester vos stratégies sans risquer de capital réel.</p>
+            </div>
+            
+            <h3 style="margin-top:20px">Types d'Ordres</h3>
+            <div class="lexique-list">
+              <div class="lexique-item">
+                <div class="lexique-term">Ordre au Marché</div>
+                <div class="lexique-def">Exécution immédiate au meilleur prix disponible. Risque de slippage en cas de faible liquidité.</div>
+              </div>
+              <div class="lexique-item">
+                <div class="lexique-term">Ordre Limité</div>
+                <div class="lexique-def">Achat/Vente à un prix défini ou mieux. Garantit le prix mais pas l'exécution.</div>
+              </div>
+              <div class="lexique-item">
+                <div class="lexique-term">Ordre à la Clôture</div>
+                <div class="lexique-def">Exécution au cours de clôture de la séance. Utile pour les stratégies de fin de journée.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 // ═══════════════════════════════════════
 // TOAST SYSTEM
@@ -1850,243 +2489,795 @@ function openAnalyseDetail(id, noHash) {
 }
 
 // ═══════════════════════════════════════
-// ANALYSE TECHNIQUE AVANCÉE
+// ANALYSE TECHNIQUE AVANCÉE — V2
 // ═══════════════════════════════════════
-function toggleTechIndicator(key, btn) {
-  _techConfig[key] = !_techConfig[key];
-  btn.classList.toggle('active', _techConfig[key]);
+
+let _techPeriod = 60;
+let _techInterval = 'daily';
+let _techTicker = '';
+let _chartType = 'line';
+let _techChartInst = null;
+let _subChart1Inst = null;
+let _subChart2Inst = null;
+let _focusMode = false;
+let _indicatorsPanelOpen = true;
+
+// Configuration des indicateurs
+const INDICATOR_CONFIG = {
+  sma20:  { color: '#60A5FA', width: 1.5, label: 'SMA 20' },
+  sma50:  { color: '#F87171', width: 1.5, label: 'SMA 50' },
+  sma200: { color: '#A78BFA', width: 1.5, label: 'SMA 200' },
+  ema12:  { color: '#4ADE80', width: 1.5, label: 'EMA 12' },
+  ema26:  { color: '#FB923C', width: 1.5, label: 'EMA 26' },
+  bb:     { color: 'rgba(184,150,78,0.3)', width: 1, label: 'BB' },
+  vwap:   { color: '#E879F9', width: 1.5, label: 'VWAP', dash: [5,5] }
+};
+
+function setChartType(type, btn) {
+  _chartType = type;
+  document.querySelectorAll('#view-analyse-technique .tech-toggle').forEach(b => {
+    if (b.id && (b.id === 'btnLine' || b.id === 'btnCandle' || b.id === 'btnBar')) {
+      b.classList.remove('active');
+    }
+  });
+  btn.classList.add('active');
   loadTechAnalysis();
 }
 
 function setTechPeriod(n, btn) {
   _techPeriod = n;
-  document.querySelectorAll('#view-analyse-technique .filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#view-analyse-technique .tech-toggle').forEach(b => {
+    if (!b.id && b.textContent.includes('J') || b.textContent.includes('M') || b.textContent.includes('A') || b.textContent === 'Max') {
+      // Reset period buttons
+    }
+  });
+  // Simple reset all period buttons then activate clicked
+  const allBtns = btn.parentElement.querySelectorAll('.tech-toggle');
+  allBtns.forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  loadTechAnalysis();
+}
+
+function setTechInterval(interval, btn) {
+  _techInterval = interval;
+  const group = btn.parentElement;
+  group.querySelectorAll('.tech-toggle').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  loadTechAnalysis();
+}
+
+function toggleIndicatorsPanel() {
+  _indicatorsPanelOpen = !_indicatorsPanelOpen;
+  const body = document.getElementById('indicatorsBody');
+  const toggle = document.getElementById('indicatorsToggle');
+  if (_indicatorsPanelOpen) {
+    body.style.display = 'block';
+    toggle.textContent = '▼ Réduire';
+  } else {
+    body.style.display = 'none';
+    toggle.textContent = '▶ Déployer';
+  }
+}
+
+function toggleFocusMode() {
+  _focusMode = !_focusMode;
+  const zone = document.getElementById('chartZone');
+  const btn = document.getElementById('btnFocus');
+  
+  if (_focusMode) {
+    zone.classList.remove('chart-zone-normal');
+    zone.classList.add('chart-zone-focus');
+    btn.classList.add('active');
+    btn.textContent = '✕ Quitter';
+    
+    // Add exit button
+    const exitBtn = document.createElement('button');
+    exitBtn.id = 'focusExitBtn';
+    exitBtn.className = 'focus-exit-btn';
+    exitBtn.textContent = '✕ Quitter le mode focus';
+    exitBtn.onclick = toggleFocusMode;
+    document.body.appendChild(exitBtn);
+    
+    // Hide other elements
+    document.getElementById('indicatorsPanel').style.display = 'none';
+    document.getElementById('techSignals').style.display = 'none';
+    document.getElementById('subIndicators').style.display = 'none';
+  } else {
+    zone.classList.remove('chart-zone-focus');
+    zone.classList.add('chart-zone-normal');
+    btn.classList.remove('active');
+    btn.textContent = '🔍 Focus';
+    
+    const exitBtn = document.getElementById('focusExitBtn');
+    if (exitBtn) exitBtn.remove();
+    
+    document.getElementById('indicatorsPanel').style.display = 'block';
+    document.getElementById('techSignals').style.display = 'grid';
+    if (document.getElementById('chkRSI').checked || document.getElementById('chkMACD').checked) {
+      document.getElementById('subIndicators').style.display = 'block';
+    }
+  }
+  
+  // Redraw chart with new dimensions
+  setTimeout(() => loadTechAnalysis(), 300);
+}
+
+function updateIndicators() {
   loadTechAnalysis();
 }
 
 async function loadTechAnalysis() {
   const ticker = document.getElementById('techTickerSelect').value;
-  if (!ticker) return;
+  if (!ticker) {
+    document.getElementById('chartTitle').textContent = 'Sélectionnez un ticker';
+    return;
+  }
   _techTicker = ticker;
+
+  // Fetch data
   let hist;
   try {
-    hist = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc',select: 'date_seance,cours_cloture,cours_normal,volume,plus_haut,plus_bas',limit: 252});
+    const limit = _techPeriod === 99999 ? 5000 : Math.min(_techPeriod * 2, 2000);
+    hist = await sb('historique', { 
+      ticker: `eq.${ticker}`, 
+      order: 'date_seance.asc',
+      select: 'date_seance,cours_ouverture,cours_cloture,cours_normal,plus_haut,plus_bas,volume',
+      limit: limit
+    });
   } catch(e) {
     toast('Historique indisponible pour ' + ticker, 'error');
     return;
   }
-  if (!hist.length) { toast('Aucun historique pour ' + ticker, 'warn'); return; }
-
-  hist = hist.slice(-_techPeriod);
-  const closes = hist.map(d => d.cours_cloture || d.cours_normal || 0);
-  const volumes = hist.map(d => d.volume || 0);
-  const labels = hist.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
-
-  // Calculs indicateurs
-  const sma20 = _techConfig.sma20 ? calcSMA(closes, 20) : [];
-  const sma50 = _techConfig.sma50 ? calcSMA(closes, 50) : [];
-  const ema12 = _techConfig.ema12 ? calcEMA(closes, 12) : [];
-  const ema26 = _techConfig.ema26 ? calcEMA(closes, 26) : [];
-  const rsi = calcRSI(closes, 14);
-  const macd = calcMACD(closes);
-  const bb = _techConfig.bb ? calcBollinger(closes, 20) : { upper:[], lower:[], mid:[] };
-
-  const lastClose = closes[closes.length-1];
-  const lastRSI = rsi[rsi.length-1];
-  const lastMACD = macd.macdLine[macd.macdLine.length-1];
-  const lastSignal = macd.signalLine[macd.signalLine.length-1];
-  const lastSMA20 = sma20[sma20.length-1];
-
-  // Signal global
-  let signal = 'NEUTRE', signalClass = 'tech-signal-neutral';
-  let score = 0;
-  if (lastRSI < 30) score += 1; else if (lastRSI > 70) score -= 1;
-  if (lastMACD > lastSignal) score += 1; else score -= 1;
-  if (lastSMA20 && lastClose > lastSMA20) score += 1; else if (lastSMA20) score -= 1;
-  if (score >= 2) { signal = 'ACHAT'; signalClass = 'tech-signal-buy'; }
-  else if (score <= -2) { signal = 'VENTE'; signalClass = 'tech-signal-sell'; }
-
-  // Support / Résistance
-  const highs = hist.map(d => d.plus_haut || d.cours_cloture || d.cours_normal || 0);
-  const lows = hist.map(d => d.plus_bas || d.cours_cloture || d.cours_normal || 0);
-  const resistance = Math.max(...highs.slice(-20));
-  const support = Math.min(...lows.slice(-20));
-
-  document.getElementById('techContent').innerHTML = `
-    <div class="grid-5" style="margin-bottom:20px">
-      <div class="tech-indicator"><div class="tech-indicator-title">Signal global</div><div class="tech-indicator-value ${signalClass}">${signal}</div><div class="tech-indicator-signal">Score : ${score}/3</div></div>
-      <div class="tech-indicator"><div class="tech-indicator-title">RSI (14)</div><div class="tech-indicator-value">${lastRSI?.toFixed(1) || '—'}</div><div class="tech-indicator-signal ${lastRSI>70?'tech-signal-sell':lastRSI<30?'tech-signal-buy':'tech-signal-neutral'}">${lastRSI>70?'Surachat':lastRSI<30?'Survente':'Neutre'}</div></div>
-      <div class="tech-indicator"><div class="tech-indicator-title">MACD</div><div class="tech-indicator-value">${lastMACD?.toFixed(2) || '—'}</div><div class="tech-indicator-signal ${lastMACD>lastSignal?'tech-signal-buy':'tech-signal-sell'}">${lastMACD>lastSignal?'Haussier':'Baissier'}</div></div>
-      <div class="tech-indicator"><div class="tech-indicator-title">Support</div><div class="tech-indicator-value">${fmt(support)}</div><div class="tech-indicator-signal">20 séances</div></div>
-      <div class="tech-indicator"><div class="tech-indicator-title">Résistance</div><div class="tech-indicator-value">${fmt(resistance)}</div><div class="tech-indicator-signal">20 séances</div></div>
-    </div>
-    <div class="tech-controls">
-      <span style="font-size:11px;color:var(--dim);margin-right:8px">INDICATEURS :</span>
-      <button class="tech-toggle ${_techConfig.sma20?'active':''}" onclick="toggleTechIndicator('sma20',this)">SMA 20</button>
-      <button class="tech-toggle ${_techConfig.sma50?'active':''}" onclick="toggleTechIndicator('sma50',this)">SMA 50</button>
-      <button class="tech-toggle ${_techConfig.ema12?'active':''}" onclick="toggleTechIndicator('ema12',this)">EMA 12</button>
-      <button class="tech-toggle ${_techConfig.ema26?'active':''}" onclick="toggleTechIndicator('ema26',this)">EMA 26</button>
-      <button class="tech-toggle ${_techConfig.bb?'active':''}" onclick="toggleTechIndicator('bb',this)">Bollinger</button>
-      <button class="tech-toggle ${_techConfig.volume?'active':''}" onclick="toggleTechIndicator('volume',this)">Volume</button>
-    </div>
-    <div class="card mb20">
-      <div class="card-header"><div class="card-title">Cours & Indicateurs — ${ticker}</div></div>
-      <div class="card-body"><div class="chart-container xl"><canvas id="chartTech"></canvas></div></div>
-    </div>
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><div class="card-title">MACD</div></div>
-        <div class="card-body"><div class="chart-container"><canvas id="chartMACD"></canvas></div></div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">RSI</div></div>
-        <div class="card-body"><div class="chart-container"><canvas id="chartRSI"></canvas></div></div>
-      </div>
-    </div>
-  `;
-
-  // Build datasets for price chart
-  const priceDatasets = [mkDataset(closes, '#B8964E', 'Cours')];
-  if (_techConfig.sma20 && sma20.some(v => v != null)) priceDatasets.push(mkLineDataset(sma20, '#60A5FA', 'SMA 20'));
-  if (_techConfig.sma50 && sma50.some(v => v != null)) priceDatasets.push(mkLineDataset(sma50, '#F87171', 'SMA 50'));
-  if (_techConfig.ema12 && ema12.some(v => v != null)) priceDatasets.push(mkLineDataset(ema12, '#4ADE80', 'EMA 12', 1));
-  if (_techConfig.ema26 && ema26.some(v => v != null)) priceDatasets.push(mkLineDataset(ema26, '#A78BFA', 'EMA 26', 1));
-  if (_techConfig.bb && bb.upper.some(v => v != null)) {
-    priceDatasets.push(mkLineDataset(bb.upper, 'rgba(184,150,78,0.25)', 'BB Upper', 1));
-    priceDatasets.push(mkLineDataset(bb.lower, 'rgba(184,150,78,0.25)', 'BB Lower', 1));
+  
+  if (!hist.length) { 
+    toast('Aucun historique pour ' + ticker, 'warn'); 
+    return; 
   }
 
-  // Price + Volume chart
-  const priceOpts = {
-    ...chartOpts,
+  // Apply interval aggregation
+  hist = aggregateByInterval(hist, _techInterval);
+  
+  // Slice to period
+  if (_techPeriod !== 99999) {
+    hist = hist.slice(-_techPeriod);
+  }
+
+  const closes = hist.map(d => d.cours_cloture || d.cours_normal || 0);
+  const opens = hist.map(d => d.cours_ouverture || d.cours_cloture || d.cours_normal || 0);
+  const highs = hist.map(d => d.plus_haut || Math.max(d.cours_ouverture || 0, d.cours_cloture || 0));
+  const lows = hist.map(d => d.plus_bas || Math.min(d.cours_ouverture || Infinity, d.cours_cloture || Infinity));
+  const volumes = hist.map(d => d.volume || 0);
+  const labels = hist.map(d => formatTechDate(d.date_seance, _techInterval));
+
+  // Update header info
+  const lastClose = closes[closes.length - 1];
+  const prevClose = closes[closes.length - 2] || lastClose;
+  const change = ((lastClose - prevClose) / prevClose * 100);
+  document.getElementById('chartTitle').textContent = `${ticker} — ${labels[labels.length-1]}`;
+  document.getElementById('chartInfo').textContent = `${hist.length} périodes · ${_techInterval === 'daily' ? 'Journalier' : _techInterval === 'weekly' ? 'Hebdomadaire' : 'Mensuel'}`;
+  document.getElementById('livePrice').textContent = fmt(lastClose, 2) + ' FCFA';
+  const changeEl = document.getElementById('liveChange');
+  changeEl.innerHTML = change >= 0 
+    ? `<span style="color:var(--green)">▲ +${change.toFixed(2)}%</span>`
+    : `<span style="color:var(--red)">▼ ${change.toFixed(2)}%</span>`;
+
+  // Build datasets based on chart type
+  const datasets = [];
+  
+  if (_chartType === 'candlestick') {
+    // Custom candlestick dataset
+    datasets.push({
+      label: 'Chandeliers',
+      data: hist.map((d, i) => ({
+        x: i,
+        o: opens[i],
+        h: highs[i],
+        l: lows[i],
+        c: closes[i]
+      })),
+      type: 'bar',
+      barThickness: Math.max(2, Math.min(20, 800 / hist.length)),
+      backgroundColor: hist.map((d, i) => closes[i] >= opens[i] ? 'rgba(74,222,128,0.8)' : 'rgba(248,113,113,0.8)'),
+      borderColor: hist.map((d, i) => closes[i] >= opens[i] ? 'var(--green)' : 'var(--red)'),
+      borderWidth: 1,
+      // Custom plugin will draw wicks
+    });
+  } else if (_chartType === 'bar') {
+    datasets.push({
+      label: 'Clôture',
+      data: closes,
+      type: 'bar',
+      backgroundColor: closes.map((c, i) => i > 0 && c >= closes[i-1] ? 'rgba(74,222,128,0.6)' : 'rgba(248,113,113,0.6)'),
+      borderColor: closes.map((c, i) => i > 0 && c >= closes[i-1] ? 'var(--green)' : 'var(--red)'),
+      borderWidth: 1,
+      barThickness: Math.max(2, Math.min(16, 800 / hist.length))
+    });
+  } else {
+    // Line chart (default)
+    datasets.push(mkDataset(closes, '#B8964E', 'Cours'));
+  }
+
+  // Add overlay indicators
+  const activeIndicators = getActiveIndicators();
+  
+  if (activeIndicators.sma20) {
+    const sma20 = calcSMA(closes, 20);
+    datasets.push(mkLineDataset(sma20, INDICATOR_CONFIG.sma20.color, INDICATOR_CONFIG.sma20.label, INDICATOR_CONFIG.sma20.width));
+  }
+  if (activeIndicators.sma50) {
+    const sma50 = calcSMA(closes, 50);
+    datasets.push(mkLineDataset(sma50, INDICATOR_CONFIG.sma50.color, INDICATOR_CONFIG.sma50.label, INDICATOR_CONFIG.sma50.width));
+  }
+  if (activeIndicators.sma200) {
+    const sma200 = calcSMA(closes, 200);
+    datasets.push(mkLineDataset(sma200, INDICATOR_CONFIG.sma200.color, INDICATOR_CONFIG.sma200.label, INDICATOR_CONFIG.sma200.width));
+  }
+  if (activeIndicators.ema12) {
+    const ema12 = calcEMA(closes, 12);
+    datasets.push(mkLineDataset(ema12, INDICATOR_CONFIG.ema12.color, INDICATOR_CONFIG.ema12.label, INDICATOR_CONFIG.ema12.width));
+  }
+  if (activeIndicators.ema26) {
+    const ema26 = calcEMA(closes, 26);
+    datasets.push(mkLineDataset(ema26, INDICATOR_CONFIG.ema26.color, INDICATOR_CONFIG.ema26.label, INDICATOR_CONFIG.ema26.width));
+  }
+  if (activeIndicators.bb) {
+    const bb = calcBollinger(closes, 20);
+    datasets.push(mkLineDataset(bb.upper, INDICATOR_CONFIG.bb.color, 'BB Upper', INDICATOR_CONFIG.bb.width));
+    datasets.push(mkLineDataset(bb.lower, INDICATOR_CONFIG.bb.color, 'BB Lower', INDICATOR_CONFIG.bb.width));
+    datasets.push(mkLineDataset(bb.mid, 'rgba(184,150,78,0.15)', 'BB Mid', 1));
+  }
+  if (activeIndicators.vwap) {
+    const vwap = calcVWAP(closes, volumes);
+    datasets.push(mkLineDataset(vwap, INDICATOR_CONFIG.vwap.color, INDICATOR_CONFIG.vwap.label, INDICATOR_CONFIG.vwap.width));
+  }
+
+  // Volume (on secondary axis)
+  if (activeIndicators.volume && volumes.some(v => v > 0)) {
+    datasets.push({
+      label: 'Volume',
+      data: volumes,
+      type: 'bar',
+      backgroundColor: 'rgba(184,150,78,0.15)',
+      borderColor: 'rgba(184,150,78,0.2)',
+      borderWidth: 0,
+      yAxisID: 'yVolume',
+      order: 99
+    });
+  }
+
+  // Destroy old chart
+  if (_techChartInst) _techChartInst.destroy();
+
+  // Chart options
+  const isCandle = _chartType === 'candlestick';
+  const mainOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
+    animation: { duration: 0 },
     plugins: {
-      ...chartOpts.plugins,
-      legend: { display: true, labels: { color: 'rgba(245,240,232,0.5)', font: { size: 10 }, boxWidth: 12 } },
+      legend: { 
+        display: true, 
+        position: 'top',
+        align: 'end',
+        labels: { 
+          color: 'rgba(245,240,232,0.6)', 
+          font: { size: 10, family: 'DM Mono' }, 
+          boxWidth: 12,
+          usePointStyle: true,
+          padding: 10
+        } 
+      },
       tooltip: {
-        ...chartOpts.plugins.tooltip,
+        backgroundColor: '#1A1610', 
+        borderColor: 'rgba(184,150,78,0.3)', 
+        borderWidth: 1,
+        titleColor: '#B8964E', 
+        bodyColor: '#F5F0E8', 
+        padding: 12,
         callbacks: {
-          title: items => {
-           const idx = items[0].dataIndex;
-           const d = hist[idx];
-           const prix = d.cours_cloture || d.cours_normal || 0;
-           return `${labels[idx]} — Haut: ${fmt(d.plus_haut||prix)} · Bas: ${fmt(d.plus_bas||prix)} · Clôture: ${fmt(prix)}`;
+          title: (items) => {
+            const idx = items[0].dataIndex;
+            return `${labels[idx]} · Vol: ${fmt(volumes[idx])}`;
           },
-          label: ctx => {
+          label: (ctx) => {
+            if (isCandle && ctx.dataset.label === 'Chandeliers') {
+              const d = ctx.raw;
+              return [` Ouvert: ${fmt(d.o, 2)}`, ` Haut: ${fmt(d.h, 2)}`, ` Bas: ${fmt(d.l, 2)}`, ` Clôture: ${fmt(d.c, 2)}`];
+            }
             let val = fmt(ctx.parsed.y, 2);
             if (ctx.dataset.label === 'Volume') val = fmt(ctx.parsed.y);
             return ` ${ctx.dataset.label}: ${val}`;
           }
         }
       }
+    },
+    scales: {
+      x: { 
+        grid: { color: 'rgba(184,150,78,0.04)', display: false }, 
+        ticks: { 
+          color: 'rgba(245,240,232,0.3)', 
+          font: { size: 9, family: 'DM Mono' }, 
+          maxTicksLimit: _focusMode ? 15 : 8,
+          maxRotation: 0
+        } 
+      },
+      y: { 
+        position: 'right', 
+        grid: { color: 'rgba(184,150,78,0.06)' }, 
+        ticks: { 
+          color: 'rgba(245,240,232,0.3)', 
+          font: { size: 10, family: 'DM Mono' }, 
+          callback: v => fmt(v, 2) 
+        } 
+      },
+      yVolume: {
+        position: 'left',
+        display: activeIndicators.volume,
+        grid: { display: false },
+        ticks: { display: false },
+        min: 0,
+        max: Math.max(...volumes) * 5
+      }
     }
   };
 
-  if (_techConfig.volume && volumes.some(v => v > 0)) {
-    priceDatasets.push({
-      label: 'Volume', data: volumes, type: 'bar', backgroundColor: 'rgba(184,150,78,0.2)',
-      borderColor: 'rgba(184,150,78,0.3)', borderWidth: 0, yAxisID: 'y1', pointRadius: 0
-    });
-    priceOpts.scales = {
-      ...priceOpts.scales,
-      y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 } } },
-      y1: { position: 'left', grid: { display: false }, ticks: { display: false }, display: true }
+  // Custom candlestick plugin
+  if (isCandle) {
+    mainOptions.plugins.candlestick = {
+      id: 'candlestick',
+      beforeDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, i) => {
+          const d = hist[i];
+          const x = bar.x;
+          const yOpen = chart.scales.y.getPixelForValue(d.cours_ouverture || d.cours_cloture);
+          const yHigh = chart.scales.y.getPixelForValue(d.plus_haut || d.cours_cloture);
+          const yLow = chart.scales.y.getPixelForValue(d.plus_bas || d.cours_cloture);
+          
+          ctx.beginPath();
+          ctx.strokeStyle = d.cours_cloture >= (d.cours_ouverture || d.cours_cloture) ? 'var(--green)' : 'var(--red)';
+          ctx.lineWidth = 1;
+          ctx.moveTo(x, yHigh);
+          ctx.lineTo(x, yLow);
+          ctx.stroke();
+        });
+      }
     };
   }
 
-  if (techChartInst) techChartInst.destroy();
-  techChartInst = new Chart(document.getElementById('chartTech'), {
-    type: 'line',
-    data: { labels, datasets: priceDatasets },
-    options: priceOpts
+  _techChartInst = new Chart(document.getElementById('chartTech'), {
+    type: isCandle ? 'bar' : 'line',
+    data: { labels, datasets },
+    options: mainOptions,
+    plugins: isCandle ? [{
+      id: 'candleWicks',
+      beforeDatasetsDraw(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        meta.data.forEach((bar, i) => {
+          const d = hist[i];
+          const x = bar.x;
+          const yHigh = chart.scales.y.getPixelForValue(d.plus_haut || Math.max(d.cours_ouverture || 0, d.cours_cloture || 0));
+          const yLow = chart.scales.y.getPixelForValue(d.plus_bas || Math.min(d.cours_ouverture || Infinity, d.cours_cloture || Infinity));
+          const yOpen = chart.scales.y.getPixelForValue(d.cours_ouverture || d.cours_cloture);
+          const yClose = chart.scales.y.getPixelForValue(d.cours_cloture);
+          
+          ctx.beginPath();
+          const isUp = d.cours_cloture >= (d.cours_ouverture || d.cours_cloture);
+          ctx.strokeStyle = isUp ? 'var(--green)' : 'var(--red)';
+          ctx.lineWidth = 1;
+          ctx.moveTo(x, yHigh);
+          ctx.lineTo(x, yLow);
+          ctx.stroke();
+        });
+      }
+    }] : []
   });
 
-  // MACD chart
-  new Chart(document.getElementById('chartMACD'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { label: 'MACD', data: macd.macdLine, borderColor: '#60A5FA', borderWidth: 1.5, pointRadius: 0, fill: false },
-        { label: 'Signal', data: macd.signalLine, borderColor: '#F87171', borderWidth: 1.5, pointRadius: 0, fill: false },
-        { label: 'Histogramme', data: macd.histogram, backgroundColor: macd.histogram.map(v => v >= 0 ? 'rgba(74,222,128,0.5)' : 'rgba(248,113,113,0.5)'), type: 'bar', borderWidth: 0 }
-      ]
-    },
-    options: { ...chartOpts, plugins: { ...chartOpts.plugins, legend: { display: true, labels: { color: 'rgba(245,240,232,0.5)', font: { size: 10 } } } } }
-  });
-
-  // RSI chart
-  new Chart(document.getElementById('chartRSI'), {
-    type: 'line',
-    data: {
-      labels,
-      datasets: [
-        { data: rsi, borderColor: '#B8964E', borderWidth: 1.5, pointRadius: 0, fill: false },
-        { data: Array(rsi.length).fill(70), borderColor: 'rgba(248,113,113,0.4)', borderWidth: 1, pointRadius: 0, borderDash: [4,4], fill: false },
-        { data: Array(rsi.length).fill(30), borderColor: 'rgba(74,222,128,0.4)', borderWidth: 1, pointRadius: 0, borderDash: [4,4], fill: false }
-      ]
-    },
-    options: { ...chartOpts, scales: { ...chartOpts.scales, y: { min: 0, max: 100, position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 } } } } }
-  });
-}
-
-// Technical indicators
-function calcSMA(data, period) {
-  const out = [];
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) { out.push(null); continue; }
-    let sum = 0;
-    for (let j = 0; j < period; j++) sum += data[i - j];
-    out.push(sum / period);
+  // Sub-indicators (RSI, MACD, etc.)
+  const subContainer = document.getElementById('subIndicators');
+  const hasSubInd = activeIndicators.rsi || activeIndicators.macd || activeIndicators.stoch || activeIndicators.cci;
+  
+  if (hasSubInd && !_focusMode) {
+    subContainer.style.display = 'block';
+    renderSubIndicators(hist, closes, highs, lows, volumes, labels, activeIndicators);
+  } else {
+    subContainer.style.display = 'none';
   }
-  return out;
+
+  // Calculate & display signals
+  calculateSignals(closes, highs, lows, volumes, activeIndicators);
 }
-function calcEMA(data, period) {
-  const out = []; const k = 2 / (period + 1);
-  for (let i = 0; i < data.length; i++) {
-    if (i === 0) { out.push(data[0]); continue; }
-    out.push(data[i] * k + out[i-1] * (1 - k));
-  }
-  return out;
+
+function getActiveIndicators() {
+  return {
+    sma20: document.getElementById('chkSMA20')?.checked || false,
+    sma50: document.getElementById('chkSMA50')?.checked || false,
+    sma200: document.getElementById('chkSMA200')?.checked || false,
+    ema12: document.getElementById('chkEMA12')?.checked || false,
+    ema26: document.getElementById('chkEMA26')?.checked || false,
+    bb: document.getElementById('chkBB')?.checked || false,
+    atr: document.getElementById('chkATR')?.checked || false,
+    keltner: document.getElementById('chkKeltner')?.checked || false,
+    rsi: document.getElementById('chkRSI')?.checked || false,
+    macd: document.getElementById('chkMACD')?.checked || false,
+    stoch: document.getElementById('chkStoch')?.checked || false,
+    cci: document.getElementById('chkCCI')?.checked || false,
+    volume: document.getElementById('chkVolume')?.checked || false,
+    vwap: document.getElementById('chkVWAP')?.checked || false,
+    adx: document.getElementById('chkADX')?.checked || false,
+    obv: document.getElementById('chkOBV')?.checked || false,
+    ichimoku: document.getElementById('chkIchimoku')?.checked || false,
+    fibonacci: document.getElementById('chkFibonacci')?.checked || false,
+    pivot: document.getElementById('chkPivot')?.checked || false,
+    sr: document.getElementById('chkSR')?.checked || false
+  };
 }
-function calcRSI(data, period) {
-  const out = [];
-  for (let i = 0; i < data.length; i++) {
-    if (i < period) { out.push(null); continue; }
-    let gains = 0, losses = 0;
-    for (let j = 1; j <= period; j++) {
-      const diff = data[i - j + 1] - data[i - j];
-      if (diff > 0) gains += diff; else losses -= diff;
+
+function aggregateByInterval(data, interval) {
+  if (interval === 'daily') return data;
+  
+  const aggregated = [];
+  let current = null;
+  
+  data.forEach(d => {
+    const date = new Date(d.date_seance);
+    let key;
+    
+    if (interval === 'weekly') {
+      const weekStart = new Date(date);
+      weekStart.setDate(date.getDate() - date.getDay());
+      key = weekStart.toISOString().split('T')[0];
+    } else if (interval === 'monthly') {
+      key = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}`;
     }
-    const avgGain = gains / period;
-    const avgLoss = losses / period;
-    const rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    out.push(100 - (100 / (1 + rs)));
-  }
-  return out;
-}
-function calcMACD(data) {
-  const ema12 = calcEMA(data, 12);
-  const ema26 = calcEMA(data, 26);
-  const macdLine = ema12.map((v, i) => v - ema26[i]);
-  const signalLine = calcEMA(macdLine.filter(v => v !== null), 9);
-  const hist = macdLine.slice(-signalLine.length).map((v, i) => v - signalLine[i]);
-  return { macdLine: macdLine.slice(-signalLine.length), signalLine, histogram: hist };
-}
-function calcBollinger(data, period) {
-  const upper = [], lower = [], mid = calcSMA(data, period);
-  for (let i = 0; i < data.length; i++) {
-    if (i < period - 1) { upper.push(null); lower.push(null); continue; }
-    let sum = 0;
-    for (let j = 0; j < period; j++) sum += Math.pow(data[i-j] - mid[i], 2);
-    const sd = Math.sqrt(sum / period);
-    upper.push(mid[i] + 2 * sd);
-    lower.push(mid[i] - 2 * sd);
-  }
-  return { upper, lower, mid };
+    
+    if (!current || current.key !== key) {
+      if (current) aggregated.push(current);
+      current = {
+        ...d,
+        key,
+        date_seance: key,
+        plus_haut: d.plus_haut || d.cours_cloture,
+        plus_bas: d.plus_bas || d.cours_cloture,
+        volume: d.volume || 0
+      };
+    } else {
+      current.cours_cloture = d.cours_cloture;
+      current.plus_haut = Math.max(current.plus_haut, d.plus_haut || d.cours_cloture);
+      current.plus_bas = Math.min(current.plus_bas, d.plus_bas || d.cours_cloture);
+      current.volume += (d.volume || 0);
+    }
+  });
+  
+  if (current) aggregated.push(current);
+  return aggregated;
 }
 
+function formatTechDate(dateStr, interval) {
+  const d = new Date(dateStr);
+  if (interval === 'weekly') {
+    return 'S' + getWeekNumber(d) + ' ' + d.getFullYear();
+  } else if (interval === 'monthly') {
+    return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+  }
+  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+}
+
+function getWeekNumber(d) {
+  d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+function calcVWAP(closes, volumes) {
+  let cumVol = 0, cumPV = 0;
+  return closes.map((c, i) => {
+    cumVol += volumes[i];
+    cumPV += c * volumes[i];
+    return cumVol > 0 ? cumPV / cumVol : c;
+  });
+}
+
+function calcATR(highs, lows, closes, period = 14) {
+  const tr = [highs[0] - lows[0]];
+  for (let i = 1; i < highs.length; i++) {
+    tr.push(Math.max(
+      highs[i] - lows[i],
+      Math.abs(highs[i] - closes[i-1]),
+      Math.abs(lows[i] - closes[i-1])
+    ));
+  }
+  return calcSMA(tr, period);
+}
+
+function calcCCI(highs, lows, closes, period = 20) {
+  const tp = highs.map((h, i) => (h + lows[i] + closes[i]) / 3);
+  const smaTP = calcSMA(tp, period);
+  const meanDev = tp.map((v, i) => {
+    if (i < period - 1) return null;
+    let sum = 0;
+    for (let j = 0; j < period; j++) sum += Math.abs(tp[i-j] - smaTP[i]);
+    return sum / period;
+  });
+  return tp.map((v, i) => {
+    if (!smaTP[i] || !meanDev[i]) return null;
+    return (v - smaTP[i]) / (0.015 * meanDev[i]);
+  });
+}
+
+function calcStochastic(highs, lows, closes, kPeriod = 14, dPeriod = 3) {
+  const k = highs.map((h, i) => {
+    if (i < kPeriod - 1) return null;
+    let highest = h, lowest = lows[i];
+    for (let j = 1; j < kPeriod; j++) {
+      highest = Math.max(highest, highs[i-j]);
+      lowest = Math.min(lowest, lows[i-j]);
+    }
+    const range = highest - lowest;
+    return range > 0 ? ((closes[i] - lowest) / range) * 100 : 50;
+  });
+  const d = calcSMA(k.filter(v => v !== null), dPeriod);
+  return { k, d: k.map((v, i) => i < kPeriod - 1 ? null : d[Math.min(i - kPeriod + 1, d.length - 1)] || null) };
+}
+
+function calcOBV(closes, volumes) {
+  let obv = 0;
+  return closes.map((c, i) => {
+    if (i === 0) {
+      obv = volumes[i];
+    } else {
+      obv += (c > closes[i-1] ? volumes[i] : c < closes[i-1] ? -volumes[i] : 0);
+    }
+    return obv;
+  });
+}
+
+function calcADX(highs, lows, closes, period = 14) {
+  const tr = [], plusDM = [], minusDM = [];
+  for (let i = 1; i < highs.length; i++) {
+    tr.push(Math.max(highs[i] - lows[i], Math.abs(highs[i] - closes[i-1]), Math.abs(lows[i] - closes[i-1])));
+    const upMove = highs[i] - highs[i-1];
+    const downMove = lows[i-1] - lows[i];
+    plusDM.push(upMove > downMove && upMove > 0 ? upMove : 0);
+    minusDM.push(downMove > upMove && downMove > 0 ? downMove : 0);
+  }
+  
+  const atr = calcSMA(tr, period);
+  const plusDI = calcSMA(plusDM, period).map((v, i) => atr[i] ? (v / atr[i]) * 100 : 0);
+  const minusDI = calcSMA(minusDM, period).map((v, i) => atr[i] ? (v / atr[i]) * 100 : 0);
+  
+  const dx = plusDI.map((v, i) => {
+    const sum = v + minusDI[i];
+    return sum > 0 ? (Math.abs(v - minusDI[i]) / sum) * 100 : 0;
+  });
+  
+  return calcSMA(dx, period);
+}
+
+function renderSubIndicators(hist, closes, highs, lows, volumes, labels, indicators) {
+  const sub1 = document.getElementById('chartSub1');
+  const sub2 = document.getElementById('chartSub2');
+  
+  if (_subChart1Inst) _subChart1Inst.destroy();
+  if (_subChart2Inst) _subChart2Inst.destroy();
+
+  const subOpts = {
+    ...chartOpts,
+    plugins: {
+      ...chartOpts.plugins,
+      legend: { display: false }
+    },
+    scales: {
+      x: { display: false, grid: { display: false } },
+      y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 9 } } }
+    }
+  };
+
+  // Sub 1: RSI or Stochastic or CCI
+  if (indicators.rsi) {
+    const rsi = calcRSI(closes, 14);
+    document.getElementById('subIndTitle1').textContent = 'RSI (14)';
+    _subChart1Inst = new Chart(sub1, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { data: rsi, borderColor: '#B8964E', borderWidth: 1.5, pointRadius: 0, fill: false },
+          { data: Array(rsi.length).fill(70), borderColor: 'rgba(248,113,113,0.4)', borderWidth: 1, pointRadius: 0, borderDash: [4,4] },
+          { data: Array(rsi.length).fill(30), borderColor: 'rgba(74,222,128,0.4)', borderWidth: 1, pointRadius: 0, borderDash: [4,4] }
+        ]
+      },
+      options: { ...subOpts, scales: { ...subOpts.scales, y: { ...subOpts.scales.y, min: 0, max: 100 } } }
+    });
+  } else if (indicators.stoch) {
+    const stoch = calcStochastic(highs, lows, closes);
+    document.getElementById('subIndTitle1').textContent = 'Stochastique (14,3)';
+    _subChart1Inst = new Chart(sub1, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { data: stoch.k, borderColor: '#60A5FA', borderWidth: 1.5, pointRadius: 0, fill: false, label: '%K' },
+          { data: stoch.d, borderColor: '#F87171', borderWidth: 1.5, pointRadius: 0, fill: false, label: '%D' },
+          { data: Array(labels.length).fill(80), borderColor: 'rgba(248,113,113,0.3)', borderWidth: 1, pointRadius: 0, borderDash: [4,4] },
+          { data: Array(labels.length).fill(20), borderColor: 'rgba(74,222,128,0.3)', borderWidth: 1, pointRadius: 0, borderDash: [4,4] }
+        ]
+      },
+      options: { ...subOpts, scales: { ...subOpts.scales, y: { ...subOpts.scales.y, min: 0, max: 100 } } }
+    });
+  } else if (indicators.cci) {
+    const cci = calcCCI(highs, lows, closes);
+    document.getElementById('subIndTitle1').textContent = 'CCI (20)';
+    _subChart1Inst = new Chart(sub1, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { data: cci, borderColor: '#A78BFA', borderWidth: 1.5, pointRadius: 0, fill: false },
+          { data: Array(labels.length).fill(100), borderColor: 'rgba(248,113,113,0.3)', borderWidth: 1, pointRadius: 0, borderDash: [4,4] },
+          { data: Array(labels.length).fill(-100), borderColor: 'rgba(74,222,128,0.3)', borderWidth: 1, pointRadius: 0, borderDash: [4,4] }
+        ]
+      },
+      options: subOpts
+    });
+  }
+
+  // Sub 2: MACD or OBV or ADX
+  if (indicators.macd) {
+    const macd = calcMACD(closes);
+    document.getElementById('subIndTitle2').textContent = 'MACD';
+    _subChart2Inst = new Chart(sub2, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { label: 'MACD', data: macd.macdLine, borderColor: '#60A5FA', borderWidth: 1.5, pointRadius: 0, fill: false },
+          { label: 'Signal', data: macd.signalLine, borderColor: '#F87171', borderWidth: 1.5, pointRadius: 0, fill: false },
+          { label: 'Hist', data: macd.histogram, backgroundColor: macd.histogram.map(v => v >= 0 ? 'rgba(74,222,128,0.5)' : 'rgba(248,113,113,0.5)'), type: 'bar', borderWidth: 0 }
+        ]
+      },
+      options: subOpts
+    });
+  } else if (indicators.obv) {
+    const obv = calcOBV(closes, volumes);
+    document.getElementById('subIndTitle2').textContent = 'OBV';
+    _subChart2Inst = new Chart(sub2, {
+      type: 'line',
+      data: { labels, datasets: [{ data: obv, borderColor: '#E879F9', borderWidth: 1.5, pointRadius: 0, fill: false }] },
+      options: subOpts
+    });
+  } else if (indicators.adx) {
+    const adx = calcADX(highs, lows, closes);
+    document.getElementById('subIndTitle2').textContent = 'ADX (14)';
+    _subChart2Inst = new Chart(sub2, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          { data: adx, borderColor: '#FB923C', borderWidth: 1.5, pointRadius: 0, fill: false },
+          { data: Array(labels.length).fill(25), borderColor: 'rgba(184,150,78,0.3)', borderWidth: 1, pointRadius: 0, borderDash: [4,4] }
+        ]
+      },
+      options: { ...subOpts, scales: { ...subOpts.scales, y: { ...subOpts.scales.y, min: 0, max: 100 } } }
+    });
+  }
+}
+
+function calculateSignals(closes, highs, lows, volumes, indicators) {
+  const lastClose = closes[closes.length - 1];
+  const prevClose = closes[closes.length - 2];
+  
+  // Trend signal
+  const sma20 = calcSMA(closes, 20);
+  const sma50 = calcSMA(closes, 50);
+  const lastSMA20 = sma20[sma20.length - 1];
+  const lastSMA50 = sma50[sma50.length - 1];
+  
+  let trendSignal = 'NEUTRE', trendClass = 'tech-signal-neutral';
+  if (lastSMA20 && lastSMA50) {
+    if (lastClose > lastSMA20 && lastSMA20 > lastSMA50) { trendSignal = 'HAUSSIÈRE'; trendClass = 'tech-signal-buy'; }
+    else if (lastClose < lastSMA20 && lastSMA20 < lastSMA50) { trendSignal = 'BAISSIÈRE'; trendClass = 'tech-signal-sell'; }
+  }
+  document.getElementById('sigTrend').innerHTML = `<span class="${trendClass}">${trendSignal}</span>`;
+
+  // Momentum signal
+  const rsi = calcRSI(closes, 14);
+  const lastRSI = rsi[rsi.length - 1];
+  let momSignal = 'NEUTRE', momClass = 'tech-signal-neutral';
+  if (!isNaN(lastRSI)) {
+    if (lastRSI > 60) { momSignal = 'ACHAT'; momClass = 'tech-signal-buy'; }
+    else if (lastRSI < 40) { momSignal = 'VENTE'; momClass = 'tech-signal-sell'; }
+  }
+  document.getElementById('sigMomentum').innerHTML = `<span class="${momClass}">${momSignal}</span>`;
+
+  // Volatility
+  const bb = calcBollinger(closes, 20);
+  const lastBB = bb.upper[bb.upper.length - 1];
+  const lastBBLow = bb.lower[bb.lower.length - 1];
+  let volSignal = 'NORMALE', volClass = 'tech-signal-neutral';
+  if (lastBB && lastBBLow) {
+    const bbWidth = (lastBB - lastBBLow) / ((lastBB + lastBBLow) / 2) * 100;
+    if (bbWidth > 5) { volSignal = 'ÉLEVÉE'; volClass = 'tech-signal-sell'; }
+    else if (bbWidth < 2) { volSignal = 'FAIBLE'; volClass = 'tech-signal-buy'; }
+  }
+  document.getElementById('sigVolatility').innerHTML = `<span class="${volClass}">${volSignal}</span>`;
+
+  // Volume signal
+  const volSMA = calcSMA(volumes, 20);
+  const lastVol = volumes[volumes.length - 1];
+  const lastVolSMA = volSMA[volSMA.length - 1];
+  let volTrend = 'NEUTRE', volTrendClass = 'tech-signal-neutral';
+  if (lastVolSMA && lastVol > lastVolSMA * 1.5) { 
+    volTrend = lastClose > prevClose ? 'CONFIRMÉ' : 'DISTRIBUTION';
+    volTrendClass = lastClose > prevClose ? 'tech-signal-buy' : 'tech-signal-sell';
+  }
+  document.getElementById('sigVolume').innerHTML = `<span class="${volTrendClass}">${volTrend}</span>`;
+
+  // Global signal
+  let score = 0;
+  if (trendSignal === 'HAUSSIÈRE') score += 1;
+  if (trendSignal === 'BAISSIÈRE') score -= 1;
+  if (momSignal === 'ACHAT') score += 1;
+  if (momSignal === 'VENTE') score -= 1;
+  if (volTrend === 'CONFIRMÉ') score += 1;
+  if (volTrend === 'DISTRIBUTION') score -= 1;
+
+  let globalSignal = 'NEUTRE', globalClass = 'tech-signal-neutral';
+  if (score >= 2) { globalSignal = 'ACHAT FORT'; globalClass = 'tech-signal-buy'; }
+  else if (score === 1) { globalSignal = 'ACHAT'; globalClass = 'tech-signal-buy'; }
+  else if (score === -1) { globalSignal = 'VENTE'; globalClass = 'tech-signal-sell'; }
+  else if (score <= -2) { globalSignal = 'VENTE FORTE'; globalClass = 'tech-signal-sell'; }
+
+  document.getElementById('sigGlobal').innerHTML = `<span class="${globalClass}">${globalSignal}</span>`;
+}
+
+function exportTechReport() {
+  const ticker = _techTicker;
+  if (!ticker) { toast('Sélectionnez un ticker d\'abord', 'warn'); return; }
+
+  const indicators = getActiveIndicators();
+  const activeList = Object.entries(indicators).filter(([k,v]) => v).map(([k]) => k.toUpperCase()).join(', ');
+  
+  const report = `
+═══════════════════════════════════════
+  RAPPORT ANALYSE TECHNIQUE — THE CAPITAL
+═══════════════════════════════════════
+Ticker: ${ticker}
+Date d'extraction: ${new Date().toLocaleString('fr-FR')}
+Période: ${_techPeriod === 99999 ? 'Max' : _techPeriod + ' périodes'}
+Intervalle: ${_techInterval === 'daily' ? 'Journalier' : _techInterval === 'weekly' ? 'Hebdomadaire' : 'Mensuel'}
+Type de graphique: ${_chartType === 'line' ? 'Ligne' : _chartType === 'candlestick' ? 'Chandelier' : 'Barres'}
+
+INDICATEURS ACTIFS:
+${activeList || 'Aucun'}
+
+SIGNAUX:
+- Global: ${document.getElementById('sigGlobal').textContent}
+- Tendance: ${document.getElementById('sigTrend').textContent}
+- Momentum: ${document.getElementById('sigMomentum').textContent}
+- Volatilité: ${document.getElementById('sigVolatility').textContent}
+- Volume: ${document.getElementById('sigVolume').textContent}
+
+═══════════════════════════════════════
+Généré par The Capital — Intelligence Financière BRVM
+  `;
+
+  const blob = new Blob([report], { type: 'text/plain;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `analyse_technique_${ticker}_${new Date().toISOString().split('T')[0]}.txt`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  
+  toast('Rapport exporté avec succès', 'success');
+}
 // ═══════════════════════════════════════
 // SCREENER
 // ═══════════════════════════════════════
