@@ -733,10 +733,12 @@ function toast(msg, type='info') {
 // ═══════════════════════════════════════
 // SESSION & AUTH
 // ═══════════════════════════════════════
+// ═══ SESSION & AUTH ═══
 const SK = 'tc_session';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
-const SK = 'tc_session';
+// ═══ CONFIG SUPABASE ═══ (doit être défini AVANT d’être utilisé)
+const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 (async function initApp() {
   const raw = localStorage.getItem(SK);
@@ -771,13 +773,14 @@ const SK = 'tc_session';
     document.getElementById('userRole').textContent = 'BRVM';
     window._userPlan = 'pro';
 
-    // Lancer le chargement des données
+    // Charger les données
     loadAll();
   } catch (e) {
     localStorage.removeItem(SK);
     window.location.href = 'login.html';
   }
 })();
+
 function doLogout() {
   localStorage.removeItem(SK);
   window.location.href = 'login.html';
