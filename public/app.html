@@ -736,11 +736,18 @@ const SK = 'tc_session';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 (function() {
-  document.getElementById('userAvatar').textContent = 'T';
-  document.getElementById('userName').textContent = 'test@exemple.com';
-  document.getElementById('userRole').textContent = 'Pro · BRVM';
-  window._userPlan = 'pro';
-  document.getElementById('adminLink').style.display = 'none';
+  const sess = JSON.parse(localStorage.getItem(SK) || 'null');
+  if (!sess || !sess.email) {
+    window.location.href = 'login.html';
+    return;
+  }
+  document.getElementById('userAvatar').textContent = (sess.email || 'U').charAt(0).toUpperCase();
+  document.getElementById('userName').textContent = sess.email || 'Utilisateur';
+  document.getElementById('userRole').textContent = (sess.plan || 'Pro') + ' · BRVM';
+  window._userPlan = sess.plan || 'pro';
+  if (sess.role === 'admin') {
+    document.getElementById('adminLink').style.display = 'block';
+  }
 })();
 
 function doLogout() {
@@ -755,12 +762,17 @@ const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 async function sb(table, params = {}) {
-  const url = new URL(`${SB_URL}/rest/v1/${table}`);
+  // Construire l'URL manuellement pour éviter les problèmes d'encoding avec Supabase
+  let queryParts = [];
   Object.entries(params).forEach(([k, v]) => {
-    if (v !== undefined && v !== null) url.searchParams.set(k, v);
+    if (v !== undefined && v !== null && v !== '') {
+      queryParts.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+    }
   });
-  
-  const r = await fetch(url.toString(), {
+  const queryString = queryParts.length > 0 ? '?' + queryParts.join('&') : '';
+  const url = `${SB_URL}/rest/v1/${table}${queryString}`;
+
+  const r = await fetch(url, {
     headers: { 
       'Authorization': `Bearer ${SB_KEY}`, 
       'apikey': SB_KEY, 
@@ -768,12 +780,23 @@ async function sb(table, params = {}) {
       'Content-Type': 'application/json'
     }
   });
-  
+
   if (!r.ok) {
     const text = await r.text().catch(() => '');
-    throw new Error(`${table}: ${r.status} ${r.statusText} ${text}`);
+    throw new Error(`${table}: ${r.status} ${r.statusText} — ${text.substring(0, 200)}`);
   }
-  return r.json();
+
+  const data = await r.json();
+  return Array.isArray(data) ? data : [];
+}
+
+async function checkSupabaseHealth() {
+  try {
+    const result = await sb('cours_latest', { limit: 1 });
+    return { ok: true, hasData: Array.isArray(result) && result.length > 0 };
+  } catch(e) {
+    return { ok: false, error: e.message };
+  }
 }
 
 // ═══════════════════════════════════════
@@ -977,6 +1000,21 @@ function sortTable(tbodyId, colIndex) {
 // LOAD — 100% SUPABASE, PAS DE DEMO
 // ═══════════════════════════════════════
 async function loadAll() {
+  // Vérification préliminaire Supabase
+  const health = await checkSupabaseHealth();
+  if (!health.ok) {
+    toast('⚠️ Impossible de se connecter à Supabase: ' + health.error, 'error');
+    document.getElementById('idx-composite').textContent = 'ERR';
+    document.getElementById('idx-30').textContent = 'ERR';
+    document.getElementById('idx-prestige').textContent = 'ERR';
+    document.getElementById('coursTable').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">⚠️ Connexion Supabase impossible. Vérifiez votre connexion internet et l'état du projet Supabase.</td></tr>';
+    document.getElementById('topMovers').innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Connexion impossible</div>';
+    return;
+  }
+  if (!health.hasData) {
+    toast('⚠️ Supabase connecté mais tables vides — insérez des données', 'warn');
+  }
+
   try {
     const results = await Promise.allSettled([
       sb('cours_latest', {}),
@@ -1113,16 +1151,20 @@ function renderOverview(indices) {
   renderTopMovers();
 }
 function renderCoursTable() {
+  if (!Array.isArray(allCours)) { allCours = []; }
   const byTicker = {};
-  allCours.forEach(c => { if (c?.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const rows = Object.values(byTicker).sort((a, b) => (a?.ticker || '').localeCompare(b?.ticker || ''));
-  document.getElementById('coursCount').textContent = rows.length + ' titre' + (rows.length > 1 ? 's' : '');
+  allCours.forEach(c => { if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  const rows = Object.values(byTicker).sort((a, b) => ((a && a.ticker) || '').localeCompare((b && b.ticker) || ''));
+  const countEl = document.getElementById('coursCount');
+  if (countEl) countEl.textContent = rows.length + ' titre' + (rows.length > 1 ? 's' : '');
+  const tableEl = document.getElementById('coursTable');
+  if (!tableEl) return;
   if (!rows.length) {
-    const isConnected = allCours.length === 0 && allEntreprises.length === 0;
-    const message = isConnected 
+    const isEmpty = allCours.length === 0 && allEntreprises.length === 0;
+    const message = isEmpty 
       ? '⚠️ Connexion Supabase OK mais aucune donnée dans la table cours_latest. Vérifiez que vos données sont bien insérées.'
       : 'Aucune donnée de cours disponible.';
-    document.getElementById('coursTable').innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">' + message + '</td></tr>';
+    tableEl.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">' + message + '</td></tr>';
     return;
   }
   document.getElementById('coursTable').innerHTML = rows.map(c =>
@@ -1137,18 +1179,20 @@ function renderCoursTable() {
 }
 
 function renderTopMovers() {
+  const moversEl = document.getElementById('topMovers');
+  if (!moversEl) return;
   if (!Array.isArray(allCours) || allCours.length === 0) {
-    document.getElementById('topMovers').innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Aucune donnée de cours disponible</div>';
+    moversEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Aucune donnée de cours disponible</div>';
     return;
   }
   const byTicker = {};
-  allCours.forEach(c => { if (c?.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  allCours.forEach(c => { if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
   const sorted = Object.values(byTicker)
-    .filter(c => c?.variation != null && !isNaN(parseFloat(c.variation)))
-    .sort((a, b) => Math.abs(parseFloat(b.variation || 0)) - Math.abs(parseFloat(a.variation || 0)))
+    .filter(c => c && c.variation != null && !isNaN(parseFloat(c.variation)))
+    .sort((a, b) => Math.abs(parseFloat((b && b.variation) || 0)) - Math.abs(parseFloat((a && a.variation) || 0)))
     .slice(0, 8);
   if (!sorted.length) { 
-    document.getElementById('topMovers').innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Aucune variation disponible</div>'; 
+    moversEl.innerHTML = '<div style="padding:20px;text-align:center;color:var(--dim);font-size:13px">Aucune variation disponible</div>'; 
     return; 
   }
   document.getElementById('topMovers').innerHTML = sorted.map(c => {
