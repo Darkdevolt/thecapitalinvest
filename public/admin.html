@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=omRN01hvnDppSsq6CIsVV8mtIuGOnVpBHyqmIgwIdVJDelMNA_75PNwWp2oxe3YkFv3bNwtE4Ipfgh0_3diwNm4lgEBvX3rD3PfUTWnQJVVTRSvEWJNyhWdOUmHbxAupNCs8dMWGCap4NX-u4IURhh9_0Pqy0YKdQ19zEhD8Kbtz02EnhzFoQFbHE7it-wiCwLkFU3NjbONIdNUcOafQocDECWhDATwXOYuf_X_ERwYUG06KUPC6V8t-DabFf7SHSnv2RIZLkbeKtCyHAKqUpG9C27ikGjz3aDqAJ6ViEs59B-RHWJWKy3HjOvNceL_ktRVeVy0fUSZ-V9p2qV5i7Q7wZXDJl7rjlcti17optjChjMwbpqIG_CzNXd7bexB1wurB_dw4-bE-BTMKLvhsgGqLZ7qst2aVj6S5ap1MJlmwUv4lAfnRdiG3GyB1amy5x4ByyOTO-CcbxGV_H9TymtrHy9pUg9HVyhcR9pMW-Kfhsx7G5wGLIRaJEnvTLJwudSljoYUPpyPGgg2KY1Op0cXNE4FoAO0ZfxAEAR0IGEeTxbdG61vVFqQqubAqkxlJ5yO1Ng3L69Zb38Oqt9llV440_4hjCd18_ARnZsHVMITvkGQV9bke-go4NJXYCTRfSnFnWp6OMZzb8EYsJPNPMvxxWZ5qAWulU3WezjrdfCvssGHvCDyePOsQAC2z_Xtk" charset="UTF-8"></script><style>
+    <style>
         :root {
             --bg:         #0A0804;
             --surface:    #13110C;
@@ -215,6 +215,14 @@
         .analyse-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border-s); flex-wrap:wrap; }
         .analyse-item:last-child { border-bottom:none; }
 
+        /* Écran de chargement initial */
+        #loading-screen {
+            position:fixed; inset:0; z-index:9999; background:var(--bg);
+            display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
+        }
+        #loading-screen .spinner { width:32px; height:32px; }
+        #loading-screen p { color:var(--muted); font-size:13px; }
+
         @media(max-width:600px) {
             .kpi-row { grid-template-columns:repeat(2,1fr); }
             .form-grid { grid-template-columns:1fr; }
@@ -223,6 +231,15 @@
     </style>
 </head>
 <body>
+
+<!-- Écran de chargement initial -->
+<div id="loading-screen">
+    <div style="font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:3px;color:var(--cream);">THE <span style="color:var(--gold);">·</span> CAPITAL</div>
+    <div class="spinner" style="border-top-color:var(--gold);border-color:var(--border);border-width:3px;border-style:solid;border-radius:50%;width:32px;height:32px;animation:spin .8s linear infinite;"></div>
+    <p id="loading-msg">Vérification de la session...</p>
+</div>
+
+<div id="app-wrapper" style="display:none;">
 
 <div id="toast-container"></div>
 
@@ -758,8 +775,11 @@
         </div>
     </div>
 
-</div>
+</div><!-- /.main -->
 
+</div><!-- /#app-wrapper -->
+
+<!-- Modals -->
 <div class="inline-edit" id="modal-entreprise">
     <div class="modal">
         <div class="modal-title" id="modal-ent-title">Modifier l'entreprise</div>
@@ -858,7 +878,7 @@
 <script>
 'use strict';
 
-const SK = 'tc_session';
+const SK      = 'tc_session';
 const SB_URL  = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_REST = SB_URL + '/rest/v1';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
@@ -868,50 +888,109 @@ let coursData = [], finData = [], divData = [], entData = [], usrData = [], hist
 let diagData = null;
 let activeTab = 'dashboard';
 
+/* ── ÉCRAN DE CHARGEMENT ─────────────────────────────────────── */
+function showLoadingScreen(msg) {
+    const screen = document.getElementById('loading-screen');
+    const msgEl  = document.getElementById('loading-msg');
+    if (screen) screen.style.display = 'flex';
+    if (msgEl)  msgEl.textContent = msg || 'Chargement...';
+}
+
+function hideLoadingScreen() {
+    const screen = document.getElementById('loading-screen');
+    const app    = document.getElementById('app-wrapper');
+    if (screen) screen.style.display = 'none';
+    if (app)    app.style.display = '';
+}
+
+function showFatalError(title, details) {
+    document.body.innerHTML =
+        '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;' +
+        'padding:24px;text-align:center;background:#0A0804;font-family:sans-serif;">' +
+        '<div>' +
+        '<div style="font-size:48px;margin-bottom:16px;">⛔</div>' +
+        '<h2 style="color:#F87171;margin-bottom:12px;">' + title + '</h2>' +
+        '<p style="color:rgba(245,240,232,0.45);max-width:420px;margin:0 auto;line-height:1.6;">' + details + '</p>' +
+        '<button onclick="localStorage.removeItem(\'' + SK + '\');location.href=\'login.html\'" ' +
+        'style="margin-top:24px;padding:10px 22px;background:#B8964E;color:#0A0804;border:none;' +
+        'border-radius:4px;font-family:sans-serif;cursor:pointer;font-weight:500;">' +
+        'Se reconnecter</button>' +
+        '</div></div>';
+}
+
 /* ── INIT ─────────────────────────────────────────────────────── */
 async function init() {
-  const s = localStorage.getItem(SK);
-  if (!s) { location.href = 'login.html'; return; }
-  let sess;
-  try { sess = JSON.parse(s); } catch(e) { location.href = 'login.html'; return; }
-  TK = sess?.access_token || '';
-  if (!TK) { location.href = 'login.html'; return; }
-  const userId    = sess.user?.id || sess.id || null;
-  const userEmail = sess.user?.email || sess.email || '';
-  if (!userId) { alert('Session invalide.'); location.href = 'login.html'; return; }
+    showLoadingScreen('Vérification de la session...');
 
-  const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 10000);
+    const s = localStorage.getItem(SK);
+    if (!s) { location.href = 'login.html'; return; }
 
-  try {
-    const r = await fetch(`${SB_REST}/users?select=id,is_admin,email,nom&id=eq.${userId}`, {
-      headers: { apikey: SB_ANON, Authorization: `Bearer ${TK}` },
-      signal: ctrl.signal
-    });
-    clearTimeout(t);
+    let sess;
+    try { sess = JSON.parse(s); } catch(e) { location.href = 'login.html'; return; }
 
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    let rows = await r.json().catch(() => []);
+    TK = sess?.access_token || '';
+    if (!TK) { location.href = 'login.html'; return; }
 
-    if (!rows?.length && userEmail) {
-      const r2 = await fetch(`${SB_REST}/users?select=id,is_admin,email,nom&email=eq.${encodeURIComponent(userEmail)}`, {
-        headers: { apikey: SB_ANON, Authorization: `Bearer ${TK}` }
-      });
-      rows = await r2.json().catch(() => []);
+    const userId    = sess.user?.id || sess.id || null;
+    const userEmail = sess.user?.email || sess.email || '';
+
+    if (!userId) {
+        showFatalError('Session invalide', 'Identifiant utilisateur introuvable dans la session.');
+        return;
     }
 
-    const user = rows?.[0];
-    if (!user) { alert('Compte introuvable.'); location.href = 'app.html'; return; }
-    if (!user.is_admin) { alert('Accès refusé.'); location.href = 'app.html'; return; }
+    showLoadingScreen('Vérification des droits admin...');
 
-    ME = { is_admin: true, email: user.email || userEmail };
-    document.getElementById('admin-user').textContent = ME.email;
-    await loadDashboard();
+    try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 10000);
 
-  } catch (e) {
-    clearTimeout(t);
-    throw e;
-  }
+        const r = await fetch(
+            SB_REST + '/users?select=id,is_admin,email,nom&id=eq.' + userId,
+            { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + TK }, signal: ctrl.signal }
+        );
+        clearTimeout(t);
+
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+
+        let rows = await r.json().catch(() => []);
+
+        if (!rows?.length && userEmail) {
+            const r2 = await fetch(
+                SB_REST + '/users?select=id,is_admin,email,nom&email=eq.' + encodeURIComponent(userEmail),
+                { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + TK } }
+            );
+            rows = await r2.json().catch(() => []);
+        }
+
+        const user = rows?.[0];
+        if (!user) {
+            showFatalError('Compte introuvable', 'Votre compte n\'existe pas dans la base.');
+            return;
+        }
+        if (!user.is_admin) {
+            showFatalError('Accès refusé', 'Vous n\'avez pas les droits administrateur.');
+            setTimeout(() => { location.href = 'app.html'; }, 2000);
+            return;
+        }
+
+        ME = { is_admin: true, email: user.email || userEmail };
+        document.getElementById('admin-user').textContent = ME.email;
+
+        hideLoadingScreen();
+        await loadDashboard();
+
+    } catch(e) {
+        if (e.name === 'AbortError') {
+            showFatalError(
+                'Délai dépassé',
+                'La connexion a pris trop de temps.<br><br>' +
+                '• Token expiré<br>• RLS Supabase restrictif<br>• Problème réseau'
+            );
+        } else {
+            showFatalError('Erreur de connexion', e.message || 'Erreur inconnue');
+        }
+    }
 }
 
 function doLogout() { localStorage.removeItem(SK); location.href = 'login.html'; }
@@ -922,1023 +1001,1023 @@ const set = (id, val) => { const el = document.getElementById(id); if (el) el.va
 const pf  = id => { const n = parseFloat(v(id)); return isNaN(n) ? null : n; };
 const pi  = id => { const n = parseInt(v(id)); return isNaN(n) ? null : n; };
 const fmt     = n => n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR') : '—';
-const fmtPct  = n => n != null && !isNaN(n) ? `${Number(n)>=0?'+':''}${Number(n).toFixed(2)}%` : '—';
+const fmtPct  = n => n != null && !isNaN(n) ? (Number(n)>=0?'+':'') + Number(n).toFixed(2) + '%' : '—';
 const clrPct  = n => Number(n)>=0 ? 'var(--green)' : 'var(--red)';
 const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 function clearForm(ids) { ids.forEach(id => set(id, '')); }
 function clearBulk() { set('bulk-csv',''); document.getElementById('bulk-preview').style.display='none'; }
 
-function sbHeaders(extra={}) {
-  return { apikey: SB_ANON, Authorization: `Bearer ${TK}`, 'Content-Type': 'application/json', Prefer: 'return=representation', ...extra };
+function sbHeaders(extra) {
+    return Object.assign(
+        { apikey: SB_ANON, Authorization: 'Bearer ' + TK, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+        extra || {}
+    );
 }
 
-async function sbGet(table, params='') {
-  try {
-    const r = await fetch(`${SB_REST}/${table}?${params}`, { headers: sbHeaders() });
-    if (!r.ok) { const e = await r.json().catch(()=>{}); toast((e?.message||'Erreur lecture')+` [${table}]`,'err'); return null; }
-    return r.json();
-  } catch(e) { toast('Réseau: '+e.message,'err'); return null; }
+async function sbGet(table, params) {
+    try {
+        const url = SB_REST + '/' + table + (params ? '?' + params : '');
+        const r = await fetch(url, { headers: sbHeaders() });
+        if (!r.ok) { const e = await r.json().catch(()=>{}); toast((e?.message||'Erreur lecture') + ' [' + table + ']', 'err'); return null; }
+        return r.json();
+    } catch(e) { toast('Réseau: ' + e.message, 'err'); return null; }
 }
 
-async function sbCount(table, params = '') {
-  try {
-    const cleanParams = String(params).replace(/select=[^&]*/g, '').replace(/^&|&$/g, '');
-    const url = `${SB_REST}/${table}?select=id${cleanParams ? '&' + cleanParams : ''}`;
-    const ctrl = new AbortController();
-    const t = setTimeout(() => ctrl.abort(), 8000);
-    const r = await fetch(url, {
-      headers: { ...sbHeaders(), Prefer: 'count=exact', Range: '0-0' },
-      signal: ctrl.signal
-    });
-    clearTimeout(t);
-    if (!r.ok) { console.warn(`sbCount [${table}] HTTP ${r.status}`); return 0; }
-    const range = r.headers.get('content-range');
-    return parseInt(range?.split('/')?.[1] ?? '0');
-  } catch (e) {
-    console.error(`sbCount [${table}] error:`, e.message);
-    return 0;
-  }
+async function sbCount(table, params) {
+    try {
+        const cleanParams = params ? String(params).replace(/select=[^&]*/g, '').replace(/^&|&$/g, '') : '';
+        const url = SB_REST + '/' + table + '?select=id' + (cleanParams ? '&' + cleanParams : '');
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 8000);
+        const r = await fetch(url, {
+            headers: Object.assign({}, sbHeaders(), { Prefer: 'count=exact', Range: '0-0' }),
+            signal: ctrl.signal
+        });
+        clearTimeout(t);
+        if (!r.ok) { console.warn('sbCount [' + table + '] HTTP ' + r.status); return 0; }
+        const range = r.headers.get('content-range');
+        return parseInt(range ? range.split('/')[1] : '0') || 0;
+    } catch(e) {
+        console.error('sbCount [' + table + '] error:', e.message);
+        return 0;
+    }
 }
 
-async function sbPost(table, body, onConflict='') {
-  try {
-    const prefer = onConflict ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
-    const url = onConflict ? `${SB_REST}/${table}?on_conflict=${onConflict}` : `${SB_REST}/${table}`;
-    const r = await fetch(url, { method:'POST', headers: sbHeaders({Prefer:prefer}), body: JSON.stringify(body) });
-    if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur écriture','err'); return null; }
-    return r.json();
-  } catch(e) { toast('Réseau: '+e.message,'err'); return null; }
+async function sbPost(table, body, onConflict) {
+    try {
+        const prefer = onConflict ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
+        const url = onConflict ? SB_REST + '/' + table + '?on_conflict=' + onConflict : SB_REST + '/' + table;
+        const r = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body) });
+        if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur écriture', 'err'); return null; }
+        return r.json();
+    } catch(e) { toast('Réseau: ' + e.message, 'err'); return null; }
 }
 
 async function sbPatch(table, filter, body) {
-  try {
-    const r = await fetch(`${SB_REST}/${table}?${filter}`, { method:'PATCH', headers: sbHeaders(), body: JSON.stringify(body) });
-    if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur MAJ','err'); return null; }
-    return r.json();
-  } catch(e) { toast('Réseau: '+e.message,'err'); return null; }
+    try {
+        const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'PATCH', headers: sbHeaders(), body: JSON.stringify(body) });
+        if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur MAJ', 'err'); return null; }
+        return r.json();
+    } catch(e) { toast('Réseau: ' + e.message, 'err'); return null; }
 }
 
 async function sbDel(table, filter) {
-  try {
-    const r = await fetch(`${SB_REST}/${table}?${filter}`, { method:'DELETE', headers: sbHeaders() });
-    if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur suppression','err'); return false; }
-    return true;
-  } catch(e) { toast('Réseau: '+e.message,'err'); return false; }
+    try {
+        const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'DELETE', headers: sbHeaders() });
+        if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur suppression', 'err'); return false; }
+        return true;
+    } catch(e) { toast('Réseau: ' + e.message, 'err'); return false; }
 }
 
 /* ── NAVIGATION ───────────────────────────────────────────────── */
 const tabLoaders = {
-  dashboard: loadDashboard,
-  cours: loadCours,
-  historique: () => {},
-  entreprises: loadEntreprises,
-  financials: loadFinancials,
-  dividendes: loadDividendes,
-  analyses: loadAnalyses,
-  utilisateurs: loadUsers,
-  import: () => {}
+    dashboard:    loadDashboard,
+    cours:        loadCours,
+    historique:   function(){},
+    entreprises:  loadEntreprises,
+    financials:   loadFinancials,
+    dividendes:   loadDividendes,
+    analyses:     loadAnalyses,
+    utilisateurs: loadUsers,
+    import:       function(){}
 };
 
 function switchTab(name, el) {
-  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-  const panel = document.getElementById('panel-' + name);
-  if (panel) panel.classList.add('active');
-  if (el) el.classList.add('active');
-  if (name !== activeTab) { activeTab = name; (tabLoaders[name] || (() => {}))(); }
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.admin-tab').forEach(function(t){ t.classList.remove('active'); });
+    const panel = document.getElementById('panel-' + name);
+    if (panel) panel.classList.add('active');
+    if (el) el.classList.add('active');
+    if (name !== activeTab) { activeTab = name; (tabLoaders[name] || function(){})(); }
 }
 
 function switchSubTab(prefix, panel, el) {
-  const container = el.closest('.tab-panel');
-  container.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-  el.classList.add('active');
-  ['ligne','bulk','view','list','add'].forEach(p => {
-    const e2 = document.getElementById(`${prefix}-panel-${p}`);
-    if (e2) e2.style.display = 'none';
-  });
-  const target = document.getElementById(`${prefix}-panel-${panel}`);
-  if (target) target.style.display = '';
+    const container = el.closest('.tab-panel');
+    container.querySelectorAll('.sub-tab').forEach(function(t){ t.classList.remove('active'); });
+    el.classList.add('active');
+    ['ligne','bulk','view','list','add'].forEach(function(p){
+        const e2 = document.getElementById(prefix + '-panel-' + p);
+        if (e2) e2.style.display = 'none';
+    });
+    const target = document.getElementById(prefix + '-panel-' + panel);
+    if (target) target.style.display = '';
 }
 
 /* ── TOASTS ───────────────────────────────────────────────────── */
-function toast(msg, type='ok') {
-  const c = document.getElementById('toast-container');
-  const t = document.createElement('div');
-  t.className = `toast ${type}`;
-  t.textContent = msg;
-  c.appendChild(t);
-  setTimeout(() => t.remove(), 4000);
+function toast(msg, type) {
+    type = type || 'ok';
+    const c = document.getElementById('toast-container');
+    if (!c) return;
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(function(){ t.remove(); }, 4000);
 }
 
 /* ── MODALS ───────────────────────────────────────────────────── */
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function openModal(id) { document.getElementById(id).classList.add('open'); }
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
 
 /* ══════════════════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════════════════ */
 async function loadDashboard() {
-  document.getElementById('dash-ts').textContent = new Date().toLocaleString('fr-FR');
-  const [nEnt, nCours, nHist, nFin, nDiv, nUsers] = await Promise.all([
-    sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
-    sbCount('financials'), sbCount('dividendes_calendrier'), sbCount('users'),
-  ]);
-  document.getElementById('k-entreprises').textContent = nEnt;
-  document.getElementById('k-cours').textContent = nCours;
-  document.getElementById('k-historique').textContent = nHist;
-  document.getElementById('k-financials').textContent = nFin;
-  document.getElementById('k-dividendes').textContent = nDiv;
-  document.getElementById('k-users').textContent = nUsers;
+    document.getElementById('dash-ts').textContent = new Date().toLocaleString('fr-FR');
+    const counts = await Promise.all([
+        sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
+        sbCount('financials'), sbCount('dividendes_calendrier'), sbCount('users')
+    ]);
+    const [nEnt, nCours, nHist, nFin, nDiv, nUsers] = counts;
+    document.getElementById('k-entreprises').textContent = nEnt;
+    document.getElementById('k-cours').textContent       = nCours;
+    document.getElementById('k-historique').textContent  = nHist;
+    document.getElementById('k-financials').textContent  = nFin;
+    document.getElementById('k-dividendes').textContent  = nDiv;
+    document.getElementById('k-users').textContent       = nUsers;
 
-  const [lastCours, usersPlans] = await Promise.all([
-    sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1'),
-    sbGet('users', 'select=plan'),
-  ]);
-  const plans = { free:0, pro:0, elite:0 };
-  (usersPlans||[]).forEach(u => { if (plans[u.plan] !== undefined) plans[u.plan]++; });
-  document.getElementById('ks-users').textContent = `Free:${plans.free} Pro:${plans.pro} Elite:${plans.elite}`;
-  document.getElementById('ks-cours').textContent = `Dernière: ${lastCours?.[0]?.date_seance||'—'}`;
+    const [lastCours, usersPlans] = await Promise.all([
+        sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1'),
+        sbGet('users', 'select=plan')
+    ]);
+    const plans = { free:0, pro:0, elite:0 };
+    (usersPlans||[]).forEach(function(u){ if (u.plan in plans) plans[u.plan]++; });
+    document.getElementById('ks-users').textContent = 'Free:' + plans.free + ' Pro:' + plans.pro + ' Elite:' + plans.elite;
+    document.getElementById('ks-cours').textContent = 'Dernière: ' + ((lastCours||[])[0]?.date_seance || '—');
 
-  document.getElementById('dash-info').innerHTML = `
-    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">
-      <div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance :</span> <strong>${lastCours?.[0]?.date_seance||'—'}</strong></div>
-      <div style="font-size:13px;"><span style="color:var(--muted);">Entreprises :</span> <strong>${nEnt}</strong></div>
-      <div style="font-size:13px;"><span style="color:var(--muted);">Historique :</span> <strong>${nHist.toLocaleString('fr-FR')}</strong></div>
-    </div>`;
-  await loadDashboardAlerts();
+    document.getElementById('dash-info').innerHTML =
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">' +
+        '<div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance :</span> <strong>' + ((lastCours||[])[0]?.date_seance||'—') + '</strong></div>' +
+        '<div style="font-size:13px;"><span style="color:var(--muted);">Entreprises :</span> <strong>' + nEnt + '</strong></div>' +
+        '<div style="font-size:13px;"><span style="color:var(--muted);">Historique :</span> <strong>' + nHist.toLocaleString('fr-FR') + '</strong></div>' +
+        '</div>';
+
+    await loadDashboardAlerts();
 }
 
 async function loadDashboardAlerts() {
-  const panel = document.getElementById('dash-alerts');
-  const alerts = [];
-  const nullVar   = await sbCount('cours', 'variation=is.null');
-  const nullCours = await sbCount('cours', 'cours=lte.0');
-  const nullClot  = await sbCount('historique', 'cours_cloture=is.null');
-  if (nullVar > 0)   alerts.push({ type:'warn', msg: `${nullVar} cours sans variation` });
-  if (nullCours > 0) alerts.push({ type:'err',  msg: `${nullCours} cours ≤ 0` });
-  if (nullClot > 0)  alerts.push({ type:'warn', msg: `${nullClot} historique sans cours_cloture` });
-
-  if (!alerts.length) {
-    panel.innerHTML = '<div style="color:var(--green);font-size:13px;">✓ Aucune anomalie.</div>';
-    return;
-  }
-  panel.innerHTML = alerts.map(a => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-s);">
-      <span style="font-size:16px;">${a.type==='err'?'⚠':'ℹ'}</span>
-      <span style="font-size:13px;color:${a.type==='err'?'var(--red)':'var(--orange)'};">${a.msg}</span>
-    </div>`).join('');
+    const panel = document.getElementById('dash-alerts');
+    const alerts = [];
+    const [nullVar, nullCours, nullClot] = await Promise.all([
+        sbCount('cours', 'variation=is.null'),
+        sbCount('cours', 'cours=lte.0'),
+        sbCount('historique', 'cours_cloture=is.null')
+    ]);
+    if (nullVar   > 0) alerts.push({ type:'warn', msg: nullVar   + ' cours sans variation' });
+    if (nullCours > 0) alerts.push({ type:'err',  msg: nullCours + ' cours ≤ 0' });
+    if (nullClot  > 0) alerts.push({ type:'warn', msg: nullClot  + ' historique sans cours_cloture' });
+    if (!alerts.length) { panel.innerHTML = '<div style="color:var(--green);font-size:13px;">✓ Aucune anomalie.</div>'; return; }
+    panel.innerHTML = alerts.map(function(a){
+        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-s);">' +
+               '<span style="font-size:16px;">' + (a.type==='err'?'⚠':'ℹ') + '</span>' +
+               '<span style="font-size:13px;color:' + (a.type==='err'?'var(--red)':'var(--orange)') + ';">' + a.msg + '</span>' +
+               '</div>';
+    }).join('');
 }
 
 /* ══════════════════════════════════════════════════════
    COURS
 ══════════════════════════════════════════════════════ */
 async function loadCours() {
-  const rows = await sbGet('cours', 'select=*&order=date_seance.desc&limit=100');
-  coursData = rows || [];
-  renderCoursTable(coursData);
+    const rows = await sbGet('cours', 'select=*&order=date_seance.desc&limit=100');
+    coursData = rows || [];
+    renderCoursTable(coursData);
 }
 
 function renderCoursTable(data) {
-  const tb = document.getElementById('cours-tbody');
-  const count = document.getElementById('cours-count');
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px;">Aucun cours</td></tr>'; count.textContent='0 ligne'; return; }
-  tb.innerHTML = data.map(r => `
-    <tr>
-      <td class="td-gold">${r.ticker}</td>
-      <td class="td-muted">${r.date_seance}</td>
-      <td class="r td-mono">${fmt(r.cours)}</td>
-      <td class="r td-muted">${fmt(r.ouverture)}</td>
-      <td class="r td-muted">${fmt(r.plus_haut)}</td>
-      <td class="r td-muted">${fmt(r.plus_bas)}</td>
-      <td class="r td-muted">${fmt(r.volume)}</td>
-      <td class="r" style="color:${clrPct(r.variation)};font-family:var(--mono);">${fmtPct(r.variation)}</td>
-      <td class="r td-muted">${fmt(r.capitalisation)}</td>
-      <td class="r td-muted">${fmt(r.plus_haut_52)}</td>
-      <td class="r td-muted">${fmt(r.plus_bas_52)}</td>
-      <td>
-        <button class="btn btn-outline btn-sm" onclick='editCours(${JSON.stringify(r)})'>✎</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteCours('${r.ticker}','${r.date_seance}')">✕</button>
-      </td>
-    </tr>`).join('');
-  count.textContent = data.length + ' ligne(s)';
+    const tb    = document.getElementById('cours-tbody');
+    const count = document.getElementById('cours-count');
+    if (!data.length) {
+        tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px;">Aucun cours</td></tr>';
+        count.textContent = '0 ligne'; return;
+    }
+    tb.innerHTML = data.map(function(r){
+        return '<tr>' +
+            '<td class="td-gold">' + r.ticker + '</td>' +
+            '<td class="td-muted">' + r.date_seance + '</td>' +
+            '<td class="r td-mono">' + fmt(r.cours) + '</td>' +
+            '<td class="r td-muted">' + fmt(r.ouverture) + '</td>' +
+            '<td class="r td-muted">' + fmt(r.plus_haut) + '</td>' +
+            '<td class="r td-muted">' + fmt(r.plus_bas) + '</td>' +
+            '<td class="r td-muted">' + fmt(r.volume) + '</td>' +
+            '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
+            '<td class="r td-muted">' + fmt(r.capitalisation) + '</td>' +
+            '<td class="r td-muted">' + fmt(r.plus_haut_52) + '</td>' +
+            '<td class="r td-muted">' + fmt(r.plus_bas_52) + '</td>' +
+            '<td>' +
+              '<button class="btn btn-outline btn-sm" onclick=\'editCours(' + JSON.stringify(r) + ')\'>✎</button> ' +
+              '<button class="btn btn-danger btn-sm" onclick="deleteCours(\'' + r.ticker + '\',\'' + r.date_seance + '\')">✕</button>' +
+            '</td></tr>';
+    }).join('');
+    count.textContent = data.length + ' ligne(s)';
 }
 
 function filterCoursTable() {
-  const f = v('cours-filter').toUpperCase();
-  const d = v('cours-date-filter');
-  const filtered = coursData.filter(r => {
-    const matchTicker = !f || r.ticker?.includes(f);
-    const matchDate = !d || r.date_seance === d;
-    return matchTicker && matchDate;
-  });
-  renderCoursTable(filtered);
+    const f = v('cours-filter').toUpperCase();
+    const d = v('cours-date-filter');
+    renderCoursTable(coursData.filter(function(r){
+        return (!f || (r.ticker||'').includes(f)) && (!d || r.date_seance === d);
+    }));
 }
 
 async function addCours() {
-  const msg = document.getElementById('c-msg');
-  const body = {
-    ticker: v('c-ticker'), date_seance: v('c-date'), cours: pf('c-cours'),
-    ouverture: pf('c-ouv'), plus_haut: pf('c-haut'), plus_bas: pf('c-bas'),
-    volume: pi('c-vol'), variation: pf('c-var'), capitalisation: pf('c-capi'),
-    plus_haut_52: pf('c-h52'), plus_bas_52: pf('c-b52')
-  };
-  if (!body.ticker || !body.date_seance || body.cours == null) { msg.textContent='Ticker, date et cours obligatoires'; msg.className='msg err'; return; }
-  const r = await sbPost('cours', body, 'ticker,date_seance');
-  if (r) { msg.textContent='✓ Enregistré'; msg.className='msg ok'; clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi','c-h52','c-b52']); loadCours(); }
+    const msg  = document.getElementById('c-msg');
+    const body = {
+        ticker: v('c-ticker'), date_seance: v('c-date'), cours: pf('c-cours'),
+        ouverture: pf('c-ouv'), plus_haut: pf('c-haut'), plus_bas: pf('c-bas'),
+        volume: pi('c-vol'), variation: pf('c-var'), capitalisation: pf('c-capi'),
+        plus_haut_52: pf('c-h52'), plus_bas_52: pf('c-b52')
+    };
+    if (!body.ticker || !body.date_seance || body.cours == null) {
+        msg.textContent = 'Ticker, date et cours obligatoires'; msg.className = 'msg err'; return;
+    }
+    const r = await sbPost('cours', body, 'ticker,date_seance');
+    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi','c-h52','c-b52']); loadCours(); }
 }
 
 function editCours(row) {
-  document.getElementById('modal-cours-info').textContent = `${row.ticker} — ${row.date_seance}`;
-  document.getElementById('modal-cours-id').value = row.id || '';
-  set('modal-cours-val', row.cours);
-  set('modal-cours-ouv', row.ouverture);
-  set('modal-cours-haut', row.plus_haut);
-  set('modal-cours-bas', row.plus_bas);
-  set('modal-cours-vol', row.volume);
-  set('modal-cours-var', row.variation);
-  set('modal-cours-capi', row.capitalisation);
-  set('modal-cours-h52', row.plus_haut_52);
-  set('modal-cours-b52', row.plus_bas_52);
-  openModal('modal-cours');
+    document.getElementById('modal-cours-info').textContent = row.ticker + ' — ' + row.date_seance;
+    document.getElementById('modal-cours-id').value = row.id || '';
+    set('modal-cours-val',  row.cours);       set('modal-cours-ouv',  row.ouverture);
+    set('modal-cours-haut', row.plus_haut);   set('modal-cours-bas',  row.plus_bas);
+    set('modal-cours-vol',  row.volume);      set('modal-cours-var',  row.variation);
+    set('modal-cours-capi', row.capitalisation); set('modal-cours-h52', row.plus_haut_52);
+    set('modal-cours-b52',  row.plus_bas_52);
+    openModal('modal-cours');
 }
 
 async function saveCours() {
-  const id = v('modal-cours-id');
-  const msg = document.getElementById('modal-cours-msg');
-  const body = {
-    cours: pf('modal-cours-val'), ouverture: pf('modal-cours-ouv'), plus_haut: pf('modal-cours-haut'),
-    plus_bas: pf('modal-cours-bas'), volume: pi('modal-cours-vol'), variation: pf('modal-cours-var'),
-    capitalisation: pf('modal-cours-capi'), plus_haut_52: pf('modal-cours-h52'), plus_bas_52: pf('modal-cours-b52')
-  };
-  const r = await sbPatch('cours', `id=eq.${id}`, body);
-  if (r) { msg.textContent='✓ Modifié'; msg.className='msg ok'; closeModal('modal-cours'); loadCours(); }
+    const id  = v('modal-cours-id');
+    const msg = document.getElementById('modal-cours-msg');
+    const body = {
+        cours: pf('modal-cours-val'), ouverture: pf('modal-cours-ouv'), plus_haut: pf('modal-cours-haut'),
+        plus_bas: pf('modal-cours-bas'), volume: pi('modal-cours-vol'), variation: pf('modal-cours-var'),
+        capitalisation: pf('modal-cours-capi'), plus_haut_52: pf('modal-cours-h52'), plus_bas_52: pf('modal-cours-b52')
+    };
+    const r = await sbPatch('cours', 'id=eq.' + id, body);
+    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-cours'); loadCours(); }
 }
 
 async function deleteCours(ticker, date) {
-  if (!confirm(`Supprimer le cours ${ticker} du ${date} ?`)) return;
-  const ok = await sbDel('cours', `ticker=eq.${encodeURIComponent(ticker)}&date_seance=eq.${date}`);
-  if (ok) { toast('Cours supprimé'); loadCours(); }
+    if (!confirm('Supprimer le cours ' + ticker + ' du ' + date + ' ?')) return;
+    const ok = await sbDel('cours', 'ticker=eq.' + encodeURIComponent(ticker) + '&date_seance=eq.' + date);
+    if (ok) { toast('Cours supprimé'); loadCours(); }
 }
 
 /* ══════════════════════════════════════════════════════
    HISTORIQUE
 ══════════════════════════════════════════════════════ */
 async function addHistorique() {
-  const msg = document.getElementById('h-msg');
-  const body = {
-    ticker: v('h-ticker'), date_seance: v('h-date'), cours_cloture: pf('h-cloture'),
-    ouverture: pf('h-ouverture'), plus_haut: pf('h-haut'), plus_bas: pf('h-bas'),
-    volume: pi('h-vol'), variation: pf('h-var')
-  };
-  if (!body.ticker || !body.date_seance || body.cours_cloture == null) { msg.textContent='Champs obligatoires manquants'; msg.className='msg err'; return; }
-  const r = await sbPost('historique', body, 'ticker,date_seance');
-  if (r) { msg.textContent='✓ Enregistré'; msg.className='msg ok'; clearForm(['h-ticker','h-date','h-cloture','h-ouverture','h-haut','h-bas','h-vol','h-var']); }
+    const msg  = document.getElementById('h-msg');
+    const body = {
+        ticker: v('h-ticker'), date_seance: v('h-date'), cours_cloture: pf('h-cloture'),
+        ouverture: pf('h-ouverture'), plus_haut: pf('h-haut'), plus_bas: pf('h-bas'),
+        volume: pi('h-vol'), variation: pf('h-var')
+    };
+    if (!body.ticker || !body.date_seance || body.cours_cloture == null) {
+        msg.textContent = 'Champs obligatoires manquants'; msg.className = 'msg err'; return;
+    }
+    const r = await sbPost('historique', body, 'ticker,date_seance');
+    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['h-ticker','h-date','h-cloture','h-ouverture','h-haut','h-bas','h-vol','h-var']); }
 }
 
 async function importBulk() {
-  const raw = v('bulk-csv');
-  const msg = document.getElementById('bulk-msg');
-  if (!raw) { msg.textContent='CSV vide'; msg.className='msg err'; return; }
-  const lines = raw.split('\n').filter(l => l.trim());
-  const rows = [];
-  for (const line of lines) {
-    const [ticker, date, cloture, ouv, haut, bas, vol, vari] = line.split(',');
-    if (!ticker || !date) continue;
-    rows.push({ ticker: ticker.trim().toUpperCase(), date_seance: date.trim(), cours_cloture: parseFloat(cloture), ouverture: parseFloat(ouv)||null, plus_haut: parseFloat(haut)||null, plus_bas: parseFloat(bas)||null, volume: parseInt(vol)||null, variation: parseFloat(vari)||null });
-  }
-  if (!rows.length) { msg.textContent='Aucune ligne valide'; msg.className='msg err'; return; }
-  const r = await sbPost('historique', rows, 'ticker,date_seance');
-  if (r) { msg.textContent=`✓ ${rows.length} lignes importées`; msg.className='msg ok'; set('bulk-csv',''); }
+    const raw = v('bulk-csv');
+    const msg = document.getElementById('bulk-msg');
+    if (!raw) { msg.textContent = 'CSV vide'; msg.className = 'msg err'; return; }
+    const lines = raw.split('\n').filter(function(l){ return l.trim(); });
+    const rows = [];
+    lines.forEach(function(line){
+        const parts = line.split(',');
+        const ticker = parts[0], date = parts[1], cloture = parts[2],
+              ouv = parts[3], haut = parts[4], bas = parts[5], vol = parts[6], vari = parts[7];
+        if (!ticker || !date) return;
+        rows.push({
+            ticker: ticker.trim().toUpperCase(), date_seance: date.trim(),
+            cours_cloture: parseFloat(cloture), ouverture: parseFloat(ouv)||null,
+            plus_haut: parseFloat(haut)||null, plus_bas: parseFloat(bas)||null,
+            volume: parseInt(vol)||null, variation: parseFloat(vari)||null
+        });
+    });
+    if (!rows.length) { msg.textContent = 'Aucune ligne valide'; msg.className = 'msg err'; return; }
+    const r = await sbPost('historique', rows, 'ticker,date_seance');
+    if (r) { msg.textContent = '✓ ' + rows.length + ' lignes importées'; msg.className = 'msg ok'; set('bulk-csv',''); }
 }
 
 function parseBulkPreview() {
-  const raw = v('bulk-csv');
-  const msg = document.getElementById('bulk-msg');
-  if (!raw) { msg.textContent='CSV vide'; msg.className='msg err'; return; }
-  const lines = raw.split('\n').filter(l => l.trim());
-  const preview = document.getElementById('bulk-preview');
-  const tbody = document.getElementById('bulk-preview-tbody');
-  preview.style.display = '';
-  tbody.innerHTML = lines.slice(0,20).map(line => {
-    const [ticker, date, cloture, ouv, haut, bas, vol, vari] = line.split(',');
-    const ok = ticker && date && !isNaN(parseFloat(cloture));
-    return `<tr><td>${ticker||'—'}</td><td>${date||'—'}</td><td>${cloture||'—'}</td><td>${vol||'—'}</td><td>${vari||'—'}</td><td>${ok?'✅':'❌'}</td></tr>`;
-  }).join('');
-  msg.textContent = `${lines.length} lignes détectées`;
-  msg.className = 'msg info';
+    const raw = v('bulk-csv');
+    const msg = document.getElementById('bulk-msg');
+    if (!raw) { msg.textContent = 'CSV vide'; msg.className = 'msg err'; return; }
+    const lines = raw.split('\n').filter(function(l){ return l.trim(); });
+    const preview = document.getElementById('bulk-preview');
+    const tbody   = document.getElementById('bulk-preview-tbody');
+    preview.style.display = '';
+    tbody.innerHTML = lines.slice(0,20).map(function(line){
+        const p = line.split(',');
+        const ticker = p[0], date = p[1], cloture = p[2], vol = p[6], vari = p[7];
+        const ok = ticker && date && !isNaN(parseFloat(cloture));
+        return '<tr><td>' + (ticker||'—') + '</td><td>' + (date||'—') + '</td><td>' + (cloture||'—') + '</td><td>' + (vol||'—') + '</td><td>' + (vari||'—') + '</td><td>' + (ok?'✅':'❌') + '</td></tr>';
+    }).join('');
+    msg.textContent = lines.length + ' lignes détectées'; msg.className = 'msg info';
 }
 
 async function loadHistoriqueTicker() {
-  const ticker = v('hist-ticker-search');
-  const from = v('hist-date-from');
-  const to = v('hist-date-to');
-  const tb = document.getElementById('hist-tbody');
-  if (!ticker) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Entrez un ticker</td></tr>'; return; }
-  let params = `select=*&ticker=eq.${encodeURIComponent(ticker)}&order=date_seance.desc`;
-  if (from) params += `&date_seance=gte.${from}`;
-  if (to)   params += `&date_seance=lte.${to}`;
-  const rows = await sbGet('historique', params);
-  histData = rows || [];
-  if (!histData.length) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucun historique</td></tr>'; document.getElementById('btn-del-all-hist').style.display='none'; }
-  else {
-    tb.innerHTML = histData.map(r => `
-      <tr>
-        <td class="td-gold">${r.ticker}</td><td class="td-muted">${r.date_seance}</td>
-        <td class="r td-mono">${fmt(r.cours_cloture)}</td><td class="r td-muted">${fmt(r.ouverture)}</td>
-        <td class="r td-muted">${fmt(r.plus_haut)}</td><td class="r td-muted">${fmt(r.plus_bas)}</td>
-        <td class="r td-muted">${fmt(r.volume)}</td>
-        <td class="r" style="color:${clrPct(r.variation)};font-family:var(--mono);">${fmtPct(r.variation)}</td>
-        <td><button class="btn btn-danger btn-sm" onclick="sbDel('historique','id=eq.${r.id}').then(()=>loadHistoriqueTicker())">✕</button></td>
-      </tr>`).join('');
-    document.getElementById('btn-del-all-hist').style.display = '';
-  }
-  document.getElementById('hist-count').textContent = histData.length + ' ligne(s)';
+    const ticker = v('hist-ticker-search');
+    const from   = v('hist-date-from');
+    const to     = v('hist-date-to');
+    const tb     = document.getElementById('hist-tbody');
+    if (!ticker) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Entrez un ticker</td></tr>'; return; }
+    let params = 'select=*&ticker=eq.' + encodeURIComponent(ticker) + '&order=date_seance.desc';
+    if (from) params += '&date_seance=gte.' + from;
+    if (to)   params += '&date_seance=lte.' + to;
+    const rows = await sbGet('historique', params);
+    histData = rows || [];
+    if (!histData.length) {
+        tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucun historique</td></tr>';
+        document.getElementById('btn-del-all-hist').style.display = 'none';
+    } else {
+        tb.innerHTML = histData.map(function(r){
+            return '<tr>' +
+                '<td class="td-gold">' + r.ticker + '</td>' +
+                '<td class="td-muted">' + r.date_seance + '</td>' +
+                '<td class="r td-mono">' + fmt(r.cours_cloture) + '</td>' +
+                '<td class="r td-muted">' + fmt(r.ouverture) + '</td>' +
+                '<td class="r td-muted">' + fmt(r.plus_haut) + '</td>' +
+                '<td class="r td-muted">' + fmt(r.plus_bas) + '</td>' +
+                '<td class="r td-muted">' + fmt(r.volume) + '</td>' +
+                '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
+                '<td><button class="btn btn-danger btn-sm" onclick="deleteHistRow(\'' + r.id + '\')">✕</button></td>' +
+                '</tr>';
+        }).join('');
+        document.getElementById('btn-del-all-hist').style.display = '';
+    }
+    document.getElementById('hist-count').textContent = histData.length + ' ligne(s)';
+}
+
+async function deleteHistRow(id) {
+    const ok = await sbDel('historique', 'id=eq.' + id);
+    if (ok) loadHistoriqueTicker();
 }
 
 async function deleteAllHistoriqueTicker() {
-  const ticker = v('hist-ticker-search');
-  if (!ticker || !confirm(`Supprimer TOUT l'historique de ${ticker} ?`)) return;
-  const ok = await sbDel('historique', `ticker=eq.${encodeURIComponent(ticker)}`);
-  if (ok) { toast('Historique supprimé'); loadHistoriqueTicker(); }
+    const ticker = v('hist-ticker-search');
+    if (!ticker || !confirm('Supprimer TOUT l\'historique de ' + ticker + ' ?')) return;
+    const ok = await sbDel('historique', 'ticker=eq.' + encodeURIComponent(ticker));
+    if (ok) { toast('Historique supprimé'); loadHistoriqueTicker(); }
 }
 
 /* ══════════════════════════════════════════════════════
    ENTREPRISES
 ══════════════════════════════════════════════════════ */
 async function loadEntreprises() {
-  const rows = await sbGet('entreprises', 'select=*&order=ticker.asc');
-  entData = rows || [];
-  renderEntTable(entData);
+    const rows = await sbGet('entreprises', 'select=*&order=ticker.asc');
+    entData = rows || [];
+    renderEntTable(entData);
 }
 
 function renderEntTable(data) {
-  const tb = document.getElementById('ent-tbody');
-  document.getElementById('ent-count').textContent = (data||[]).length;
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucune entreprise</td></tr>'; return; }
-  tb.innerHTML = data.map(r => `
-    <tr>
-      <td class="td-gold">${r.ticker}</td>
-      <td>${r.nom}</td>
-      <td class="td-muted">${r.secteur||'—'}</td>
-      <td class="td-muted">${r.pays||'—'}</td>
-      <td><span class="badge ${r.compartiment==='PRESTIGE'?'badge-gold':'badge-blue'}">${r.compartiment||'—'}</span></td>
-      <td class="td-muted">${r.isin||'—'}</td>
-      <td><span class="badge badge-green">Actif</span></td>
-      <td>
-        <button class="btn btn-outline btn-sm" onclick='openEntModal(${JSON.stringify(r)})'>✎</button>
-      </td>
-    </tr>`).join('');
+    const tb = document.getElementById('ent-tbody');
+    document.getElementById('ent-count').textContent = (data||[]).length;
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucune entreprise</td></tr>'; return; }
+    tb.innerHTML = data.map(function(r){
+        return '<tr>' +
+            '<td class="td-gold">' + r.ticker + '</td>' +
+            '<td>' + r.nom + '</td>' +
+            '<td class="td-muted">' + (r.secteur||'—') + '</td>' +
+            '<td class="td-muted">' + (r.pays||'—') + '</td>' +
+            '<td><span class="badge ' + (r.compartiment==='PRESTIGE'?'badge-gold':'badge-blue') + '">' + (r.compartiment||'—') + '</span></td>' +
+            '<td class="td-muted">' + (r.isin||'—') + '</td>' +
+            '<td><span class="badge badge-green">Actif</span></td>' +
+            '<td><button class="btn btn-outline btn-sm" onclick=\'openEntModal(' + JSON.stringify(r) + ')\'>✎</button></td>' +
+            '</tr>';
+    }).join('');
 }
 
 function filterEntTable() {
-  const f = v('ent-search').toLowerCase();
-  const filtered = entData.filter(r => !f || (r.ticker+r.nom+r.secteur+r.pays).toLowerCase().includes(f));
-  renderEntTable(filtered);
+    const f = v('ent-search').toLowerCase();
+    renderEntTable(entData.filter(function(r){ return !f || (r.ticker+r.nom+(r.secteur||'')+(r.pays||'')).toLowerCase().includes(f); }));
 }
 
 function openEntModal(row) {
-  document.getElementById('modal-ent-title').textContent = 'Modifier ' + row.ticker;
-  document.getElementById('modal-ent-ticker').value = row.ticker;
-  set('modal-ent-nom', row.nom);
-  set('modal-ent-secteur', row.secteur);
-  set('modal-ent-pays', row.pays);
-  set('modal-ent-compart', row.compartiment);
-  set('modal-ent-isin', row.isin);
-  set('modal-ent-actions', row.nombre_actions);
-  set('modal-ent-desc', row.description);
-  openModal('modal-entreprise');
+    document.getElementById('modal-ent-title').textContent = 'Modifier ' + row.ticker;
+    document.getElementById('modal-ent-ticker').value = row.ticker;
+    set('modal-ent-nom', row.nom); set('modal-ent-secteur', row.secteur);
+    set('modal-ent-pays', row.pays); set('modal-ent-compart', row.compartiment);
+    set('modal-ent-isin', row.isin); set('modal-ent-actions', row.nombre_actions);
+    set('modal-ent-desc', row.description);
+    openModal('modal-entreprise');
 }
 
 async function saveEntreprise() {
-  const ticker = v('modal-ent-ticker');
-  const msg = document.getElementById('modal-ent-msg');
-  const body = {
-    nom: v('modal-ent-nom'), secteur: v('modal-ent-secteur'), pays: v('modal-ent-pays'),
-    compartiment: v('modal-ent-compart'), isin: v('modal-ent-isin'),
-    nombre_actions: pi('modal-ent-actions'), description: v('modal-ent-desc')
-  };
-  const r = await sbPatch('entreprises', `ticker=eq.${encodeURIComponent(ticker)}`, body);
-  if (r) { msg.textContent='✓ Modifié'; msg.className='msg ok'; closeModal('modal-entreprise'); loadEntreprises(); }
+    const ticker = v('modal-ent-ticker');
+    const msg    = document.getElementById('modal-ent-msg');
+    const body = {
+        nom: v('modal-ent-nom'), secteur: v('modal-ent-secteur'), pays: v('modal-ent-pays'),
+        compartiment: v('modal-ent-compart'), isin: v('modal-ent-isin'),
+        nombre_actions: pi('modal-ent-actions'), description: v('modal-ent-desc')
+    };
+    const r = await sbPatch('entreprises', 'ticker=eq.' + encodeURIComponent(ticker), body);
+    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-entreprise'); loadEntreprises(); }
 }
 
 async function addEntreprise() {
-  const msg = document.getElementById('ne-msg');
-  const body = {
-    ticker: v('ne-ticker'), nom: v('ne-nom'), secteur: v('ne-secteur'), pays: v('ne-pays'),
-    compartiment: v('ne-compart'), isin: v('ne-isin'), description: v('ne-desc'), nombre_actions: pi('ne-actions')
-  };
-  if (!body.ticker || !body.nom) { msg.textContent='Ticker et nom obligatoires'; msg.className='msg err'; return; }
-  const r = await sbPost('entreprises', body, 'ticker');
-  if (r) { msg.textContent='✓ Créée'; msg.className='msg ok'; clearForm(['ne-ticker','ne-nom','ne-secteur','ne-isin','ne-desc','ne-actions']); loadEntreprises(); }
+    const msg  = document.getElementById('ne-msg');
+    const body = {
+        ticker: v('ne-ticker'), nom: v('ne-nom'), secteur: v('ne-secteur'), pays: v('ne-pays'),
+        compartiment: v('ne-compart'), isin: v('ne-isin'), description: v('ne-desc'), nombre_actions: pi('ne-actions')
+    };
+    if (!body.ticker || !body.nom) { msg.textContent = 'Ticker et nom obligatoires'; msg.className = 'msg err'; return; }
+    const r = await sbPost('entreprises', body, 'ticker');
+    if (r) { msg.textContent = '✓ Créée'; msg.className = 'msg ok'; clearForm(['ne-ticker','ne-nom','ne-secteur','ne-isin','ne-desc','ne-actions']); loadEntreprises(); }
 }
 
 /* ══════════════════════════════════════════════════════
    FINANCIALS
 ══════════════════════════════════════════════════════ */
 async function loadFinancials() {
-  const rows = await sbGet('financials', 'select=*&order=annee.desc&limit=200');
-  finData = rows || [];
-  renderFinTable(finData);
-  const years = [...new Set(finData.map(r => r.annee))].sort((a,b)=>b-a);
-  const sel = document.getElementById('fin-year-filter');
-  sel.innerHTML = '<option value="">Toutes années</option>' + years.map(y=>`<option value="${y}">${y}</option>`).join('');
+    const rows = await sbGet('financials', 'select=*&order=annee.desc&limit=200');
+    finData = rows || [];
+    renderFinTable(finData);
+    const years = [];
+    finData.forEach(function(r){ if (!years.includes(r.annee)) years.push(r.annee); });
+    years.sort(function(a,b){ return b-a; });
+    const sel = document.getElementById('fin-year-filter');
+    sel.innerHTML = '<option value="">Toutes années</option>' + years.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
 }
 
 function renderFinTable(data) {
-  const tb = document.getElementById('fin-tbody');
-  document.getElementById('fin-count').textContent = (data||[]).length;
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px;">Aucun financial</td></tr>'; return; }
-  tb.innerHTML = data.map(r => `
-    <tr>
-      <td class="td-gold">${r.ticker}</td>
-      <td>${r.annee}</td>
-      <td><span class="badge badge-blue">${r.periode||'annuel'}</span></td>
-      <td class="r td-mono">${fmt(r.chiffre_affaires)}</td>
-      <td class="r td-mono">${fmt(r.rbe)}</td>
-      <td class="r td-mono">${fmt(r.resultat_net)}</td>
-      <td class="r td-mono">${fmt(r.bpa)}</td>
-      <td class="r td-mono">${fmt(r.dpa)}</td>
-      <td class="r td-mono">${fmt(r.dettes_financieres)}</td>
-      <td class="td-muted">${r.source||'—'}</td>
-      <td><button class="btn btn-outline btn-sm" onclick='openFinModal(${JSON.stringify(r)})'>✎</button></td>
-    </tr>`).join('');
+    const tb = document.getElementById('fin-tbody');
+    document.getElementById('fin-count').textContent = (data||[]).length;
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px;">Aucun financial</td></tr>'; return; }
+    tb.innerHTML = data.map(function(r){
+        return '<tr>' +
+            '<td class="td-gold">' + r.ticker + '</td>' +
+            '<td>' + r.annee + '</td>' +
+            '<td><span class="badge badge-blue">' + (r.periode||'annuel') + '</span></td>' +
+            '<td class="r td-mono">' + fmt(r.chiffre_affaires) + '</td>' +
+            '<td class="r td-mono">' + fmt(r.rbe) + '</td>' +
+            '<td class="r td-mono">' + fmt(r.resultat_net) + '</td>' +
+            '<td class="r td-mono">' + fmt(r.bpa) + '</td>' +
+            '<td class="r td-mono">' + fmt(r.dpa) + '</td>' +
+            '<td class="r td-mono">' + fmt(r.dettes_financieres) + '</td>' +
+            '<td class="td-muted">' + (r.source||'—') + '</td>' +
+            '<td><button class="btn btn-outline btn-sm" onclick=\'openFinModal(' + JSON.stringify(r) + ')\'>✎</button></td>' +
+            '</tr>';
+    }).join('');
 }
 
 function filterFinTable() {
-  const f = v('fin-filter').toUpperCase();
-  const y = v('fin-year-filter');
-  const filtered = finData.filter(r => {
-    const matchTicker = !f || r.ticker?.includes(f);
-    const matchYear = !y || String(r.annee) === y;
-    return matchTicker && matchYear;
-  });
-  renderFinTable(filtered);
+    const f = v('fin-filter').toUpperCase();
+    const y = v('fin-year-filter');
+    renderFinTable(finData.filter(function(r){
+        return (!f || (r.ticker||'').includes(f)) && (!y || String(r.annee) === y);
+    }));
 }
 
 function openFinModal(row) {
-  document.getElementById('modal-fin-title').textContent = 'Modifier ' + row.ticker + ' ' + row.annee;
-  document.getElementById('modal-fin-id').value = row.id;
-  set('modal-fin-ca', row.chiffre_affaires);
-  set('modal-fin-rbe', row.rbe);
-  set('modal-fin-rn', row.resultat_net);
-  set('modal-fin-bpa', row.bpa);
-  set('modal-fin-dpa', row.dpa);
-  set('modal-fin-fp', row.fonds_propres);
-  set('modal-fin-dettes', row.dettes_financieres);
-  set('modal-fin-actif', row.total_actif);
-  set('modal-fin-cfo', row.cash_flow_operationnel);
-  set('modal-fin-capex', row.capex);
-  set('modal-fin-source', row.source);
-  openModal('modal-financial');
+    document.getElementById('modal-fin-title').textContent = 'Modifier ' + row.ticker + ' ' + row.annee;
+    document.getElementById('modal-fin-id').value = row.id;
+    set('modal-fin-ca', row.chiffre_affaires); set('modal-fin-rbe', row.rbe);
+    set('modal-fin-rn', row.resultat_net);     set('modal-fin-bpa', row.bpa);
+    set('modal-fin-dpa', row.dpa);             set('modal-fin-fp', row.fonds_propres);
+    set('modal-fin-dettes', row.dettes_financieres); set('modal-fin-actif', row.total_actif);
+    set('modal-fin-cfo', row.cash_flow_operationnel); set('modal-fin-capex', row.capex);
+    set('modal-fin-source', row.source);
+    openModal('modal-financial');
 }
 
 async function saveFinancial() {
-  const id = v('modal-fin-id');
-  const msg = document.getElementById('modal-fin-msg');
-  const body = {
-    chiffre_affaires: pf('modal-fin-ca'), rbe: pf('modal-fin-rbe'), resultat_net: pf('modal-fin-rn'),
-    bpa: pf('modal-fin-bpa'), dpa: pf('modal-fin-dpa'), fonds_propres: pf('modal-fin-fp'),
-    dettes_financieres: pf('modal-fin-dettes'), total_actif: pf('modal-fin-actif'),
-    cash_flow_operationnel: pf('modal-fin-cfo'), capex: pf('modal-fin-capex'), source: v('modal-fin-source')
-  };
-  const r = await sbPatch('financials', `id=eq.${id}`, body);
-  if (r) { msg.textContent='✓ Modifié'; msg.className='msg ok'; closeModal('modal-financial'); loadFinancials(); }
+    const id  = v('modal-fin-id');
+    const msg = document.getElementById('modal-fin-msg');
+    const body = {
+        chiffre_affaires: pf('modal-fin-ca'), rbe: pf('modal-fin-rbe'), resultat_net: pf('modal-fin-rn'),
+        bpa: pf('modal-fin-bpa'), dpa: pf('modal-fin-dpa'), fonds_propres: pf('modal-fin-fp'),
+        dettes_financieres: pf('modal-fin-dettes'), total_actif: pf('modal-fin-actif'),
+        cash_flow_operationnel: pf('modal-fin-cfo'), capex: pf('modal-fin-capex'), source: v('modal-fin-source')
+    };
+    const r = await sbPatch('financials', 'id=eq.' + id, body);
+    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-financial'); loadFinancials(); }
 }
 
 async function addFinancial() {
-  const msg = document.getElementById('fin-msg');
-  const body = {
-    ticker: v('fin-ticker'), annee: pi('fin-annee'), periode: v('fin-periode')||'annuel',
-    chiffre_affaires: pf('fin-ca'), rbe: pf('fin-rbe'), resultat_net: pf('fin-rn'),
-    bpa: pf('fin-bpa'), dpa: pf('fin-dpa'), fonds_propres: pf('fin-fp'),
-    dettes_financieres: pf('fin-dettes'), total_actif: pf('fin-actif'),
-    nombre_actions: pi('fin-nb-actions'), cash_flow_operationnel: pf('fin-cfo'),
-    capex: pf('fin-capex'), source: v('fin-source')
-  };
-  if (!body.ticker || !body.annee) { msg.textContent='Ticker et année obligatoires'; msg.className='msg err'; return; }
-  const r = await sbPost('financials', body, 'ticker,annee,periode');
-  if (r) { msg.textContent='✓ Enregistré'; msg.className='msg ok'; clearForm(['fin-ticker','fin-annee','fin-ca','fin-rbe','fin-rn','fin-bpa','fin-dpa','fin-fp','fin-dettes','fin-actif','fin-nb-actions','fin-cfo','fin-capex','fin-source']); loadFinancials(); }
+    const msg  = document.getElementById('fin-msg');
+    const body = {
+        ticker: v('fin-ticker'), annee: pi('fin-annee'), periode: v('fin-periode')||'annuel',
+        chiffre_affaires: pf('fin-ca'), rbe: pf('fin-rbe'), resultat_net: pf('fin-rn'),
+        bpa: pf('fin-bpa'), dpa: pf('fin-dpa'), fonds_propres: pf('fin-fp'),
+        dettes_financieres: pf('fin-dettes'), total_actif: pf('fin-actif'),
+        nombre_actions: pi('fin-nb-actions'), cash_flow_operationnel: pf('fin-cfo'),
+        capex: pf('fin-capex'), source: v('fin-source')
+    };
+    if (!body.ticker || !body.annee) { msg.textContent = 'Ticker et année obligatoires'; msg.className = 'msg err'; return; }
+    const r = await sbPost('financials', body, 'ticker,annee,periode');
+    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['fin-ticker','fin-annee','fin-ca','fin-rbe','fin-rn','fin-bpa','fin-dpa','fin-fp','fin-dettes','fin-actif','fin-nb-actions','fin-cfo','fin-capex','fin-source']); loadFinancials(); }
 }
 
 async function prefillFinancialFromTicker() {
-  const ticker = v('fin-ticker');
-  if (!ticker) return;
-  const rows = await sbGet('entreprises', `select=nombre_actions&ticker=eq.${encodeURIComponent(ticker)}`);
-  if (rows?.[0]?.nombre_actions) set('fin-nb-actions', rows[0].nombre_actions);
+    const ticker = v('fin-ticker');
+    if (!ticker) return;
+    const rows = await sbGet('entreprises', 'select=nombre_actions&ticker=eq.' + encodeURIComponent(ticker));
+    if (rows?.[0]?.nombre_actions) set('fin-nb-actions', rows[0].nombre_actions);
 }
 
 /* ══════════════════════════════════════════════════════
    DIVIDENDES
 ══════════════════════════════════════════════════════ */
 async function loadDividendes() {
-  const rows = await sbGet('dividendes_calendrier', 'select=*&order=annee.desc&limit=200');
-  divData = rows || [];
-  renderDivTable(divData);
+    const rows = await sbGet('dividendes_calendrier', 'select=*&order=annee.desc&limit=200');
+    divData = rows || [];
+    renderDivTable(divData);
 }
 
 function renderDivTable(data) {
-  const tb = document.getElementById('div-tbody');
-  document.getElementById('div-count').textContent = (data||[]).length;
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucun dividende</td></tr>'; return; }
-  tb.innerHTML = data.map(r => `
-    <tr>
-      <td class="td-gold">${r.ticker}</td>
-      <td>${r.annee}</td>
-      <td class="r td-mono">${fmt(r.montant)}</td>
-      <td class="r" style="color:var(--green);font-family:var(--mono);">${fmtPct(r.taux_rendement)}</td>
-      <td class="td-muted">${fmtDate(r.date_detachement)}</td>
-      <td class="td-muted">${fmtDate(r.date_paiement)}</td>
-      <td><span class="badge ${r.statut==='payé'?'badge-green':r.statut==='prévisionnel'?'badge-orange':'badge-gold'}">${r.statut||'—'}</span></td>
-      <td><button class="btn btn-danger btn-sm" onclick="sbDel('dividendes_calendrier','id=eq.${r.id}').then(()=>loadDividendes())">✕</button></td>
-    </tr>`).join('');
+    const tb = document.getElementById('div-tbody');
+    document.getElementById('div-count').textContent = (data||[]).length;
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucun dividende</td></tr>'; return; }
+    tb.innerHTML = data.map(function(r){
+        return '<tr>' +
+            '<td class="td-gold">' + r.ticker + '</td>' +
+            '<td>' + r.annee + '</td>' +
+            '<td class="r td-mono">' + fmt(r.montant) + '</td>' +
+            '<td class="r" style="color:var(--green);font-family:var(--mono);">' + fmtPct(r.taux_rendement) + '</td>' +
+            '<td class="td-muted">' + fmtDate(r.date_detachement) + '</td>' +
+            '<td class="td-muted">' + fmtDate(r.date_paiement) + '</td>' +
+            '<td><span class="badge ' + (r.statut==='payé'?'badge-green':r.statut==='prévisionnel'?'badge-orange':'badge-gold') + '">' + (r.statut||'—') + '</span></td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="deleteDivRow(\'' + r.id + '\')">✕</button></td>' +
+            '</tr>';
+    }).join('');
+}
+
+async function deleteDivRow(id) {
+    const ok = await sbDel('dividendes_calendrier', 'id=eq.' + id);
+    if (ok) loadDividendes();
 }
 
 function filterDivTable() {
-  const f = v('div-filter').toLowerCase();
-  const filtered = divData.filter(r => !f || (r.ticker+r.notes||'').toLowerCase().includes(f));
-  renderDivTable(filtered);
+    const f = v('div-filter').toLowerCase();
+    renderDivTable(divData.filter(function(r){ return !f || (r.ticker+(r.notes||'')).toLowerCase().includes(f); }));
 }
 
 async function addDividende() {
-  const msg = document.getElementById('div-msg');
-  const body = {
-    ticker: v('div-ticker'), annee: pi('div-annee'), montant: pf('div-montant'),
-    taux_rendement: pf('div-tx'), date_detachement: v('div-detach')||null,
-    date_paiement: v('div-paie')||null, statut: v('div-statut'), notes: v('div-notes')
-  };
-  if (!body.ticker || !body.annee || body.montant == null) { msg.textContent='Champs obligatoires manquants'; msg.className='msg err'; return; }
-  const r = await sbPost('dividendes_calendrier', body, 'ticker,annee');
-  if (r) { msg.textContent='✓ Enregistré'; msg.className='msg ok'; clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']); loadDividendes(); }
+    const msg  = document.getElementById('div-msg');
+    const body = {
+        ticker: v('div-ticker'), annee: pi('div-annee'), montant: pf('div-montant'),
+        taux_rendement: pf('div-tx'), date_detachement: v('div-detach')||null,
+        date_paiement: v('div-paie')||null, statut: v('div-statut'), notes: v('div-notes')
+    };
+    if (!body.ticker || !body.annee || body.montant == null) { msg.textContent = 'Champs obligatoires manquants'; msg.className = 'msg err'; return; }
+    const r = await sbPost('dividendes_calendrier', body, 'ticker,annee');
+    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']); loadDividendes(); }
 }
 
 /* ══════════════════════════════════════════════════════
    ANALYSES
 ══════════════════════════════════════════════════════ */
 async function loadAnalyses() {
-  const rows = await sbGet('analyses', 'select=*&order=date_analyse.desc&limit=100');
-  const list = document.getElementById('an-list');
-  document.getElementById('an-count').textContent = (rows||[]).length;
-  if (!rows?.length) { list.innerHTML = '<div style="padding:18px;color:var(--muted);text-align:center;">Aucune analyse</div>'; return; }
-  list.innerHTML = rows.map(r => `
-    <div class="analyse-item">
-      <div style="flex:1;min-width:200px;">
-        <div style="font-family:var(--serif);font-size:15px;color:var(--gold);margin-bottom:4px;">${r.titre||'Sans titre'}</div>
-        <div style="font-size:12px;color:var(--muted);">${r.ticker} · ${r.analyste||'—'} · ${fmtDate(r.date_analyse)}</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;">${(r.resume||'').substring(0,180)}${(r.resume||'').length>180?'...':''}</div>
-      </div>
-      <div style="text-align:right;">
-        <span class="badge ${r.recommandation==='Acheter'?'badge-green':r.recommandation==='Vendre'?'badge-red':'badge-gold'}">${r.recommandation}</span>
-        <div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">${fmt(r.cours_cible)}</div>
-        <button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="sbDel('analyses','id=eq.${r.id}').then(()=>loadAnalyses())">✕</button>
-      </div>
-    </div>`).join('');
+    const rows = await sbGet('analyses', 'select=*&order=date_analyse.desc&limit=100');
+    const list = document.getElementById('an-list');
+    document.getElementById('an-count').textContent = (rows||[]).length;
+    if (!rows?.length) { list.innerHTML = '<div style="padding:18px;color:var(--muted);text-align:center;">Aucune analyse</div>'; return; }
+    list.innerHTML = rows.map(function(r){
+        var resume = (r.resume||'').substring(0,180) + ((r.resume||'').length>180?'...':'');
+        return '<div class="analyse-item">' +
+            '<div style="flex:1;min-width:200px;">' +
+              '<div style="font-family:var(--serif);font-size:15px;color:var(--gold);margin-bottom:4px;">' + (r.titre||'Sans titre') + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);">' + r.ticker + ' · ' + (r.analyste||'—') + ' · ' + fmtDate(r.date_analyse) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;">' + resume + '</div>' +
+            '</div>' +
+            '<div style="text-align:right;">' +
+              '<span class="badge ' + (r.recommandation==='Acheter'?'badge-green':r.recommandation==='Vendre'?'badge-red':'badge-gold') + '">' + r.recommandation + '</span>' +
+              '<div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">' + fmt(r.cours_cible) + '</div>' +
+              '<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="deleteAnalyseRow(\'' + r.id + '\')">✕</button>' +
+            '</div>' +
+            '</div>';
+    }).join('');
+}
+
+async function deleteAnalyseRow(id) {
+    const ok = await sbDel('analyses', 'id=eq.' + id);
+    if (ok) loadAnalyses();
 }
 
 function calcPotentiel() {
-  const cible = pf('an-cible');
-  const cours = pf('an-cours');
-  const disp = document.getElementById('an-potentiel-display');
-  if (!cible || !cours || cours <= 0) { disp.value = '—'; return; }
-  const pot = ((cible - cours) / cours * 100).toFixed(2);
-  disp.value = (pot >= 0 ? '+' : '') + pot + '%';
-  disp.style.color = pot >= 0 ? 'var(--green)' : 'var(--red)';
+    const cible = pf('an-cible');
+    const cours = pf('an-cours');
+    const disp  = document.getElementById('an-potentiel-display');
+    if (!cible || !cours || cours <= 0) { disp.value = '—'; return; }
+    const pot = ((cible - cours) / cours * 100).toFixed(2);
+    disp.value = (pot >= 0 ? '+' : '') + pot + '%';
+    disp.style.color = pot >= 0 ? 'var(--green)' : 'var(--red)';
 }
 
 async function addAnalyse() {
-  const msg = document.getElementById('an-msg');
-  const body = {
-    ticker: v('an-ticker'), titre: v('an-titre'), recommandation: v('an-reco'),
-    cours_cible: pf('an-cible'), date_analyse: v('an-date')||new Date().toISOString().split('T')[0],
-    analyste: v('an-analyste'), resume: v('an-resume')
-  };
-  if (!body.ticker || !body.recommandation) { msg.textContent='Ticker et recommandation obligatoires'; msg.className='msg err'; return; }
-  const r = await sbPost('analyses', body);
-  if (r) { msg.textContent='✓ Publiée'; msg.className='msg ok'; clearForm(['an-ticker','an-titre','an-cible','an-cours','an-analyste','an-resume']); document.getElementById('an-potentiel-display').value=''; loadAnalyses(); }
+    const msg  = document.getElementById('an-msg');
+    const body = {
+        ticker: v('an-ticker'), titre: v('an-titre'), recommandation: v('an-reco'),
+        cours_cible: pf('an-cible'), date_analyse: v('an-date')||new Date().toISOString().split('T')[0],
+        analyste: v('an-analyste'), resume: v('an-resume')
+    };
+    if (!body.ticker || !body.recommandation) { msg.textContent = 'Ticker et recommandation obligatoires'; msg.className = 'msg err'; return; }
+    const r = await sbPost('analyses', body);
+    if (r) { msg.textContent = '✓ Publiée'; msg.className = 'msg ok'; clearForm(['an-ticker','an-titre','an-cible','an-cours','an-analyste','an-resume']); document.getElementById('an-potentiel-display').value = ''; loadAnalyses(); }
 }
 
 /* ══════════════════════════════════════════════════════
    UTILISATEURS
 ══════════════════════════════════════════════════════ */
 async function loadUsers() {
-  const rows = await sbGet('users', 'select=*&order=created_at.desc&limit=200');
-  usrData = rows || [];
-  renderUsrTable(usrData);
+    const rows = await sbGet('users', 'select=*&order=created_at.desc&limit=200');
+    usrData = rows || [];
+    renderUsrTable(usrData);
 }
 
 function renderUsrTable(data) {
-  const tb = document.getElementById('usr-tbody');
-  document.getElementById('usr-count').textContent = (data||[]).length;
-  if (!data.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Aucun utilisateur</td></tr>'; return; }
-  tb.innerHTML = data.map(r => `
-    <tr>
-      <td>${r.email}</td>
-      <td>${r.nom||'—'}</td>
-      <td><span class="badge ${r.plan==='elite'?'badge-gold':r.plan==='pro'?'badge-blue':'badge-green'}">${r.plan||'free'}</span></td>
-      <td class="td-muted">${fmtDate(r.plan_expiry)}</td>
-      <td>${r.is_admin?'✓':'—'}</td>
-      <td class="td-muted">${fmtDate(r.created_at)}</td>
-      <td><button class="btn btn-outline btn-sm" onclick='openUsrModal(${JSON.stringify(r)})'>✎</button></td>
-    </tr>`).join('');
+    const tb = document.getElementById('usr-tbody');
+    document.getElementById('usr-count').textContent = (data||[]).length;
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Aucun utilisateur</td></tr>'; return; }
+    tb.innerHTML = data.map(function(r){
+        return '<tr>' +
+            '<td>' + r.email + '</td>' +
+            '<td>' + (r.nom||'—') + '</td>' +
+            '<td><span class="badge ' + (r.plan==='elite'?'badge-gold':r.plan==='pro'?'badge-blue':'badge-green') + '">' + (r.plan||'free') + '</span></td>' +
+            '<td class="td-muted">' + fmtDate(r.plan_expiry) + '</td>' +
+            '<td>' + (r.is_admin?'✓':'—') + '</td>' +
+            '<td class="td-muted">' + fmtDate(r.created_at) + '</td>' +
+            '<td><button class="btn btn-outline btn-sm" onclick=\'openUsrModal(' + JSON.stringify(r) + ')\'>✎</button></td>' +
+            '</tr>';
+    }).join('');
 }
 
 function filterUsrTable() {
-  const f = v('usr-search').toLowerCase();
-  const p = v('usr-plan-filter');
-  const filtered = usrData.filter(r => {
-    const matchText = !f || (r.email+r.nom||'').toLowerCase().includes(f);
-    const matchPlan = !p || r.plan === p;
-    return matchText && matchPlan;
-  });
-  renderUsrTable(filtered);
+    const f = v('usr-search').toLowerCase();
+    const p = v('usr-plan-filter');
+    renderUsrTable(usrData.filter(function(r){
+        return (!f || (r.email+(r.nom||'')).toLowerCase().includes(f)) && (!p || r.plan === p);
+    }));
 }
 
 function openUsrModal(row) {
-  document.getElementById('modal-usr-id').value = row.id;
-  set('modal-usr-plan', row.plan||'free');
-  set('modal-usr-expiry', row.plan_expiry ? row.plan_expiry.split('T')[0] : '');
-  set('modal-usr-nom', row.nom);
-  set('modal-usr-admin', String(row.is_admin));
-  openModal('modal-user');
+    document.getElementById('modal-usr-id').value = row.id;
+    set('modal-usr-plan',   row.plan||'free');
+    set('modal-usr-expiry', row.plan_expiry ? row.plan_expiry.split('T')[0] : '');
+    set('modal-usr-nom',    row.nom);
+    set('modal-usr-admin',  String(row.is_admin));
+    openModal('modal-user');
 }
 
 async function saveUser() {
-  const id = v('modal-usr-id');
-  const msg = document.getElementById('modal-usr-msg');
-  const body = {
-    plan: v('modal-usr-plan'), plan_expiry: v('modal-usr-expiry')||null,
-    nom: v('modal-usr-nom'), is_admin: v('modal-usr-admin') === 'true'
-  };
-  const r = await sbPatch('users', `id=eq.${id}`, body);
-  if (r) { msg.textContent='✓ Modifié'; msg.className='msg ok'; closeModal('modal-user'); loadUsers(); }
+    const id  = v('modal-usr-id');
+    const msg = document.getElementById('modal-usr-msg');
+    const body = {
+        plan: v('modal-usr-plan'), plan_expiry: v('modal-usr-expiry')||null,
+        nom: v('modal-usr-nom'), is_admin: v('modal-usr-admin') === 'true'
+    };
+    const r = await sbPatch('users', 'id=eq.' + id, body);
+    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-user'); loadUsers(); }
 }
 
 /* ══════════════════════════════════════════════════════
-   SCRAPER / DIAGNOSTIC
+   SCRAPER
 ══════════════════════════════════════════════════════ */
-async function runScraper() {
-  const msg = document.getElementById('scraper-msg');
-  msg.textContent = 'Scraper déclenché (simulation)...'; msg.className = 'msg info';
-  setTimeout(() => { msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }, 1500);
+function runScraper() {
+    const msg = document.getElementById('scraper-msg');
+    msg.textContent = 'Scraper déclenché (simulation)...'; msg.className = 'msg info';
+    setTimeout(function(){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }, 1500);
 }
 
-async function runFallback() {
-  const msg = document.getElementById('scraper-msg');
-  msg.textContent = 'Recalcul variation...'; msg.className = 'msg info';
-  setTimeout(() => { msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }, 1000);
+function runFallback() {
+    const msg = document.getElementById('scraper-msg');
+    msg.textContent = 'Recalcul variation...'; msg.className = 'msg info';
+    setTimeout(function(){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }, 1000);
 }
 
 async function syncHistFromCours() {
-  const msg = document.getElementById('scraper-msg');
-  msg.textContent = 'Sync en cours...'; msg.className = 'msg info';
-  const rows = await sbGet('cours', 'select=*&order=date_seance.desc&limit=50');
-  if (!rows?.length) { msg.textContent='Aucun cours à synchroniser'; msg.className='msg err'; return; }
-  const mapped = rows.map(r => ({
-    ticker: r.ticker, date_seance: r.date_seance, cours_cloture: r.cours,
-    ouverture: r.ouverture, plus_haut: r.plus_haut, plus_bas: r.plus_bas,
-    volume: r.volume, variation: r.variation
-  }));
-  const res = await sbPost('historique', mapped, 'ticker,date_seance');
-  if (res) { msg.textContent=`✓ ${mapped.length} cours synchronisés`; msg.className='msg ok'; }
+    const msg = document.getElementById('scraper-msg');
+    msg.textContent = 'Sync en cours...'; msg.className = 'msg info';
+    const rows = await sbGet('cours', 'select=*&order=date_seance.desc&limit=50');
+    if (!rows?.length) { msg.textContent = 'Aucun cours à synchroniser'; msg.className = 'msg err'; return; }
+    const mapped = rows.map(function(r){
+        return { ticker: r.ticker, date_seance: r.date_seance, cours_cloture: r.cours,
+                 ouverture: r.ouverture, plus_haut: r.plus_haut, plus_bas: r.plus_bas,
+                 volume: r.volume, variation: r.variation };
+    });
+    const res = await sbPost('historique', mapped, 'ticker,date_seance');
+    if (res) { msg.textContent = '✓ ' + mapped.length + ' cours synchronisés'; msg.className = 'msg ok'; }
 }
 
+/* ══════════════════════════════════════════════════════
+   DIAGNOSTIC
+══════════════════════════════════════════════════════ */
 async function runDiagnostic() {
-  const res = document.getElementById('diag-result');
-  res.innerHTML = '<div class="loading"><div class="spinner"></div><p>Diagnostic en cours...</p></div>';
-  const [nEnt, nCours, nHist, nFin, nDiv] = await Promise.all([
-    sbCount('entreprises'), sbCount('cours'), sbCount('historique'), sbCount('financials'), sbCount('dividendes_calendrier')
-  ]);
-  const total = 5;
-  const ok = [nEnt>0, nCours>0, nHist>0, nFin>0, nDiv>0].filter(Boolean).length;
-  const score = Math.round(ok/total*100);
-  const bar = document.getElementById('diag-health-bar');
-  bar.style.display = '';
-  document.getElementById('diag-health-icon').textContent = score>=80?'✅':score>=50?'⚠️':'⛔';
-  document.getElementById('diag-health-title').textContent = score>=80?'Plateforme saine':score>=50?'Quelques alertes':'Problèmes détectés';
-  document.getElementById('diag-health-sub').textContent = `${ok}/${total} tables alimentées`;
-  document.getElementById('diag-score').textContent = score+'%';
-  document.getElementById('diag-score').style.color = score>=80?'var(--green)':score>=50?'var(--orange)':'var(--red)';
-
-  res.innerHTML = `
-    <div class="card"><div style="padding:18px;">
-      <table class="diag-table" style="width:100%;font-size:13px;">
-        <tr><th style="text-align:left;">Table</th><th style="text-align:right;">Lignes</th><th>État</th></tr>
-        <tr><td>entreprises</td><td style="text-align:right;font-family:var(--mono);">${nEnt}</td><td class="${nEnt>0?'diag-ok':'diag-err'}">${nEnt>0?'OK':'VIDE'}</td></tr>
-        <tr><td>cours</td><td style="text-align:right;font-family:var(--mono);">${nCours}</td><td class="${nCours>0?'diag-ok':'diag-err'}">${nCours>0?'OK':'VIDE'}</td></tr>
-        <tr><td>historique</td><td style="text-align:right;font-family:var(--mono);">${nHist}</td><td class="${nHist>0?'diag-ok':'diag-err'}">${nHist>0?'OK':'VIDE'}</td></tr>
-        <tr><td>financials</td><td style="text-align:right;font-family:var(--mono);">${nFin}</td><td class="${nFin>0?'diag-ok':'diag-err'}">${nFin>0?'OK':'VIDE'}</td></tr>
-        <tr><td>dividendes</td><td style="text-align:right;font-family:var(--mono);">${nDiv}</td><td class="${nDiv>0?'diag-ok':'diag-err'}">${nDiv>0?'OK':'VIDE'}</td></tr>
-      </table>
-    </div></div>`;
-  diagData = { nEnt, nCours, nHist, nFin, nDiv, score, date: new Date().toISOString() };
+    const res = document.getElementById('diag-result');
+    res.innerHTML = '<div class="loading"><div class="spinner"></div><p>Diagnostic en cours...</p></div>';
+    const counts = await Promise.all([
+        sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
+        sbCount('financials'), sbCount('dividendes_calendrier')
+    ]);
+    const [nEnt, nCours, nHist, nFin, nDiv] = counts;
+    const total = 5;
+    const ok = [nEnt>0, nCours>0, nHist>0, nFin>0, nDiv>0].filter(Boolean).length;
+    const score = Math.round(ok/total*100);
+    const bar = document.getElementById('diag-health-bar');
+    bar.style.display = '';
+    document.getElementById('diag-health-icon').textContent  = score>=80?'✅':score>=50?'⚠️':'⛔';
+    document.getElementById('diag-health-title').textContent = score>=80?'Plateforme saine':score>=50?'Quelques alertes':'Problèmes détectés';
+    document.getElementById('diag-health-sub').textContent   = ok + '/' + total + ' tables alimentées';
+    document.getElementById('diag-score').textContent = score + '%';
+    document.getElementById('diag-score').style.color = score>=80?'var(--green)':score>=50?'var(--orange)':'var(--red)';
+    res.innerHTML =
+        '<div class="card"><div style="padding:18px;">' +
+        '<table class="diag-table" style="width:100%;font-size:13px;">' +
+        '<tr><th style="text-align:left;">Table</th><th style="text-align:right;">Lignes</th><th>État</th></tr>' +
+        [['entreprises',nEnt],['cours',nCours],['historique',nHist],['financials',nFin],['dividendes',nDiv]].map(function(row){
+            return '<tr><td>' + row[0] + '</td><td style="text-align:right;font-family:var(--mono);">' + row[1] + '</td>' +
+                   '<td class="' + (row[1]>0?'diag-ok':'diag-err') + '">' + (row[1]>0?'OK':'VIDE') + '</td></tr>';
+        }).join('') +
+        '</table></div></div>';
+    diagData = { nEnt:nEnt, nCours:nCours, nHist:nHist, nFin:nFin, nDiv:nDiv, score:score, date:new Date().toISOString() };
 }
 
 function exportDiagnostic() {
-  if (!diagData) { toast('Lancez d\'abord le diagnostic','err'); return; }
-  const blob = new Blob([JSON.stringify(diagData, null, 2)], {type:'application/json'});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = `diagnostic-${new Date().toISOString().split('T')[0]}.json`; a.click();
-  URL.revokeObjectURL(url);
+    if (!diagData) { toast('Lancez d\'abord le diagnostic', 'err'); return; }
+    const blob = new Blob([JSON.stringify(diagData, null, 2)], { type:'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url; a.download = 'diagnostic-' + new Date().toISOString().split('T')[0] + '.json'; a.click();
+    URL.revokeObjectURL(url);
 }
 
 async function loadCoursErreurs() {
-  const panel = document.getElementById('cours-erreurs-panel');
-  const rows = await sbGet('cours', 'select=*&or=(cours.lte.0,variation.is.null)&limit=50');
-  if (!rows?.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Aucun cours invalide</div>'; return; }
-  panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Date</th><th>Cours</th><th>Variation</th></tr></thead><tbody>' +
-    rows.map(r=>`<tr><td>${r.ticker}</td><td>${r.date_seance}</td><td style="color:${r.cours<=0?'var(--red)':''}">${r.cours}</td><td style="color:${r.variation==null?'var(--red)':''}">${r.variation??'NULL'}</td></tr>`).join('') +
-    '</tbody></table></div>';
+    const panel = document.getElementById('cours-erreurs-panel');
+    const rows  = await sbGet('cours', 'select=*&or=(cours.lte.0,variation.is.null)&limit=50');
+    if (!rows?.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Aucun cours invalide</div>'; return; }
+    panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Date</th><th>Cours</th><th>Variation</th></tr></thead><tbody>' +
+        rows.map(function(r){
+            return '<tr><td>' + r.ticker + '</td><td>' + r.date_seance + '</td>' +
+                   '<td style="color:' + (r.cours<=0?'var(--red)':'') + '">' + r.cours + '</td>' +
+                   '<td style="color:' + (r.variation==null?'var(--red)':'') + '">' + (r.variation!=null?r.variation:'NULL') + '</td></tr>';
+        }).join('') + '</tbody></table></div>';
 }
 
 async function loadTickersSansFinancials() {
-  const panel = document.getElementById('tickers-sans-fin-panel');
-  const ents = await sbGet('entreprises', 'select=ticker');
-  const fins = await sbGet('financials', 'select=ticker');
-  const finSet = new Set((fins||[]).map(f=>f.ticker));
-  const missing = (ents||[]).filter(e=>!finSet.has(e.ticker));
-  if (!missing.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Tous les tickers ont des financials</div>'; return; }
-  panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th></tr></thead><tbody>' +
-    missing.map(e=>`<tr><td>${e.ticker}</td></tr>`).join('') + '</tbody></table></div>';
+    const panel = document.getElementById('tickers-sans-fin-panel');
+    const ents  = await sbGet('entreprises', 'select=ticker');
+    const fins  = await sbGet('financials',  'select=ticker');
+    const finSet  = new Set((fins||[]).map(function(f){ return f.ticker; }));
+    const missing = (ents||[]).filter(function(e){ return !finSet.has(e.ticker); });
+    if (!missing.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Tous les tickers ont des financials</div>'; return; }
+    panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th></tr></thead><tbody>' +
+        missing.map(function(e){ return '<tr><td>' + e.ticker + '</td></tr>'; }).join('') +
+        '</tbody></table></div>';
 }
 
 /* ══════════════════════════════════════════════════════
    IMPORT EXCEL
 ══════════════════════════════════════════════════════ */
-const TEMPLATE_CONFIG = {
-  entreprises: {
-    name: 'BRVM_Entreprises',
-    headers: ['ticker','nom','nom_complet','pays','secteur','compartiment','capital_social_fcfa','nombre_actions','valeur_nominale','isin','description','site_web','date_introduction','siege_social','actif'],
-    required: ['ticker','nom','pays','secteur','compartiment'],
-    table: 'entreprises',
-    uniqueKey: 'ticker'
-  },
-  cours: {
-    name: 'BRVM_Cours',
-    headers: ['ticker','date_seance','cours','ouverture','plus_haut','plus_bas','volume','capitalisation','plus_haut_52','plus_bas_52'],
-    required: ['ticker','date_seance','cours'],
-    table: 'cours',
-    uniqueKey: 'ticker,date_seance',
-    autoCalc: ['variation']
-  },
-  financials: {
-    name: 'BRVM_Financials',
-    headers: ['ticker','annee','periode','chiffre_affaires','rbe','resultat_net','bpa','dpa','fonds_propres','dettes_financieres','total_actif','nombre_actions','cash_flow_operationnel','capex','source'],
-    required: ['ticker','annee'],
-    table: 'financials',
-    uniqueKey: 'ticker,annee,periode',
-    autoCalc: ['roe','roa','marge_rbe']
-  },
-  dividendes: {
-    name: 'BRVM_Dividendes',
-    headers: ['ticker','annee','montant','date_detachement','date_paiement','statut','notes'],
-    required: ['ticker','annee','montant'],
-    table: 'dividendes_calendrier',
-    uniqueKey: 'ticker,annee',
-    autoCalc: ['taux_rendement']
-  },
-  indices: {
-    name: 'BRVM_Indices',
-    headers: ['code','nom','valeur','variation','description'],
-    required: ['code','nom','valeur'],
-    table: 'indices',
-    uniqueKey: 'code'
-  },
-  actionnaires: {
-    name: 'BRVM_Actionnaires',
-    headers: ['ticker','nom_actionnaire','pourcentage','type_actionnaire','pays_origine'],
-    required: ['ticker','nom_actionnaire','pourcentage'],
-    table: 'actionnaires',
-    uniqueKey: null
-  }
+var TEMPLATE_CONFIG = {
+    entreprises: {
+        name: 'BRVM_Entreprises',
+        headers: ['ticker','nom','nom_complet','pays','secteur','compartiment','capital_social_fcfa','nombre_actions','valeur_nominale','isin','description','site_web','date_introduction','siege_social','actif'],
+        required: ['ticker','nom','pays','secteur','compartiment'],
+        table: 'entreprises', uniqueKey: 'ticker'
+    },
+    cours: {
+        name: 'BRVM_Cours',
+        headers: ['ticker','date_seance','cours','ouverture','plus_haut','plus_bas','volume','capitalisation','plus_haut_52','plus_bas_52'],
+        required: ['ticker','date_seance','cours'],
+        table: 'cours', uniqueKey: 'ticker,date_seance', autoCalc: ['variation']
+    },
+    financials: {
+        name: 'BRVM_Financials',
+        headers: ['ticker','annee','periode','chiffre_affaires','rbe','resultat_net','bpa','dpa','fonds_propres','dettes_financieres','total_actif','nombre_actions','cash_flow_operationnel','capex','source'],
+        required: ['ticker','annee'],
+        table: 'financials', uniqueKey: 'ticker,annee,periode', autoCalc: ['roe','roa','marge_rbe']
+    },
+    dividendes: {
+        name: 'BRVM_Dividendes',
+        headers: ['ticker','annee','montant','date_detachement','date_paiement','statut','notes'],
+        required: ['ticker','annee','montant'],
+        table: 'dividendes_calendrier', uniqueKey: 'ticker,annee', autoCalc: ['taux_rendement']
+    },
+    indices: {
+        name: 'BRVM_Indices',
+        headers: ['code','nom','valeur','variation','description'],
+        required: ['code','nom','valeur'], table: 'indices', uniqueKey: 'code'
+    },
+    actionnaires: {
+        name: 'BRVM_Actionnaires',
+        headers: ['ticker','nom_actionnaire','pourcentage','type_actionnaire','pays_origine'],
+        required: ['ticker','nom_actionnaire','pourcentage'], table: 'actionnaires', uniqueKey: null
+    }
 };
 
-let currentUpload = { data: [], config: null, filename: '' };
+var currentUpload = { data: [], config: null, filename: '' };
 
-const dropZone = document.getElementById('drop-zone');
-if (dropZone) {
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault(); dropZone.classList.remove('dragover');
-    const files = e.dataTransfer.files;
-    if (files.length) handleFile(files[0]);
-  });
+var dz = document.getElementById('drop-zone');
+if (dz) {
+    dz.addEventListener('dragover', function(e){ e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', function(){ dz.classList.remove('dragover'); });
+    dz.addEventListener('drop', function(e){
+        e.preventDefault(); dz.classList.remove('dragover');
+        if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    });
 }
 
 function handleFileSelect(e) { if (e.target.files.length) handleFile(e.target.files[0]); }
 
 async function handleFile(file) {
-  currentUpload.filename = file.name;
-  document.getElementById('upload-filename').textContent = file.name;
-  document.getElementById('upload-info').style.display = '';
-  const data = await file.arrayBuffer();
-  const workbook = XLSX.read(data, { type: 'array' });
-  const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-  const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
-  if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
-  const headers = jsonData[0].map(h => String(h).toLowerCase().trim().replace(/\s+/g, '_'));
-  const detected = detectTemplate(headers);
-  if (!detected) { toast('Template non reconnu', 'err'); console.log('Headers:', headers); return; }
-  document.getElementById('upload-sheet-detected').style.display = '';
-  currentUpload.config = TEMPLATE_CONFIG[detected];
-  const rows = [];
-  for (let i = 1; i < jsonData.length; i++) {
-    const row = jsonData[i];
-    if (!row.some(cell => cell !== '')) continue;
-    const obj = {};
-    headers.forEach((h, idx) => obj[h] = row[idx] !== undefined ? row[idx] : null);
-    rows.push(obj);
-  }
-  currentUpload.data = rows;
-  showPreview(detected, rows);
+    currentUpload.filename = file.name;
+    document.getElementById('upload-filename').textContent = file.name;
+    document.getElementById('upload-info').style.display = '';
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+    if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
+    const headers = jsonData[0].map(function(h){ return String(h).toLowerCase().trim().replace(/\s+/g,'_'); });
+    const detected = detectTemplate(headers);
+    if (!detected) { toast('Template non reconnu', 'err'); console.log('Headers:', headers); return; }
+    document.getElementById('upload-sheet-detected').style.display = '';
+    currentUpload.config = TEMPLATE_CONFIG[detected];
+    const rows = [];
+    for (var i = 1; i < jsonData.length; i++) {
+        var row = jsonData[i];
+        if (!row.some(function(cell){ return cell !== ''; })) continue;
+        var obj = {};
+        headers.forEach(function(h, idx){ obj[h] = row[idx] !== undefined ? row[idx] : null; });
+        rows.push(obj);
+    }
+    currentUpload.data = rows;
+    showPreview(detected, rows);
 }
 
 function detectTemplate(headers) {
-  for (const [key, config] of Object.entries(TEMPLATE_CONFIG)) {
-    const required = config.required;
-    const norm = config.headers.map(h => h.toLowerCase());
-    const match = required.filter(rh => headers.includes(rh) || norm.includes(rh)).length;
-    if (match >= required.length * 0.8) return key;
-  }
-  return null;
+    for (var key in TEMPLATE_CONFIG) {
+        var config = TEMPLATE_CONFIG[key];
+        var required = config.required;
+        var match = required.filter(function(rh){ return headers.includes(rh); }).length;
+        if (match >= Math.ceil(required.length * 0.8)) return key;
+    }
+    return null;
 }
 
 async function showPreview(templateKey, rows) {
-  const config = TEMPLATE_CONFIG[templateKey];
-  document.getElementById('preview-card').style.display = '';
-  document.getElementById('preview-count').textContent = rows.length + ' lignes';
-  let displayHeaders = [...config.headers];
-  if (config.autoCalc) displayHeaders = displayHeaders.concat(config.autoCalc.map(c => `[AUTO] ${c}`));
-  document.getElementById('preview-thead').innerHTML = '<tr>' + displayHeaders.map(h => `<th>${h}</th>`).join('') + '<th>Statut</th></tr>';
-
-  let insertCount=0, updateCount=0, errorCount=0;
-  const previewRows = [];
-  for (const row of rows.slice(0,50)) {
-    const val = await validateRow(row, config, templateKey);
-    if (val.status === 'error') errorCount++;
-    else if (val.status === 'update') updateCount++;
-    else insertCount++;
-    previewRows.push({...row, ...val.calculated, _status: val.status, _errors: val.errors});
-  }
-  document.getElementById('import-summary').innerHTML = `
-    <div class="import-stat insert"><div class="number">${insertCount}</div><div class="label">Nouveaux</div></div>
-    <div class="import-stat update"><div class="number">${updateCount}</div><div class="label">Màj</div></div>
-    <div class="import-stat skip"><div class="number">${rows.length - insertCount - updateCount - errorCount}</div><div class="label">Ignorés</div></div>
-    <div class="import-stat error"><div class="number">${errorCount}</div><div class="label">Erreurs</div></div>`;
-  document.getElementById('preview-tbody').innerHTML = previewRows.map(r => {
-    const cls = r._status==='error'?'error':r._status==='update'?'update':'new';
-    const cells = displayHeaders.map(h => {
-      const clean = h.replace('[AUTO] ','');
-      const val = r[clean] ?? '—';
-      return `<td>${val}</td>`;
+    var config = TEMPLATE_CONFIG[templateKey];
+    document.getElementById('preview-card').style.display = '';
+    document.getElementById('preview-count').textContent = rows.length + ' lignes';
+    var displayHeaders = config.headers.slice();
+    if (config.autoCalc) config.autoCalc.forEach(function(c){ displayHeaders.push('[AUTO] ' + c); });
+    document.getElementById('preview-thead').innerHTML = '<tr>' + displayHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '<th>Statut</th></tr>';
+    var insertCount = 0, updateCount = 0, errorCount = 0;
+    var previewRows = [];
+    for (var i = 0; i < Math.min(rows.length, 50); i++) {
+        var val = await validateRow(rows[i], config, templateKey);
+        if (val.status === 'error') errorCount++;
+        else if (val.status === 'update') updateCount++;
+        else insertCount++;
+        var combined = Object.assign({}, rows[i], val.calculated, { _status: val.status, _errors: val.errors });
+        previewRows.push(combined);
+    }
+    document.getElementById('import-summary').innerHTML =
+        '<div class="import-stat insert"><div class="number">' + insertCount + '</div><div class="label">Nouveaux</div></div>' +
+        '<div class="import-stat update"><div class="number">' + updateCount + '</div><div class="label">Màj</div></div>' +
+        '<div class="import-stat skip"><div class="number">' + (rows.length - insertCount - updateCount - errorCount) + '</div><div class="label">Ignorés</div></div>' +
+        '<div class="import-stat error"><div class="number">' + errorCount + '</div><div class="label">Erreurs</div></div>';
+    document.getElementById('preview-tbody').innerHTML = previewRows.map(function(r){
+        var cls = r._status==='error'?'error':r._status==='update'?'update':'new';
+        var cells = displayHeaders.map(function(h){
+            var clean = h.replace('[AUTO] ','');
+            return '<td>' + (r[clean] != null ? r[clean] : '—') + '</td>';
+        }).join('');
+        return '<tr class="preview-row ' + cls + '" title="' + (r._errors||[]).join(', ') + '">' + cells + '<td>' + (r._status==='error'?'❌':r._status==='update'?'🔄':'✅') + '</td></tr>';
     }).join('');
-    return `<tr class="preview-row ${cls}" title="${(r._errors||[]).join(', ')}">${cells}<td>${r._status==='error'?'❌':r._status==='update'?'🔄':'✅'}</td></tr>`;
-  }).join('');
 }
 
 async function validateRow(row, config, templateKey) {
-  const errors = [];
-  const calculated = {};
-  let status = 'insert';
-  for (const req of config.required) {
-    if (!row[req] && row[req] !== 0) errors.push(`${req} manquant`);
-  }
-  if (config.uniqueKey && !errors.length) {
-    const filters = config.uniqueKey.split(',').map(k => `${k}=eq.${encodeURIComponent(row[k])}`).join('&');
-    const exists = await sbCount(config.table, filters);
-    if (exists > 0) status = 'update';
-  }
-  if (templateKey === 'cours' && row.cours) {
-    const last = await sbGet('cours', `select=cours&ticker=eq.${row.ticker}&order=date_seance.desc&limit=1`);
-    if (last?.length && last[0].cours > 0) {
-      calculated.variation = parseFloat(((parseFloat(row.cours)-last[0].cours)/last[0].cours*100).toFixed(2));
+    var errors = [], calculated = {}, status = 'insert';
+    config.required.forEach(function(req){
+        if (!row[req] && row[req] !== 0) errors.push(req + ' manquant');
+    });
+    if (config.uniqueKey && !errors.length) {
+        var filters = config.uniqueKey.split(',').map(function(k){ return k + '=eq.' + encodeURIComponent(row[k]); }).join('&');
+        var exists = await sbCount(config.table, filters);
+        if (exists > 0) status = 'update';
     }
-  }
-  if (errors.length) status = 'error';
-  return { status, errors, calculated };
+    if (templateKey === 'cours' && row.cours) {
+        var last = await sbGet('cours', 'select=cours&ticker=eq.' + row.ticker + '&order=date_seance.desc&limit=1');
+        if (last?.length && last[0].cours > 0) {
+            calculated.variation = parseFloat(((parseFloat(row.cours) - last[0].cours) / last[0].cours * 100).toFixed(2));
+        }
+    }
+    if (errors.length) status = 'error';
+    return { status: status, errors: errors, calculated: calculated };
 }
 
 async function confirmImport() {
-  const { data, config } = currentUpload;
-  if (!data.length || !config) return;
-  const progressCard = document.getElementById('progress-card');
-  progressCard.style.display = '';
-  let inserted = 0, errors = 0;
-  const batchSize = 50;
-  for (let i=0; i<data.length; i+=batchSize) {
-    const batch = data.slice(i, i+batchSize);
-    document.getElementById('import-progress').style.width = Math.round((i/data.length)*100)+'%';
-    document.getElementById('progress-text').textContent = `Traitement ${i+1}–${Math.min(i+batchSize, data.length)}`;
-    const prepared = [];
-    for (const row of batch) {
-      const val = await validateRow(row, config, Object.keys(TEMPLATE_CONFIG).find(k=>TEMPLATE_CONFIG[k]===config));
-      if (val.status === 'error') { errors++; continue; }
-      const clean = {};
-      config.headers.forEach(h => { if (row[h] !== undefined && row[h] !== '') clean[h] = row[h]; });
-      Object.assign(clean, val.calculated);
-      prepared.push(clean);
+    var data = currentUpload.data, config = currentUpload.config;
+    if (!data.length || !config) return;
+    var progressCard = document.getElementById('progress-card');
+    progressCard.style.display = '';
+    var inserted = 0, errors = 0;
+    var batchSize = 50;
+    var templateKey = null;
+    for (var k in TEMPLATE_CONFIG) { if (TEMPLATE_CONFIG[k] === config) { templateKey = k; break; } }
+    for (var i = 0; i < data.length; i += batchSize) {
+        var batch = data.slice(i, i + batchSize);
+        document.getElementById('import-progress').style.width = Math.round((i / data.length) * 100) + '%';
+        document.getElementById('progress-text').textContent = 'Traitement ' + (i+1) + '–' + Math.min(i+batchSize, data.length);
+        var prepared = [];
+        for (var j = 0; j < batch.length; j++) {
+            var val = await validateRow(batch[j], config, templateKey);
+            if (val.status === 'error') { errors++; continue; }
+            var clean = {};
+            config.headers.forEach(function(h){ if (batch[j][h] !== undefined && batch[j][h] !== '') clean[h] = batch[j][h]; });
+            Object.assign(clean, val.calculated);
+            prepared.push(clean);
+        }
+        if (prepared.length) {
+            var r = await sbPost(config.table, prepared, config.uniqueKey);
+            if (r) inserted += prepared.length; else errors += prepared.length;
+        }
     }
-    if (prepared.length) {
-      const r = await sbPost(config.table, prepared, config.uniqueKey);
-      if (r) inserted += prepared.length;
-      else errors += prepared.length;
-    }
-  }
-  toast(`Import terminé : ${inserted} lignes`);
-  cancelImport();
+    toast('Import terminé : ' + inserted + ' lignes');
+    cancelImport();
 }
 
 function cancelImport() {
-  currentUpload = { data:[], config:null, filename:'' };
-  document.getElementById('preview-card').style.display = 'none';
-  document.getElementById('progress-card').style.display = 'none';
-  document.getElementById('upload-info').style.display = 'none';
-  document.getElementById('excel-file').value = '';
+    currentUpload = { data:[], config:null, filename:'' };
+    document.getElementById('preview-card').style.display   = 'none';
+    document.getElementById('progress-card').style.display  = 'none';
+    document.getElementById('upload-info').style.display    = 'none';
+    document.getElementById('excel-file').value = '';
 }
 
 function downloadTemplate(type) {
-  const config = TEMPLATE_CONFIG[type];
-  if (!config) return;
-  let data = [];
-  if (type === 'entreprises') data = [{ ticker:'SNTS', nom:'SONATEL', pays:'Sénégal', secteur:'Télécoms', compartiment:'Prestige' }];
-  else if (type === 'cours') data = [{ ticker:'SNTS', date_seance:'2026-05-08', cours:25995 }];
-  else if (type === 'financials') data = [{ ticker:'SNTS', annee:2024, periode:'annuel', chiffre_affaires:900000 }];
-  else if (type === 'dividendes') data = [{ ticker:'SNTS', annee:2024, montant:12000 }];
-  else if (type === 'indices') data = [{ code:'BRVM10', nom:'BRVM 10', valeur:185.42 }];
-  else if (type === 'actionnaires') data = [{ ticker:'SNTS', nom_actionnaire:'État du Sénégal', pourcentage:55 }];
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, config.name);
-  XLSX.writeFile(wb, `${config.name}_Template.xlsx`);
-  toast(`Template ${config.name} téléchargé`);
+    var config = TEMPLATE_CONFIG[type];
+    if (!config) return;
+    var data = [];
+    if (type === 'entreprises') data = [{ ticker:'SNTS', nom:'SONATEL', pays:'Sénégal', secteur:'Télécoms', compartiment:'Prestige' }];
+    else if (type === 'cours') data = [{ ticker:'SNTS', date_seance:'2026-05-08', cours:25995 }];
+    else if (type === 'financials') data = [{ ticker:'SNTS', annee:2024, periode:'annuel', chiffre_affaires:900000 }];
+    else if (type === 'dividendes') data = [{ ticker:'SNTS', annee:2024, montant:12000 }];
+    else if (type === 'indices') data = [{ code:'BRVM10', nom:'BRVM 10', valeur:185.42 }];
+    else if (type === 'actionnaires') data = [{ ticker:'SNTS', nom_actionnaire:'État du Sénégal', pourcentage:55 }];
+    var ws = XLSX.utils.json_to_sheet(data);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, config.name);
+    XLSX.writeFile(wb, config.name + '_Template.xlsx');
+    toast('Template ' + config.name + ' téléchargé');
 }
 
 /* ══════════════════════════════════════════════════════
    BOC
 ══════════════════════════════════════════════════════ */
 async function importBOC() {
-  const date = v('boc-date'), nom = v('boc-nom')||null, urlManuelle = v('boc-url')||null;
-  const fileInput = document.getElementById('boc-file'), file = fileInput.files[0];
-  const msg = document.getElementById('boc-msg');
-  if (!date) { msg.textContent='Date obligatoire'; msg.className='msg err'; return; }
-  if (!file && !urlManuelle) { msg.textContent='Fichier ou URL requis'; msg.className='msg err'; return; }
-  let fichierUrl = urlManuelle;
-  if (file) {
-    if (file.type !== 'application/pdf') { msg.textContent='PDF uniquement'; msg.className='msg err'; return; }
-    const fileName = `boc-${Date.now()}-${file.name}`;
-    const formData = new FormData(); formData.append('file', file);
-    const uploadRes = await fetch(`${SB_URL}/storage/v1/object/boc_pdfs/${fileName}`, {
-      method:'POST', headers:{apikey:SB_ANON,Authorization:`Bearer ${TK}`}, body:formData
-    });
-    if (!uploadRes.ok) { msg.textContent='Échec upload'; msg.className='msg err'; return; }
-    fichierUrl = `${SB_URL}/storage/v1/object/public/boc_pdfs/${fileName}`;
-  }
-  const body = { date_seance:date, fichier_nom: nom||(file?file.name:'boc.pdf'), fichier_url:fichierUrl };
-  const r = await sbPost('boc', body, 'date_seance');
-  if (r) { msg.textContent='✓ BOC enregistré'; msg.className='msg ok'; loadBOC(); }
+    var date = v('boc-date'), nom = v('boc-nom')||null, urlManuelle = v('boc-url')||null;
+    var fileInput = document.getElementById('boc-file'), file = fileInput.files[0];
+    var msg = document.getElementById('boc-msg');
+    if (!date) { msg.textContent = 'Date obligatoire'; msg.className = 'msg err'; return; }
+    if (!file && !urlManuelle) { msg.textContent = 'Fichier ou URL requis'; msg.className = 'msg err'; return; }
+    var fichierUrl = urlManuelle;
+    if (file) {
+        if (file.type !== 'application/pdf') { msg.textContent = 'PDF uniquement'; msg.className = 'msg err'; return; }
+        var fileName = 'boc-' + Date.now() + '-' + file.name;
+        var formData = new FormData(); formData.append('file', file);
+        var uploadRes = await fetch(SB_URL + '/storage/v1/object/boc_pdfs/' + fileName, {
+            method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer ' + TK }, body:formData
+        });
+        if (!uploadRes.ok) { msg.textContent = 'Échec upload'; msg.className = 'msg err'; return; }
+        fichierUrl = SB_URL + '/storage/v1/object/public/boc_pdfs/' + fileName;
+    }
+    var body = { date_seance:date, fichier_nom: nom||(file?file.name:'boc.pdf'), fichier_url:fichierUrl };
+    var r = await sbPost('boc', body, 'date_seance');
+    if (r) { msg.textContent = '✓ BOC enregistré'; msg.className = 'msg ok'; loadBOC(); }
 }
 
 async function loadBOC() {
-  const list = await sbGet('boc','select=*&order=date_seance.desc&limit=20') || [];
-  document.getElementById('boc-list').innerHTML = list.length
-    ? '<div class="tw"><table><thead><tr><th>Date</th><th>Nom</th><th>URL</th><th></th></tr></thead><tbody>'
-      + list.map(b=>`<tr><td>${b.date_seance}</td><td>${b.fichier_nom}</td><td><a href="${b.fichier_url}" target="_blank" style="color:var(--gold);">Voir</a></td><td><button class="btn btn-danger btn-sm" onclick="sbDel('boc','id=eq.${b.id}').then(()=>loadBOC())">✕</button></td></tr>`).join('')
-      + '</tbody></table></div>'
-    : '<div style="padding:16px;color:var(--muted);">Aucun BOC.</div>';
+    var list = await sbGet('boc', 'select=*&order=date_seance.desc&limit=20') || [];
+    document.getElementById('boc-list').innerHTML = list.length
+        ? '<div class="tw"><table><thead><tr><th>Date</th><th>Nom</th><th>URL</th><th></th></tr></thead><tbody>' +
+          list.map(function(b){
+              return '<tr><td>' + b.date_seance + '</td><td>' + b.fichier_nom + '</td>' +
+                     '<td><a href="' + b.fichier_url + '" target="_blank" style="color:var(--gold);">Voir</a></td>' +
+                     '<td><button class="btn btn-danger btn-sm" onclick="deleteBocRow(\'' + b.id + '\')">✕</button></td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<div style="padding:16px;color:var(--muted);">Aucun BOC.</div>';
+}
+
+async function deleteBocRow(id) {
+    const ok = await sbDel('boc', 'id=eq.' + id);
+    if (ok) loadBOC();
 }
 
 /* ══════════════════════════════════════════════════════
-   RUNNER
+   DÉMARRAGE — sans boucle infinie
 ══════════════════════════════════════════════════════ */
-(async function bootAdmin() {
-  const MAX_WAIT = 15000;
-  let finished = false;
-  const timeoutId = setTimeout(() => {
-    if (finished) return;
-    console.error('⛔ INIT TIMEOUT');
-    document.body.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center;">' +
-      '<div><div style="font-size:48px;margin-bottom:16px;">⛔</div>' +
-      '<h2 style="color:var(--red);font-family:var(--sans);margin-bottom:12px;">Connexion impossible</h2>' +
-      '<p style="color:var(--muted);font-family:var(--sans);max-width:420px;margin:0 auto;line-height:1.6;">' +
-      'Le chargement a dépassé le délai autorisé.<br><br>• Token expiré<br>• RLS Supabase trop restrictif<br>• Table users inaccessible<br>• Problème réseau' +
-      '</p><button onclick="localStorage.removeItem('tc_session');location.href='login.html'" ' +
-      'style="margin-top:24px;padding:10px 22px;background:var(--gold);color:var(--bg);border:none;border-radius:4px;font-family:var(--sans);cursor:pointer;font-weight:500;">' +
-      'Se reconnecter</button></div></div>';
-  }, MAX_WAIT);
-
-  try {
-    await init();
-    finished = true;
-    clearTimeout(timeoutId);
-    console.log('✅ Admin initialisé');
-  } catch (err) {
-    finished = true;
-    clearTimeout(timeoutId);
+init().catch(function(err){
     console.error('Fatal init error:', err);
-    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:var(--red);font-family:var(--sans);"><h2>Erreur fatale</h2><p>' + (err.message || 'Inconnue') + '</p></div>';
-  }
-})();
+    showFatalError('Erreur fatale', err.message || 'Erreur inconnue');
+});
 </script>
 </body>
 </html>
