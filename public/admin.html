@@ -1,5 +1,4 @@
-
-html_content = '''<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
@@ -8,7 +7,7 @@ html_content = '''<!DOCTYPE html>
     <meta name="robots" content="noindex, nofollow">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    <style>
+    <script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=omRN01hvnDppSsq6CIsVV8mtIuGOnVpBHyqmIgwIdVJDelMNA_75PNwWp2oxe3YkFv3bNwtE4Ipfgh0_3diwNm4lgEBvX3rD3PfUTWnQJVVTRSvEWJNyhWdOUmHbxAupNCs8dMWGCap4NX-u4IURhh9_0Pqy0YKdQ19zEhD8Kbtz02EnhzFoQFbHE7it-wiCwLkFU3NjbONIdNUcOafQocDECWhDATwXOYuf_X_ERwYUG06KUPC6V8t-DabFf7SHSnv2RIZLkbeKtCyHAKqUpG9C27ikGjz3aDqAJ6ViEs59B-RHWJWKy3HjOvNceL_ktRVeVy0fUSZ-V9p2qV5i7Q7wZXDJl7rjlcti17optjChjMwbpqIG_CzNXd7bexB1wurB_dw4-bE-BTMKLvhsgGqLZ7qst2aVj6S5ap1MJlmwUv4lAfnRdiG3GyB1amy5x4ByyOTO-CcbxGV_H9TymtrHy9pUg9HVyhcR9pMW-Kfhsx7G5wGLIRaJEnvTLJwudSljoYUPpyPGgg2KY1Op0cXNE4FoAO0ZfxAEAR0IGEeTxbdG61vVFqQqubAqkxlJ5yO1Ng3L69Zb38Oqt9llV440_4hjCd18_ARnZsHVMITvkGQV9bke-go4NJXYCTRfSnFnWp6OMZzb8EYsJPNPMvxxWZ5qAWulU3WezjrdfCvssGHvCDyePOsQAC2z_Xtk" charset="UTF-8"></script><style>
         :root {
             --bg:         #0A0804;
             --surface:    #13110C;
@@ -1200,7 +1199,7 @@ async function importBulk() {
   const raw = v('bulk-csv');
   const msg = document.getElementById('bulk-msg');
   if (!raw) { msg.textContent='CSV vide'; msg.className='msg err'; return; }
-  const lines = raw.split('\\n').filter(l => l.trim());
+  const lines = raw.split('\n').filter(l => l.trim());
   const rows = [];
   for (const line of lines) {
     const [ticker, date, cloture, ouv, haut, bas, vol, vari] = line.split(',');
@@ -1216,7 +1215,7 @@ function parseBulkPreview() {
   const raw = v('bulk-csv');
   const msg = document.getElementById('bulk-msg');
   if (!raw) { msg.textContent='CSV vide'; msg.className='msg err'; return; }
-  const lines = raw.split('\\n').filter(l => l.trim());
+  const lines = raw.split('\n').filter(l => l.trim());
   const preview = document.getElementById('bulk-preview');
   const tbody = document.getElementById('bulk-preview-tbody');
   preview.style.display = '';
@@ -1634,7 +1633,7 @@ async function runDiagnostic() {
 }
 
 function exportDiagnostic() {
-  if (!diagData) { toast('Lancez d\\'abord le diagnostic','err'); return; }
+  if (!diagData) { toast('Lancez d\'abord le diagnostic','err'); return; }
   const blob = new Blob([JSON.stringify(diagData, null, 2)], {type:'application/json'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1737,7 +1736,7 @@ async function handleFile(file) {
   const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
   const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
   if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
-  const headers = jsonData[0].map(h => String(h).toLowerCase().trim().replace(/\\s+/g, '_'));
+  const headers = jsonData[0].map(h => String(h).toLowerCase().trim().replace(/\s+/g, '_'));
   const detected = detectTemplate(headers);
   if (!detected) { toast('Template non reconnu', 'err'); console.log('Headers:', headers); return; }
   document.getElementById('upload-sheet-detected').style.display = '';
@@ -1923,7 +1922,7 @@ async function loadBOC() {
       '<h2 style="color:var(--red);font-family:var(--sans);margin-bottom:12px;">Connexion impossible</h2>' +
       '<p style="color:var(--muted);font-family:var(--sans);max-width:420px;margin:0 auto;line-height:1.6;">' +
       'Le chargement a dépassé le délai autorisé.<br><br>• Token expiré<br>• RLS Supabase trop restrictif<br>• Table users inaccessible<br>• Problème réseau' +
-      '</p><button onclick="localStorage.removeItem(\'tc_session\');location.href=\'login.html\'" ' +
+      '</p><button onclick="localStorage.removeItem('tc_session');location.href='login.html'" ' +
       'style="margin-top:24px;padding:10px 22px;background:var(--gold);color:var(--bg);border:none;border-radius:4px;font-family:var(--sans);cursor:pointer;font-weight:500;">' +
       'Se reconnecter</button></div></div>';
   }, MAX_WAIT);
@@ -1942,9 +1941,4 @@ async function loadBOC() {
 })();
 </script>
 </body>
-</html>'''
-
-with open('/mnt/agents/output/admin_thecapital_complet.html', 'w', encoding='utf-8') as f:
-    f.write(html_content)
-
-print(f"Fichier écrit : {len(html_content)} caractères")
+</html>
