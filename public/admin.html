@@ -215,7 +215,6 @@
         .analyse-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border-s); flex-wrap:wrap; }
         .analyse-item:last-child { border-bottom:none; }
 
-        /* Écran de chargement initial */
         #loading-screen {
             position:fixed; inset:0; z-index:9999; background:var(--bg);
             display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
@@ -892,8 +891,18 @@ let activeTab = 'dashboard';
 function showLoadingScreen(msg) {
     const screen = document.getElementById('loading-screen');
     const msgEl  = document.getElementById('loading-msg');
-    if (screen) screen.style.display = 'flex';
-    if (msgEl)  msgEl.textContent = msg || 'Chargement...';
+    if (screen) {
+        // Réinitialise le contenu au cas où showFatalError l'aurait modifié
+        if (!screen.querySelector('.spinner')) {
+            screen.innerHTML =
+                '<div style="font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:3px;color:var(--cream);">THE <span style="color:var(--gold);">·</span> CAPITAL</div>' +
+                '<div class="spinner" style="border-top-color:var(--gold);border-color:var(--border);border-width:3px;border-style:solid;border-radius:50%;width:32px;height:32px;animation:spin .8s linear infinite;"></div>' +
+                '<p id="loading-msg"></p>';
+        }
+        screen.style.display = 'flex';
+    }
+    const freshMsg = document.getElementById('loading-msg');
+    if (freshMsg) freshMsg.textContent = msg || 'Chargement...';
 }
 
 function hideLoadingScreen() {
@@ -904,18 +913,21 @@ function hideLoadingScreen() {
 }
 
 function showFatalError(title, details) {
-    document.body.innerHTML =
-        '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;' +
-        'padding:24px;text-align:center;background:#0A0804;font-family:sans-serif;">' +
-        '<div>' +
-        '<div style="font-size:48px;margin-bottom:16px;">⛔</div>' +
-        '<h2 style="color:#F87171;margin-bottom:12px;">' + title + '</h2>' +
-        '<p style="color:rgba(245,240,232,0.45);max-width:420px;margin:0 auto;line-height:1.6;">' + details + '</p>' +
-        '<button onclick="localStorage.removeItem(\'' + SK + '\');location.href=\'login.html\'" ' +
-        'style="margin-top:24px;padding:10px 22px;background:#B8964E;color:#0A0804;border:none;' +
-        'border-radius:4px;font-family:sans-serif;cursor:pointer;font-weight:500;">' +
-        'Se reconnecter</button>' +
-        '</div></div>';
+    const screen = document.getElementById('loading-screen');
+    if (screen) {
+        screen.innerHTML =
+            '<div style="text-align:center;max-width:460px;padding:24px;">' +
+            '<div style="font-size:48px;margin-bottom:16px;">⛔</div>' +
+            '<h2 style="color:#F87171;margin-bottom:12px;font-family:var(--sans);font-size:20px;">' + title + '</h2>' +
+            '<p style="color:rgba(245,240,232,0.65);line-height:1.6;font-size:13px;margin-bottom:24px;">' + details + '</p>' +
+            '<button onclick="localStorage.removeItem(\'' + SK + '\');location.href=\'login.html\'" ' +
+            'style="padding:10px 22px;background:var(--gold);color:var(--bg);border:none;border-radius:4px;font-family:var(--sans);cursor:pointer;font-weight:500;">' +
+            'Se reconnecter</button></div>';
+        screen.style.display = 'flex';
+        screen.style.flexDirection = 'column';
+        screen.style.alignItems = 'center';
+        screen.style.justifyContent = 'center';
+    }
 }
 
 /* ── INIT ─────────────────────────────────────────────────────── */
@@ -928,14 +940,19 @@ async function init() {
     let sess;
     try { sess = JSON.parse(s); } catch(e) { location.href = 'login.html'; return; }
 
-    TK = sess?.access_token || '';
+    // Gère plusieurs formats de session possibles
+    const session = sess?.data?.session || sess?.session || sess;
+    const userObj = sess?.data?.user || sess?.user || null;
+
+    TK = session?.access_token || sess?.access_token || '';
     if (!TK) { location.href = 'login.html'; return; }
 
-    const userId    = sess.user?.id || sess.id || null;
-    const userEmail = sess.user?.email || sess.email || '';
+    const userId    = userObj?.id || sess?.id || null;
+    const userEmail = userObj?.email || sess?.email || '';
 
     if (!userId) {
-        showFatalError('Session invalide', 'Identifiant utilisateur introuvable dans la session.');
+        hideLoadingScreen();
+        showFatalError('Session invalide', 'Identifiant utilisateur introuvable dans la session. Essayez de vous reconnecter.');
         return;
     }
 
@@ -946,12 +963,15 @@ async function init() {
         const t = setTimeout(() => ctrl.abort(), 10000);
 
         const r = await fetch(
-            SB_REST + '/users?select=id,is_admin,email,nom&id=eq.' + userId,
+            SB_REST + '/users?select=id,is_admin,email,nom&id=eq.' + encodeURIComponent(userId),
             { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + TK }, signal: ctrl.signal }
         );
         clearTimeout(t);
 
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) {
+            const errText = await r.text();
+            throw new Error('HTTP ' + r.status + ' — ' + errText.substring(0, 200));
+        }
 
         let rows = await r.json().catch(() => []);
 
@@ -965,22 +985,27 @@ async function init() {
 
         const user = rows?.[0];
         if (!user) {
-            showFatalError('Compte introuvable', 'Votre compte n\'existe pas dans la base.');
+            hideLoadingScreen();
+            showFatalError('Compte introuvable', 'Votre compte n\'existe pas dans la base ou les droits RLS bloquent l\'accès.');
             return;
         }
         if (!user.is_admin) {
+            hideLoadingScreen();
             showFatalError('Accès refusé', 'Vous n\'avez pas les droits administrateur.');
             setTimeout(() => { location.href = 'app.html'; }, 2000);
             return;
         }
 
         ME = { is_admin: true, email: user.email || userEmail };
-        document.getElementById('admin-user').textContent = ME.email;
+        const adminUserEl = document.getElementById('admin-user');
+        if (adminUserEl) adminUserEl.textContent = ME.email;
 
         hideLoadingScreen();
         await loadDashboard();
 
     } catch(e) {
+        console.error('Init error:', e);
+        hideLoadingScreen();
         if (e.name === 'AbortError') {
             showFatalError(
                 'Délai dépassé',
@@ -1005,7 +1030,7 @@ const fmtPct  = n => n != null && !isNaN(n) ? (Number(n)>=0?'+':'') + Number(n).
 const clrPct  = n => Number(n)>=0 ? 'var(--green)' : 'var(--red)';
 const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 function clearForm(ids) { ids.forEach(id => set(id, '')); }
-function clearBulk() { set('bulk-csv',''); document.getElementById('bulk-preview').style.display='none'; }
+function clearBulk() { set('bulk-csv',''); const bp = document.getElementById('bulk-preview'); if(bp) bp.style.display='none'; }
 
 function sbHeaders(extra) {
     return Object.assign(
@@ -1017,10 +1042,16 @@ function sbHeaders(extra) {
 async function sbGet(table, params) {
     try {
         const url = SB_REST + '/' + table + (params ? '?' + params : '');
-        const r = await fetch(url, { headers: sbHeaders() });
-        if (!r.ok) { const e = await r.json().catch(()=>{}); toast((e?.message||'Erreur lecture') + ' [' + table + ']', 'err'); return null; }
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 10000);
+        const r = await fetch(url, { headers: sbHeaders(), signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) { const e = await r.json().catch(()=>({})); toast((e?.message||'Erreur lecture') + ' [' + table + ']', 'err'); return null; }
         return r.json();
-    } catch(e) { toast('Réseau: ' + e.message, 'err'); return null; }
+    } catch(e) {
+        if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
+        return null;
+    }
 }
 
 async function sbCount(table, params) {
@@ -1047,26 +1078,44 @@ async function sbPost(table, body, onConflict) {
     try {
         const prefer = onConflict ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
         const url = onConflict ? SB_REST + '/' + table + '?on_conflict=' + onConflict : SB_REST + '/' + table;
-        const r = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body) });
-        if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur écriture', 'err'); return null; }
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 15000);
+        const r = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body), signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) { const e = await r.json().catch(()=>({})); toast(e?.message||'Erreur écriture', 'err'); return null; }
         return r.json();
-    } catch(e) { toast('Réseau: ' + e.message, 'err'); return null; }
+    } catch(e) {
+        if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
+        return null;
+    }
 }
 
 async function sbPatch(table, filter, body) {
     try {
-        const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'PATCH', headers: sbHeaders(), body: JSON.stringify(body) });
-        if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur MAJ', 'err'); return null; }
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 10000);
+        const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'PATCH', headers: sbHeaders(), body: JSON.stringify(body), signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) { const e = await r.json().catch(()=>({})); toast(e?.message||'Erreur MAJ', 'err'); return null; }
         return r.json();
-    } catch(e) { toast('Réseau: ' + e.message, 'err'); return null; }
+    } catch(e) {
+        if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
+        return null;
+    }
 }
 
 async function sbDel(table, filter) {
     try {
-        const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'DELETE', headers: sbHeaders() });
-        if (!r.ok) { const e = await r.json().catch(()=>{}); toast(e?.message||'Erreur suppression', 'err'); return false; }
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 10000);
+        const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'DELETE', headers: sbHeaders(), signal: ctrl.signal });
+        clearTimeout(t);
+        if (!r.ok) { const e = await r.json().catch(()=>({})); toast(e?.message||'Erreur suppression', 'err'); return false; }
         return true;
-    } catch(e) { toast('Réseau: ' + e.message, 'err'); return false; }
+    } catch(e) {
+        if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
+        return false;
+    }
 }
 
 /* ── NAVIGATION ───────────────────────────────────────────────── */
@@ -1087,12 +1136,14 @@ function switchTab(name, el) {
     document.querySelectorAll('.admin-tab').forEach(function(t){ t.classList.remove('active'); });
     const panel = document.getElementById('panel-' + name);
     if (panel) panel.classList.add('active');
-    if (el) el.classList.add('active');
-    if (name !== activeTab) { activeTab = name; (tabLoaders[name] || function(){})(); }
+    if (el && el.classList) el.classList.add('active');
+    if (name !== activeTab) { activeTab = name; if (typeof tabLoaders[name] === 'function') tabLoaders[name](); }
 }
 
 function switchSubTab(prefix, panel, el) {
+    if (!el) return;
     const container = el.closest('.tab-panel');
+    if (!container) return;
     container.querySelectorAll('.sub-tab').forEach(function(t){ t.classList.remove('active'); });
     el.classList.add('active');
     ['ligne','bulk','view','list','add'].forEach(function(p){
@@ -1116,47 +1167,57 @@ function toast(msg, type) {
 }
 
 /* ── MODALS ───────────────────────────────────────────────────── */
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { const el = document.getElementById(id); if(el) el.classList.remove('open'); }
+function openModal(id)  { const el = document.getElementById(id); if(el) el.classList.add('open'); }
 
 /* ══════════════════════════════════════════════════════
    DASHBOARD
 ══════════════════════════════════════════════════════ */
 async function loadDashboard() {
-    document.getElementById('dash-ts').textContent = new Date().toLocaleString('fr-FR');
+    const tsEl = document.getElementById('dash-ts');
+    if (tsEl) tsEl.textContent = new Date().toLocaleString('fr-FR');
+
     const counts = await Promise.all([
         sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
         sbCount('financials'), sbCount('dividendes_calendrier'), sbCount('users')
     ]);
     const [nEnt, nCours, nHist, nFin, nDiv, nUsers] = counts;
-    document.getElementById('k-entreprises').textContent = nEnt;
-    document.getElementById('k-cours').textContent       = nCours;
-    document.getElementById('k-historique').textContent  = nHist;
-    document.getElementById('k-financials').textContent  = nFin;
-    document.getElementById('k-dividendes').textContent  = nDiv;
-    document.getElementById('k-users').textContent       = nUsers;
+
+    const kEnt = document.getElementById('k-entreprises'); if(kEnt) kEnt.textContent = nEnt;
+    const kCou = document.getElementById('k-cours');       if(kCou) kCou.textContent = nCours;
+    const kHis = document.getElementById('k-historique');  if(kHis) kHis.textContent = nHist;
+    const kFin = document.getElementById('k-financials');  if(kFin) kFin.textContent = nFin;
+    const kDiv = document.getElementById('k-dividendes');  if(kDiv) kDiv.textContent = nDiv;
+    const kUsr = document.getElementById('k-users');       if(kUsr) kUsr.textContent = nUsers;
 
     const [lastCours, usersPlans] = await Promise.all([
         sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1'),
         sbGet('users', 'select=plan')
     ]);
+
     const plans = { free:0, pro:0, elite:0 };
     (usersPlans||[]).forEach(function(u){ if (u.plan in plans) plans[u.plan]++; });
-    document.getElementById('ks-users').textContent = 'Free:' + plans.free + ' Pro:' + plans.pro + ' Elite:' + plans.elite;
-    document.getElementById('ks-cours').textContent = 'Dernière: ' + ((lastCours||[])[0]?.date_seance || '—');
+    const ksUsr = document.getElementById('ks-users');
+    if(ksUsr) ksUsr.textContent = 'Free:' + plans.free + ' Pro:' + plans.pro + ' Elite:' + plans.elite;
+    const ksCou = document.getElementById('ks-cours');
+    if(ksCou) ksCou.textContent = 'Dernière: ' + ((lastCours||[])[0]?.date_seance || '—');
 
-    document.getElementById('dash-info').innerHTML =
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">' +
-        '<div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance :</span> <strong>' + ((lastCours||[])[0]?.date_seance||'—') + '</strong></div>' +
-        '<div style="font-size:13px;"><span style="color:var(--muted);">Entreprises :</span> <strong>' + nEnt + '</strong></div>' +
-        '<div style="font-size:13px;"><span style="color:var(--muted);">Historique :</span> <strong>' + nHist.toLocaleString('fr-FR') + '</strong></div>' +
-        '</div>';
+    const dashInfo = document.getElementById('dash-info');
+    if(dashInfo) {
+        dashInfo.innerHTML =
+            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">' +
+            '<div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance :</span> <strong>' + ((lastCours||[])[0]?.date_seance||'—') + '</strong></div>' +
+            '<div style="font-size:13px;"><span style="color:var(--muted);">Entreprises :</span> <strong>' + nEnt + '</strong></div>' +
+            '<div style="font-size:13px;"><span style="color:var(--muted);">Historique :</span> <strong>' + nHist.toLocaleString('fr-FR') + '</strong></div>' +
+            '</div>';
+    }
 
     await loadDashboardAlerts();
 }
 
 async function loadDashboardAlerts() {
     const panel = document.getElementById('dash-alerts');
+    if(!panel) return;
     const alerts = [];
     const [nullVar, nullCours, nullClot] = await Promise.all([
         sbCount('cours', 'variation=is.null'),
@@ -1185,11 +1246,13 @@ async function loadCours() {
 }
 
 function renderCoursTable(data) {
+    data = data || [];
     const tb    = document.getElementById('cours-tbody');
     const count = document.getElementById('cours-count');
+    if (!tb) return;
     if (!data.length) {
         tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px;">Aucun cours</td></tr>';
-        count.textContent = '0 ligne'; return;
+        if(count) count.textContent = '0 ligne'; return;
     }
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
@@ -1209,7 +1272,7 @@ function renderCoursTable(data) {
               '<button class="btn btn-danger btn-sm" onclick="deleteCours(\'' + r.ticker + '\',\'' + r.date_seance + '\')">✕</button>' +
             '</td></tr>';
     }).join('');
-    count.textContent = data.length + ' ligne(s)';
+    if(count) count.textContent = data.length + ' ligne(s)';
 }
 
 function filterCoursTable() {
@@ -1229,15 +1292,20 @@ async function addCours() {
         plus_haut_52: pf('c-h52'), plus_bas_52: pf('c-b52')
     };
     if (!body.ticker || !body.date_seance || body.cours == null) {
-        msg.textContent = 'Ticker, date et cours obligatoires'; msg.className = 'msg err'; return;
+        if(msg){ msg.textContent = 'Ticker, date et cours obligatoires'; msg.className = 'msg err'; } return;
     }
     const r = await sbPost('cours', body, 'ticker,date_seance');
-    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi','c-h52','c-b52']); loadCours(); }
+    if (r) {
+        if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
+        clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi','c-h52','c-b52']);
+        loadCours();
+    }
 }
 
 function editCours(row) {
-    document.getElementById('modal-cours-info').textContent = row.ticker + ' — ' + row.date_seance;
-    document.getElementById('modal-cours-id').value = row.id || '';
+    const info = document.getElementById('modal-cours-info');
+    if(info) info.textContent = row.ticker + ' — ' + row.date_seance;
+    set('modal-cours-id', row.id || '');
     set('modal-cours-val',  row.cours);       set('modal-cours-ouv',  row.ouverture);
     set('modal-cours-haut', row.plus_haut);   set('modal-cours-bas',  row.plus_bas);
     set('modal-cours-vol',  row.volume);      set('modal-cours-var',  row.variation);
@@ -1255,7 +1323,7 @@ async function saveCours() {
         capitalisation: pf('modal-cours-capi'), plus_haut_52: pf('modal-cours-h52'), plus_bas_52: pf('modal-cours-b52')
     };
     const r = await sbPatch('cours', 'id=eq.' + id, body);
-    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-cours'); loadCours(); }
+    if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-cours'); loadCours(); }
 }
 
 async function deleteCours(ticker, date) {
@@ -1275,16 +1343,19 @@ async function addHistorique() {
         volume: pi('h-vol'), variation: pf('h-var')
     };
     if (!body.ticker || !body.date_seance || body.cours_cloture == null) {
-        msg.textContent = 'Champs obligatoires manquants'; msg.className = 'msg err'; return;
+        if(msg){ msg.textContent = 'Champs obligatoires manquants'; msg.className = 'msg err'; } return;
     }
     const r = await sbPost('historique', body, 'ticker,date_seance');
-    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['h-ticker','h-date','h-cloture','h-ouverture','h-haut','h-bas','h-vol','h-var']); }
+    if (r) {
+        if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
+        clearForm(['h-ticker','h-date','h-cloture','h-ouverture','h-haut','h-bas','h-vol','h-var']);
+    }
 }
 
 async function importBulk() {
     const raw = v('bulk-csv');
     const msg = document.getElementById('bulk-msg');
-    if (!raw) { msg.textContent = 'CSV vide'; msg.className = 'msg err'; return; }
+    if (!raw) { if(msg){ msg.textContent = 'CSV vide'; msg.className = 'msg err'; } return; }
     const lines = raw.split('\n').filter(function(l){ return l.trim(); });
     const rows = [];
     lines.forEach(function(line){
@@ -1299,26 +1370,26 @@ async function importBulk() {
             volume: parseInt(vol)||null, variation: parseFloat(vari)||null
         });
     });
-    if (!rows.length) { msg.textContent = 'Aucune ligne valide'; msg.className = 'msg err'; return; }
+    if (!rows.length) { if(msg){ msg.textContent = 'Aucune ligne valide'; msg.className = 'msg err'; } return; }
     const r = await sbPost('historique', rows, 'ticker,date_seance');
-    if (r) { msg.textContent = '✓ ' + rows.length + ' lignes importées'; msg.className = 'msg ok'; set('bulk-csv',''); }
+    if (r) { if(msg){ msg.textContent = '✓ ' + rows.length + ' lignes importées'; msg.className = 'msg ok'; } set('bulk-csv',''); }
 }
 
 function parseBulkPreview() {
     const raw = v('bulk-csv');
     const msg = document.getElementById('bulk-msg');
-    if (!raw) { msg.textContent = 'CSV vide'; msg.className = 'msg err'; return; }
+    if (!raw) { if(msg){ msg.textContent = 'CSV vide'; msg.className = 'msg err'; } return; }
     const lines = raw.split('\n').filter(function(l){ return l.trim(); });
     const preview = document.getElementById('bulk-preview');
     const tbody   = document.getElementById('bulk-preview-tbody');
-    preview.style.display = '';
-    tbody.innerHTML = lines.slice(0,20).map(function(line){
+    if(preview) preview.style.display = '';
+    if(tbody) tbody.innerHTML = lines.slice(0,20).map(function(line){
         const p = line.split(',');
         const ticker = p[0], date = p[1], cloture = p[2], vol = p[6], vari = p[7];
         const ok = ticker && date && !isNaN(parseFloat(cloture));
         return '<tr><td>' + (ticker||'—') + '</td><td>' + (date||'—') + '</td><td>' + (cloture||'—') + '</td><td>' + (vol||'—') + '</td><td>' + (vari||'—') + '</td><td>' + (ok?'✅':'❌') + '</td></tr>';
     }).join('');
-    msg.textContent = lines.length + ' lignes détectées'; msg.className = 'msg info';
+    if(msg){ msg.textContent = lines.length + ' lignes détectées'; msg.className = 'msg info'; }
 }
 
 async function loadHistoriqueTicker() {
@@ -1326,15 +1397,17 @@ async function loadHistoriqueTicker() {
     const from   = v('hist-date-from');
     const to     = v('hist-date-to');
     const tb     = document.getElementById('hist-tbody');
-    if (!ticker) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Entrez un ticker</td></tr>'; return; }
+    if (!ticker) { if(tb) tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Entrez un ticker</td></tr>'; return; }
     let params = 'select=*&ticker=eq.' + encodeURIComponent(ticker) + '&order=date_seance.desc';
     if (from) params += '&date_seance=gte.' + from;
     if (to)   params += '&date_seance=lte.' + to;
     const rows = await sbGet('historique', params);
     histData = rows || [];
+    if (!tb) return;
+    const btnDel = document.getElementById('btn-del-all-hist');
     if (!histData.length) {
         tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucun historique</td></tr>';
-        document.getElementById('btn-del-all-hist').style.display = 'none';
+        if(btnDel) btnDel.style.display = 'none';
     } else {
         tb.innerHTML = histData.map(function(r){
             return '<tr>' +
@@ -1349,9 +1422,10 @@ async function loadHistoriqueTicker() {
                 '<td><button class="btn btn-danger btn-sm" onclick="deleteHistRow(\'' + r.id + '\')">✕</button></td>' +
                 '</tr>';
         }).join('');
-        document.getElementById('btn-del-all-hist').style.display = '';
+        if(btnDel) btnDel.style.display = '';
     }
-    document.getElementById('hist-count').textContent = histData.length + ' ligne(s)';
+    const hCount = document.getElementById('hist-count');
+    if(hCount) hCount.textContent = histData.length + ' ligne(s)';
 }
 
 async function deleteHistRow(id) {
@@ -1376,8 +1450,11 @@ async function loadEntreprises() {
 }
 
 function renderEntTable(data) {
+    data = data || [];
     const tb = document.getElementById('ent-tbody');
-    document.getElementById('ent-count').textContent = (data||[]).length;
+    const cnt = document.getElementById('ent-count');
+    if(cnt) cnt.textContent = data.length;
+    if (!tb) return;
     if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucune entreprise</td></tr>'; return; }
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
@@ -1399,8 +1476,9 @@ function filterEntTable() {
 }
 
 function openEntModal(row) {
-    document.getElementById('modal-ent-title').textContent = 'Modifier ' + row.ticker;
-    document.getElementById('modal-ent-ticker').value = row.ticker;
+    const title = document.getElementById('modal-ent-title');
+    if(title) title.textContent = 'Modifier ' + row.ticker;
+    set('modal-ent-ticker', row.ticker);
     set('modal-ent-nom', row.nom); set('modal-ent-secteur', row.secteur);
     set('modal-ent-pays', row.pays); set('modal-ent-compart', row.compartiment);
     set('modal-ent-isin', row.isin); set('modal-ent-actions', row.nombre_actions);
@@ -1417,7 +1495,7 @@ async function saveEntreprise() {
         nombre_actions: pi('modal-ent-actions'), description: v('modal-ent-desc')
     };
     const r = await sbPatch('entreprises', 'ticker=eq.' + encodeURIComponent(ticker), body);
-    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-entreprise'); loadEntreprises(); }
+    if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-entreprise'); loadEntreprises(); }
 }
 
 async function addEntreprise() {
@@ -1426,9 +1504,13 @@ async function addEntreprise() {
         ticker: v('ne-ticker'), nom: v('ne-nom'), secteur: v('ne-secteur'), pays: v('ne-pays'),
         compartiment: v('ne-compart'), isin: v('ne-isin'), description: v('ne-desc'), nombre_actions: pi('ne-actions')
     };
-    if (!body.ticker || !body.nom) { msg.textContent = 'Ticker et nom obligatoires'; msg.className = 'msg err'; return; }
+    if (!body.ticker || !body.nom) { if(msg){ msg.textContent = 'Ticker et nom obligatoires'; msg.className = 'msg err'; } return; }
     const r = await sbPost('entreprises', body, 'ticker');
-    if (r) { msg.textContent = '✓ Créée'; msg.className = 'msg ok'; clearForm(['ne-ticker','ne-nom','ne-secteur','ne-isin','ne-desc','ne-actions']); loadEntreprises(); }
+    if (r) {
+        if(msg){ msg.textContent = '✓ Créée'; msg.className = 'msg ok'; }
+        clearForm(['ne-ticker','ne-nom','ne-secteur','ne-isin','ne-desc','ne-actions']);
+        loadEntreprises();
+    }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1442,12 +1524,15 @@ async function loadFinancials() {
     finData.forEach(function(r){ if (!years.includes(r.annee)) years.push(r.annee); });
     years.sort(function(a,b){ return b-a; });
     const sel = document.getElementById('fin-year-filter');
-    sel.innerHTML = '<option value="">Toutes années</option>' + years.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
+    if(sel) sel.innerHTML = '<option value="">Toutes années</option>' + years.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
 }
 
 function renderFinTable(data) {
+    data = data || [];
     const tb = document.getElementById('fin-tbody');
-    document.getElementById('fin-count').textContent = (data||[]).length;
+    const cnt = document.getElementById('fin-count');
+    if(cnt) cnt.textContent = data.length;
+    if (!tb) return;
     if (!data.length) { tb.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px;">Aucun financial</td></tr>'; return; }
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
@@ -1475,8 +1560,9 @@ function filterFinTable() {
 }
 
 function openFinModal(row) {
-    document.getElementById('modal-fin-title').textContent = 'Modifier ' + row.ticker + ' ' + row.annee;
-    document.getElementById('modal-fin-id').value = row.id;
+    const title = document.getElementById('modal-fin-title');
+    if(title) title.textContent = 'Modifier ' + row.ticker + ' ' + row.annee;
+    set('modal-fin-id', row.id);
     set('modal-fin-ca', row.chiffre_affaires); set('modal-fin-rbe', row.rbe);
     set('modal-fin-rn', row.resultat_net);     set('modal-fin-bpa', row.bpa);
     set('modal-fin-dpa', row.dpa);             set('modal-fin-fp', row.fonds_propres);
@@ -1496,7 +1582,7 @@ async function saveFinancial() {
         cash_flow_operationnel: pf('modal-fin-cfo'), capex: pf('modal-fin-capex'), source: v('modal-fin-source')
     };
     const r = await sbPatch('financials', 'id=eq.' + id, body);
-    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-financial'); loadFinancials(); }
+    if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-financial'); loadFinancials(); }
 }
 
 async function addFinancial() {
@@ -1509,9 +1595,13 @@ async function addFinancial() {
         nombre_actions: pi('fin-nb-actions'), cash_flow_operationnel: pf('fin-cfo'),
         capex: pf('fin-capex'), source: v('fin-source')
     };
-    if (!body.ticker || !body.annee) { msg.textContent = 'Ticker et année obligatoires'; msg.className = 'msg err'; return; }
+    if (!body.ticker || !body.annee) { if(msg){ msg.textContent = 'Ticker et année obligatoires'; msg.className = 'msg err'; } return; }
     const r = await sbPost('financials', body, 'ticker,annee,periode');
-    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['fin-ticker','fin-annee','fin-ca','fin-rbe','fin-rn','fin-bpa','fin-dpa','fin-fp','fin-dettes','fin-actif','fin-nb-actions','fin-cfo','fin-capex','fin-source']); loadFinancials(); }
+    if (r) {
+        if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
+        clearForm(['fin-ticker','fin-annee','fin-ca','fin-rbe','fin-rn','fin-bpa','fin-dpa','fin-fp','fin-dettes','fin-actif','fin-nb-actions','fin-cfo','fin-capex','fin-source']);
+        loadFinancials();
+    }
 }
 
 async function prefillFinancialFromTicker() {
@@ -1531,8 +1621,11 @@ async function loadDividendes() {
 }
 
 function renderDivTable(data) {
+    data = data || [];
     const tb = document.getElementById('div-tbody');
-    document.getElementById('div-count').textContent = (data||[]).length;
+    const cnt = document.getElementById('div-count');
+    if(cnt) cnt.textContent = data.length;
+    if (!tb) return;
     if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucun dividende</td></tr>'; return; }
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
@@ -1565,9 +1658,13 @@ async function addDividende() {
         taux_rendement: pf('div-tx'), date_detachement: v('div-detach')||null,
         date_paiement: v('div-paie')||null, statut: v('div-statut'), notes: v('div-notes')
     };
-    if (!body.ticker || !body.annee || body.montant == null) { msg.textContent = 'Champs obligatoires manquants'; msg.className = 'msg err'; return; }
+    if (!body.ticker || !body.annee || body.montant == null) { if(msg){ msg.textContent = 'Champs obligatoires manquants'; msg.className = 'msg err'; } return; }
     const r = await sbPost('dividendes_calendrier', body, 'ticker,annee');
-    if (r) { msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']); loadDividendes(); }
+    if (r) {
+        if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
+        clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']);
+        loadDividendes();
+    }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1576,7 +1673,9 @@ async function addDividende() {
 async function loadAnalyses() {
     const rows = await sbGet('analyses', 'select=*&order=date_analyse.desc&limit=100');
     const list = document.getElementById('an-list');
-    document.getElementById('an-count').textContent = (rows||[]).length;
+    const cnt = document.getElementById('an-count');
+    if(cnt) cnt.textContent = (rows||[]).length;
+    if (!list) return;
     if (!rows?.length) { list.innerHTML = '<div style="padding:18px;color:var(--muted);text-align:center;">Aucune analyse</div>'; return; }
     list.innerHTML = rows.map(function(r){
         var resume = (r.resume||'').substring(0,180) + ((r.resume||'').length>180?'...':'');
@@ -1604,10 +1703,12 @@ function calcPotentiel() {
     const cible = pf('an-cible');
     const cours = pf('an-cours');
     const disp  = document.getElementById('an-potentiel-display');
-    if (!cible || !cours || cours <= 0) { disp.value = '—'; return; }
+    if (!cible || !cours || cours <= 0) { if(disp) disp.value = '—'; return; }
     const pot = ((cible - cours) / cours * 100).toFixed(2);
-    disp.value = (pot >= 0 ? '+' : '') + pot + '%';
-    disp.style.color = pot >= 0 ? 'var(--green)' : 'var(--red)';
+    if(disp){
+        disp.value = (pot >= 0 ? '+' : '') + pot + '%';
+        disp.style.color = pot >= 0 ? 'var(--green)' : 'var(--red)';
+    }
 }
 
 async function addAnalyse() {
@@ -1617,9 +1718,15 @@ async function addAnalyse() {
         cours_cible: pf('an-cible'), date_analyse: v('an-date')||new Date().toISOString().split('T')[0],
         analyste: v('an-analyste'), resume: v('an-resume')
     };
-    if (!body.ticker || !body.recommandation) { msg.textContent = 'Ticker et recommandation obligatoires'; msg.className = 'msg err'; return; }
+    if (!body.ticker || !body.recommandation) { if(msg){ msg.textContent = 'Ticker et recommandation obligatoires'; msg.className = 'msg err'; } return; }
     const r = await sbPost('analyses', body);
-    if (r) { msg.textContent = '✓ Publiée'; msg.className = 'msg ok'; clearForm(['an-ticker','an-titre','an-cible','an-cours','an-analyste','an-resume']); document.getElementById('an-potentiel-display').value = ''; loadAnalyses(); }
+    if (r) {
+        if(msg){ msg.textContent = '✓ Publiée'; msg.className = 'msg ok'; }
+        clearForm(['an-ticker','an-titre','an-cible','an-cours','an-analyste','an-resume']);
+        const disp = document.getElementById('an-potentiel-display');
+        if(disp) disp.value = '';
+        loadAnalyses();
+    }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1632,8 +1739,11 @@ async function loadUsers() {
 }
 
 function renderUsrTable(data) {
+    data = data || [];
     const tb = document.getElementById('usr-tbody');
-    document.getElementById('usr-count').textContent = (data||[]).length;
+    const cnt = document.getElementById('usr-count');
+    if(cnt) cnt.textContent = data.length;
+    if (!tb) return;
     if (!data.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Aucun utilisateur</td></tr>'; return; }
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
@@ -1657,7 +1767,7 @@ function filterUsrTable() {
 }
 
 function openUsrModal(row) {
-    document.getElementById('modal-usr-id').value = row.id;
+    set('modal-usr-id', row.id);
     set('modal-usr-plan',   row.plan||'free');
     set('modal-usr-expiry', row.plan_expiry ? row.plan_expiry.split('T')[0] : '');
     set('modal-usr-nom',    row.nom);
@@ -1673,7 +1783,7 @@ async function saveUser() {
         nom: v('modal-usr-nom'), is_admin: v('modal-usr-admin') === 'true'
     };
     const r = await sbPatch('users', 'id=eq.' + id, body);
-    if (r) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; closeModal('modal-user'); loadUsers(); }
+    if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-user'); loadUsers(); }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1681,28 +1791,28 @@ async function saveUser() {
 ══════════════════════════════════════════════════════ */
 function runScraper() {
     const msg = document.getElementById('scraper-msg');
-    msg.textContent = 'Scraper déclenché (simulation)...'; msg.className = 'msg info';
-    setTimeout(function(){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }, 1500);
+    if(msg){ msg.textContent = 'Scraper déclenché (simulation)...'; msg.className = 'msg info'; }
+    setTimeout(function(){ if(msg){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; } }, 1500);
 }
 
 function runFallback() {
     const msg = document.getElementById('scraper-msg');
-    msg.textContent = 'Recalcul variation...'; msg.className = 'msg info';
-    setTimeout(function(){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }, 1000);
+    if(msg){ msg.textContent = 'Recalcul variation...'; msg.className = 'msg info'; }
+    setTimeout(function(){ if(msg){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; } }, 1000);
 }
 
 async function syncHistFromCours() {
     const msg = document.getElementById('scraper-msg');
-    msg.textContent = 'Sync en cours...'; msg.className = 'msg info';
+    if(msg){ msg.textContent = 'Sync en cours...'; msg.className = 'msg info'; }
     const rows = await sbGet('cours', 'select=*&order=date_seance.desc&limit=50');
-    if (!rows?.length) { msg.textContent = 'Aucun cours à synchroniser'; msg.className = 'msg err'; return; }
+    if (!rows?.length) { if(msg){ msg.textContent = 'Aucun cours à synchroniser'; msg.className = 'msg err'; } return; }
     const mapped = rows.map(function(r){
         return { ticker: r.ticker, date_seance: r.date_seance, cours_cloture: r.cours,
                  ouverture: r.ouverture, plus_haut: r.plus_haut, plus_bas: r.plus_bas,
                  volume: r.volume, variation: r.variation };
     });
     const res = await sbPost('historique', mapped, 'ticker,date_seance');
-    if (res) { msg.textContent = '✓ ' + mapped.length + ' cours synchronisés'; msg.className = 'msg ok'; }
+    if (res) { if(msg){ msg.textContent = '✓ ' + mapped.length + ' cours synchronisés'; msg.className = 'msg ok'; } }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1710,7 +1820,7 @@ async function syncHistFromCours() {
 ══════════════════════════════════════════════════════ */
 async function runDiagnostic() {
     const res = document.getElementById('diag-result');
-    res.innerHTML = '<div class="loading"><div class="spinner"></div><p>Diagnostic en cours...</p></div>';
+    if(res) res.innerHTML = '<div class="loading"><div class="spinner"></div><p>Diagnostic en cours...</p></div>';
     const counts = await Promise.all([
         sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
         sbCount('financials'), sbCount('dividendes_calendrier')
@@ -1720,21 +1830,29 @@ async function runDiagnostic() {
     const ok = [nEnt>0, nCours>0, nHist>0, nFin>0, nDiv>0].filter(Boolean).length;
     const score = Math.round(ok/total*100);
     const bar = document.getElementById('diag-health-bar');
-    bar.style.display = '';
-    document.getElementById('diag-health-icon').textContent  = score>=80?'✅':score>=50?'⚠️':'⛔';
-    document.getElementById('diag-health-title').textContent = score>=80?'Plateforme saine':score>=50?'Quelques alertes':'Problèmes détectés';
-    document.getElementById('diag-health-sub').textContent   = ok + '/' + total + ' tables alimentées';
-    document.getElementById('diag-score').textContent = score + '%';
-    document.getElementById('diag-score').style.color = score>=80?'var(--green)':score>=50?'var(--orange)':'var(--red)';
-    res.innerHTML =
-        '<div class="card"><div style="padding:18px;">' +
-        '<table class="diag-table" style="width:100%;font-size:13px;">' +
-        '<tr><th style="text-align:left;">Table</th><th style="text-align:right;">Lignes</th><th>État</th></tr>' +
-        [['entreprises',nEnt],['cours',nCours],['historique',nHist],['financials',nFin],['dividendes',nDiv]].map(function(row){
-            return '<tr><td>' + row[0] + '</td><td style="text-align:right;font-family:var(--mono);">' + row[1] + '</td>' +
-                   '<td class="' + (row[1]>0?'diag-ok':'diag-err') + '">' + (row[1]>0?'OK':'VIDE') + '</td></tr>';
-        }).join('') +
-        '</table></div></div>';
+    if(bar) bar.style.display = '';
+    const hIcon = document.getElementById('diag-health-icon');
+    const hTitle = document.getElementById('diag-health-title');
+    const hSub = document.getElementById('diag-health-sub');
+    const hScore = document.getElementById('diag-score');
+    if(hIcon) hIcon.textContent  = score>=80?'✅':score>=50?'⚠️':'⛔';
+    if(hTitle) hTitle.textContent = score>=80?'Plateforme saine':score>=50?'Quelques alertes':'Problèmes détectés';
+    if(hSub) hSub.textContent   = ok + '/' + total + ' tables alimentées';
+    if(hScore){
+        hScore.textContent = score + '%';
+        hScore.style.color = score>=80?'var(--green)':score>=50?'var(--orange)':'var(--red)';
+    }
+    if(res){
+        res.innerHTML =
+            '<div class="card"><div style="padding:18px;">' +
+            '<table class="diag-table" style="width:100%;font-size:13px;">' +
+            '<tr><th style="text-align:left;">Table</th><th style="text-align:right;">Lignes</th><th>État</th></tr>' +
+            [['entreprises',nEnt],['cours',nCours],['historique',nHist],['financials',nFin],['dividendes',nDiv]].map(function(row){
+                return '<tr><td>' + row[0] + '</td><td style="text-align:right;font-family:var(--mono);">' + row[1] + '</td>' +
+                       '<td class="' + (row[1]>0?'diag-ok':'diag-err') + '">' + (row[1]>0?'OK':'VIDE') + '</td></tr>';
+            }).join('') +
+            '</table></div></div>';
+    }
     diagData = { nEnt:nEnt, nCours:nCours, nHist:nHist, nFin:nFin, nDiv:nDiv, score:score, date:new Date().toISOString() };
 }
 
@@ -1750,6 +1868,7 @@ function exportDiagnostic() {
 async function loadCoursErreurs() {
     const panel = document.getElementById('cours-erreurs-panel');
     const rows  = await sbGet('cours', 'select=*&or=(cours.lte.0,variation.is.null)&limit=50');
+    if (!panel) return;
     if (!rows?.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Aucun cours invalide</div>'; return; }
     panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Date</th><th>Cours</th><th>Variation</th></tr></thead><tbody>' +
         rows.map(function(r){
@@ -1763,6 +1882,7 @@ async function loadTickersSansFinancials() {
     const panel = document.getElementById('tickers-sans-fin-panel');
     const ents  = await sbGet('entreprises', 'select=ticker');
     const fins  = await sbGet('financials',  'select=ticker');
+    if (!panel) return;
     const finSet  = new Set((fins||[]).map(function(f){ return f.ticker; }));
     const missing = (ents||[]).filter(function(e){ return !finSet.has(e.ticker); });
     if (!missing.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Tous les tickers ont des financials</div>'; return; }
@@ -1827,8 +1947,10 @@ function handleFileSelect(e) { if (e.target.files.length) handleFile(e.target.fi
 
 async function handleFile(file) {
     currentUpload.filename = file.name;
-    document.getElementById('upload-filename').textContent = file.name;
-    document.getElementById('upload-info').style.display = '';
+    const uf = document.getElementById('upload-filename');
+    const ui = document.getElementById('upload-info');
+    if(uf) uf.textContent = file.name;
+    if(ui) ui.style.display = '';
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: 'array' });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -1837,7 +1959,8 @@ async function handleFile(file) {
     const headers = jsonData[0].map(function(h){ return String(h).toLowerCase().trim().replace(/\s+/g,'_'); });
     const detected = detectTemplate(headers);
     if (!detected) { toast('Template non reconnu', 'err'); console.log('Headers:', headers); return; }
-    document.getElementById('upload-sheet-detected').style.display = '';
+    const usd = document.getElementById('upload-sheet-detected');
+    if(usd) usd.style.display = '';
     currentUpload.config = TEMPLATE_CONFIG[detected];
     const rows = [];
     for (var i = 1; i < jsonData.length; i++) {
@@ -1863,11 +1986,15 @@ function detectTemplate(headers) {
 
 async function showPreview(templateKey, rows) {
     var config = TEMPLATE_CONFIG[templateKey];
-    document.getElementById('preview-card').style.display = '';
-    document.getElementById('preview-count').textContent = rows.length + ' lignes';
+    const pCard = document.getElementById('preview-card');
+    const pCount = document.getElementById('preview-count');
+    if(pCard) pCard.style.display = '';
+    if(pCount) pCount.textContent = rows.length + ' lignes';
     var displayHeaders = config.headers.slice();
     if (config.autoCalc) config.autoCalc.forEach(function(c){ displayHeaders.push('[AUTO] ' + c); });
-    document.getElementById('preview-thead').innerHTML = '<tr>' + displayHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '<th>Statut</th></tr>';
+    const pHead = document.getElementById('preview-thead');
+    const pBody = document.getElementById('preview-tbody');
+    if(pHead) pHead.innerHTML = '<tr>' + displayHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '<th>Statut</th></tr>';
     var insertCount = 0, updateCount = 0, errorCount = 0;
     var previewRows = [];
     for (var i = 0; i < Math.min(rows.length, 50); i++) {
@@ -1878,19 +2005,24 @@ async function showPreview(templateKey, rows) {
         var combined = Object.assign({}, rows[i], val.calculated, { _status: val.status, _errors: val.errors });
         previewRows.push(combined);
     }
-    document.getElementById('import-summary').innerHTML =
-        '<div class="import-stat insert"><div class="number">' + insertCount + '</div><div class="label">Nouveaux</div></div>' +
-        '<div class="import-stat update"><div class="number">' + updateCount + '</div><div class="label">Màj</div></div>' +
-        '<div class="import-stat skip"><div class="number">' + (rows.length - insertCount - updateCount - errorCount) + '</div><div class="label">Ignorés</div></div>' +
-        '<div class="import-stat error"><div class="number">' + errorCount + '</div><div class="label">Erreurs</div></div>';
-    document.getElementById('preview-tbody').innerHTML = previewRows.map(function(r){
-        var cls = r._status==='error'?'error':r._status==='update'?'update':'new';
-        var cells = displayHeaders.map(function(h){
-            var clean = h.replace('[AUTO] ','');
-            return '<td>' + (r[clean] != null ? r[clean] : '—') + '</td>';
+    const iSum = document.getElementById('import-summary');
+    if(iSum){
+        iSum.innerHTML =
+            '<div class="import-stat insert"><div class="number">' + insertCount + '</div><div class="label">Nouveaux</div></div>' +
+            '<div class="import-stat update"><div class="number">' + updateCount + '</div><div class="label">Màj</div></div>' +
+            '<div class="import-stat skip"><div class="number">' + (rows.length - insertCount - updateCount - errorCount) + '</div><div class="label">Ignorés</div></div>' +
+            '<div class="import-stat error"><div class="number">' + errorCount + '</div><div class="label">Erreurs</div></div>';
+    }
+    if(pBody){
+        pBody.innerHTML = previewRows.map(function(r){
+            var cls = r._status==='error'?'error':r._status==='update'?'update':'new';
+            var cells = displayHeaders.map(function(h){
+                var clean = h.replace('[AUTO] ','');
+                return '<td>' + (r[clean] != null ? r[clean] : '—') + '</td>';
+            }).join('');
+            return '<tr class="preview-row ' + cls + '" title="' + (r._errors||[]).join(', ') + '">' + cells + '<td>' + (r._status==='error'?'❌':r._status==='update'?'🔄':'✅') + '</td></tr>';
         }).join('');
-        return '<tr class="preview-row ' + cls + '" title="' + (r._errors||[]).join(', ') + '">' + cells + '<td>' + (r._status==='error'?'❌':r._status==='update'?'🔄':'✅') + '</td></tr>';
-    }).join('');
+    }
 }
 
 async function validateRow(row, config, templateKey) {
@@ -1917,15 +2049,17 @@ async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
     var progressCard = document.getElementById('progress-card');
-    progressCard.style.display = '';
+    if(progressCard) progressCard.style.display = '';
     var inserted = 0, errors = 0;
     var batchSize = 50;
     var templateKey = null;
     for (var k in TEMPLATE_CONFIG) { if (TEMPLATE_CONFIG[k] === config) { templateKey = k; break; } }
     for (var i = 0; i < data.length; i += batchSize) {
         var batch = data.slice(i, i + batchSize);
-        document.getElementById('import-progress').style.width = Math.round((i / data.length) * 100) + '%';
-        document.getElementById('progress-text').textContent = 'Traitement ' + (i+1) + '–' + Math.min(i+batchSize, data.length);
+        const iProg = document.getElementById('import-progress');
+        const pText = document.getElementById('progress-text');
+        if(iProg) iProg.style.width = Math.round((i / data.length) * 100) + '%';
+        if(pText) pText.textContent = 'Traitement ' + (i+1) + '–' + Math.min(i+batchSize, data.length);
         var prepared = [];
         for (var j = 0; j < batch.length; j++) {
             var val = await validateRow(batch[j], config, templateKey);
@@ -1946,10 +2080,14 @@ async function confirmImport() {
 
 function cancelImport() {
     currentUpload = { data:[], config:null, filename:'' };
-    document.getElementById('preview-card').style.display   = 'none';
-    document.getElementById('progress-card').style.display  = 'none';
-    document.getElementById('upload-info').style.display    = 'none';
-    document.getElementById('excel-file').value = '';
+    const pCard = document.getElementById('preview-card');
+    const prCard = document.getElementById('progress-card');
+    const uInfo = document.getElementById('upload-info');
+    const eFile = document.getElementById('excel-file');
+    if(pCard) pCard.style.display   = 'none';
+    if(prCard) prCard.style.display  = 'none';
+    if(uInfo) uInfo.style.display    = 'none';
+    if(eFile) eFile.value = '';
 }
 
 function downloadTemplate(type) {
@@ -1974,29 +2112,31 @@ function downloadTemplate(type) {
 ══════════════════════════════════════════════════════ */
 async function importBOC() {
     var date = v('boc-date'), nom = v('boc-nom')||null, urlManuelle = v('boc-url')||null;
-    var fileInput = document.getElementById('boc-file'), file = fileInput.files[0];
+    var fileInput = document.getElementById('boc-file'), file = fileInput ? fileInput.files[0] : null;
     var msg = document.getElementById('boc-msg');
-    if (!date) { msg.textContent = 'Date obligatoire'; msg.className = 'msg err'; return; }
-    if (!file && !urlManuelle) { msg.textContent = 'Fichier ou URL requis'; msg.className = 'msg err'; return; }
+    if (!date) { if(msg){ msg.textContent = 'Date obligatoire'; msg.className = 'msg err'; } return; }
+    if (!file && !urlManuelle) { if(msg){ msg.textContent = 'Fichier ou URL requis'; msg.className = 'msg err'; } return; }
     var fichierUrl = urlManuelle;
     if (file) {
-        if (file.type !== 'application/pdf') { msg.textContent = 'PDF uniquement'; msg.className = 'msg err'; return; }
+        if (file.type !== 'application/pdf') { if(msg){ msg.textContent = 'PDF uniquement'; msg.className = 'msg err'; } return; }
         var fileName = 'boc-' + Date.now() + '-' + file.name;
         var formData = new FormData(); formData.append('file', file);
         var uploadRes = await fetch(SB_URL + '/storage/v1/object/boc_pdfs/' + fileName, {
             method:'POST', headers:{ apikey:SB_ANON, Authorization:'Bearer ' + TK }, body:formData
         });
-        if (!uploadRes.ok) { msg.textContent = 'Échec upload'; msg.className = 'msg err'; return; }
+        if (!uploadRes.ok) { if(msg){ msg.textContent = 'Échec upload'; msg.className = 'msg err'; } return; }
         fichierUrl = SB_URL + '/storage/v1/object/public/boc_pdfs/' + fileName;
     }
     var body = { date_seance:date, fichier_nom: nom||(file?file.name:'boc.pdf'), fichier_url:fichierUrl };
     var r = await sbPost('boc', body, 'date_seance');
-    if (r) { msg.textContent = '✓ BOC enregistré'; msg.className = 'msg ok'; loadBOC(); }
+    if (r) { if(msg){ msg.textContent = '✓ BOC enregistré'; msg.className = 'msg ok'; } loadBOC(); }
 }
 
 async function loadBOC() {
     var list = await sbGet('boc', 'select=*&order=date_seance.desc&limit=20') || [];
-    document.getElementById('boc-list').innerHTML = list.length
+    const bocList = document.getElementById('boc-list');
+    if(!bocList) return;
+    bocList.innerHTML = list.length
         ? '<div class="tw"><table><thead><tr><th>Date</th><th>Nom</th><th>URL</th><th></th></tr></thead><tbody>' +
           list.map(function(b){
               return '<tr><td>' + b.date_seance + '</td><td>' + b.fichier_nom + '</td>' +
@@ -2016,6 +2156,7 @@ async function deleteBocRow(id) {
 ══════════════════════════════════════════════════════ */
 init().catch(function(err){
     console.error('Fatal init error:', err);
+    hideLoadingScreen();
     showFatalError('Erreur fatale', err.message || 'Erreur inconnue');
 });
 </script>
