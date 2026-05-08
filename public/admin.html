@@ -1049,27 +1049,43 @@ async function init() {
   try { sess = JSON.parse(s); } catch(e) { location.href = 'login.html'; return; }
   TK = sess?.access_token || '';
   if (!TK) { location.href = 'login.html'; return; }
-  const userId   = sess.user?.id || sess.id || null;
-  const userEmail= sess.user?.email || sess.email || '';
-  if (!userId) { alert('Session invalide. Reconnectez-vous.'); location.href = 'login.html'; return; }
+  const userId    = sess.user?.id || sess.id || null;
+  const userEmail = sess.user?.email || sess.email || '';
+  if (!userId) { alert('Session invalide.'); location.href = 'login.html'; return; }
+
+  // Timeout de sécurité sur le fetch auth
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), 10000);
+
   try {
     const r = await fetch(`${SB_REST}/users?select=id,is_admin,email,nom&id=eq.${userId}`, {
-      headers: { apikey: SB_ANON, Authorization: `Bearer ${TK}` }
+      headers: { apikey: SB_ANON, Authorization: `Bearer ${TK}` },
+      signal: ctrl.signal
     });
+    clearTimeout(t);
+
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     let rows = await r.json().catch(() => []);
+
     if (!rows?.length && userEmail) {
       const r2 = await fetch(`${SB_REST}/users?select=id,is_admin,email,nom&email=eq.${encodeURIComponent(userEmail)}`, {
         headers: { apikey: SB_ANON, Authorization: `Bearer ${TK}` }
       });
       rows = await r2.json().catch(() => []);
     }
+
     const user = rows?.[0];
     if (!user) { alert('Compte introuvable.'); location.href = 'app.html'; return; }
     if (!user.is_admin) { alert('Accès refusé.'); location.href = 'app.html'; return; }
+
     ME = { is_admin: true, email: user.email || userEmail };
     document.getElementById('admin-user').textContent = ME.email;
-    loadDashboard();
-  } catch(e) { alert('Erreur: '+e.message); location.href = 'login.html'; }
+    await loadDashboard();
+
+  } catch (e) {
+    clearTimeout(t);
+    throw e; // laisse le runner final afficher l'erreur proprement
+  }
 }
 
 function doLogout() { localStorage.removeItem(SK); location.href = 'login.html'; }
@@ -1098,15 +1114,32 @@ async function sbGet(table, params='') {
   } catch(e) { toast('Réseau: '+e.message,'err'); return null; }
 }
 
-async function sbCount(table, params='') {
+async function sbCount(table, params = '') {
   try {
-    const r = await fetch(`${SB_REST}/${table}?select=id&${params}`, {
-      headers: { ...sbHeaders(), Prefer: 'count=exact', Range: '0-0' }
-    });
-    return parseInt(r.headers.get('content-range')?.split('/')?.[1] ?? '0');
-  } catch(e) { return 0; }
-}
+    // Nettoie pour éviter les doubles select= qui plantent Supabase
+    const cleanParams = String(params).replace(/select=[^&]*/g, '').replace(/^&|&$/g, '');
+    const url = `${SB_REST}/${table}?select=id${cleanParams ? '&' + cleanParams : ''}`;
 
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 8000); // 8s max par comptage
+
+    const r = await fetch(url, {
+      headers: { ...sbHeaders(), Prefer: 'count=exact', Range: '0-0' },
+      signal: ctrl.signal
+    });
+    clearTimeout(t);
+
+    if (!r.ok) {
+      console.warn(`sbCount [${table}] HTTP ${r.status}`);
+      return 0;
+    }
+    const range = r.headers.get('content-range');
+    return parseInt(range?.split('/')?.[1] ?? '0');
+  } catch (e) {
+    console.error(`sbCount [${table}] error:`, e.message);
+    return 0;
+  }
+}
 async function sbPost(table, body, onConflict='') {
   try {
     const prefer = onConflict ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
@@ -1482,9 +1515,45 @@ async function loadBOC() {
       + '</tbody></table></div>'
     : '<div style="padding:16px;color:var(--muted);">Aucun BOC.</div>';
 }
+/* ═══════════════════════════════════════════════════════════════
+   RUNNER FINAL — avec timeout de sécurité anti-blocage
+══════════════════════════════════════════════════════════════ */
+(async function bootAdmin() {
+  const MAX_WAIT = 15000; // 15 secondes max pour toute l'init
+  let finished = false;
 
-// Runner final
-init();
+  const timeoutId = setTimeout(() => {
+    if (finished) return;
+    console.error('⛔ INIT TIMEOUT — Supabase ne répond pas (vérifiez RLS / réseau / token)');
+    document.body.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center;">' +
+      '<div>' +
+      '<div style="font-size:48px;margin-bottom:16px;">⛔</div>' +
+      '<h2 style="color:var(--red);font-family:var(--sans);margin-bottom:12px;">Connexion impossible</h2>' +
+      '<p style="color:var(--muted);font-family:var(--sans);max-width:420px;margin:0 auto;line-height:1.6;">' +
+      'Le chargement a dépassé le délai autorisé.<br><br>' +
+      '• Token expiré<br>• RLS Supabase trop restrictif<br>• Table <code>users</code> inaccessible<br>• Problème réseau' +
+      '</p>' +
+      '<button onclick="localStorage.removeItem(\'' + SK + '\');location.href=\'login.html\'" ' +
+      'style="margin-top:24px;padding:10px 22px;background:var(--gold);color:var(--bg);border:none;border-radius:4px;font-family:var(--sans);cursor:pointer;font-weight:500;">' +
+      'Se reconnecter</button>' +
+      '</div></div>';
+  }, MAX_WAIT);
+
+  try {
+    await init();
+    finished = true;
+    clearTimeout(timeoutId);
+    console.log('✅ Admin initialisé');
+  } catch (err) {
+    finished = true;
+    clearTimeout(timeoutId);
+    console.error('Fatal init error:', err);
+    document.body.innerHTML =
+      '<div style="padding:40px;text-align:center;color:var(--red);font-family:var(--sans);">' +
+      '<h2>Erreur fatale</h2><p>' + (err.message || 'Inconnue') + '</p></div>';
+  }
+})();
 </script>
 </body>
 </html>
