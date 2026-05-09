@@ -1922,8 +1922,9 @@ var TEMPLATE_CONFIG = {
     },
     indices: {
         name: 'BRVM_Indices',
-        headers: ['code','nom','valeur','variation','description'],
-        required: ['code','nom','valeur'], table: 'indices', uniqueKey: 'code'
+        headers: ['indice','date_seance','valeur','variation','variation_pct'],
+        required: ['indice','date_seance','valeur'],
+        table: 'indices', uniqueKey: 'indice,date_seance'
     },
     actionnaires: {
         name: 'BRVM_Actionnaires',
