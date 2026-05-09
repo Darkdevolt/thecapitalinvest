@@ -2030,25 +2030,6 @@ async function showPreview(templateKey, rows) {
     }
 }
 
-async function validateRow(row, config, templateKey) {
-    var errors = [], calculated = {}, status = 'insert';
-    config.required.forEach(function(req){
-        if (!row[req] && row[req] !== 0) errors.push(req + ' manquant');
-    });
-    if (config.uniqueKey && !errors.length) {
-        var filters = config.uniqueKey.split(',').map(function(k){ return k + '=eq.' + encodeURIComponent(row[k]); }).join('&');
-        var exists = await sbCount(config.table, filters);
-        if (exists > 0) status = 'update';
-    }
-    if (templateKey === 'cours' && row.cours) {
-        var last = await sbGet('cours', 'select=cours&ticker=eq.' + row.ticker + '&order=date_seance.desc&limit=1');
-        if (last?.length && last[0].cours > 0) {
-            calculated.variation = parseFloat(((parseFloat(row.cours) - last[0].cours) / last[0].cours * 100).toFixed(2));
-        }
-    }
-    if (errors.length) status = 'error';
-    return { status: status, errors: errors, calculated: calculated };
-}
 
 async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
