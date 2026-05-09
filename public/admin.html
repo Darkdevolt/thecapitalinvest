@@ -1492,6 +1492,7 @@ async function loadHistoriqueTicker() {
 }
 
 async function deleteHistRow(id) {
+    if (!confirm("Supprimer cette ligne d'historique ?")) return;
     const ok = await sbDel('historique', 'id=eq.' + id);
     if (ok) loadHistoriqueTicker();
 }
@@ -1705,6 +1706,7 @@ function renderDivTable(data) {
 }
 
 async function deleteDivRow(id) {
+    if (!confirm("Supprimer ce dividende ?")) return;
     const ok = await sbDel('dividendes_calendrier', 'id=eq.' + id);
     if (ok) loadDividendes();
 }
@@ -1758,6 +1760,7 @@ async function loadAnalyses() {
 }
 
 async function deleteAnalyseRow(id) {
+    if (!confirm("Supprimer cette analyse ?")) return;
     const ok = await sbDel('analyses', 'id=eq.' + id);
     if (ok) loadAnalyses();
 }
@@ -2265,6 +2268,7 @@ async function loadBOC() {
 }
 
 async function deleteBocRow(id) {
+    if (!confirm("Supprimer ce BOC ?")) return;
     const ok = await sbDel('boc', 'id=eq.' + id);
     if (ok) loadBOC();
 }
@@ -2348,8 +2352,37 @@ async function addIndice() {
 }
 
 async function deleteIndiceRow(id) {
+    if (!confirm("Supprimer cet indice ?")) return;
     const ok = await sbDel('indices', 'id=eq.' + id);
     if (ok) loadIndices();
+}
+
+function editIndice(row) {
+    const info = document.getElementById('modal-idx-info');
+    if(info) info.textContent = row.indice + ' — ' + row.date_seance;
+    set('modal-idx-id', row.id);
+    set('modal-idx-indice', row.indice);
+    set('modal-idx-date', row.date_seance);
+    set('modal-idx-valeur', row.valeur);
+    set('modal-idx-var', row.variation);
+    set('modal-idx-varpct', row.variation_pct);
+    openModal('modal-indice');
+}
+
+async function saveIndice() {
+    const id  = v('modal-idx-id');
+    const msg = document.getElementById('modal-idx-msg');
+    const body = {
+        valeur: pf('modal-idx-valeur'),
+        variation: pf('modal-idx-var'),
+        variation_pct: pf('modal-idx-varpct')
+    };
+    const r = await sbPatch('indices', 'id=eq.' + id, body);
+    if (r) {
+        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
+        closeModal('modal-indice');
+        loadIndices();
+    }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2361,5 +2394,25 @@ init().catch(function(err){
     showFatalError('Erreur fatale', err.message || 'Erreur inconnue');
 });
 </script>
+<div class="inline-edit" id="modal-indice">
+    <div class="modal">
+        <div class="modal-title">Modifier l'indice</div>
+        <input type="hidden" id="modal-idx-id">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;" id="modal-idx-info"></div>
+        <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
+            <div class="field"><label>Indice</label><input type="text" id="modal-idx-indice" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Date séance</label><input type="text" id="modal-idx-date" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Valeur</label><input type="number" id="modal-idx-valeur" step="any"></div>
+            <div class="field"><label>Variation</label><input type="number" id="modal-idx-var" step="any"></div>
+            <div class="field"><label>Variation %</label><input type="number" id="modal-idx-varpct" step="any"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline btn-sm" onclick="closeModal('modal-indice')">Annuler</button>
+            <button class="btn btn-primary btn-sm" onclick="saveIndice()">Enregistrer</button>
+        </div>
+        <span id="modal-idx-msg" class="msg" style="display:block;margin-top:8px;"></span>
+    </div>
+</div>
+
 </body>
 </html>
