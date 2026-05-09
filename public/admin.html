@@ -595,6 +595,7 @@
             </div>
             <div class="actions-row">
                 <button class="btn btn-primary" onclick="addAnalyse()">Publier la recommandation</button>
+                <button class="btn btn-outline btn-sm" onclick="prefillAnalyseFromTicker()">↑ Charger dernier cours</button>
                 <span id="an-msg" class="msg"></span>
             </div>
         </div>
@@ -1144,9 +1145,15 @@ async function sbPost(table, body, onConflict) {
         const t = setTimeout(() => ctrl.abort(), 15000);
         const r = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body), signal: ctrl.signal });
         clearTimeout(t);
-        if (!r.ok) { const e = await r.json().catch(()=>({})); toast(e?.message||'Erreur écriture', 'err'); return null; }
+        if (!r.ok) {
+            const e = await r.json().catch(()=>({}));
+            console.error('[sbPost ERROR]', table, e);
+            toast((e?.message || e?.details || 'Erreur écriture') + ' [' + table + ']', 'err');
+            return null;
+        }
         return r.json();
     } catch(e) {
+        console.error('[sbPost NETWORK]', table, e);
         if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
         return null;
     }
@@ -1529,7 +1536,8 @@ function renderEntTable(data) {
             '<td><span class="badge ' + (r.compartiment==='PRESTIGE'?'badge-gold':'badge-blue') + '">' + (r.compartiment||'—') + '</span></td>' +
             '<td class="td-muted">' + (r.isin||'—') + '</td>' +
             '<td><span class="badge badge-green">Actif</span></td>' +
-            '<td><button class="btn btn-outline btn-sm" onclick=\'openEntModal(' + JSON.stringify(r) + ')\'>✎</button></td>' +
+            '<td><button class="btn btn-outline btn-sm" onclick=\'openEntModal(' + JSON.stringify(r) + ')\'>✎</button> ' +
+              '<button class="btn btn-danger btn-sm" onclick="deleteEntreprise(\\'' + r.ticker + '\\')">✕</button></td>' +
             '</tr>';
     }).join('');
 }
@@ -1561,6 +1569,14 @@ async function saveEntreprise() {
     const r = await sbPatch('entreprises', 'ticker=eq.' + encodeURIComponent(ticker), body);
     if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-entreprise'); loadEntreprises(); }
 }
+
+async function deleteEntreprise(ticker) {
+    if (!confirm('Supprimer l\'entreprise ' + ticker + ' ? Cette action est irréversible.')) return;
+    const ok = await sbDel('entreprises', 'ticker=eq.' + encodeURIComponent(ticker));
+    if (ok) { toast('Entreprise supprimée'); loadEntreprises(); }
+}
+
+
 
 async function addEntreprise() {
     const msg  = document.getElementById('ne-msg');
@@ -1649,6 +1665,12 @@ async function saveFinancial() {
     if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-financial'); loadFinancials(); }
 }
 
+async function deleteFinancial(id) {
+    if (!confirm('Supprimer ce financial ?')) return;
+    const ok = await sbDel('financials', 'id=eq.' + id);
+    if (ok) { toast('Financial supprimé'); loadFinancials(); }
+}
+
 async function addFinancial() {
     const msg  = document.getElementById('fin-msg');
     const body = {
@@ -1711,6 +1733,42 @@ async function deleteDivRow(id) {
     if (ok) loadDividendes();
 }
 
+function editDividende(row) {
+    const info = document.getElementById('modal-div-info');
+    if(info) info.textContent = row.ticker + ' — ' + row.annee;
+    set('modal-div-id', row.id);
+    set('modal-div-ticker', row.ticker);
+    set('modal-div-annee', row.annee);
+    set('modal-div-montant', row.montant);
+    set('modal-div-tx', row.taux_rendement);
+    set('modal-div-detach', row.date_detachement ? row.date_detachement.split('T')[0] : '');
+    set('modal-div-paie', row.date_paiement ? row.date_paiement.split('T')[0] : '');
+    set('modal-div-statut', row.statut || 'confirmé');
+    set('modal-div-notes', row.notes);
+    openModal('modal-dividende');
+}
+
+async function saveDividende() {
+    const id  = v('modal-div-id');
+    const msg = document.getElementById('modal-div-msg');
+    const body = {
+        montant: pf('modal-div-montant'),
+        taux_rendement: pf('modal-div-tx'),
+        date_detachement: v('modal-div-detach') || null,
+        date_paiement: v('modal-div-paie') || null,
+        statut: v('modal-div-statut'),
+        notes: v('modal-div-notes')
+    };
+    const r = await sbPatch('dividendes_calendrier', 'id=eq.' + id, body);
+    if (r) {
+        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
+        closeModal('modal-dividende');
+        loadDividendes();
+    }
+}
+
+
+
 function filterDivTable() {
     const f = v('div-filter').toLowerCase();
     renderDivTable(divData.filter(function(r){ return !f || (r.ticker+(r.notes||'')).toLowerCase().includes(f); }));
@@ -1765,6 +1823,40 @@ async function deleteAnalyseRow(id) {
     if (ok) loadAnalyses();
 }
 
+function editAnalyse(row) {
+    const info = document.getElementById('modal-an-info');
+    if(info) info.textContent = row.ticker + ' — ' + (row.date_analyse || '—');
+    set('modal-an-id', row.id);
+    set('modal-an-ticker', row.ticker);
+    set('modal-an-date', row.date_analyse ? row.date_analyse.split('T')[0] : '');
+    set('modal-an-titre', row.titre);
+    set('modal-an-reco', row.recommandation);
+    set('modal-an-cible', row.cours_cible);
+    set('modal-an-analyste', row.analyste);
+    set('modal-an-resume', row.resume);
+    openModal('modal-analyse');
+}
+
+async function saveAnalyse() {
+    const id  = v('modal-an-id');
+    const msg = document.getElementById('modal-an-msg');
+    const body = {
+        titre: v('modal-an-titre'),
+        recommandation: v('modal-an-reco'),
+        cours_cible: pf('modal-an-cible'),
+        analyste: v('modal-an-analyste'),
+        resume: v('modal-an-resume')
+    };
+    const r = await sbPatch('analyses', 'id=eq.' + id, body);
+    if (r) {
+        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
+        closeModal('modal-analyse');
+        loadAnalyses();
+    }
+}
+
+
+
 function calcPotentiel() {
     const cible = pf('an-cible');
     const cours = pf('an-cours');
@@ -1777,13 +1869,25 @@ function calcPotentiel() {
     }
 }
 
+async function prefillAnalyseFromTicker() {
+    const ticker = v('an-ticker');
+    if (!ticker) return;
+    const rows = await sbGet('cours', 'select=cours&order=date_seance.desc&limit=1&ticker=eq.' + encodeURIComponent(ticker));
+    if (rows?.[0]?.cours) {
+        set('an-cours', rows[0].cours);
+        calcPotentiel();
+    }
+}
+
 async function addAnalyse() {
     const msg  = document.getElementById('an-msg');
     const body = {
         ticker: v('an-ticker'), titre: v('an-titre'), recommandation: v('an-reco'),
-        cours_cible: pf('an-cible'), date_analyse: v('an-date')||new Date().toISOString().split('T')[0],
+        date_analyse: v('an-date')||new Date().toISOString().split('T')[0],
         analyste: v('an-analyste'), resume: v('an-resume')
     };
+    var cible = pf('an-cible');
+    if (cible != null) body.cours_cible = cible;
     if (!body.ticker || !body.recommandation) { if(msg){ msg.textContent = 'Ticker et recommandation obligatoires'; msg.className = 'msg err'; } return; }
     const r = await sbPost('analyses', body);
     if (r) {
@@ -1794,10 +1898,6 @@ async function addAnalyse() {
         loadAnalyses();
     }
 }
-
-/* ══════════════════════════════════════════════════════
-   UTILISATEURS
-══════════════════════════════════════════════════════ */
 async function loadUsers() {
     const rows = await sbGet('users', 'select=*&order=created_at.desc&limit=200');
     usrData = rows || [];
@@ -1999,7 +2099,7 @@ var TEMPLATE_CONFIG = {
     },
     indices: {
         name: 'BRVM_Indices',
-        headers: ['indice','date_seance','valeur','variation','variation_pct','volume','ouverture','plus_haut','plus_bas'],
+        headers: ['indice','date_seance','valeur','variation','variation_pct'],
         required: ['indice','date_seance','valeur'],
         table: 'indices', uniqueKey: 'indice,date_seance'
     },
@@ -2235,7 +2335,15 @@ async function confirmImport() {
         var prepared = batch.map(function(row) {
             var clean = {};
             config.headers.forEach(function(h) {
-                if (row[h] !== undefined && row[h] !== '') clean[h] = row[h];
+                var val = row[h];
+                if (val !== undefined && val !== '' && val !== null) {
+                    // Normalisation des dates JJ/MM/AAAA → AAAA-MM-JJ
+                    if (String(h).includes('date') && String(val).match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+                        var parts = String(val).split('/');
+                        val = parts[2] + '-' + parts[1] + '-' + parts[0];
+                    }
+                    clean[h] = val;
+                }
             });
             return clean;
         });
@@ -2518,6 +2626,55 @@ init().catch(function(err){
             <button class="btn btn-primary btn-sm" onclick="saveIndice()">Enregistrer</button>
         </div>
         <span id="modal-idx-msg" class="msg" style="display:block;margin-top:8px;"></span>
+    </div>
+</div>
+
+<div class="inline-edit" id="modal-dividende">
+    <div class="modal">
+        <div class="modal-title">Modifier le dividende</div>
+        <input type="hidden" id="modal-div-id">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;" id="modal-div-info"></div>
+        <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
+            <div class="field"><label>Ticker</label><input type="text" id="modal-div-ticker" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Année</label><input type="text" id="modal-div-annee" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Montant (FCFA)</label><input type="number" id="modal-div-montant" step="any"></div>
+            <div class="field"><label>Taux rendement (%)</label><input type="number" id="modal-div-tx" step="any"></div>
+            <div class="field"><label>Date ex-dividende</label><input type="date" id="modal-div-detach"></div>
+            <div class="field"><label>Date paiement</label><input type="date" id="modal-div-paie"></div>
+            <div class="field"><label>Statut</label>
+                <select id="modal-div-statut"><option value="confirmé">Confirmé</option><option value="prévisionnel">Prévisionnel</option><option value="payé">Payé</option></select>
+            </div>
+            <div class="field"><label>Notes</label><input type="text" id="modal-div-notes"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline btn-sm" onclick="closeModal('modal-dividende')">Annuler</button>
+            <button class="btn btn-primary btn-sm" onclick="saveDividende()">Enregistrer</button>
+        </div>
+        <span id="modal-div-msg" class="msg" style="display:block;margin-top:8px;"></span>
+    </div>
+</div>
+
+<div class="inline-edit" id="modal-analyse">
+    <div class="modal">
+        <div class="modal-title">Modifier la recommandation</div>
+        <input type="hidden" id="modal-an-id">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;" id="modal-an-info"></div>
+        <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
+            <div class="field"><label>Ticker</label><input type="text" id="modal-an-ticker" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Date</label><input type="text" id="modal-an-date" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Titre</label><input type="text" id="modal-an-titre"></div>
+            <div class="field"><label>Recommandation</label>
+                <select id="modal-an-reco"><option value="Acheter">Acheter</option><option value="Renforcer">Renforcer</option><option value="Conserver">Conserver</option><option value="Alléger">Alléger</option><option value="Vendre">Vendre</option></select>
+            </div>
+            <div class="field"><label>Cours cible</label><input type="number" id="modal-an-cible" step="any"></div>
+            <div class="field"><label>Analyste</label><input type="text" id="modal-an-analyste"></div>
+            <div class="field" style="grid-column:1/-1;"><label>Résumé</label><textarea id="modal-an-resume" rows="3"></textarea></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline btn-sm" onclick="closeModal('modal-analyse')">Annuler</button>
+            <button class="btn btn-primary btn-sm" onclick="saveAnalyse()">Enregistrer</button>
+        </div>
+        <span id="modal-an-msg" class="msg" style="display:block;margin-top:8px;"></span>
     </div>
 </div>
 
