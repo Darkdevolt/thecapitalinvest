@@ -703,9 +703,23 @@
                 </div>
                 <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelect(event)">
                 <div id="upload-info" style="margin-top:12px;display:none;">
-                    <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                         <span id="upload-filename" style="font-size:13px;color:var(--cream);"></span>
                         <span id="upload-sheet-detected" class="badge badge-gold" style="display:none;">Template détecté</span>
+                        <span id="upload-headers-found" style="font-size:11px;color:var(--muted);"></span>
+                    </div>
+                    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:11px;color:var(--muted);">Forcer le template :</span>
+                        <select id="manual-template" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="forceTemplate(this.value)">
+                            <option value="">— Auto —</option>
+                            <option value="entreprises">Entreprises</option>
+                            <option value="cours">Cours</option>
+                            <option value="financials">Financials</option>
+                            <option value="dividendes">Dividendes</option>
+                            <option value="indices">Indices</option>
+                            <option value="actionnaires">Actionnaires</option>
+                        </select>
+                        <span id="upload-colonnes" style="font-size:11px;color:var(--muted);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
                     </div>
                 </div>
             </div>
@@ -1943,40 +1957,52 @@ async function loadTickersSansFinancials() {
 /* ══════════════════════════════════════════════════════
    IMPORT EXCEL
 ══════════════════════════════════════════════════════ */
+var TEMPLATE_SYNONYMS = {
+    'date': ['date_seance','date_detachement','date_paiement','date_introduction','date_entree','date_analyse'],
+    'code': ['indice','ticker','isin'],
+    'valeur': ['valeur','cours','montant','capitalisation'],
+    'volume': ['volume'],
+    'nom': ['nom','nom_complet','nom_actionnaire'],
+    'variation': ['variation','variation_pct'],
+    'pays': ['pays','pays_origine'],
+    'annee': ['annee','year'],
+    'montant': ['montant','valeur','dividende']
+};
+
 var TEMPLATE_CONFIG = {
     entreprises: {
         name: 'BRVM_Entreprises',
-        headers: ['ticker','nom','nom_complet','pays','secteur','compartiment','capital_social_fcfa','nombre_actions','valeur_nominale','isin','description','site_web','date_introduction','siege_social','actif'],
+        headers: ['ticker','nom','nom_complet','pays','secteur','compartiment','capital_social_fcfa','nombre_actions','valeur_nominale','isin','description','site_web','date_introduction','siege_social','actif','telephone','email','dirigeant','logo_url','code_naf'],
         required: ['ticker','nom','pays','secteur','compartiment'],
         table: 'entreprises', uniqueKey: 'ticker'
     },
     cours: {
         name: 'BRVM_Cours',
-        headers: ['ticker','date_seance','cours','ouverture','plus_haut','plus_bas','volume','capitalisation','plus_haut_52','plus_bas_52'],
+        headers: ['ticker','date_seance','cours','ouverture','plus_haut','plus_bas','volume','capitalisation','plus_haut_52','plus_bas_52','variation'],
         required: ['ticker','date_seance','cours'],
-        table: 'cours', uniqueKey: 'ticker,date_seance', autoCalc: ['variation']
+        table: 'cours', uniqueKey: 'ticker,date_seance', autoCalc: ['variation','capitalisation']
     },
     financials: {
         name: 'BRVM_Financials',
-        headers: ['ticker','annee','periode','chiffre_affaires','rbe','resultat_net','bpa','dpa','fonds_propres','dettes_financieres','total_actif','nombre_actions','cash_flow_operationnel','capex','source'],
+        headers: ['ticker','annee','periode','chiffre_affaires','rbe','resultat_net','bpa','dpa','fonds_propres','dettes_financieres','total_actif','nombre_actions','cash_flow_operationnel','capex','source','marge_nette','rendement_dividende','ebitda','resultat_exploitation'],
         required: ['ticker','annee'],
         table: 'financials', uniqueKey: 'ticker,annee,periode', autoCalc: ['roe','roa','marge_rbe']
     },
     dividendes: {
         name: 'BRVM_Dividendes',
-        headers: ['ticker','annee','montant','date_detachement','date_paiement','statut','notes'],
+        headers: ['ticker','annee','montant','date_detachement','date_paiement','statut','notes','devise','type_dividende','exercice'],
         required: ['ticker','annee','montant'],
         table: 'dividendes_calendrier', uniqueKey: 'ticker,annee', autoCalc: ['taux_rendement']
     },
     indices: {
         name: 'BRVM_Indices',
-        headers: ['indice','date_seance','valeur','variation','variation_pct'],
+        headers: ['indice','date_seance','valeur','variation','variation_pct','volume','ouverture','plus_haut','plus_bas'],
         required: ['indice','date_seance','valeur'],
         table: 'indices', uniqueKey: 'indice,date_seance'
     },
     actionnaires: {
         name: 'BRVM_Actionnaires',
-        headers: ['ticker','nom_actionnaire','pourcentage','type_actionnaire','pays_origine'],
+        headers: ['ticker','nom_actionnaire','pourcentage','type_actionnaire','pays_origine','date_entree','nombre_actions','nature'],
         required: ['ticker','nom_actionnaire','pourcentage'], table: 'actionnaires', uniqueKey: null
     }
 };
@@ -1997,21 +2023,43 @@ function handleFileSelect(e) { if (e.target.files.length) handleFile(e.target.fi
 
 async function handleFile(file) {
     currentUpload.filename = file.name;
+    currentUpload.config = null;
+    currentUpload.data = [];
     const uf = document.getElementById('upload-filename');
     const ui = document.getElementById('upload-info');
+    const usd = document.getElementById('upload-sheet-detected');
+    const uhf = document.getElementById('upload-headers-found');
+    const ucol = document.getElementById('upload-colonnes');
+    const manual = document.getElementById('manual-template');
     if(uf) uf.textContent = file.name;
     if(ui) ui.style.display = '';
+    if(usd) usd.style.display = 'none';
+    if(uhf) uhf.textContent = '';
+    if(ucol) ucol.textContent = '';
+    if(manual) manual.value = '';
+
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: 'array' });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
     const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
     if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
-    const headers = jsonData[0].map(function(h){ return String(h).toLowerCase().trim().replace(/\s+/g,'_'); });
+
+    const rawHeaders = jsonData[0];
+    const headers = rawHeaders.map(function(h){ return String(h).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,''); });
     const detected = detectTemplate(headers);
-    if (!detected) { toast('Template non reconnu', 'err'); console.log('Headers:', headers); return; }
-    const usd = document.getElementById('upload-sheet-detected');
-    if(usd) usd.style.display = '';
+
+    if(uhf) uhf.textContent = headers.length + ' colonnes détectées';
+    if(ucol) ucol.textContent = 'Cols: ' + headers.join(', ');
+
+    if (!detected) {
+        toast('Template non reconnu — sélectionnez manuellement', 'err');
+        console.log('Headers détectés:', headers);
+        return;
+    }
+
+    if(usd){ usd.textContent = 'Template : ' + TEMPLATE_CONFIG[detected].name; usd.style.display = ''; }
     currentUpload.config = TEMPLATE_CONFIG[detected];
+
     const rows = [];
     for (var i = 1; i < jsonData.length; i++) {
         var row = jsonData[i];
@@ -2024,14 +2072,43 @@ async function handleFile(file) {
     showPreview(detected, rows);
 }
 
+function normalizeHeader(h) {
+    return String(h).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
+}
+
+function headerMatches(detected, expected) {
+    var norm = normalizeHeader(detected);
+    if (norm === expected) return true;
+    for (var syn in TEMPLATE_SYNONYMS) {
+        if (TEMPLATE_SYNONYMS[syn].includes(expected) && TEMPLATE_SYNONYMS[syn].includes(norm)) return true;
+        if (syn === expected && TEMPLATE_SYNONYMS[syn].includes(norm)) return true;
+        if (syn === norm && TEMPLATE_SYNONYMS[syn].includes(expected)) return true;
+    }
+    return false;
+}
+
 function detectTemplate(headers) {
+    var normHeaders = headers.map(normalizeHeader);
     for (var key in TEMPLATE_CONFIG) {
         var config = TEMPLATE_CONFIG[key];
         var required = config.required;
-        var match = required.filter(function(rh){ return headers.includes(rh); }).length;
+        var match = required.filter(function(rh){
+            return normHeaders.some(function(h){ return headerMatches(h, rh); });
+        }).length;
         if (match >= Math.ceil(required.length * 0.8)) return key;
     }
     return null;
+}
+
+function forceTemplate(key) {
+    if (!key || !TEMPLATE_CONFIG[key]) { toast('Template invalide', 'err'); return; }
+    currentUpload.config = TEMPLATE_CONFIG[key];
+    var usd = document.getElementById('upload-sheet-detected');
+    if(usd){ usd.textContent = 'Template forcé : ' + TEMPLATE_CONFIG[key].name; usd.style.display = ''; }
+    toast('Template manuel : ' + TEMPLATE_CONFIG[key].name, 'info');
+    if (currentUpload.data && currentUpload.data.length) {
+        showPreview(key, currentUpload.data);
+    }
 }
 
 async function showPreview(templateKey, rows) {
