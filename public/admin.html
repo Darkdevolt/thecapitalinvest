@@ -2214,14 +2214,39 @@ function cancelImport() {
 function downloadTemplate(type) {
     var config = TEMPLATE_CONFIG[type];
     if (!config) return;
-    var data = [];
-    if (type === 'entreprises') data = [{ ticker:'SNTS', nom:'SONATEL', pays:'Sénégal', secteur:'Télécoms', compartiment:'Prestige' }];
-    else if (type === 'cours') data = [{ ticker:'SNTS', date_seance:'2026-05-08', cours:25995 }];
-    else if (type === 'financials') data = [{ ticker:'SNTS', annee:2024, periode:'annuel', chiffre_affaires:900000 }];
-    else if (type === 'dividendes') data = [{ ticker:'SNTS', annee:2024, montant:12000 }];
-    else if (type === 'indices') data = [{ code:'BRVM10', nom:'BRVM 10', valeur:185.42 }];
-    else if (type === 'actionnaires') data = [{ ticker:'SNTS', nom_actionnaire:'État du Sénégal', pourcentage:55 }];
-    var ws = XLSX.utils.json_to_sheet(data);
+    var examples = {
+        ticker: 'SNTS', nom: 'SONATEL', nom_complet: 'Sonatel SA',
+        pays: 'Sénégal', secteur: 'Télécoms', compartiment: 'Prestige',
+        isin: 'SN0000000000', description: 'Opérateur télécoms',
+        site_web: 'https://sonatel.sn', date_introduction: '2024-01-15',
+        siege_social: 'Dakar', actif: 'Télécommunications',
+        telephone: '+221338491010', email: 'contact@sonatel.sn',
+        dirigeant: 'Directeur Général', logo_url: 'https://...',
+        code_naf: '6110Z',
+        date_seance: '2026-05-09', cours: 25995, ouverture: 25800,
+        plus_haut: 26100, plus_bas: 25750, volume: 1250,
+        capitalisation: 250000000000, plus_haut_52: 28000, plus_bas_52: 22000,
+        annee: 2024, periode: 'annuel', chiffre_affaires: 900000,
+        rbe: 250000, resultat_net: 168000, bpa: 17500, dpa: 12000,
+        fonds_propres: 620000, dettes_financieres: 150000,
+        total_actif: 850000, nombre_actions: 9600000,
+        cash_flow_operationnel: 200000, capex: 80000, source: 'Rapport annuel 2024',
+        marge_nette: 18.7, rendement_dividende: 5.2, ebitda: 300000,
+        resultat_exploitation: 220000,
+        montant: 12000, date_detachement: '2026-06-15',
+        date_paiement: '2026-07-01', statut: 'confirmé', notes: 'Acompte',
+        devise: 'XOF', type_dividende: 'cash', exercice: '2024-2025',
+        indice: 'BRVM10', valeur: 185.42, variation: 0.85, variation_pct: 0.46,
+        nom_actionnaire: 'État du Sénégal', pourcentage: 55,
+        type_actionnaire: 'État', pays_origine: 'Sénégal',
+        date_entree: '2000-01-01', nature: 'Actionnaire majoritaire'
+    };
+    var row = {};
+    config.headers.forEach(function(h){
+        if (examples[h] !== undefined) row[h] = examples[h];
+        else if (config.required.includes(h)) row[h] = '';
+    });
+    var ws = XLSX.utils.json_to_sheet([row]);
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, config.name);
     XLSX.writeFile(wb, config.name + '_Template.xlsx');
