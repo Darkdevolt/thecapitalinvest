@@ -2316,12 +2316,15 @@ function renderIndicesTable(data) {
     if (!data.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Aucun indice</td></tr>'; return; }
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
-            '<td class="td-gold">' + r.indice + '</td>' +
-            '<td class="td-muted">' + r.date_seance + '</td>' +
+            '<td class="td-gold">' + (r.indice || '—') + '</td>' +
+            '<td class="td-muted">' + (r.date_seance || '—') + '</td>' +
             '<td class="r td-mono">' + fmt(r.valeur) + '</td>' +
             '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
             '<td class="r td-muted">' + (r.variation_pct != null ? Number(r.variation_pct).toFixed(2) + '%' : '—') + '</td>' +
-            '<td><button class="btn btn-danger btn-sm" onclick="deleteIndiceRow(\'" + r.id + "\')">✕</button></td>' +
+            '<td>' +
+              '<button class="btn btn-outline btn-sm idx-edit" data-id="' + r.id + '">✎</button> ' +
+              '<button class="btn btn-danger btn-sm idx-del" data-id="' + r.id + '">✕</button>' +
+            '</td>' +
             '</tr>';
     }).join('');
 }
@@ -2352,14 +2355,17 @@ async function addIndice() {
 }
 
 async function deleteIndiceRow(id) {
+    console.log('[deleteIndiceRow] id =', id);
     if (!confirm("Supprimer cet indice ?")) return;
     const ok = await sbDel('indices', 'id=eq.' + id);
+    console.log('[deleteIndiceRow] sbDel result =', ok);
     if (ok) loadIndices();
 }
 
 function editIndice(row) {
+    console.log('[editIndice] row =', row);
     const info = document.getElementById('modal-idx-info');
-    if(info) info.textContent = row.indice + ' — ' + row.date_seance;
+    if(info) info.textContent = (row.indice || '—') + ' — ' + (row.date_seance || '—');
     set('modal-idx-id', row.id);
     set('modal-idx-indice', row.indice);
     set('modal-idx-date', row.date_seance);
@@ -2377,6 +2383,7 @@ async function saveIndice() {
         variation: pf('modal-idx-var'),
         variation_pct: pf('modal-idx-varpct')
     };
+    console.log('[saveIndice] body =', body);
     const r = await sbPatch('indices', 'id=eq.' + id, body);
     if (r) {
         if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
@@ -2384,6 +2391,18 @@ async function saveIndice() {
         loadIndices();
     }
 }
+
+/* Event delegation pour les boutons indices */
+document.addEventListener('click', function(e){
+    var btn = e.target.closest('.idx-del');
+    if (btn) { deleteIndiceRow(btn.dataset.id); return; }
+    btn = e.target.closest('.idx-edit');
+    if (btn) {
+        var row = idxData.find(function(r){ return r.id === btn.dataset.id; });
+        if (row) editIndice(row);
+        else toast('Indice introuvable', 'err');
+    }
+});
 
 /* ══════════════════════════════════════════════════════
    DÉMARRAGE — sans boucle infinie
