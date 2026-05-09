@@ -228,6 +228,7 @@
             .main { padding:16px 12px 80px; }
         }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -263,6 +264,7 @@
     <button class="admin-tab" onclick="switchTab('scraper',this)">Scraper</button>
     <button class="admin-tab" onclick="switchTab('import',this)">Import Excel</button>
     <button class="admin-tab" onclick="switchTab('diagnostic',this)">Diagnostic</button>
+    <button class="admin-tab" onclick="switchTab('indices',this)">Indices</button>
 </div>
 
 <div class="main">
@@ -775,6 +777,51 @@
         </div>
     </div>
 
+    <div class="tab-panel" id="panel-indices">
+        <div class="section-header"><div class="section-title">Indices <em>BRVM</em></div></div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> indice · date_seance · valeur · variation · variation_pct</div>
+        <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchSubTab('idx','add',this)">Ajouter</button>
+            <button class="sub-tab" onclick="switchSubTab('idx','list',this)">Consulter</button>
+        </div>
+        <div id="idx-panel-add">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Ajouter / modifier un indice</span></div>
+                <div class="form-grid">
+                    <div class="field"><label>Code indice *</label><input type="text" id="idx-indice" placeholder="BRVM10" oninput="this.value=this.value.toUpperCase()"></div>
+                    <div class="field"><label>Date séance *</label><input type="date" id="idx-date"></div>
+                    <div class="field"><label>Valeur *</label><input type="number" id="idx-valeur" placeholder="185.42" step="any"></div>
+                    <div class="field"><label>Variation</label><input type="number" id="idx-var" placeholder="0.85" step="any"></div>
+                    <div class="field"><label>Variation %</label><input type="number" id="idx-varpct" placeholder="0.46" step="any"></div>
+                </div>
+                <div class="actions-row">
+                    <button class="btn btn-primary" onclick="addIndice()">Enregistrer</button>
+                    <button class="btn btn-outline btn-sm" onclick="clearForm(['idx-indice','idx-date','idx-valeur','idx-var','idx-varpct'])">Effacer</button>
+                    <span id="idx-msg" class="msg"></span>
+                </div>
+            </div>
+        </div>
+        <div id="idx-panel-list" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Indices enregistrés</span>
+                    <span class="card-count" id="idx-count"></span>
+                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                        <input type="text" id="idx-filter" placeholder="Filtrer indice..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterIndicesTable()">
+                        <input type="date" id="idx-date-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" oninput="filterIndicesTable()">
+                        <button class="btn btn-outline btn-sm" onclick="loadIndices()">↺</button>
+                    </div>
+                </div>
+                <div class="tw">
+                    <table>
+                        <thead><tr><th>Indice</th><th>Date</th><th class="r">Valeur</th><th class="r">Variation</th><th class="r">Var. %</th><th></th></tr></thead>
+                        <tbody id="idx-tbody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div><!-- /.main -->
 
 </div><!-- /#app-wrapper -->
@@ -884,7 +931,7 @@ const SB_REST = SB_URL + '/rest/v1';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 let TK = '', ME = null;
-let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [];
+let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [];
 let diagData = null;
 let activeTab = 'dashboard';
 
@@ -1129,7 +1176,8 @@ const tabLoaders = {
     dividendes:   loadDividendes,
     analyses:     loadAnalyses,
     utilisateurs: loadUsers,
-    import:       function(){}
+    import:       function(){},
+    indices:      loadIndices
 };
 
 function switchTab(name, el) {
@@ -2167,6 +2215,64 @@ async function deleteBocRow(id) {
     }
     toast(`${updated} variations mises à jour`);
     loadCours(); // rafraîchir l'affichage
+}
+
+/* ══════════════════════════════════════════════════════
+   INDICES
+══════════════════════════════════════════════════════ */
+async function loadIndices() {
+    const rows = await sbGet('indices', 'select=*&order=date_seance.desc&limit=200');
+    idxData = rows || [];
+    renderIndicesTable(idxData);
+}
+
+function renderIndicesTable(data) {
+    data = data || [];
+    const tb = document.getElementById('idx-tbody');
+    const cnt = document.getElementById('idx-count');
+    if(cnt) cnt.textContent = data.length;
+    if (!tb) return;
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Aucun indice</td></tr>'; return; }
+    tb.innerHTML = data.map(function(r){
+        return '<tr>' +
+            '<td class="td-gold">' + r.indice + '</td>' +
+            '<td class="td-muted">' + r.date_seance + '</td>' +
+            '<td class="r td-mono">' + fmt(r.valeur) + '</td>' +
+            '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
+            '<td class="r td-muted">' + (r.variation_pct != null ? Number(r.variation_pct).toFixed(2) + '%' : '—') + '</td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="deleteIndiceRow('' + r.id + '')">✕</button></td>' +
+            '</tr>';
+    }).join('');
+}
+
+function filterIndicesTable() {
+    const f = v('idx-filter').toUpperCase();
+    const d = v('idx-date-filter');
+    renderIndicesTable(idxData.filter(function(r){
+        return (!f || (r.indice||'').includes(f)) && (!d || r.date_seance === d);
+    }));
+}
+
+async function addIndice() {
+    const msg = document.getElementById('idx-msg');
+    const body = {
+        indice: v('idx-indice'), date_seance: v('idx-date'), valeur: pf('idx-valeur'),
+        variation: pf('idx-var'), variation_pct: pf('idx-varpct')
+    };
+    if (!body.indice || !body.date_seance || body.valeur == null) {
+        if(msg){ msg.textContent = 'Indice, date et valeur obligatoires'; msg.className = 'msg err'; } return;
+    }
+    const r = await sbPost('indices', body, 'indice,date_seance');
+    if (r) {
+        if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
+        clearForm(['idx-indice','idx-date','idx-valeur','idx-var','idx-varpct']);
+        loadIndices();
+    }
+}
+
+async function deleteIndiceRow(id) {
+    const ok = await sbDel('indices', 'id=eq.' + id);
+    if (ok) loadIndices();
 }
 
 /* ══════════════════════════════════════════════════════
