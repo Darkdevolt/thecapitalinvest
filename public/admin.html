@@ -1499,7 +1499,6 @@ async function loadHistoriqueTicker() {
 }
 
 async function deleteHistRow(id) {
-    if (!confirm("Supprimer cette ligne d'historique ?")) return;
     const ok = await sbDel('historique', 'id=eq.' + id);
     if (ok) loadHistoriqueTicker();
 }
@@ -1570,14 +1569,6 @@ async function saveEntreprise() {
     if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-entreprise'); loadEntreprises(); }
 }
 
-async function deleteEntreprise(ticker) {
-    if (!confirm('Supprimer l\'entreprise ' + ticker + ' ? Cette action est irréversible.')) return;
-    const ok = await sbDel('entreprises', 'ticker=eq.' + encodeURIComponent(ticker));
-    if (ok) { toast('Entreprise supprimée'); loadEntreprises(); }
-}
-
-
-
 async function addEntreprise() {
     const msg  = document.getElementById('ne-msg');
     const body = {
@@ -1626,7 +1617,8 @@ function renderFinTable(data) {
             '<td class="r td-mono">' + fmt(r.dpa) + '</td>' +
             '<td class="r td-mono">' + fmt(r.dettes_financieres) + '</td>' +
             '<td class="td-muted">' + (r.source||'—') + '</td>' +
-            '<td><button class="btn btn-outline btn-sm" onclick=\'openFinModal(' + JSON.stringify(r) + ')\'>✎</button></td>' +
+            '<td><button class="btn btn-outline btn-sm" onclick=\'openFinModal(' + JSON.stringify(r) + ')\'>✎</button> ' +
+              '<button class="btn btn-danger btn-sm" onclick="deleteFinancial(' + r.id + ')">✕</button></td>' +
             '</tr>';
     }).join('');
 }
@@ -1663,12 +1655,6 @@ async function saveFinancial() {
     };
     const r = await sbPatch('financials', 'id=eq.' + id, body);
     if (r) { if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } closeModal('modal-financial'); loadFinancials(); }
-}
-
-async function deleteFinancial(id) {
-    if (!confirm('Supprimer ce financial ?')) return;
-    const ok = await sbDel('financials', 'id=eq.' + id);
-    if (ok) { toast('Financial supprimé'); loadFinancials(); }
 }
 
 async function addFinancial() {
@@ -1728,46 +1714,9 @@ function renderDivTable(data) {
 }
 
 async function deleteDivRow(id) {
-    if (!confirm("Supprimer ce dividende ?")) return;
     const ok = await sbDel('dividendes_calendrier', 'id=eq.' + id);
     if (ok) loadDividendes();
 }
-
-function editDividende(row) {
-    const info = document.getElementById('modal-div-info');
-    if(info) info.textContent = row.ticker + ' — ' + row.annee;
-    set('modal-div-id', row.id);
-    set('modal-div-ticker', row.ticker);
-    set('modal-div-annee', row.annee);
-    set('modal-div-montant', row.montant);
-    set('modal-div-tx', row.taux_rendement);
-    set('modal-div-detach', row.date_detachement ? row.date_detachement.split('T')[0] : '');
-    set('modal-div-paie', row.date_paiement ? row.date_paiement.split('T')[0] : '');
-    set('modal-div-statut', row.statut || 'confirmé');
-    set('modal-div-notes', row.notes);
-    openModal('modal-dividende');
-}
-
-async function saveDividende() {
-    const id  = v('modal-div-id');
-    const msg = document.getElementById('modal-div-msg');
-    const body = {
-        montant: pf('modal-div-montant'),
-        taux_rendement: pf('modal-div-tx'),
-        date_detachement: v('modal-div-detach') || null,
-        date_paiement: v('modal-div-paie') || null,
-        statut: v('modal-div-statut'),
-        notes: v('modal-div-notes')
-    };
-    const r = await sbPatch('dividendes_calendrier', 'id=eq.' + id, body);
-    if (r) {
-        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
-        closeModal('modal-dividende');
-        loadDividendes();
-    }
-}
-
-
 
 function filterDivTable() {
     const f = v('div-filter').toLowerCase();
@@ -1801,65 +1750,26 @@ async function loadAnalyses() {
     if (!list) return;
     if (!rows?.length) { list.innerHTML = '<div style="padding:18px;color:var(--muted);text-align:center;">Aucune analyse</div>'; return; }
     list.innerHTML = rows.map(function(r){
-        var commentaire = (r.commentaire||'').substring(0,180) + ((r.commentaire||'').length>180?'...':'');
-        var titre = r.titre || (r.ticker + ' — ' + r.recommandation);
+        var resume = (r.resume||'').substring(0,180) + ((r.resume||'').length>180?'...':'');
         return '<div class="analyse-item">' +
             '<div style="flex:1;min-width:200px;">' +
-              '<div style="font-family:var(--serif);font-size:15px;color:var(--gold);margin-bottom:4px;">' + titre + '</div>' +
+              '<div style="font-family:var(--serif);font-size:15px;color:var(--gold);margin-bottom:4px;">' + (r.titre||'Sans titre') + '</div>' +
               '<div style="font-size:12px;color:var(--muted);">' + r.ticker + ' · ' + (r.analyste||'—') + ' · ' + fmtDate(r.date_analyse) + '</div>' +
-              '<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;">' + commentaire + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;">' + resume + '</div>' +
             '</div>' +
             '<div style="text-align:right;">' +
               '<span class="badge ' + (r.recommandation==='Acheter'?'badge-green':r.recommandation==='Vendre'?'badge-red':'badge-gold') + '">' + r.recommandation + '</span>' +
-              '<div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">' + fmt(r.cours_cible || r.objectif_cours) + '</div>' +
-              '<button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick=\'editAnalyse(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              '<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="deleteAnalyseRow(\\'' + r.id + '\\')">✕</button>' +
+              '<div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">' + fmt(r.cours_cible) + '</div>' +
+              '<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="deleteAnalyseRow(\'' + r.id + '\')">✕</button>' +
             '</div>' +
             '</div>';
     }).join('');
 }
 
 async function deleteAnalyseRow(id) {
-    if (!confirm("Supprimer cette analyse ?")) return;
     const ok = await sbDel('analyses', 'id=eq.' + id);
     if (ok) loadAnalyses();
 }
-
-function editAnalyse(row) {
-    const info = document.getElementById('modal-an-info');
-    if(info) info.textContent = row.ticker + ' — ' + (row.date_analyse || '—');
-    set('modal-an-id', row.id);
-    set('modal-an-ticker', row.ticker);
-    set('modal-an-date', row.date_analyse ? row.date_analyse.split('T')[0] : '');
-    set('modal-an-titre', row.titre || '');
-    set('modal-an-reco', row.recommandation);
-    set('modal-an-cible', row.cours_cible || row.objectif_cours);
-    set('modal-an-analyste', row.analyste);
-    set('modal-an-resume', row.commentaire || '');
-    openModal('modal-analyse');
-}
-
-async function saveAnalyse() {
-    const id  = v('modal-an-id');
-    const msg = document.getElementById('modal-an-msg');
-    const body = {
-        recommandation: v('modal-an-reco'),
-        analyste: v('modal-an-analyste'),
-        commentaire: v('modal-an-resume')
-    };
-    var cible = pf('modal-an-cible');
-    if (cible != null) body.cours_cible = cible;
-    const r = await sbPatch('analyses', 'id=eq.' + id, body);
-    if (r) {
-        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
-        closeModal('modal-analyse');
-        loadAnalyses();
-    }
-}
-
-
-
-
 
 function calcPotentiel() {
     const cible = pf('an-cible');
@@ -1870,16 +1780,6 @@ function calcPotentiel() {
     if(disp){
         disp.value = (pot >= 0 ? '+' : '') + pot + '%';
         disp.style.color = pot >= 0 ? 'var(--green)' : 'var(--red)';
-    }
-}
-
-async function prefillAnalyseFromTicker() {
-    const ticker = v('an-ticker');
-    if (!ticker) return;
-    const rows = await sbGet('cours', 'select=cours&order=date_seance.desc&limit=1&ticker=eq.' + encodeURIComponent(ticker));
-    if (rows?.[0]?.cours) {
-        set('an-cours', rows[0].cours);
-        calcPotentiel();
     }
 }
 
@@ -1904,6 +1804,10 @@ async function addAnalyse() {
         loadAnalyses();
     }
 }
+
+/* ══════════════════════════════════════════════════════
+   UTILISATEURS
+══════════════════════════════════════════════════════ */
 async function loadUsers() {
     const rows = await sbGet('users', 'select=*&order=created_at.desc&limit=200');
     usrData = rows || [];
@@ -2081,25 +1985,25 @@ var TEMPLATE_SYNONYMS = {
 var TEMPLATE_CONFIG = {
     entreprises: {
         name: 'BRVM_Entreprises',
-        headers: ['ticker','nom','nom_complet','pays','secteur','compartiment','capital_social_fcfa','nombre_actions','valeur_nominale','isin','description','site_web','date_introduction','siege_social','actif','telephone','email','dirigeant','logo_url','code_naf'],
+        headers: ['ticker','nom','nom_complet','pays','secteur','compartiment','capital_social_fcfa','nombre_actions','valeur_nominale','isin','description','site_web','date_introduction','siege_social','actif'],
         required: ['ticker','nom','pays','secteur','compartiment'],
         table: 'entreprises', uniqueKey: 'ticker'
     },
     cours: {
         name: 'BRVM_Cours',
-        headers: ['ticker','date_seance','cours','ouverture','plus_haut','plus_bas','volume','capitalisation','plus_haut_52','plus_bas_52','variation'],
+        headers: ['ticker','date_seance','cours','ouverture','plus_haut','plus_bas','volume','capitalisation','plus_haut_52','plus_bas_52'],
         required: ['ticker','date_seance','cours'],
-        table: 'cours', uniqueKey: 'ticker,date_seance', autoCalc: ['variation','capitalisation']
+        table: 'cours', uniqueKey: 'ticker,date_seance', autoCalc: ['variation']
     },
     financials: {
         name: 'BRVM_Financials',
-        headers: ['ticker','annee','periode','chiffre_affaires','rbe','resultat_net','bpa','dpa','fonds_propres','dettes_financieres','total_actif','nombre_actions','cash_flow_operationnel','capex','source','marge_nette','rendement_dividende','ebitda','resultat_exploitation'],
+        headers: ['ticker','annee','periode','chiffre_affaires','rbe','resultat_net','bpa','dpa','fonds_propres','dettes_financieres','total_actif','nombre_actions','cash_flow_operationnel','capex','source'],
         required: ['ticker','annee'],
         table: 'financials', uniqueKey: 'ticker,annee,periode', autoCalc: ['roe','roa','marge_rbe']
     },
     dividendes: {
         name: 'BRVM_Dividendes',
-        headers: ['ticker','annee','montant','date_detachement','date_paiement','statut','notes','devise','type_dividende','exercice'],
+        headers: ['ticker','annee','montant','date_detachement','date_paiement','statut','notes'],
         required: ['ticker','annee','montant'],
         table: 'dividendes_calendrier', uniqueKey: 'ticker,annee', autoCalc: ['taux_rendement']
     },
@@ -2111,7 +2015,7 @@ var TEMPLATE_CONFIG = {
     },
     actionnaires: {
         name: 'BRVM_Actionnaires',
-        headers: ['ticker','nom_actionnaire','pourcentage','type_actionnaire','pays_origine','date_entree','nombre_actions','nature'],
+        headers: ['ticker','nom_actionnaire','pourcentage','type_actionnaire','pays_origine'],
         required: ['ticker','nom_actionnaire','pourcentage'], table: 'actionnaires', uniqueKey: null
     }
 };
@@ -2267,93 +2171,30 @@ async function showPreview(templateKey, rows) {
 }
 
 
-async function verifyTickers(tickers) {
-    if (!tickers.length) return { ok: true, missing: [] };
-    var params = 'select=ticker&ticker=in.(' + tickers.map(encodeURIComponent).join(',') + ')';
-    var rows = await sbGet('entreprises', params);
-    var found = new Set((rows || []).map(function(r){ return r.ticker; }));
-    var missing = tickers.filter(function(t){ return !found.has(t); });
-    return { ok: missing.length === 0, missing: missing };
-}
-
-async function createMissingTickers(missing) {
-    var body = missing.map(function(t){
-        return { ticker: t, nom: t, pays: '', secteur: '', compartiment: 'PRINCIPAL' };
-    });
-    var r = await sbPost('entreprises', body, 'ticker');
-    return r !== null;
-}
-
-async function autoCreateTickers() {
-    if (!currentUpload.missingTickers || !currentUpload.missingTickers.length) return;
-    var btn = document.getElementById('import-msg');
-    if(btn) { btn.textContent = 'Création des tickers...'; btn.className = 'msg info'; }
-    var ok = await createMissingTickers(currentUpload.missingTickers);
-    if (ok) {
-        toast('✓ ' + currentUpload.missingTickers.length + ' ticker(s) créé(s)');
-        currentUpload.missingTickers = [];
-        confirmImport();
-    } else {
-        if(btn) { btn.textContent = 'Échec création tickers'; btn.className = 'msg err'; }
-    }
-}
-
 async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
-
-    // Vérification des tickers pour tables liées
-    var tablesWithTicker = ['cours','financials','dividendes_calendrier','actionnaires','historique'];
-    if (tablesWithTicker.includes(config.table)) {
-        var tickers = [];
-        data.forEach(function(row){
-            var t = row.ticker;
-            if (t && !tickers.includes(t)) tickers.push(t);
-        });
-        if (tickers.length) {
-            var check = await verifyTickers(tickers);
-            if (!check.ok) {
-                var msg = document.getElementById('import-msg');
-                if(msg){
-                    msg.innerHTML = '<span style="color:var(--red);">⚠️ Tickers inconnus : ' + check.missing.join(', ') +
-                        '</span><br><button class="btn btn-orange btn-sm" style="margin-top:6px;" onclick="autoCreateTickers()">' +
-                        '➕ Créer ' + check.missing.length + ' ticker(s) manquant(s)</button>';
-                    msg.className = 'msg err';
-                }
-                currentUpload.missingTickers = check.missing;
-                return;
-            }
-        }
-    }
-
     var progressCard = document.getElementById('progress-card');
     if(progressCard) progressCard.style.display = 'block';
     var inserted = 0;
-    var batchSize = 100;
+    var batchSize = 100; // on peut envoyer plus de lignes par lot
     var progress = document.getElementById('import-progress');
     var pText = document.getElementById('progress-text');
-
+    
     for (var i = 0; i < data.length; i += batchSize) {
         var batch = data.slice(i, i + batchSize);
         if(progress) progress.style.width = Math.round((i / data.length) * 100) + '%';
         if(pText) pText.textContent = 'Envoi lot ' + (Math.floor(i/batchSize)+1) + '...';
-
+        
+        // Préparer les données sans aucune requête préalable
         var prepared = batch.map(function(row) {
             var clean = {};
             config.headers.forEach(function(h) {
-                var val = row[h];
-                if (val !== undefined && val !== '' && val !== null) {
-                    // Normalisation des dates JJ/MM/AAAA → AAAA-MM-JJ
-                    if (String(h).includes('date') && String(val).match(/^\d{2}\/\d{2}\/\d{4}$/)) {
-                        var parts = String(val).split('/');
-                        val = parts[2] + '-' + parts[1] + '-' + parts[0];
-                    }
-                    clean[h] = val;
-                }
+                if (row[h] !== undefined && row[h] !== '') clean[h] = row[h];
             });
             return clean;
         });
-
+        
         if (prepared.length) {
             var r = await sbPost(config.table, prepared, config.uniqueKey);
             if (r) inserted += prepared.length;
@@ -2362,12 +2203,12 @@ async function confirmImport() {
     if(progress) progress.style.width = '100%';
     if(pText) pText.textContent = 'Terminé !';
     toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s)');
-
+    
+    // 👇 NOUVELLE LIGNE : recalcul auto si c'est la table cours
     if (config.table === 'cours') await recalcVariations();
-
+    
     cancelImport();
 }
-
 function cancelImport() {
     currentUpload = { data:[], config:null, filename:'' };
     const pCard = document.getElementById('preview-card');
@@ -2410,18 +2251,14 @@ function downloadTemplate(type) {
         type_actionnaire: 'État', pays_origine: 'Sénégal',
         date_entree: '2000-01-01', nature: 'Actionnaire majoritaire'
     };
-    // Construit le tableau ligne par ligne pour garantir l'ordre exact des colonnes
-    var aoa = [config.headers]; // ligne 1 = en-têtes
+    var aoa = [config.headers];
     var row1 = [];
     config.headers.forEach(function(h){
         row1.push(examples[h] !== undefined ? examples[h] : '');
     });
     aoa.push(row1);
-    // Ligne 2 vide = modèle à remplir
     var row2 = [];
-    config.headers.forEach(function(h){
-        row2.push('');
-    });
+    config.headers.forEach(function(h){ row2.push(''); });
     aoa.push(row2);
     var ws = XLSX.utils.aoa_to_sheet(aoa);
     var wb = XLSX.utils.book_new();
@@ -2470,7 +2307,6 @@ async function loadBOC() {
 }
 
 async function deleteBocRow(id) {
-    if (!confirm("Supprimer ce BOC ?")) return;
     const ok = await sbDel('boc', 'id=eq.' + id);
     if (ok) loadBOC();
 }
@@ -2557,15 +2393,12 @@ async function addIndice() {
 }
 
 async function deleteIndiceRow(id) {
-    console.log('[deleteIndiceRow] id =', id);
     if (!confirm("Supprimer cet indice ?")) return;
     const ok = await sbDel('indices', 'id=eq.' + id);
-    console.log('[deleteIndiceRow] sbDel result =', ok);
     if (ok) loadIndices();
 }
 
 function editIndice(row) {
-    console.log('[editIndice] row =', row);
     const info = document.getElementById('modal-idx-info');
     if(info) info.textContent = (row.indice || '—') + ' — ' + (row.date_seance || '—');
     set('modal-idx-id', row.id);
@@ -2585,7 +2418,6 @@ async function saveIndice() {
         variation: pf('modal-idx-var'),
         variation_pct: pf('modal-idx-varpct')
     };
-    console.log('[saveIndice] body =', body);
     const r = await sbPatch('indices', 'id=eq.' + id, body);
     if (r) {
         if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
@@ -2606,6 +2438,107 @@ document.addEventListener('click', function(e){
     }
 });
 
+/* ══════════════════════════════════════════════════════
+   DIVIDENDES — ÉDITION
+══════════════════════════════════════════════════════ */
+function editDividende(row) {
+    const info = document.getElementById('modal-div-info');
+    if(info) info.textContent = row.ticker + ' — ' + row.annee;
+    set('modal-div-id', row.id);
+    set('modal-div-ticker', row.ticker);
+    set('modal-div-annee', row.annee);
+    set('modal-div-montant', row.montant);
+    set('modal-div-tx', row.taux_rendement);
+    set('modal-div-detach', row.date_detachement ? row.date_detachement.split('T')[0] : '');
+    set('modal-div-paie', row.date_paiement ? row.date_paiement.split('T')[0] : '');
+    set('modal-div-statut', row.statut || 'confirmé');
+    set('modal-div-notes', row.notes);
+    openModal('modal-dividende');
+}
+
+async function saveDividende() {
+    const id  = v('modal-div-id');
+    const msg = document.getElementById('modal-div-msg');
+    const body = {
+        montant: pf('modal-div-montant'),
+        taux_rendement: pf('modal-div-tx'),
+        date_detachement: v('modal-div-detach') || null,
+        date_paiement: v('modal-div-paie') || null,
+        statut: v('modal-div-statut'),
+        notes: v('modal-div-notes')
+    };
+    const r = await sbPatch('dividendes_calendrier', 'id=eq.' + id, body);
+    if (r) {
+        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
+        closeModal('modal-dividende');
+        loadDividendes();
+    }
+}
+
+/* ══════════════════════════════════════════════════════
+   ANALYSES — ÉDITION + PRÉ-REMPLISSAGE
+══════════════════════════════════════════════════════ */
+async function prefillAnalyseFromTicker() {
+    const ticker = v('an-ticker');
+    if (!ticker) return;
+    const rows = await sbGet('cours', 'select=cours&order=date_seance.desc&limit=1&ticker=eq.' + encodeURIComponent(ticker));
+    if (rows?.[0]?.cours) {
+        set('an-cours', rows[0].cours);
+        calcPotentiel();
+    }
+}
+
+function editAnalyse(row) {
+    const info = document.getElementById('modal-an-info');
+    if(info) info.textContent = row.ticker + ' — ' + (row.date_analyse || '—');
+    set('modal-an-id', row.id);
+    set('modal-an-ticker', row.ticker);
+    set('modal-an-date', row.date_analyse ? row.date_analyse.split('T')[0] : '');
+    set('modal-an-titre', row.titre || '');
+    set('modal-an-reco', row.recommandation);
+    set('modal-an-cible', row.cours_cible || row.objectif_cours);
+    set('modal-an-analyste', row.analyste);
+    set('modal-an-resume', row.commentaire || '');
+    openModal('modal-analyse');
+}
+
+async function saveAnalyse() {
+    const id  = v('modal-an-id');
+    const msg = document.getElementById('modal-an-msg');
+    const body = {
+        recommandation: v('modal-an-reco'),
+        analyste: v('modal-an-analyste'),
+        commentaire: v('modal-an-resume')
+    };
+    var cible = pf('modal-an-cible');
+    if (cible != null) body.cours_cible = cible;
+    const r = await sbPatch('analyses', 'id=eq.' + id, body);
+    if (r) {
+        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
+        closeModal('modal-analyse');
+        loadAnalyses();
+    }
+}
+
+/* ══════════════════════════════════════════════════════
+   ENTREPRISES — SUPPRESSION
+══════════════════════════════════════════════════════ */
+async function deleteEntreprise(ticker) {
+    if (!confirm("Supprimer l'entreprise " + ticker + " ? Cette action est irréversible.")) return;
+    const ok = await sbDel('entreprises', 'ticker=eq.' + encodeURIComponent(ticker));
+    if (ok) { toast('Entreprise supprimée'); loadEntreprises(); }
+}
+
+/* ══════════════════════════════════════════════════════
+   FINANCIALS — SUPPRESSION
+══════════════════════════════════════════════════════ */
+async function deleteFinancial(id) {
+    if (!confirm('Supprimer ce financial ?')) return;
+    const ok = await sbDel('financials', 'id=eq.' + id);
+    if (ok) { toast('Financial supprimé'); loadFinancials(); }
+}
+
+/* ══════════════════════════════════════════════════════
 /* ══════════════════════════════════════════════════════
    DÉMARRAGE — sans boucle infinie
 ══════════════════════════════════════════════════════ */
