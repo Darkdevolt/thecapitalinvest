@@ -2240,7 +2240,7 @@ function renderIndicesTable(data) {
             '<td class="r td-mono">' + fmt(r.valeur) + '</td>' +
             '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
             '<td class="r td-muted">' + (r.variation_pct != null ? Number(r.variation_pct).toFixed(2) + '%' : '—') + '</td>' +
-            '<td><button class="btn btn-danger btn-sm" onclick="deleteIndiceRow('' + r.id + '')">✕</button></td>' +
+            '<td><button class="btn btn-danger btn-sm" onclick="deleteIndiceRow(\'" + r.id + "\')">✕</button></td>' +
             '</tr>';
     }).join('');
 }
