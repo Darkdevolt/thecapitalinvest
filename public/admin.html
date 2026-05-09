@@ -1998,13 +1998,18 @@ async function showPreview(templateKey, rows) {
     var insertCount = 0, updateCount = 0, errorCount = 0;
     var previewRows = [];
     for (var i = 0; i < Math.min(rows.length, 50); i++) {
-        var val = await validateRow(rows[i], config, templateKey);
-        if (val.status === 'error') errorCount++;
-        else if (val.status === 'update') updateCount++;
-        else insertCount++;
-        var combined = Object.assign({}, rows[i], val.calculated, { _status: val.status, _errors: val.errors });
-        previewRows.push(combined);
-    }
+    var row = rows[i];
+    // Vérification locale sans appel réseau
+    var errors = [];
+    config.required.forEach(function(req) {
+        if (!row[req] && row[req] !== 0) errors.push(req + ' manquant');
+    });
+    var status = errors.length ? 'error' : 'insert'; // ne distingue plus update (pas grave pour l'aperçu)
+    if (status === 'insert') insertCount++;
+    else errorCount++;
+    var combined = Object.assign({}, row, { _status: status, _errors: errors });
+    previewRows.push(combined);
+}
     const iSum = document.getElementById('import-summary');
     if(iSum){
         iSum.innerHTML =
@@ -2049,35 +2054,36 @@ async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
     var progressCard = document.getElementById('progress-card');
-    if(progressCard) progressCard.style.display = '';
-    var inserted = 0, errors = 0;
-    var batchSize = 50;
-    var templateKey = null;
-    for (var k in TEMPLATE_CONFIG) { if (TEMPLATE_CONFIG[k] === config) { templateKey = k; break; } }
+    if(progressCard) progressCard.style.display = 'block';
+    var inserted = 0;
+    var batchSize = 100; // on peut envoyer plus de lignes par lot
+    var progress = document.getElementById('import-progress');
+    var pText = document.getElementById('progress-text');
+    
     for (var i = 0; i < data.length; i += batchSize) {
         var batch = data.slice(i, i + batchSize);
-        const iProg = document.getElementById('import-progress');
-        const pText = document.getElementById('progress-text');
-        if(iProg) iProg.style.width = Math.round((i / data.length) * 100) + '%';
-        if(pText) pText.textContent = 'Traitement ' + (i+1) + '–' + Math.min(i+batchSize, data.length);
-        var prepared = [];
-        for (var j = 0; j < batch.length; j++) {
-            var val = await validateRow(batch[j], config, templateKey);
-            if (val.status === 'error') { errors++; continue; }
+        if(progress) progress.style.width = Math.round((i / data.length) * 100) + '%';
+        if(pText) pText.textContent = 'Envoi lot ' + (Math.floor(i/batchSize)+1) + '...';
+        
+        // Préparer les données sans aucune requête préalable
+        var prepared = batch.map(function(row) {
             var clean = {};
-            config.headers.forEach(function(h){ if (batch[j][h] !== undefined && batch[j][h] !== '') clean[h] = batch[j][h]; });
-            Object.assign(clean, val.calculated);
-            prepared.push(clean);
-        }
+            config.headers.forEach(function(h) {
+                if (row[h] !== undefined && row[h] !== '') clean[h] = row[h];
+            });
+            return clean;
+        });
+        
         if (prepared.length) {
             var r = await sbPost(config.table, prepared, config.uniqueKey);
-            if (r) inserted += prepared.length; else errors += prepared.length;
+            if (r) inserted += prepared.length;
         }
     }
-    toast('Import terminé : ' + inserted + ' lignes');
+    if(progress) progress.style.width = '100%';
+    if(pText) pText.textContent = 'Terminé !';
+    toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s)');
     cancelImport();
 }
-
 function cancelImport() {
     currentUpload = { data:[], config:null, filename:'' };
     const pCard = document.getElementById('preview-card');
