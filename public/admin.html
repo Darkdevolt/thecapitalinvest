@@ -2241,12 +2241,20 @@ function downloadTemplate(type) {
         type_actionnaire: 'État', pays_origine: 'Sénégal',
         date_entree: '2000-01-01', nature: 'Actionnaire majoritaire'
     };
-    var row = {};
+    // Construit le tableau ligne par ligne pour garantir l'ordre exact des colonnes
+    var aoa = [config.headers]; // ligne 1 = en-têtes
+    var row1 = [];
     config.headers.forEach(function(h){
-        if (examples[h] !== undefined) row[h] = examples[h];
-        else if (config.required.includes(h)) row[h] = '';
+        row1.push(examples[h] !== undefined ? examples[h] : '');
     });
-    var ws = XLSX.utils.json_to_sheet([row]);
+    aoa.push(row1);
+    // Ligne 2 vide = modèle à remplir
+    var row2 = [];
+    config.headers.forEach(function(h){
+        row2.push('');
+    });
+    aoa.push(row2);
+    var ws = XLSX.utils.aoa_to_sheet(aoa);
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, config.name);
     XLSX.writeFile(wb, config.name + '_Template.xlsx');
