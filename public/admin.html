@@ -2161,22 +2161,77 @@ async function showPreview(templateKey, rows) {
 }
 
 
+async function verifyTickers(tickers) {
+    if (!tickers.length) return { ok: true, missing: [] };
+    var params = 'select=ticker&ticker=in.(' + tickers.map(encodeURIComponent).join(',') + ')';
+    var rows = await sbGet('entreprises', params);
+    var found = new Set((rows || []).map(function(r){ return r.ticker; }));
+    var missing = tickers.filter(function(t){ return !found.has(t); });
+    return { ok: missing.length === 0, missing: missing };
+}
+
+async function createMissingTickers(missing) {
+    var body = missing.map(function(t){
+        return { ticker: t, nom: t, pays: '', secteur: '', compartiment: 'PRINCIPAL' };
+    });
+    var r = await sbPost('entreprises', body, 'ticker');
+    return r !== null;
+}
+
+async function autoCreateTickers() {
+    if (!currentUpload.missingTickers || !currentUpload.missingTickers.length) return;
+    var btn = document.getElementById('import-msg');
+    if(btn) { btn.textContent = 'Création des tickers...'; btn.className = 'msg info'; }
+    var ok = await createMissingTickers(currentUpload.missingTickers);
+    if (ok) {
+        toast('✓ ' + currentUpload.missingTickers.length + ' ticker(s) créé(s)');
+        currentUpload.missingTickers = [];
+        confirmImport();
+    } else {
+        if(btn) { btn.textContent = 'Échec création tickers'; btn.className = 'msg err'; }
+    }
+}
+
 async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
+
+    // Vérification des tickers pour tables liées
+    var tablesWithTicker = ['cours','financials','dividendes_calendrier','actionnaires','historique'];
+    if (tablesWithTicker.includes(config.table)) {
+        var tickers = [];
+        data.forEach(function(row){
+            var t = row.ticker;
+            if (t && !tickers.includes(t)) tickers.push(t);
+        });
+        if (tickers.length) {
+            var check = await verifyTickers(tickers);
+            if (!check.ok) {
+                var msg = document.getElementById('import-msg');
+                if(msg){
+                    msg.innerHTML = '<span style="color:var(--red);">⚠️ Tickers inconnus : ' + check.missing.join(', ') +
+                        '</span><br><button class="btn btn-orange btn-sm" style="margin-top:6px;" onclick="autoCreateTickers()">' +
+                        '➕ Créer ' + check.missing.length + ' ticker(s) manquant(s)</button>';
+                    msg.className = 'msg err';
+                }
+                currentUpload.missingTickers = check.missing;
+                return;
+            }
+        }
+    }
+
     var progressCard = document.getElementById('progress-card');
     if(progressCard) progressCard.style.display = 'block';
     var inserted = 0;
-    var batchSize = 100; // on peut envoyer plus de lignes par lot
+    var batchSize = 100;
     var progress = document.getElementById('import-progress');
     var pText = document.getElementById('progress-text');
-    
+
     for (var i = 0; i < data.length; i += batchSize) {
         var batch = data.slice(i, i + batchSize);
         if(progress) progress.style.width = Math.round((i / data.length) * 100) + '%';
         if(pText) pText.textContent = 'Envoi lot ' + (Math.floor(i/batchSize)+1) + '...';
-        
-        // Préparer les données sans aucune requête préalable
+
         var prepared = batch.map(function(row) {
             var clean = {};
             config.headers.forEach(function(h) {
@@ -2184,7 +2239,7 @@ async function confirmImport() {
             });
             return clean;
         });
-        
+
         if (prepared.length) {
             var r = await sbPost(config.table, prepared, config.uniqueKey);
             if (r) inserted += prepared.length;
@@ -2193,12 +2248,12 @@ async function confirmImport() {
     if(progress) progress.style.width = '100%';
     if(pText) pText.textContent = 'Terminé !';
     toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s)');
-    
-    // 👇 NOUVELLE LIGNE : recalcul auto si c'est la table cours
+
     if (config.table === 'cours') await recalcVariations();
-    
+
     cancelImport();
 }
+
 function cancelImport() {
     currentUpload = { data:[], config:null, filename:'' };
     const pCard = document.getElementById('preview-card');
