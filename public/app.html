@@ -6,6 +6,7 @@
 <title>The Capital — Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 :root {
   --bg: #0A0804;
@@ -393,6 +394,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   .tech-toolbar-group { flex-wrap: wrap; }
 }
 </style>
+<base target="_blank">
 </head>
 <body class="init-hidden">
 
@@ -707,6 +709,23 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
         <div class="tech-toolbar-group" style="margin-left:auto">
           <button class="tech-toggle" onclick="toggleFocusMode()" id="btnFocus">🔍 Focus</button>
           <button class="tech-toggle" onclick="exportTechReport()">📥 Exporter</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="tech-toolbar">
+        <div class="tech-toolbar-group">
+          <span class="tech-toolbar-label">🎨 Dessin</span>
+          <button class="tech-toggle draw-btn" id="btnDrawHorizontal" onclick="setDrawMode('horizontal')">━ S/R</button>
+          <button class="tech-toggle draw-btn" id="btnDrawTrendline" onclick="setDrawMode('trendline')">📐 Tendance</button>
+          <button class="tech-toggle draw-btn" id="btnDrawFibonacci" onclick="setDrawMode('fibonacci')">🌀 Fibonacci</button>
+          <button class="tech-toggle" onclick="clearDrawings()" style="color:var(--red)">🗑 Effacer</button>
+        </div>
+        <div class="tech-toolbar-group" style="margin-left:auto">
+          <span id="drawStatus" style="font-size:11px;color:var(--gold);font-family:var(--mono)"></span>
         </div>
       </div>
     </div>
@@ -1448,6 +1467,9 @@ let _subChart1Inst = null;
 let _subChart2Inst = null;
 let _focusMode = false;
 let _indicatorsPanelOpen = true;
+let _drawMode = null;
+let _trendStart = null;
+let _techAnnotations = { lines: [], fibs: [] };
 
 // ═══════════════════════════════════════
 // CLOCK & NAV
@@ -2401,55 +2423,92 @@ async function loadTechAnalysis() {
   const ticker = document.getElementById('techTickerSelect').value;
   if (!ticker) {
     document.getElementById('chartTitle').textContent = 'Sélectionnez un ticker';
+    document.getElementById('livePrice').textContent = '';
+    document.getElementById('liveChange').textContent = '';
     return;
   }
   _techTicker = ticker;
 
+  // ── Cours actuel depuis allCours (source de vérité) ──
+  const currentCours = allCours.find(c => c.ticker === ticker);
+  const currentPrice = currentCours?.cours || 0;
+
   let hist;
   try {
-    const limit = _techPeriod === 99999 ? 5000 : Math.min(_techPeriod * 2, 2000);
+    const limit = _techPeriod === 99999 ? 5000 : Math.min(_techPeriod * 3, 3000);
     hist = await sb('historique', { 
       ticker: `eq.${ticker}`, 
       order: 'date_seance.asc',
-      select: 'date_seance,cours_ouverture,cours_cloture,cours_normal,plus_haut,plus_bas,volume',
       limit: limit
     });
   } catch(e) {
     toast('Historique indisponible pour ' + ticker, 'error');
-    return;
+    hist = [];
   }
-  
-  if (!hist.length) { 
-    toast('Aucun historique pour ' + ticker, 'warn'); 
-    return; 
+
+  if (!Array.isArray(hist)) hist = [];
+
+  // ── Extraction robuste des champs (noms multiples) ──
+  function extractField(d, ...keys) {
+    for (const k of keys) {
+      if (d[k] != null && !isNaN(+d[k])) return +d[k];
+    }
+    return null;
+  }
+
+  hist = hist.map(d => ({
+    date_seance: d.date_seance,
+    cours_cloture: extractField(d, 'cours_cloture', 'cloture', 'cours', 'prix', 'cours_normal', 'valeur', 'close'),
+    cours_ouverture: extractField(d, 'cours_ouverture', 'ouverture', 'open', 'cours', 'prix', 'cours_normal', 'cours_cloture'),
+    plus_haut: extractField(d, 'plus_haut', 'haut', 'high', 'max'),
+    plus_bas: extractField(d, 'plus_bas', 'bas', 'low', 'min'),
+    volume: extractField(d, 'volume', 'vol', 'quantite', 'qty', 'nb_transactions')
+  })).filter(d => d.cours_cloture != null && d.cours_cloture > 0);
+
+  if (!hist.length) {
+    if (currentPrice > 0) {
+      hist = [{
+        date_seance: currentCours.date_seance || new Date().toISOString().split('T')[0],
+        cours_cloture: currentPrice,
+        cours_ouverture: currentPrice,
+        plus_haut: currentPrice,
+        plus_bas: currentPrice,
+        volume: currentCours.volume || 0
+      }];
+      toast('Historique limité — affichage du cours actuel uniquement', 'warn');
+    } else {
+      toast('Aucune donnée historique pour ' + ticker, 'warn');
+      return;
+    }
   }
 
   hist = aggregateByInterval(hist, _techInterval);
-  
   if (_techPeriod !== 99999) {
     hist = hist.slice(-_techPeriod);
   }
 
-  const closes = hist.map(d => d.cours_cloture || d.cours_normal || 0);
-  const opens = hist.map(d => d.cours_ouverture || d.cours_cloture || d.cours_normal || 0);
+  const closes = hist.map(d => d.cours_cloture);
+  const opens = hist.map(d => d.cours_ouverture || d.cours_cloture);
   const highs = hist.map(d => d.plus_haut || Math.max(d.cours_ouverture || 0, d.cours_cloture || 0));
   const lows = hist.map(d => d.plus_bas || Math.min(d.cours_ouverture || Infinity, d.cours_cloture || Infinity));
   const volumes = hist.map(d => d.volume || 0);
   const labels = hist.map(d => formatTechDate(d.date_seance, _techInterval));
 
+  // ── Prix live depuis allCours (pas l'historique décalé) ──
   const lastClose = closes[closes.length - 1];
   const prevClose = closes[closes.length - 2] || lastClose;
-  const change = ((lastClose - prevClose) / prevClose * 100);
+  const change = prevClose ? ((lastClose - prevClose) / prevClose * 100) : 0;
+
   document.getElementById('chartTitle').textContent = `${ticker} — ${labels[labels.length-1]}`;
   document.getElementById('chartInfo').textContent = `${hist.length} périodes · ${_techInterval === 'daily' ? 'Journalier' : _techInterval === 'weekly' ? 'Hebdomadaire' : 'Mensuel'}`;
-  document.getElementById('livePrice').textContent = fmt(lastClose, 2) + ' FCFA';
+  document.getElementById('livePrice').textContent = fmt(currentPrice || lastClose, 2) + ' FCFA';
   const changeEl = document.getElementById('liveChange');
   changeEl.innerHTML = change >= 0 
     ? `<span style="color:var(--green)">▲ +${change.toFixed(2)}%</span>`
     : `<span style="color:var(--red)">▼ ${change.toFixed(2)}%</span>`;
 
   const datasets = [];
-  
+
   if (_chartType === 'candlestick') {
     datasets.push({
       label: 'Chandeliers',
@@ -2481,7 +2540,7 @@ async function loadTechAnalysis() {
   }
 
   const activeIndicators = getActiveIndicators();
-  
+
   if (activeIndicators.sma20) {
     const sma20 = calcSMA(closes, 20);
     datasets.push(mkLineDataset(sma20, INDICATOR_CONFIG.sma20.color, INDICATOR_CONFIG.sma20.label, INDICATOR_CONFIG.sma20.width));
@@ -2529,12 +2588,23 @@ async function loadTechAnalysis() {
   if (_techChartInst) _techChartInst.destroy();
 
   const isCandle = _chartType === 'candlestick';
+
+  // ── Construction des annotations ──
+  function buildAnnotations() {
+    const ann = {};
+    let idx = 0;
+    _techAnnotations.lines.forEach((line, i) => { ann['line' + i] = line; });
+    _techAnnotations.fibs.forEach((fib, i) => { ann['fib' + i] = fib; });
+    return ann;
+  }
+
   const mainOptions = {
     responsive: true,
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     animation: { duration: 0 },
     plugins: {
+      annotation: { annotations: buildAnnotations() },
       legend: { 
         display: true, 
         position: 'top',
@@ -2598,6 +2668,70 @@ async function loadTechAnalysis() {
         min: 0,
         max: Math.max(...volumes) * 5
       }
+    },
+    onClick: (e, elements, chart) => {
+      if (!_drawMode) return;
+      const canvasPosition = Chart.helpers.getRelativePosition(e, chart);
+      const dataY = chart.scales.y.getValueForPixel(canvasPosition.y);
+      const dataX = chart.scales.x.getValueForPixel(canvasPosition.x);
+
+      if (_drawMode === 'horizontal') {
+        _techAnnotations.lines.push({
+          type: 'line',
+          yMin: dataY,
+          yMax: dataY,
+          borderColor: 'rgba(184,150,78,0.9)',
+          borderWidth: 1.5,
+          borderDash: [6, 4],
+          label: {
+            display: true,
+            content: 'S/R ' + fmt(dataY, 2),
+            position: 'start',
+            backgroundColor: 'rgba(184,150,78,0.15)',
+            color: '#B8964E',
+            font: { size: 10, family: 'DM Mono' },
+            padding: 4
+          }
+        });
+        setDrawMode(null);
+        loadTechAnalysis();
+      } else if (_drawMode === 'trendline') {
+        if (_trendStart === null) {
+          _trendStart = { x: Math.round(dataX), y: dataY };
+          updateDrawStatus('Cliquez sur le point d'arrivée');
+        } else {
+          const xStart = Math.min(_trendStart.x, Math.round(dataX));
+          const xEnd = Math.max(_trendStart.x, Math.round(dataX));
+          _techAnnotations.lines.push({
+            type: 'line',
+            xMin: xStart,
+            xMax: xEnd,
+            yMin: _trendStart.y,
+            yMax: dataY,
+            borderColor: 'rgba(96,165,250,0.9)',
+            borderWidth: 1.5,
+            label: {
+              display: true,
+              content: 'Tendance',
+              position: 'center',
+              backgroundColor: 'rgba(96,165,250,0.15)',
+              color: '#60A5FA',
+              font: { size: 10, family: 'DM Mono' },
+              padding: 4
+            }
+          });
+          _trendStart = null;
+          setDrawMode(null);
+          loadTechAnalysis();
+        }
+      } else if (_drawMode === 'fibonacci') {
+        const visibleCloses = closes.slice(Math.max(0, closes.length - _techPeriod));
+        const minP = Math.min(...visibleCloses.filter(v => v > 0));
+        const maxP = Math.max(...visibleCloses);
+        addFibonacci(minP, maxP);
+        setDrawMode(null);
+        loadTechAnalysis();
+      }
     }
   };
 
@@ -2615,7 +2749,7 @@ async function loadTechAnalysis() {
           const x = bar.x;
           const yHigh = chart.scales.y.getPixelForValue(d.plus_haut || Math.max(d.cours_ouverture || 0, d.cours_cloture || 0));
           const yLow = chart.scales.y.getPixelForValue(d.plus_bas || Math.min(d.cours_ouverture || Infinity, d.cours_cloture || Infinity));
-          
+
           ctx.beginPath();
           const isUp = d.cours_cloture >= (d.cours_ouverture || d.cours_cloture);
           ctx.strokeStyle = isUp ? 'var(--green)' : 'var(--red)';
@@ -2630,7 +2764,7 @@ async function loadTechAnalysis() {
 
   const subContainer = document.getElementById('subIndicators');
   const hasSubInd = activeIndicators.rsi || activeIndicators.macd || activeIndicators.stoch || activeIndicators.cci;
-  
+
   if (hasSubInd && !_focusMode) {
     subContainer.style.display = 'block';
     renderSubIndicators(hist, closes, highs, lows, volumes, labels, activeIndicators);
@@ -2639,6 +2773,67 @@ async function loadTechAnalysis() {
   }
 
   calculateSignals(closes, highs, lows, volumes, activeIndicators);
+}
+
+function setDrawMode(mode) {
+  _drawMode = mode;
+  _trendStart = null;
+  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  if (mode) {
+    const btn = document.getElementById('btnDraw' + mode.charAt(0).toUpperCase() + mode.slice(1));
+    if (btn) btn.classList.add('active');
+    updateDrawStatus(mode === 'trendline' ? 'Cliquez sur le point de départ' : 'Cliquez sur le graphique');
+  } else {
+    updateDrawStatus('');
+  }
+}
+
+function updateDrawStatus(msg) {
+  const el = document.getElementById('drawStatus');
+  if (el) el.textContent = msg;
+}
+
+function clearDrawings() {
+  _techAnnotations = { lines: [], fibs: [] };
+  _trendStart = null;
+  _drawMode = null;
+  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  updateDrawStatus('');
+  loadTechAnalysis();
+  toast('Dessins effacés', 'success');
+}
+
+function addFibonacci(min, max) {
+  _techAnnotations.fibs = [];
+  const levels = [
+    { level: 0, color: 'rgba(74,222,128,0.7)', label: '0%' },
+    { level: 0.236, color: 'rgba(245,240,232,0.4)', label: '23.6%' },
+    { level: 0.382, color: 'rgba(245,240,232,0.4)', label: '38.2%' },
+    { level: 0.5, color: 'rgba(184,150,78,0.6)', label: '50%' },
+    { level: 0.618, color: 'rgba(245,240,232,0.4)', label: '61.8%' },
+    { level: 1, color: 'rgba(248,113,113,0.7)', label: '100%' }
+  ];
+  const range = max - min;
+  levels.forEach((l, i) => {
+    const price = min + range * l.level;
+    _techAnnotations.fibs.push({
+      type: 'line',
+      yMin: price,
+      yMax: price,
+      borderColor: l.color,
+      borderWidth: l.level === 0 || l.level === 1 ? 2 : 1,
+      borderDash: l.level === 0 || l.level === 1 ? [] : [4, 4],
+      label: {
+        display: true,
+        content: l.label + ' — ' + fmt(price, 2),
+        position: 'end',
+        backgroundColor: 'rgba(10,8,4,0.8)',
+        color: l.color,
+        font: { size: 10, family: 'DM Mono' },
+        padding: 4
+      }
+    });
+  });
 }
 
 function calcSMA(data, period) {
