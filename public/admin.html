@@ -2171,6 +2171,37 @@ async function showPreview(templateKey, rows) {
 }
 
 
+async function verifyTickers(tickers) {
+    if (!tickers.length) return { ok: true, missing: [] };
+    var params = 'select=ticker&ticker=in.(' + tickers.map(encodeURIComponent).join(',') + ')';
+    var rows = await sbGet('entreprises', params);
+    var found = new Set((rows || []).map(function(r){ return r.ticker; }));
+    var missing = tickers.filter(function(t){ return !found.has(t); });
+    return { ok: missing.length === 0, missing: missing };
+}
+
+async function createMissingTickers(missing) {
+    var body = missing.map(function(t){
+        return { ticker: t, nom: t, pays: '', secteur: '', compartiment: 'PRINCIPAL' };
+    });
+    var r = await sbPost('entreprises', body, 'ticker');
+    return r !== null;
+}
+
+async function autoCreateTickers() {
+    if (!currentUpload.missingTickers || !currentUpload.missingTickers.length) return;
+    var btn = document.getElementById('import-msg');
+    if(btn) { btn.textContent = 'Création des tickers...'; btn.className = 'msg info'; }
+    var ok = await createMissingTickers(currentUpload.missingTickers);
+    if (ok) {
+        toast('✓ ' + currentUpload.missingTickers.length + ' ticker(s) créé(s)');
+        currentUpload.missingTickers = [];
+        confirmImport();
+    } else {
+        if(btn) { btn.textContent = 'Échec création tickers'; btn.className = 'msg err'; }
+    }
+}
+
 async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
