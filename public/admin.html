@@ -2063,6 +2063,10 @@ async function confirmImport() {
     if(progress) progress.style.width = '100%';
     if(pText) pText.textContent = 'Terminé !';
     toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s)');
+    
+    // 👇 NOUVELLE LIGNE : recalcul auto si c'est la table cours
+    if (config.table === 'cours') await recalcVariations();
+    
     cancelImport();
 }
 function cancelImport() {
@@ -2136,6 +2140,31 @@ async function loadBOC() {
 async function deleteBocRow(id) {
     const ok = await sbDel('boc', 'id=eq.' + id);
     if (ok) loadBOC();
+}
+    async function recalcVariations() {
+    const rows = await sbGet('cours', 'select=*&order=ticker.asc,date_seance.asc');
+    if (!rows || !rows.length) { toast("Aucun cours trouvé", "err"); return; }
+    let updated = 0;
+    let byTicker = {};
+    rows.forEach(r => {
+        if (!byTicker[r.ticker]) byTicker[r.ticker] = [];
+        byTicker[r.ticker].push(r);
+    });
+    for (let ticker in byTicker) {
+        let list = byTicker[ticker];
+        // trier par date croissante (au cas où)
+        list.sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance));
+        for (let i = 1; i < list.length; i++) {
+            let prev = list[i-1], cur = list[i];
+            if (prev.cours && cur.cours && prev.cours > 0) {
+                let varPct = (cur.cours - prev.cours) / prev.cours * 100;
+                await sbPatch('cours', `id=eq.${cur.id}`, { variation: parseFloat(varPct.toFixed(2)) });
+                updated++;
+            }
+        }
+    }
+    toast(`${updated} variations mises à jour`);
+    loadCours(); // rafraîchir l'affichage
 }
 
 /* ══════════════════════════════════════════════════════
