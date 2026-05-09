@@ -2431,7 +2431,7 @@ async function loadTechAnalysis() {
 
   // ── Cours actuel depuis allCours (source de vérité) ──
   const currentCours = allCours.find(c => c.ticker === ticker);
-  const currentPrice = currentCours?.cours || 0;
+  const currentPrice = currentCours ? currentCours.cours : 0;
 
   let hist;
   try {
@@ -2449,21 +2449,26 @@ async function loadTechAnalysis() {
   if (!Array.isArray(hist)) hist = [];
 
   // ── Extraction robuste des champs (noms multiples) ──
-  function extractField(d, ...keys) {
-    for (const k of keys) {
+  function extractField(d, keys) {
+    for (let i = 0; i < keys.length; i++) {
+      const k = keys[i];
       if (d[k] != null && !isNaN(+d[k])) return +d[k];
     }
     return null;
   }
 
-  hist = hist.map(d => ({
-    date_seance: d.date_seance,
-    cours_cloture: extractField(d, 'cours_cloture', 'cloture', 'cours', 'prix', 'cours_normal', 'valeur', 'close'),
-    cours_ouverture: extractField(d, 'cours_ouverture', 'ouverture', 'open', 'cours', 'prix', 'cours_normal', 'cours_cloture'),
-    plus_haut: extractField(d, 'plus_haut', 'haut', 'high', 'max'),
-    plus_bas: extractField(d, 'plus_bas', 'bas', 'low', 'min'),
-    volume: extractField(d, 'volume', 'vol', 'quantite', 'qty', 'nb_transactions')
-  })).filter(d => d.cours_cloture != null && d.cours_cloture > 0);
+  hist = hist.map(function(d) {
+    return {
+      date_seance: d.date_seance,
+      cours_cloture: extractField(d, ['cours_cloture', 'cloture', 'cours', 'prix', 'cours_normal', 'valeur', 'close']),
+      cours_ouverture: extractField(d, ['cours_ouverture', 'ouverture', 'open', 'cours', 'prix', 'cours_normal', 'cours_cloture']),
+      plus_haut: extractField(d, ['plus_haut', 'haut', 'high', 'max']),
+      plus_bas: extractField(d, ['plus_bas', 'bas', 'low', 'min']),
+      volume: extractField(d, ['volume', 'vol', 'quantite', 'qty', 'nb_transactions'])
+    };
+  }).filter(function(d) {
+    return d.cours_cloture != null && d.cours_cloture > 0;
+  });
 
   if (!hist.length) {
     if (currentPrice > 0) {
@@ -2487,51 +2492,53 @@ async function loadTechAnalysis() {
     hist = hist.slice(-_techPeriod);
   }
 
-  const closes = hist.map(d => d.cours_cloture);
-  const opens = hist.map(d => d.cours_ouverture || d.cours_cloture);
-  const highs = hist.map(d => d.plus_haut || Math.max(d.cours_ouverture || 0, d.cours_cloture || 0));
-  const lows = hist.map(d => d.plus_bas || Math.min(d.cours_ouverture || Infinity, d.cours_cloture || Infinity));
-  const volumes = hist.map(d => d.volume || 0);
-  const labels = hist.map(d => formatTechDate(d.date_seance, _techInterval));
+  const closes = hist.map(function(d) { return d.cours_cloture; });
+  const opens = hist.map(function(d) { return d.cours_ouverture || d.cours_cloture; });
+  const highs = hist.map(function(d, i) { return d.plus_haut || Math.max(d.cours_ouverture || 0, d.cours_cloture || 0); });
+  const lows = hist.map(function(d, i) { return d.plus_bas || Math.min(d.cours_ouverture || Infinity, d.cours_cloture || Infinity); });
+  const volumes = hist.map(function(d) { return d.volume || 0; });
+  const labels = hist.map(function(d) { return formatTechDate(d.date_seance, _techInterval); });
 
-  // ── Prix live depuis allCours (pas l'historique décalé) ──
+  // ── Prix live depuis allCours (pas l historique décalé) ──
   const lastClose = closes[closes.length - 1];
   const prevClose = closes[closes.length - 2] || lastClose;
   const change = prevClose ? ((lastClose - prevClose) / prevClose * 100) : 0;
 
-  document.getElementById('chartTitle').textContent = `${ticker} — ${labels[labels.length-1]}`;
-  document.getElementById('chartInfo').textContent = `${hist.length} périodes · ${_techInterval === 'daily' ? 'Journalier' : _techInterval === 'weekly' ? 'Hebdomadaire' : 'Mensuel'}`;
+  document.getElementById('chartTitle').textContent = ticker + ' — ' + labels[labels.length-1];
+  document.getElementById('chartInfo').textContent = hist.length + ' périodes · ' + (_techInterval === 'daily' ? 'Journalier' : _techInterval === 'weekly' ? 'Hebdomadaire' : 'Mensuel');
   document.getElementById('livePrice').textContent = fmt(currentPrice || lastClose, 2) + ' FCFA';
   const changeEl = document.getElementById('liveChange');
   changeEl.innerHTML = change >= 0 
-    ? `<span style="color:var(--green)">▲ +${change.toFixed(2)}%</span>`
-    : `<span style="color:var(--red)">▼ ${change.toFixed(2)}%</span>`;
+    ? '<span style="color:var(--green)">▲ +' + change.toFixed(2) + '%</span>'
+    : '<span style="color:var(--red)">▼ ' + change.toFixed(2) + '%</span>';
 
   const datasets = [];
 
   if (_chartType === 'candlestick') {
     datasets.push({
       label: 'Chandeliers',
-      data: hist.map((d, i) => ({
-        x: i,
-        o: opens[i],
-        h: highs[i],
-        l: lows[i],
-        c: closes[i]
-      })),
+      data: hist.map(function(d, i) {
+        return {
+          x: i,
+          o: opens[i],
+          h: highs[i],
+          l: lows[i],
+          c: closes[i]
+        };
+      }),
       type: 'bar',
       barThickness: Math.max(2, Math.min(20, 800 / hist.length)),
-      backgroundColor: hist.map((d, i) => closes[i] >= opens[i] ? 'rgba(74,222,128,0.8)' : 'rgba(248,113,113,0.8)'),
-      borderColor: hist.map((d, i) => closes[i] >= opens[i] ? 'var(--green)' : 'var(--red)'),
-      borderWidth: 1,
+      backgroundColor: hist.map(function(d, i) { return closes[i] >= opens[i] ? 'rgba(74,222,128,0.8)' : 'rgba(248,113,113,0.8)'; }),
+      borderColor: hist.map(function(d, i) { return closes[i] >= opens[i] ? 'var(--green)' : 'var(--red)'; }),
+      borderWidth: 1
     });
   } else if (_chartType === 'bar') {
     datasets.push({
       label: 'Clôture',
       data: closes,
       type: 'bar',
-      backgroundColor: closes.map((c, i) => i > 0 && c >= closes[i-1] ? 'rgba(74,222,128,0.6)' : 'rgba(248,113,113,0.6)'),
-      borderColor: closes.map((c, i) => i > 0 && c >= closes[i-1] ? 'var(--green)' : 'var(--red)'),
+      backgroundColor: closes.map(function(c, i) { return i > 0 && c >= closes[i-1] ? 'rgba(74,222,128,0.6)' : 'rgba(248,113,113,0.6)'; }),
+      borderColor: closes.map(function(c, i) { return i > 0 && c >= closes[i-1] ? 'var(--green)' : 'var(--red)'; }),
       borderWidth: 1,
       barThickness: Math.max(2, Math.min(16, 800 / hist.length))
     });
@@ -2572,7 +2579,7 @@ async function loadTechAnalysis() {
     datasets.push(mkLineDataset(vwap, INDICATOR_CONFIG.vwap.color, INDICATOR_CONFIG.vwap.label, INDICATOR_CONFIG.vwap.width));
   }
 
-  if (activeIndicators.volume && volumes.some(v => v > 0)) {
+  if (activeIndicators.volume && volumes.some(function(v) { return v > 0; })) {
     datasets.push({
       label: 'Volume',
       data: volumes,
@@ -2593,8 +2600,8 @@ async function loadTechAnalysis() {
   function buildAnnotations() {
     const ann = {};
     let idx = 0;
-    _techAnnotations.lines.forEach((line, i) => { ann['line' + i] = line; });
-    _techAnnotations.fibs.forEach((fib, i) => { ann['fib' + i] = fib; });
+    _techAnnotations.lines.forEach(function(line, i) { ann['line' + i] = line; });
+    _techAnnotations.fibs.forEach(function(fib, i) { ann['fib' + i] = fib; });
     return ann;
   }
 
@@ -2625,18 +2632,18 @@ async function loadTechAnalysis() {
         bodyColor: '#F5F0E8', 
         padding: 12,
         callbacks: {
-          title: (items) => {
+          title: function(items) {
             const idx = items[0].dataIndex;
-            return `${labels[idx]} · Vol: ${fmt(volumes[idx])}`;
+            return labels[idx] + ' · Vol: ' + fmt(volumes[idx]);
           },
-          label: (ctx) => {
+          label: function(ctx) {
             if (isCandle && ctx.dataset.label === 'Chandeliers') {
               const d = ctx.raw;
-              return [` Ouvert: ${fmt(d.o, 2)}`, ` Haut: ${fmt(d.h, 2)}`, ` Bas: ${fmt(d.l, 2)}`, ` Clôture: ${fmt(d.c, 2)}`];
+              return [' Ouvert: ' + fmt(d.o, 2), ' Haut: ' + fmt(d.h, 2), ' Bas: ' + fmt(d.l, 2), ' Clôture: ' + fmt(d.c, 2)];
             }
             let val = fmt(ctx.parsed.y, 2);
             if (ctx.dataset.label === 'Volume') val = fmt(ctx.parsed.y);
-            return ` ${ctx.dataset.label}: ${val}`;
+            return ' ' + ctx.dataset.label + ': ' + val;
           }
         }
       }
@@ -2657,7 +2664,7 @@ async function loadTechAnalysis() {
         ticks: { 
           color: 'rgba(245,240,232,0.3)', 
           font: { size: 10, family: 'DM Mono' }, 
-          callback: v => fmt(v, 2) 
+          callback: function(v) { return fmt(v, 2); }
         } 
       },
       yVolume: {
@@ -2666,10 +2673,10 @@ async function loadTechAnalysis() {
         grid: { display: false },
         ticks: { display: false },
         min: 0,
-        max: Math.max(...volumes) * 5
+        max: Math.max.apply(null, volumes) * 5
       }
     },
-    onClick: (e, elements, chart) => {
+    onClick: function(e, elements, chart) {
       if (!_drawMode) return;
       const canvasPosition = Chart.helpers.getRelativePosition(e, chart);
       const dataY = chart.scales.y.getValueForPixel(canvasPosition.y);
@@ -2698,7 +2705,7 @@ async function loadTechAnalysis() {
       } else if (_drawMode === 'trendline') {
         if (_trendStart === null) {
           _trendStart = { x: Math.round(dataX), y: dataY };
-          updateDrawStatus('Cliquez sur le point d'arrivée');
+          updateDrawStatus('Cliquez sur le point d\'arrivée');
         } else {
           const xStart = Math.min(_trendStart.x, Math.round(dataX));
           const xEnd = Math.max(_trendStart.x, Math.round(dataX));
@@ -2726,8 +2733,8 @@ async function loadTechAnalysis() {
         }
       } else if (_drawMode === 'fibonacci') {
         const visibleCloses = closes.slice(Math.max(0, closes.length - _techPeriod));
-        const minP = Math.min(...visibleCloses.filter(v => v > 0));
-        const maxP = Math.max(...visibleCloses);
+        const minP = Math.min.apply(null, visibleCloses.filter(function(v) { return v > 0; }));
+        const maxP = Math.max.apply(null, visibleCloses);
         addFibonacci(minP, maxP);
         setDrawMode(null);
         loadTechAnalysis();
@@ -2737,14 +2744,14 @@ async function loadTechAnalysis() {
 
   _techChartInst = new Chart(document.getElementById('chartTech'), {
     type: isCandle ? 'bar' : 'line',
-    data: { labels, datasets },
+    data: { labels: labels, datasets: datasets },
     options: mainOptions,
     plugins: isCandle ? [{
       id: 'candleWicks',
-      beforeDatasetsDraw(chart) {
+      beforeDatasetsDraw: function(chart) {
         const ctx = chart.ctx;
         const meta = chart.getDatasetMeta(0);
-        meta.data.forEach((bar, i) => {
+        meta.data.forEach(function(bar, i) {
           const d = hist[i];
           const x = bar.x;
           const yHigh = chart.scales.y.getPixelForValue(d.plus_haut || Math.max(d.cours_ouverture || 0, d.cours_cloture || 0));
@@ -2778,9 +2785,10 @@ async function loadTechAnalysis() {
 function setDrawMode(mode) {
   _drawMode = mode;
   _trendStart = null;
-  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.draw-btn').forEach(function(b) { b.classList.remove('active'); });
   if (mode) {
-    const btn = document.getElementById('btnDraw' + mode.charAt(0).toUpperCase() + mode.slice(1));
+    const btnId = 'btnDraw' + mode.charAt(0).toUpperCase() + mode.slice(1);
+    const btn = document.getElementById(btnId);
     if (btn) btn.classList.add('active');
     updateDrawStatus(mode === 'trendline' ? 'Cliquez sur le point de départ' : 'Cliquez sur le graphique');
   } else {
@@ -2797,7 +2805,7 @@ function clearDrawings() {
   _techAnnotations = { lines: [], fibs: [] };
   _trendStart = null;
   _drawMode = null;
-  document.querySelectorAll('.draw-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.draw-btn').forEach(function(b) { b.classList.remove('active'); });
   updateDrawStatus('');
   loadTechAnalysis();
   toast('Dessins effacés', 'success');
@@ -2814,7 +2822,7 @@ function addFibonacci(min, max) {
     { level: 1, color: 'rgba(248,113,113,0.7)', label: '100%' }
   ];
   const range = max - min;
-  levels.forEach((l, i) => {
+  levels.forEach(function(l, i) {
     const price = min + range * l.level;
     _techAnnotations.fibs.push({
       type: 'line',
