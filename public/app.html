@@ -1556,6 +1556,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   </div>
 </div>
 
+
 </main>
 
 <script>
@@ -1674,14 +1675,13 @@ async function sb(table, params = {}) {
 })();
 
 function showLoginScreen() {
+  document.querySelectorAll('.view').forEach(v => v.style.display = 'none');
   const sidebar = document.getElementById('sidebar');
   const header = document.querySelector('.header');
   const breadcrumb = document.getElementById('breadcrumb');
-  const main = document.querySelector('.main');
   if (sidebar) sidebar.style.display = 'none';
   if (header) header.style.display = 'none';
   if (breadcrumb) breadcrumb.style.display = 'none';
-  if (main) main.style.display = 'none';
   
   document.body.classList.remove('init-hidden');
   
