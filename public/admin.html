@@ -2125,53 +2125,105 @@ function forceTemplate(key) {
         showPreview(key, currentUpload.data);
     }
 }
-
 async function showPreview(templateKey, rows) {
     var config = TEMPLATE_CONFIG[templateKey];
     const pCard = document.getElementById('preview-card');
     const pCount = document.getElementById('preview-count');
+    const btnConfirm = document.getElementById('btn-confirm-import');
     if(pCard) pCard.style.display = '';
     if(pCount) pCount.textContent = rows.length + ' lignes';
+    
     var displayHeaders = config.headers.slice();
     if (config.autoCalc) config.autoCalc.forEach(function(c){ displayHeaders.push('[AUTO] ' + c); });
+    
     const pHead = document.getElementById('preview-thead');
     const pBody = document.getElementById('preview-tbody');
     if(pHead) pHead.innerHTML = '<tr>' + displayHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '<th>Statut</th></tr>';
+    
     var insertCount = 0, updateCount = 0, errorCount = 0;
     var previewRows = [];
+    
     for (var i = 0; i < Math.min(rows.length, 50); i++) {
-    var row = rows[i];
-    // Vérification locale sans appel réseau
-    var errors = [];
-    config.required.forEach(function(req) {
-        if (!row[req] && row[req] !== 0) errors.push(req + ' manquant');
-    });
-    var status = errors.length ? 'error' : 'insert'; // ne distingue plus update (pas grave pour l'aperçu)
-    if (status === 'insert') insertCount++;
-    else errorCount++;
-    var combined = Object.assign({}, row, { _status: status, _errors: errors });
-    previewRows.push(combined);
-}
+        var row = rows[i];
+        var errors = [];
+        
+        // ═══════════════════════════════════════
+        // VALIDATION EXPLICITE DU TICKER
+        // ═══════════════════════════════════════
+        var rawTicker = row['ticker'] || row['Ticker'] || row['TICKER'] || row['code'] || row['CODE'] || null;
+        if (!rawTicker || String(rawTicker).trim() === '') {
+            errors.push('❌ TICKER MANQUANT (ligne ' + (i + 2) + ')');
+        } else {
+            row['ticker'] = String(rawTicker).trim().toUpperCase();
+        }
+        
+        config.required.forEach(function(req) {
+            if (!row[req] && row[req] !== 0) errors.push(req + ' manquant');
+        });
+        
+        var status = errors.length ? 'error' : 'insert';
+        if (status === 'insert') insertCount++;
+        else errorCount++;
+        
+        var combined = Object.assign({}, row, { _status: status, _errors: errors, _line: i + 2 });
+        previewRows.push(combined);
+    }
+    
+    // ═══════════════════════════════════════
+    // AFFICHAGE DU RÉSUMÉ AVEC ERREURS
+    // ═══════════════════════════════════════
     const iSum = document.getElementById('import-summary');
     if(iSum){
         iSum.innerHTML =
             '<div class="import-stat insert"><div class="number">' + insertCount + '</div><div class="label">Nouveaux</div></div>' +
             '<div class="import-stat update"><div class="number">' + updateCount + '</div><div class="label">Màj</div></div>' +
             '<div class="import-stat skip"><div class="number">' + (rows.length - insertCount - updateCount - errorCount) + '</div><div class="label">Ignorés</div></div>' +
-            '<div class="import-stat error"><div class="number">' + errorCount + '</div><div class="label">Erreurs</div></div>';
+            '<div class="import-stat error"><div class="number" style="color:' + (errorCount ? 'var(--red)' : '') + '">' + errorCount + '</div><div class="label">' + (errorCount ? 'ERREURS' : 'Erreurs') + '</div></div>';
     }
+    
+    // ═══════════════════════════════════════
+    // MESSAGE D'ALERTE SI ERREURS
+    // ═══════════════════════════════════════
+    var importMsg = document.getElementById('import-msg');
+    if (errorCount > 0) {
+        if(importMsg) {
+            importMsg.innerHTML = '<span style="color:var(--red);font-weight:500;">⚠️ ' + errorCount + ' ligne(s) invalide(s). Corrigez votre fichier avant de confirmer.</span>';
+            importMsg.className = 'msg err';
+        }
+        if(btnConfirm) {
+            btnConfirm.disabled = true;
+            btnConfirm.style.opacity = '0.5';
+            btnConfirm.style.cursor = 'not-allowed';
+        }
+    } else {
+        if(importMsg) {
+            importMsg.innerHTML = '<span style="color:var(--green);">✓ Toutes les lignes sont valides</span>';
+            importMsg.className = 'msg ok';
+        }
+        if(btnConfirm) {
+            btnConfirm.disabled = false;
+            btnConfirm.style.opacity = '1';
+            btnConfirm.style.cursor = 'pointer';
+        }
+    }
+    
+    // ═══════════════════════════════════════
+    // RENDU DU TABLEAU AVEC LIGNES ROUGES
+    // ═══════════════════════════════════════
     if(pBody){
         pBody.innerHTML = previewRows.map(function(r){
-            var cls = r._status==='error'?'error':r._status==='update'?'update':'new';
+            var cls = r._status === 'error' ? 'error' : 'new';
             var cells = displayHeaders.map(function(h){
                 var clean = h.replace('[AUTO] ','');
                 return '<td>' + (r[clean] != null ? r[clean] : '—') + '</td>';
             }).join('');
-            return '<tr class="preview-row ' + cls + '" title="' + (r._errors||[]).join(', ') + '">' + cells + '<td>' + (r._status==='error'?'❌':r._status==='update'?'🔄':'✅') + '</td></tr>';
+            var statusIcon = r._status === 'error' ? '❌' : '✅';
+            var titleAttr = (r._errors || []).join(' | ');
+            return '<tr class="preview-row ' + cls + '" title="' + titleAttr + '">' + cells + 
+                   '<td style="font-weight:500;">' + statusIcon + '<br><small style="color:var(--red);">' + titleAttr.substring(0,60) + '</small></td></tr>';
         }).join('');
     }
 }
-
 
 async function verifyTickers(tickers) {
     if (!tickers.length) return { ok: true, missing: [] };
