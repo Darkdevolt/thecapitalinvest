@@ -984,7 +984,8 @@ function showFatalError(title, details) {
             '<div style="font-size:48px;margin-bottom:16px;">⛔</div>' +
             '<h2 style="color:#F87171;margin-bottom:12px;font-family:var(--sans);font-size:20px;">' + title + '</h2>' +
             '<p style="color:rgba(245,240,232,0.65);line-height:1.6;font-size:13px;margin-bottom:24px;">' + details + '</p>' +
-            '<button onclick="localStorage.removeItem(\'' + SK + '\');location.href=\'login.html\'" ' +
+            `<button onclick="localStorage.removeItem('${SK}');location.href='login.html'" ` +
+
             'style="padding:10px 22px;background:var(--gold);color:var(--bg);border:none;border-radius:4px;font-family:var(--sans);cursor:pointer;font-weight:500;">' +
             'Se reconnecter</button></div>';
         screen.style.display = 'flex';
@@ -1340,7 +1341,7 @@ function renderCoursTable(data) {
             '<td class="r td-muted">' + fmt(r.plus_bas_52) + '</td>' +
             '<td>' +
               '<button class="btn btn-outline btn-sm" onclick=\'editCours(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              '<button class="btn btn-danger btn-sm" onclick="deleteCours(\'' + r.ticker + '\',\'' + r.date_seance + '\')">✕</button>' +
+              `<button class="btn btn-danger btn-sm" onclick="deleteCours('${r.ticker}','${r.date_seance}')">✕</button>` +
             '</td></tr>';
     }).join('');
     if(count) count.textContent = data.length + ' ligne(s)';
@@ -1490,7 +1491,7 @@ async function loadHistoriqueTicker() {
                 '<td class="r td-muted">' + fmt(r.plus_bas) + '</td>' +
                 '<td class="r td-muted">' + fmt(r.volume) + '</td>' +
                 '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
-                '<td><button class="btn btn-danger btn-sm" onclick="deleteHistRow(\'' + r.id + '\')">✕</button></td>' +
+                `<td><button class="btn btn-danger btn-sm" onclick="deleteHistRow('${r.id}')">✕</button></td>` +
                 '</tr>';
         }).join('');
         if(btnDel) btnDel.style.display = '';
@@ -1537,7 +1538,7 @@ function renderEntTable(data) {
             '<td class="td-muted">' + (r.isin||'—') + '</td>' +
             '<td><span class="badge badge-green">Actif</span></td>' +
             '<td><button class="btn btn-outline btn-sm" onclick=\'openEntModal(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              '<button class="btn btn-danger btn-sm" onclick="deleteEntreprise(\'' + r.ticker + \')">✕</button></td>' +
+              `<button class="btn btn-danger btn-sm" onclick="deleteEntreprise('${r.ticker}')">✕</button></td>` +
             '</tr>';
     }).join('');
 }
@@ -1709,7 +1710,7 @@ function renderDivTable(data) {
             '<td class="td-muted">' + fmtDate(r.date_detachement) + '</td>' +
             '<td class="td-muted">' + fmtDate(r.date_paiement) + '</td>' +
             '<td><span class="badge ' + (r.statut==='payé'?'badge-green':r.statut==='prévisionnel'?'badge-orange':'badge-gold') + '">' + (r.statut||'—') + '</span></td>' +
-            '<td><button class="btn btn-danger btn-sm" onclick="deleteDivRow(\'' + r.id + '\')">✕</button></td>' +
+            `<td><button class="btn btn-danger btn-sm" onclick="deleteDivRow('${r.id}')">✕</button></td>` +
             '</tr>';
     }).join('');
 }
@@ -1761,7 +1762,7 @@ async function loadAnalyses() {
             '<div style="text-align:right;">' +
               '<span class="badge ' + (r.recommandation==='Acheter'?'badge-green':r.recommandation==='Vendre'?'badge-red':'badge-gold') + '">' + r.recommandation + '</span>' +
               '<div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">' + fmt(r.cours_cible) + '</div>' +
-              '<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="deleteAnalyseRow(\'' + r.id + '\')">✕</button>' +
+              `<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="deleteAnalyseRow('${r.id}')">✕</button>` +
             '</div>' +
             '</div>';
     }).join('');
@@ -2333,7 +2334,7 @@ async function loadBOC() {
           list.map(function(b){
               return '<tr><td>' + b.date_seance + '</td><td>' + b.fichier_nom + '</td>' +
                      '<td><a href="' + b.fichier_url + '" target="_blank" style="color:var(--gold);">Voir</a></td>' +
-                     '<td><button class="btn btn-danger btn-sm" onclick="deleteBocRow(\'' + b.id + '\')">✕</button></td></tr>';
+          `<td><button class="btn btn-danger btn-sm" onclick="deleteBocRow('${b.id}')">✕</button></td></tr>`;
           }).join('') + '</tbody></table></div>'
         : '<div style="padding:16px;color:var(--muted);">Aucun BOC.</div>';
 }
