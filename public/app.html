@@ -2075,15 +2075,10 @@ function populateTickerSelects() {
   allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
   const tickers = Object.keys(byTicker).sort();
   const opts = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
-
-  const pf = document.getElementById('pfTicker');
-  if (pf) pf.innerHTML = '<option value="">Ticker...</option>' + opts;
-
-  const al = document.getElementById('alertTicker');
-  if (al) al.innerHTML = '<option value="">Ticker...</option>' + opts;
-
-  const fu = document.getElementById('fundTickerSelect');
-  if (fu) fu.innerHTML = '<option value="">Choisir un ticker...</option>' + opts;
+  document.getElementById('techTickerSelect').innerHTML = '<option value="">Choisir un ticker...</option>' + opts;
+  document.getElementById('pfTicker').innerHTML = '<option value="">Ticker...</option>' + opts;
+  document.getElementById('alertTicker').innerHTML = '<option value="">Ticker...</option>' + opts;
+  document.getElementById('fundTickerSelect').innerHTML = '<option value="">Choisir un ticker...</option>' + opts;
 }
 
 // ═══════════════════════════════════════
