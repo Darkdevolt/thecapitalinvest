@@ -84,17 +84,11 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 .breadcrumb a:hover { text-decoration: underline; }
 .breadcrumb span { color: var(--dim); }
 
-  /* NAV HORIZONTALE */
-.topnav { display: flex; align-items: center; gap: 2px; flex: 1; overflow-x: auto; scrollbar-width: none; }
-.topnav::-webkit-scrollbar { display: none; }
+/* NAV HORIZONTALE */
+.topnav { display: flex; align-items: center; gap: 4px; flex: 1; overflow: visible; }
 .topnav-logo { font-family: var(--serif); font-size: 16px; font-weight: 700; letter-spacing: 2px; color: var(--cream); white-space: nowrap; padding-right: 20px; border-right: 1px solid var(--border2); margin-right: 12px; cursor: pointer; flex-shrink: 0; }
 .topnav-logo span { color: var(--gold); }
-.topnav-section { font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); padding: 0 8px; white-space: nowrap; flex-shrink: 0; }
-.topnav-item { display: flex; align-items: center; gap: 6px; padding: 7px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 400; border: 1px solid transparent; white-space: nowrap; transition: all 0.18s; flex-shrink: 0; text-decoration: none; }
-.topnav-item:hover { background: rgba(184,150,78,0.05); color: var(--cream); border-color: var(--border2); }
-.topnav-item.active { background: rgba(184,150,78,0.08); color: var(--gold); border-color: rgba(184,150,78,0.2); }
-.topnav-item .icon { font-size: 13px; }
-.topnav-divider { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; margin: 0 6px; }
+.topnav-divider { width: 1px; height: 20px; background: var(--border2); flex-shrink: 0; margin: 0 4px; }
 .topnav-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; margin-left: auto; padding-left: 16px; border-left: 1px solid var(--border2); }
 .topnav-user { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 5px 8px; border-radius: 8px; border: 1px solid transparent; transition: all 0.18s; }
 .topnav-user:hover { border-color: var(--border2); background: rgba(184,150,78,0.04); }
@@ -102,6 +96,23 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 .topnav-username { font-size: 12px; color: var(--cream); font-weight: 500; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .topnav-logout { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border2); background: none; color: var(--dim); font-size: 11px; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
 .topnav-logout:hover { border-color: var(--red); color: var(--red); }
+
+/* DROPDOWN NAV */
+.nav-dropdown { position: relative; flex-shrink: 0; }
+.nav-dropdown-btn { display: flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 12.5px; font-weight: 400; border: 1px solid transparent; white-space: nowrap; transition: all 0.18s; background: none; font-family: var(--sans); user-select: none; }
+.nav-dropdown-btn:hover { background: rgba(184,150,78,0.05); color: var(--cream); border-color: var(--border2); }
+.nav-dropdown-btn.active { background: rgba(184,150,78,0.08); color: var(--gold); border-color: rgba(184,150,78,0.2); }
+.nav-dropdown-btn .caret { font-size: 8px; opacity: 0.5; margin-left: 2px; transition: transform 0.2s; }
+.nav-dropdown-btn.open .caret { transform: rotate(180deg); opacity: 1; }
+.nav-dropdown-menu { position: absolute; top: calc(100% + 8px); left: 0; min-width: 200px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,0.5); z-index: 300; padding: 6px; display: none; animation: fadeIn 0.15s ease; }
+.nav-dropdown-menu.open { display: block; }
+.nav-dropdown-label { font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); padding: 6px 10px 4px; }
+.nav-dropdown-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 13px; transition: all 0.15s; }
+.nav-dropdown-item:hover { background: rgba(184,150,78,0.06); color: var(--cream); }
+.nav-dropdown-item.active { background: rgba(184,150,78,0.08); color: var(--gold); }
+.nav-dropdown-item .icon { font-size: 14px; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-dropdown-item .item-desc { font-size: 10px; color: var(--dim); margin-top: 1px; }
+.nav-dropdown-separator { height: 1px; background: var(--border2); margin: 4px 0; }
 /* TOAST */
 .toast-container { position: fixed; top: 80px; right: 20px; z-index: 200; display: flex; flex-direction: column; gap: 8px; }
 .toast { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 12px 16px; font-size: 13px; color: var(--cream); box-shadow: 0 8px 24px rgba(0,0,0,0.4); animation: slideIn 0.3s ease; max-width: 320px; }
@@ -419,12 +430,11 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   .tech-indicators-grid { grid-template-columns: repeat(2, 1fr); }
   .tech-toolbar { gap: 12px; }
   .tech-toolbar-group { flex-wrap: wrap; }
-  .topnav-section { display: none; }
   .topnav-divider { display: none; }
   .topnav-username { display: none; }
-  .topnav-item { padding: 7px 8px; font-size: 11px; }
-  .topnav-item .icon { font-size: 14px; }
-  .global-search { max-width: 140px; }
+  .nav-dropdown-btn { padding: 7px 10px; font-size: 12px; }
+  .global-search { max-width: 130px; }
+  .nav-dropdown-menu { min-width: 180px; }
 }
 </style>
 </head>
@@ -486,28 +496,97 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   <nav class="topnav">
     <div class="topnav-logo" onclick="nav('overview')">THE <span>·</span> CAPITAL</div>
 
-    <span class="topnav-section">Marché</span>
-    <div class="topnav-item active" id="nav-overview" onclick="nav('overview')"><span class="icon">◈</span> Tableau de bord</div>
-    <div class="topnav-item" id="nav-titres" onclick="nav('titres')"><span class="icon">▦</span> Titres</div>
-    <div class="topnav-item" id="nav-boc" onclick="nav('boc')"><span class="icon">◉</span> BOC</div>
+    <!-- Tableau de bord direct -->
+    <div class="nav-dropdown">
+      <div class="nav-dropdown-btn" id="nav-overview" onclick="nav('overview')">
+        <span>◈</span> Tableau de bord
+      </div>
+    </div>
 
     <div class="topnav-divider"></div>
-    <span class="topnav-section">Analyse</span>
-    <div class="topnav-item" id="nav-analyses" onclick="nav('analyses')"><span class="icon">◎</span> Recommandations</div>
-    <div class="topnav-item" id="nav-analyse-technique" onclick="nav('analyse-technique')"><span class="icon">📈</span> Technique</div>
-    <div class="topnav-item" id="nav-analyse-fondamentale" onclick="nav('analyse-fondamentale')"><span class="icon">⊛</span> Fondamentale</div>
-    <div class="topnav-item" id="nav-screener" onclick="nav('screener')"><span class="icon">⊟</span> Screener</div>
+
+    <!-- Marché -->
+    <div class="nav-dropdown" id="dd-marche">
+      <div class="nav-dropdown-btn" id="nav-marche-btn" onclick="toggleDropdown('dd-marche')">
+        <span>▦</span> Marché <span class="caret">▼</span>
+      </div>
+      <div class="nav-dropdown-menu" id="menu-dd-marche">
+        <div class="nav-dropdown-label">Marché</div>
+        <div class="nav-dropdown-item" id="nav-titres" onclick="nav('titres');closeDropdowns()">
+          <span class="icon">▦</span>
+          <div><div>Titres BRVM</div><div class="item-desc">Tous les titres cotés</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-boc" onclick="nav('boc');closeDropdowns()">
+          <span class="icon">◉</span>
+          <div><div>BOC</div><div class="item-desc">Bulletin Officiel de la Cote</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-screener" onclick="nav('screener');closeDropdowns()">
+          <span class="icon">⊟</span>
+          <div><div>Screener</div><div class="item-desc">Filtrer les titres</div></div>
+        </div>
+      </div>
+    </div>
 
     <div class="topnav-divider"></div>
-    <span class="topnav-section">Gestion</span>
-    <div class="topnav-item" id="nav-portefeuille" onclick="nav('portefeuille')"><span class="icon">◧</span> Portefeuille</div>
-    <div class="topnav-item" id="nav-alertes" onclick="nav('alertes')"><span class="icon">△</span> Alertes</div>
+
+    <!-- Analyse -->
+    <div class="nav-dropdown" id="dd-analyse">
+      <div class="nav-dropdown-btn" id="nav-analyse-btn" onclick="toggleDropdown('dd-analyse')">
+        <span>◎</span> Analyse <span class="caret">▼</span>
+      </div>
+      <div class="nav-dropdown-menu" id="menu-dd-analyse">
+        <div class="nav-dropdown-label">Analyse</div>
+        <div class="nav-dropdown-item" id="nav-analyses" onclick="nav('analyses');closeDropdowns()">
+          <span class="icon">◎</span>
+          <div><div>Recommandations</div><div class="item-desc">Avis d'analystes</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-analyse-technique" onclick="nav('analyse-technique');closeDropdowns()">
+          <span class="icon">📈</span>
+          <div><div>Analyse Technique</div><div class="item-desc">Graphiques & indicateurs</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-analyse-fondamentale" onclick="nav('analyse-fondamentale');closeDropdowns()">
+          <span class="icon">⊛</span>
+          <div><div>Analyse Fondamentale</div><div class="item-desc">DCF, TCAM, ratios</div></div>
+        </div>
+      </div>
+    </div>
 
     <div class="topnav-divider"></div>
-    <span class="topnav-section">Données</span>
-    <div class="topnav-item" id="nav-financials" onclick="nav('financials')"><span class="icon">≡</span> Financiers</div>
-    <div class="topnav-item" id="nav-publications" onclick="nav('publications')"><span class="icon">📅</span> Calendrier</div>
-    <div class="topnav-item" id="nav-formation" onclick="nav('formation')"><span class="icon">📚</span> Formation</div>
+
+    <!-- Gestion & Données -->
+    <div class="nav-dropdown" id="dd-gestion">
+      <div class="nav-dropdown-btn" id="nav-gestion-btn" onclick="toggleDropdown('dd-gestion')">
+        <span>◧</span> Gestion <span class="caret">▼</span>
+      </div>
+      <div class="nav-dropdown-menu" id="menu-dd-gestion">
+        <div class="nav-dropdown-label">Gestion</div>
+        <div class="nav-dropdown-item" id="nav-portefeuille" onclick="nav('portefeuille');closeDropdowns()">
+          <span class="icon">◧</span>
+          <div><div>Portefeuille</div><div class="item-desc">Positions & P&L</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-alertes" onclick="nav('alertes');closeDropdowns()">
+          <span class="icon">△</span>
+          <div><div>Alertes</div><div class="item-desc">Seuils de prix</div></div>
+        </div>
+        <div class="nav-dropdown-separator"></div>
+        <div class="nav-dropdown-label">Données</div>
+        <div class="nav-dropdown-item" id="nav-financials" onclick="nav('financials');closeDropdowns()">
+          <span class="icon">≡</span>
+          <div><div>États Financiers</div><div class="item-desc">Comptes annuels</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-publications" onclick="nav('publications');closeDropdowns()">
+          <span class="icon">📅</span>
+          <div><div>Calendrier</div><div class="item-desc">Publications attendues</div></div>
+        </div>
+        <div class="nav-dropdown-separator"></div>
+        <div class="nav-dropdown-label">Apprendre</div>
+        <div class="nav-dropdown-item" id="nav-formation" onclick="nav('formation');closeDropdowns()">
+          <span class="icon">📚</span>
+          <div><div>Formation</div><div class="item-desc">Lexique & guides</div></div>
+        </div>
+      </div>
+    </div>
+
   </nav>
 
   <div class="topnav-right">
@@ -524,8 +603,6 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
     <button class="topnav-logout" onclick="doLogout()">⎋</button>
   </div>
 </header>
-
-<main class="main">
 
 <!-- ═══ OVERVIEW ═══ -->
 <div class="view active" id="view-overview">
@@ -1580,15 +1657,45 @@ const BREADCRUMBS = {
 };
 
 function nav(id, noHash) {
-  document.querySelectorAll('.topnav-item').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-dropdown-item, .nav-dropdown-btn').forEach(el => el.classList.remove('active'));
   document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
   const v = document.getElementById('view-' + id);
   if (v) v.classList.add('active');
   const navEl = document.getElementById('nav-' + id);
   if (navEl) navEl.classList.add('active');
+  // Activer aussi le bouton parent dropdown
+  const parentMenu = navEl?.closest('.nav-dropdown');
+  if (parentMenu) {
+    const parentBtn = parentMenu.querySelector('.nav-dropdown-btn');
+    if (parentBtn) parentBtn.classList.add('active');
+  }
   if (!noHash) setHashForView(id);
   document.getElementById('globalSearchResults').classList.remove('open');
+  closeDropdowns();
 }
+  function toggleDropdown(id) {
+  const dd = document.getElementById(id);
+  const menu = document.getElementById('menu-' + id);
+  const btn = dd.querySelector('.nav-dropdown-btn');
+  const isOpen = menu.classList.contains('open');
+  closeDropdowns();
+  if (!isOpen) {
+    menu.classList.add('open');
+    btn.classList.add('open');
+  }
+}
+
+function closeDropdowns() {
+  document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.classList.remove('open'));
+  document.querySelectorAll('.nav-dropdown-btn').forEach(b => b.classList.remove('open'));
+}
+
+// Fermer dropdowns au clic extérieur
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.nav-dropdown') && !e.target.closest('.topnav-logo')) {
+    closeDropdowns();
+  }
+});
 function updateBreadcrumb(viewId) {
   const bc = document.getElementById('breadcrumb');
   const items = BREADCRUMBS[viewId] || BREADCRUMBS['overview'];
