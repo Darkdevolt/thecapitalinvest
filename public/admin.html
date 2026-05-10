@@ -229,6 +229,7 @@
         }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -1536,7 +1537,7 @@ function renderEntTable(data) {
             '<td class="td-muted">' + (r.isin||'—') + '</td>' +
             '<td><span class="badge badge-green">Actif</span></td>' +
             '<td><button class="btn btn-outline btn-sm" onclick=\'openEntModal(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              '<button class="btn btn-danger btn-sm" onclick="deleteEntreprise(\\'' + r.ticker + '\\')">✕</button></td>' +
+              '<button class="btn btn-danger btn-sm" onclick="deleteEntreprise(\''' + r.ticker + '\'')">✕</button></td>' +
             '</tr>';
     }).join('');
 }
@@ -2569,7 +2570,6 @@ async function deleteFinancial(id) {
     if (ok) { toast('Financial supprimé'); loadFinancials(); }
 }
 
-/* ══════════════════════════════════════════════════════
 /* ══════════════════════════════════════════════════════
    DÉMARRAGE — sans boucle infinie
 ══════════════════════════════════════════════════════ */
