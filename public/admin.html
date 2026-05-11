@@ -1572,7 +1572,7 @@ async function saveEntreprise() {
     const ticker = v('modal-ent-ticker');
     const msg    = document.getElementById('modal-ent-msg');
     if (isIndice(ticker)) {
-        if(msg){ msg.textContent = '❌ Ce ticker est un indice BRVM. Utilisez l\'onglet Indices.'; msg.className = 'msg err'; }
+        if(msg){ msg.textContent = 'Ce ticker est un indice BRVM. Utilisez l\'onglet Indices.'; msg.className = 'msg err'; }
         return;
     }
     const body = {
@@ -1588,7 +1588,7 @@ async function addEntreprise() {
     const msg  = document.getElementById('ne-msg');
     const ticker = v('ne-ticker');
     if (isIndice(ticker)) {
-        if(msg){ msg.textContent = '❌ Ce ticker correspond à un indice BRVM. Utilisez l\'onglet Indices.'; msg.className = 'msg err'; }
+        if(msg){ msg.textContent = 'Ce ticker est un indice BRVM. Utilisez l\'onglet Indices.'; msg.className = 'msg err'; }
         return;
     }
     const body = {
@@ -2145,7 +2145,6 @@ function forceTemplate(key) {
 }
 async function showPreview(templateKey, rows) {
     var config = TEMPLATE_CONFIG[templateKey];
-    // Exclure les indices BRVM du template entreprises
     if (config.table === 'entreprises') {
         rows = rows.filter(function(r){ return !isIndice(r['ticker'] || r['code']); });
     }
@@ -2281,7 +2280,6 @@ async function autoCreateTickers() {
 async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
-    // Exclure les indices BRVM du template entreprises
     if (config.table === 'entreprises') {
         data = data.filter(function(r){ return !isIndice(r['ticker'] || r['code']); });
     }
@@ -2636,13 +2634,8 @@ async function saveAnalyse() {
 ══════════════════════════════════════════════════════ */
 async function deleteEntreprise(ticker) {
     if (!confirm("Supprimer l'entreprise " + ticker + " ? Cette action est irréversible.")) return;
-    // Pour un indice, nettoyer d'abord les tables filles (FK)
     if (isIndice(ticker)) {
-        if (!confirm("⚠️ Cet élément est un indice BRVM.
-
-Les données associées dans cours, historique, financials, dividendes, analyses et actionnaires seront aussi supprimées.
-
-Continuer ?")) return;
+        if (!confirm("Cet element est un indice BRVM. Les donnees associees seront aussi supprimees. Continuer ?")) return;
         await sbDel('historique', 'ticker=eq.' + encodeURIComponent(ticker));
         await sbDel('cours', 'ticker=eq.' + encodeURIComponent(ticker));
         await sbDel('financials', 'ticker=eq.' + encodeURIComponent(ticker));
