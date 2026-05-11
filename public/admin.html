@@ -230,6 +230,7 @@
     </style>
 <base target="_blank">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -781,7 +782,7 @@
         <div id="diag-result">
             <div class="card"><div style="padding:24px;color:var(--muted);text-align:center;font-size:13px;">Cliquez sur "Lancer le diagnostic".</div></div>
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:16px;">
             <div class="card">
                 <div class="card-header"><span class="card-title">Cours invalides</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadCoursErreurs()">Charger</button></div>
                 <div id="cours-erreurs-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
@@ -789,6 +790,10 @@
             <div class="card">
                 <div class="card-header"><span class="card-title">Tickers sans financials</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadTickersSansFinancials()">Charger</button></div>
                 <div id="tickers-sans-fin-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Indices dans Entreprises</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadIndicesDansEntreprises()">Charger</button></div>
+                <div id="indices-dans-ent-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
             </div>
         </div>
     </div>
@@ -950,6 +955,14 @@ let TK = '', ME = null;
 let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [];
 let diagData = null;
 let activeTab = 'dashboard';
+
+/* ── INDICES BRVM ───────────────────────────────────────────── */
+const INDICES_BRV = ['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT','BRVM FINANCE','BRVM DISTRIBUTION','BRVM INDUSTRIE','BRVM AGRICULTURE','BRVM SERVICES PUBLICS','BRVM AUTRES SECTEURS'];
+function isIndice(ticker) {
+    if (!ticker) return false;
+    const t = String(ticker).trim().toUpperCase();
+    return INDICES_BRV.includes(t) || t.startsWith('BRVM');
+}
 
 /* ── ÉCRAN DE CHARGEMENT ─────────────────────────────────────── */
 function showLoadingScreen(msg) {
@@ -1249,11 +1262,12 @@ async function loadDashboard() {
     const tsEl = document.getElementById('dash-ts');
     if (tsEl) tsEl.textContent = new Date().toLocaleString('fr-FR');
 
-    const counts = await Promise.all([
-        sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
+    const [entRows, nCours, nHist, nFin, nDiv, nUsers] = await Promise.all([
+        sbGet('entreprises', 'select=ticker&limit=100'),
+        sbCount('cours'), sbCount('historique'),
         sbCount('financials'), sbCount('dividendes_calendrier'), sbCount('users')
     ]);
-    const [nEnt, nCours, nHist, nFin, nDiv, nUsers] = counts;
+    const nEnt = (entRows || []).filter(function(r){ return !isIndice(r.ticker); }).length;
 
     const kEnt = document.getElementById('k-entreprises'); if(kEnt) kEnt.textContent = nEnt;
     const kCou = document.getElementById('k-cours');       if(kCou) kCou.textContent = nCours;
@@ -1291,14 +1305,17 @@ async function loadDashboardAlerts() {
     const panel = document.getElementById('dash-alerts');
     if(!panel) return;
     const alerts = [];
-    const [nullVar, nullCours, nullClot] = await Promise.all([
+    const [nullVar, nullCours, nullClot, allEnts] = await Promise.all([
         sbCount('cours', 'variation=is.null'),
         sbCount('cours', 'cours=lte.0'),
-        sbCount('historique', 'cours_cloture=is.null')
+        sbCount('historique', 'cours_cloture=is.null'),
+        sbGet('entreprises', 'select=ticker&limit=100')
     ]);
     if (nullVar   > 0) alerts.push({ type:'warn', msg: nullVar   + ' cours sans variation' });
     if (nullCours > 0) alerts.push({ type:'err',  msg: nullCours + ' cours ≤ 0' });
     if (nullClot  > 0) alerts.push({ type:'warn', msg: nullClot  + ' historique sans cours_cloture' });
+    const indicesDansEnt = (allEnts || []).filter(function(r){ return isIndice(r.ticker); });
+    if (indicesDansEnt.length > 0) alerts.push({ type:'err', msg: indicesDansEnt.length + ' indice(s) dans la table entreprises : ' + indicesDansEnt.map(function(e){ return e.ticker; }).join(', ') });
     if (!alerts.length) { panel.innerHTML = '<div style="color:var(--green);font-size:13px;">✓ Aucune anomalie.</div>'; return; }
     panel.innerHTML = alerts.map(function(a){
         return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-s);">' +
@@ -1517,7 +1534,7 @@ async function deleteAllHistoriqueTicker() {
 ══════════════════════════════════════════════════════ */
 async function loadEntreprises() {
     const rows = await sbGet('entreprises', 'select=*&order=ticker.asc');
-    entData = rows || [];
+    entData = (rows || []).filter(function(r){ return !isIndice(r.ticker); });
     renderEntTable(entData);
 }
 
@@ -1562,6 +1579,10 @@ function openEntModal(row) {
 async function saveEntreprise() {
     const ticker = v('modal-ent-ticker');
     const msg    = document.getElementById('modal-ent-msg');
+    if (isIndice(ticker)) {
+        if(msg){ msg.textContent = '❌ Ce ticker est un indice BRVM. Utilisez l\'onglet Indices.'; msg.className = 'msg err'; }
+        return;
+    }
     const body = {
         nom: v('modal-ent-nom'), secteur: v('modal-ent-secteur'), pays: v('modal-ent-pays'),
         compartiment: v('modal-ent-compart'), isin: v('modal-ent-isin'),
@@ -1573,6 +1594,11 @@ async function saveEntreprise() {
 
 async function addEntreprise() {
     const msg  = document.getElementById('ne-msg');
+    const ticker = v('ne-ticker');
+    if (isIndice(ticker)) {
+        if(msg){ msg.textContent = '❌ Ce ticker correspond à un indice BRVM. Utilisez l\'onglet Indices pour les indices de marché.'; msg.className = 'msg err'; }
+        return;
+    }
     const body = {
         ticker: v('ne-ticker'), nom: v('ne-nom'), secteur: v('ne-secteur'), pays: v('ne-pays'),
         compartiment: v('ne-compart'), isin: v('ne-isin'), description: v('ne-desc'), nombre_actions: pi('ne-actions')
@@ -1920,18 +1946,26 @@ async function runDiagnostic() {
         hScore.textContent = score + '%';
         hScore.style.color = score>=80?'var(--green)':score>=50?'var(--orange)':'var(--red)';
     }
+    // Vérifier si des indices sont dans entreprises
+    const allEnts = await sbGet('entreprises', 'select=ticker&limit=100');
+    const indicesDansEnt = (allEnts || []).filter(function(r){ return isIndice(r.ticker); });
+    var entHealth = nEnt > 0 ? 'OK' : 'VIDE';
+    if (indicesDansEnt.length > 0) entHealth = 'ALERTE';
+
     if(res){
         res.innerHTML =
             '<div class="card"><div style="padding:18px;">' +
             '<table class="diag-table" style="width:100%;font-size:13px;">' +
             '<tr><th style="text-align:left;">Table</th><th style="text-align:right;">Lignes</th><th>État</th></tr>' +
-            [['entreprises',nEnt],['cours',nCours],['historique',nHist],['financials',nFin],['dividendes',nDiv]].map(function(row){
+            [['entreprises',nEnt,entHealth],['cours',nCours,nCours>0?'OK':'VIDE'],['historique',nHist,nHist>0?'OK':'VIDE'],['financials',nFin,nFin>0?'OK':'VIDE'],['dividendes',nDiv,nDiv>0?'OK':'VIDE']].map(function(row){
+                var cls = row[2]==='ALERTE'?'diag-warn':(row[2]==='OK'?'diag-ok':'diag-err');
                 return '<tr><td>' + row[0] + '</td><td style="text-align:right;font-family:var(--mono);">' + row[1] + '</td>' +
-                       '<td class="' + (row[1]>0?'diag-ok':'diag-err') + '">' + (row[1]>0?'OK':'VIDE') + '</td></tr>';
+                       '<td class="' + cls + '">' + row[2] + '</td></tr>';
             }).join('') +
+            (indicesDansEnt.length ? '<tr><td colspan="3" style="color:var(--red);padding-top:8px;">⚠️ Indices détectés dans entreprises : ' + indicesDansEnt.map(function(e){ return e.ticker; }).join(', ') + '</td></tr>' : '') +
             '</table></div></div>';
     }
-    diagData = { nEnt:nEnt, nCours:nCours, nHist:nHist, nFin:nFin, nDiv:nDiv, score:score, date:new Date().toISOString() };
+    diagData = { nEnt:nEnt, nCours:nCours, nHist:nHist, nFin:nFin, nDiv:nDiv, score:score, date:new Date().toISOString(), indicesDansEnt: indicesDansEnt.map(function(e){return e.ticker;}) };
 }
 
 function exportDiagnostic() {
@@ -1962,10 +1996,22 @@ async function loadTickersSansFinancials() {
     const fins  = await sbGet('financials',  'select=ticker');
     if (!panel) return;
     const finSet  = new Set((fins||[]).map(function(f){ return f.ticker; }));
-    const missing = (ents||[]).filter(function(e){ return !finSet.has(e.ticker); });
+    const missing = (ents||[]).filter(function(e){ return !finSet.has(e.ticker) && !isIndice(e.ticker); });
     if (!missing.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Tous les tickers ont des financials</div>'; return; }
     panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th></tr></thead><tbody>' +
         missing.map(function(e){ return '<tr><td>' + e.ticker + '</td></tr>'; }).join('') +
+        '</tbody></table></div>';
+}
+
+async function loadIndicesDansEntreprises() {
+    const panel = document.getElementById('indices-dans-ent-panel');
+    const ents  = await sbGet('entreprises', 'select=ticker,nom&limit=100');
+    if (!panel) return;
+    const indices = (ents||[]).filter(function(e){ return isIndice(e.ticker); });
+    if (!indices.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Aucun indice dans la table entreprises</div>'; return; }
+    panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Nom</th><th>Action</th></tr></thead><tbody>' +
+        indices.map(function(e){ return '<tr><td style="color:var(--red);font-weight:500;">' + e.ticker + '</td><td>' + (e.nom||'—') + '</td>' +
+               '<td><button class="btn btn-danger btn-sm" onclick="deleteEntreprise('' + e.ticker + '')">Supprimer</button></td></tr>'; }).join('') +
         '</tbody></table></div>';
 }
 
@@ -2127,6 +2173,10 @@ function forceTemplate(key) {
 }
 async function showPreview(templateKey, rows) {
     var config = TEMPLATE_CONFIG[templateKey];
+    // Si template entreprises, exclure les indices BRVM
+    if (config.table === 'entreprises') {
+        rows = rows.filter(function(r){ return !isIndice(r['ticker'] || r['code']); });
+    }
     const pCard = document.getElementById('preview-card');
     const pCount = document.getElementById('preview-count');
     const btnConfirm = document.getElementById('btn-confirm-import');
@@ -2259,6 +2309,10 @@ async function autoCreateTickers() {
 async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
+    // Filtrer les indices si template entreprises
+    if (config.table === 'entreprises') {
+        data = data.filter(function(r){ return !isIndice(r['ticker'] || r['code']); });
+    }
     var progressCard = document.getElementById('progress-card');
     if(progressCard) progressCard.style.display = 'block';
     var inserted = 0;
@@ -2610,8 +2664,28 @@ async function saveAnalyse() {
 ══════════════════════════════════════════════════════ */
 async function deleteEntreprise(ticker) {
     if (!confirm("Supprimer l'entreprise " + ticker + " ? Cette action est irréversible.")) return;
+    // Si c'est un indice, nettoyer d'abord les tables filles pour éviter la violation FK
+    if (isIndice(ticker)) {
+        if (!confirm("⚠️ Cet élément est un indice BRVM.
+
+Cela va aussi supprimer ses données dans :
+• cours
+• historique
+• financials
+• dividendes
+• analyses
+• actionnaires
+
+Continuer ?")) return;
+        await sbDel('historique', 'ticker=eq.' + encodeURIComponent(ticker));
+        await sbDel('cours', 'ticker=eq.' + encodeURIComponent(ticker));
+        await sbDel('financials', 'ticker=eq.' + encodeURIComponent(ticker));
+        await sbDel('dividendes_calendrier', 'ticker=eq.' + encodeURIComponent(ticker));
+        await sbDel('analyses', 'ticker=eq.' + encodeURIComponent(ticker));
+        await sbDel('actionnaires', 'ticker=eq.' + encodeURIComponent(ticker));
+    }
     const ok = await sbDel('entreprises', 'ticker=eq.' + encodeURIComponent(ticker));
-    if (ok) { toast('Entreprise supprimée'); loadEntreprises(); }
+    if (ok) { toast('Entreprise supprimée'); loadEntreprises(); loadIndicesDansEntreprises(); }
 }
 
 /* ══════════════════════════════════════════════════════
