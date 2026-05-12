@@ -708,6 +708,9 @@
                 </div>
                 <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelect(event)">
                 <div id="upload-info" style="margin-top:12px;display:none;">
+                    <div id="upload-template-alert" style="display:none;margin:8px 0;padding:8px 12px;background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);border-radius:4px;color:var(--orange);font-size:12px;">
+                        ⚠️ Template non détecté automatiquement. Sélectionnez manuellement ci-dessous.
+                    </div>
                     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                         <span id="upload-filename" style="font-size:13px;color:var(--cream);"></span>
                         <span id="upload-sheet-detected" class="badge badge-gold" style="display:none;">Template détecté</span>
@@ -1014,13 +1017,14 @@ function normalizeExcelValue(val, key) {
     if (typeof val === 'number') return val;
     var s = String(val).trim();
     if (s === '') return null;
-    // Nombre avec virgule (format français) → remplacer par point
-    if (/^-?\d+[\.,]\d+$/.test(s)) {
-        s = s.replace(/\,/g, '.');
-        return parseFloat(s);
-    }
-    // Nombre entier
-    if (/^-?\d+$/.test(s)) return parseFloat(s);
+    // Format BRVM : point = séparateur de milliers, virgule = décimal
+    // Ex: "1.655,00" → "1655.00" | "266,44625" → "266.44625" | "1 080" → "1080"
+    // Étape 1: supprimer les espaces et points de milliers
+    s = s.replace(/\s/g, '').replace(/\.(?=.*\,)/g, ''); // point avant virgule = millier
+    // Étape 2: remplacer virgule décimale par point
+    s = s.replace(/\,/g, '.');
+    // Si c'est un nombre valide
+    if (/^-?\d+\.?\d*$/.test(s)) return parseFloat(s);
     return s;
 }
 function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
@@ -1168,7 +1172,7 @@ const v   = id => (document.getElementById(id)?.value || '').trim();
 const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
 const pf  = id => { const n = parseFloat(v(id)); return isNaN(n) ? null : n; };
 const pi  = id => { const n = parseInt(v(id)); return isNaN(n) ? null : n; };
-const fmt     = n => n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR') : '—';
+const fmt     = n => n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 4}) : '—';
 const fmtPct  = n => n != null && !isNaN(n) ? (Number(n)>=0?'+':'') + Number(n).toFixed(2) + '%' : '—';
 const clrPct  = n => Number(n)>=0 ? 'var(--green)' : 'var(--red)';
 const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
@@ -2244,9 +2248,14 @@ async function handleFile(file) {
 
     if (!detected) {
         toast('Template non reconnu — sélectionnez manuellement', 'err');
+        var alertEl = document.getElementById('upload-template-alert');
+        if(alertEl) alertEl.style.display = '';
         console.log('Headers détectés:', headers);
         console.log('Essayez les templates:', Object.keys(TEMPLATE_CONFIG));
         return;
+    } else {
+        var alertEl = document.getElementById('upload-template-alert');
+        if(alertEl) alertEl.style.display = 'none';
     }
 
     if(usd){ usd.textContent = 'Template : ' + TEMPLATE_CONFIG[detected].name; usd.style.display = ''; }
@@ -2287,14 +2296,23 @@ function headerMatches(detected, expected) {
 
 function detectTemplate(headers) {
     var normHeaders = headers.map(normalizeHeader);
+    // Priorité spéciale : si "exercice" ou "date_detachement" présent → dividendes
+    var hasDividendeMarker = normHeaders.some(function(h){
+        return h === 'exercice' || h === 'date_detachement' || h === 'date_paiement' || h === 'taux_rendement';
+    });
+    if (hasDividendeMarker) {
+        var divConfig = TEMPLATE_CONFIG.dividendes;
+        var divMatch = divConfig.required.filter(function(rh){
+            return normHeaders.some(function(h){ return headerMatches(h, rh); });
+        }).length;
+        if (divMatch >= 2) return 'dividendes';
+    }
     for (var key in TEMPLATE_CONFIG) {
         var config = TEMPLATE_CONFIG[key];
         var required = config.required;
         var match = required.filter(function(rh){
             return normHeaders.some(function(h){ return headerMatches(h, rh); });
         }).length;
-        // Dividendes : besoin de ticker + annee + montant (3/3 = 100%)
-        // Autres : 80% des required
         var threshold = key === 'dividendes' ? 1.0 : 0.8;
         if (match >= Math.ceil(required.length * threshold)) return key;
     }
@@ -2461,6 +2479,7 @@ async function confirmImport() {
         var tickerVal = mapped.ticker || mapped.code || mapped.symbol || mapped.isin;
         return tickerVal && String(tickerVal).trim() !== '';
     });
+    console.log('📊 Template détecté:', config.table, '| Lignes filtrées:', data.length);
     if (!data.length) { toast('Aucune ligne valide à importer', 'err'); return; }
     var progressCard = document.getElementById('progress-card');
     if(progressCard) progressCard.style.display = 'block';
@@ -2491,14 +2510,13 @@ async function confirmImport() {
                 }
                 // Normalisation des dates
                 if (isDateField(h)) val = excelDateToISO(val);
-                // Normalisation des nombres (virgule → point)
+                // Normalisation des nombres format BRVM
                 if (val !== null && val !== undefined && val !== '') {
                     var strVal = String(val).trim();
-                    if (/^-?\d+[\.,]\d+$/.test(strVal)) {
-                        val = parseFloat(strVal.replace(/\,/g, '.'));
-                    } else if (/^-?\d+$/.test(strVal)) {
-                        val = parseFloat(strVal);
-                    }
+                    // Format BRVM : point = millier, virgule = décimal
+                    // "1.655,00" → "1655.00" | "1 080" → "1080" | "266,44625" → "266.44625"
+                    strVal = strVal.replace(/\s/g, '').replace(/\.(?=.*\,)/g, '').replace(/\,/g, '.');
+                    if (/^-?\d+\.?\d*$/.test(strVal)) val = parseFloat(strVal);
                 }
                 if (val !== undefined && val !== '' && val !== null) clean[h] = val;
             });
