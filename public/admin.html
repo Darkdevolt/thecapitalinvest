@@ -529,7 +529,7 @@
 
     <div class="tab-panel" id="panel-dividendes">
         <div class="section-header"><div class="section-title">Dividendes <em>distribués</em></div></div>
-        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · annee · montant · taux_rendement · <strong>date_detachement</strong> · date_paiement · statut · notes</div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · annee · montant · taux_rendement · <strong>date_detachement</strong> · date_paiement · statut · exercice · notes</div>
         <div class="card" style="margin-bottom:16px;">
             <div class="card-header"><span class="card-title">Ajouter / modifier un dividende</span></div>
             <div class="form-grid">
@@ -546,6 +546,7 @@
                         <option value="payé">Payé</option>
                     </select>
                 </div>
+                <div class="field"><label>Exercice * <span style="color:var(--gold);font-size:9px;">→ "exercice"</span></label><input type="text" id="div-exercice" placeholder="2024-2025"></div>
                 <div class="field"><label>Notes</label><input type="text" id="div-notes" placeholder="Acompte / Solde..."></div>
             </div>
             <div class="actions-row">
@@ -564,7 +565,7 @@
             </div>
             <div class="tw">
                 <table>
-                    <thead><tr><th>Ticker</th><th>Année</th><th class="r">Montant</th><th class="r">Rend.</th><th>Ex-div.</th><th>Paiement</th><th>Statut</th><th></th></tr></thead>
+                    <thead><tr><th>Ticker</th><th>Année</th><th>Exercice</th><th class="r">Montant</th><th class="r">Rend.</th><th>Ex-div.</th><th>Paiement</th><th>Statut</th><th></th></tr></thead>
                     <tbody id="div-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
             </div>
@@ -1759,6 +1760,7 @@ function renderDivTable(data) {
         return '<tr>' +
             '<td class="td-gold">' + r.ticker + '</td>' +
             '<td>' + r.annee + '</td>' +
+            '<td class="td-muted">' + (r.exercice||'—') + '</td>' +
             '<td class="r td-mono">' + fmt(r.montant) + '</td>' +
             '<td class="r" style="color:var(--green);font-family:var(--mono);">' + fmtPct(r.taux_rendement) + '</td>' +
             '<td class="td-muted">' + fmtDate(r.date_detachement) + '</td>' +
@@ -1783,16 +1785,18 @@ function filterDivTable() {
 
 async function addDividende() {
     const msg  = document.getElementById('div-msg');
+    const annee = pi('div-annee');
     const body = {
-        ticker: v('div-ticker'), annee: pi('div-annee'), montant: pf('div-montant'),
+        ticker: v('div-ticker'), annee: annee, montant: pf('div-montant'),
         taux_rendement: pf('div-tx'), date_detachement: v('div-detach')||null,
-        date_paiement: v('div-paie')||null, statut: v('div-statut'), notes: v('div-notes')
+        date_paiement: v('div-paie')||null, statut: v('div-statut'), notes: v('div-notes'),
+        exercice: v('div-exercice') || String(annee)
     };
-    if (!body.ticker || !body.annee || body.montant == null) { if(msg){ msg.textContent = 'Champs obligatoires manquants'; msg.className = 'msg err'; } return; }
+    if (!body.ticker || !body.annee || body.montant == null || !body.exercice) { if(msg){ msg.textContent = 'Ticker, année, montant et exercice obligatoires'; msg.className = 'msg err'; } return; }
     const r = await sbPost('dividendes_calendrier', body, 'ticker,annee');
     if (r) {
         if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
-        clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']);
+        clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-exercice','div-notes']);
         loadDividendes();
     }
 }
@@ -2635,6 +2639,7 @@ function editDividende(row) {
     set('modal-div-detach', row.date_detachement ? row.date_detachement.split('T')[0] : '');
     set('modal-div-paie', row.date_paiement ? row.date_paiement.split('T')[0] : '');
     set('modal-div-statut', row.statut || 'confirmé');
+    set('modal-div-exercice', row.exercice || '');
     set('modal-div-notes', row.notes);
     openModal('modal-dividende');
 }
@@ -2648,6 +2653,7 @@ async function saveDividende() {
         date_detachement: v('modal-div-detach') || null,
         date_paiement: v('modal-div-paie') || null,
         statut: v('modal-div-statut'),
+        exercice: v('modal-div-exercice') || null,
         notes: v('modal-div-notes')
     };
     const r = await sbPatch('dividendes_calendrier', 'id=eq.' + id, body);
@@ -2765,6 +2771,7 @@ init().catch(function(err){
             <div class="field"><label>Statut</label>
                 <select id="modal-div-statut"><option value="confirmé">Confirmé</option><option value="prévisionnel">Prévisionnel</option><option value="payé">Payé</option></select>
             </div>
+            <div class="field"><label>Exercice</label><input type="text" id="modal-div-exercice"></div>
             <div class="field"><label>Notes</label><input type="text" id="modal-div-notes"></div>
         </div>
         <div class="modal-actions">
