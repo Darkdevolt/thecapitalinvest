@@ -970,6 +970,54 @@ function handleDeleteAn(el) { deleteAnalyseRow(el.dataset.id); }
 function handleEditAn(el) { editAnalyse(JSON.parse(decodeURIComponent(el.dataset.row))); }
 function handleDeleteBoc(el) { deleteBocRow(el.dataset.id); }
 function handleDeleteIdx(el) { deleteIndiceRow(el.dataset.id); }
+
+/* ── CONVERSION EXCEL DATES ─────────────────────────────────── */
+function excelDateToISO(val) {
+    if (!val && val !== 0) return null;
+    if (typeof val === 'string') {
+        var s = val.trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
+            var p = s.split('/');
+            return p[2] + '-' + p[1] + '-' + p[0];
+        }
+        if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
+            var p = s.split('-');
+            return p[2] + '-' + p[1] + '-' + p[0];
+        }
+    }
+    if (val instanceof Date) {
+        var y = val.getFullYear();
+        var m = String(val.getMonth() + 1).padStart(2, '0');
+        var d = String(val.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+    }
+    var n = Number(val);
+    if (isNaN(n) || n <= 0) return null;
+    // Excel serial date (base 30 déc 1899)
+    var epoch = new Date(1899, 11, 30);
+    var date = new Date(epoch.getTime() + n * 24 * 60 * 60 * 1000);
+    if (n >= 60) date = new Date(date.getTime() + 24 * 60 * 60 * 1000); // bug 1900
+    var y = date.getFullYear();
+    var m = String(date.getMonth() + 1).padStart(2, '0');
+    var d = String(date.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + d;
+}
+
+function isDateField(key) {
+    return /date|detachement|paiement|intro|entree|analyse|expiry/.test(String(key).toLowerCase());
+}
+
+function normalizeExcelValue(val, key) {
+    if (val === null || val === undefined || val === '') return null;
+    if (isDateField(key)) return excelDateToISO(val);
+    if (typeof val === 'number') return val;
+    var s = String(val).trim();
+    if (s === '') return null;
+    // Si c'est un nombre formaté comme string
+    if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+    return s;
+}
 function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
 
 let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [];
@@ -2171,9 +2219,9 @@ async function handleFile(file) {
     if(manual) manual.value = '';
 
     const data = await file.arrayBuffer();
-    const workbook = XLSX.read(data, { type: 'array' });
+    const workbook = XLSX.read(data, { type: 'array', cellDates: true });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
+    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
     if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
 
     // Afficher TOUTES les feuilles disponibles
@@ -2205,7 +2253,8 @@ async function handleFile(file) {
         var obj = {};
         rawHeaders.forEach(function(rawH, idx){
             var normH = String(rawH).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
-            obj[normH] = row[idx] !== undefined ? row[idx] : null;
+            var rawVal = row[idx] !== undefined ? row[idx] : null;
+            obj[normH] = normalizeExcelValue(rawVal, normH);
         });
         rows.push(obj);
     }
@@ -2418,7 +2467,7 @@ async function confirmImport() {
         if(progress) progress.style.width = Math.round((i / data.length) * 100) + '%';
         if(pText) pText.textContent = 'Envoi lot ' + (Math.floor(i/batchSize)+1) + '...';
         
-        // Préparer les données avec mapping des synonymes
+        // Préparer les données avec mapping des synonymes + normalisation dates
         var prepared = batch.map(function(row) {
             var mapped = {};
             for (var k in row) mapped[normalizeHeader(k)] = row[k];
@@ -2433,6 +2482,8 @@ async function confirmImport() {
                 if (h === 'exercice' && config.table === 'dividendes_calendrier') {
                     val = val || String(mapped.annee || mapped.year || new Date().getFullYear());
                 }
+                // Normalisation des dates
+                if (isDateField(h)) val = excelDateToISO(val);
                 if (val !== undefined && val !== '' && val !== null) clean[h] = val;
             });
             // GARANTIE : exercice TOUJOURS présent pour dividendes
