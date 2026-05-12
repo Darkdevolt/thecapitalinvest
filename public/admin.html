@@ -1573,10 +1573,6 @@ function openEntModal(row) {
 async function saveEntreprise() {
     const ticker = v('modal-ent-ticker');
     const msg    = document.getElementById('modal-ent-msg');
-    if (isIndice(ticker)) {
-        if(msg){ msg.textContent = 'Ce ticker est un indice BRVM. Utilisez l\'onglet Indices.'; msg.className = 'msg err'; }
-        return;
-    }
     const body = {
         nom: v('modal-ent-nom'), secteur: v('modal-ent-secteur'), pays: v('modal-ent-pays'),
         compartiment: v('modal-ent-compart'), isin: v('modal-ent-isin'),
@@ -1588,11 +1584,6 @@ async function saveEntreprise() {
 
 async function addEntreprise() {
     const msg  = document.getElementById('ne-msg');
-    const ticker = v('ne-ticker');
-    if (isIndice(ticker)) {
-        if(msg){ msg.textContent = 'Ce ticker est un indice BRVM. Utilisez l\'onglet Indices.'; msg.className = 'msg err'; }
-        return;
-    }
     const body = {
         ticker: v('ne-ticker'), nom: v('ne-nom'), secteur: v('ne-secteur'), pays: v('ne-pays'),
         compartiment: v('ne-compart'), isin: v('ne-isin'), description: v('ne-desc'), nombre_actions: pi('ne-actions')
@@ -1982,7 +1973,7 @@ async function loadTickersSansFinancials() {
     const fins  = await sbGet('financials',  'select=ticker');
     if (!panel) return;
     const finSet  = new Set((fins||[]).map(function(f){ return f.ticker; }));
-    const missing = (ents||[]).filter(function(e){ return !finSet.has(e.ticker) && !isIndice(e.ticker); });
+    const missing = (ents||[]).filter(function(e){ return !finSet.has(e.ticker); });
     if (!missing.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Tous les tickers ont des financials</div>'; return; }
     panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th></tr></thead><tbody>' +
         missing.map(function(e){ return '<tr><td>' + e.ticker + '</td></tr>'; }).join('') +
@@ -2147,9 +2138,6 @@ function forceTemplate(key) {
 }
 async function showPreview(templateKey, rows) {
     var config = TEMPLATE_CONFIG[templateKey];
-    if (config.table === 'entreprises') {
-        rows = rows.filter(function(r){ return !isIndice(r['ticker'] || r['code']); });
-    }
     const pCard = document.getElementById('preview-card');
     const pCount = document.getElementById('preview-count');
     const btnConfirm = document.getElementById('btn-confirm-import');
@@ -2282,9 +2270,6 @@ async function autoCreateTickers() {
 async function confirmImport() {
     var data = currentUpload.data, config = currentUpload.config;
     if (!data.length || !config) return;
-    if (config.table === 'entreprises') {
-        data = data.filter(function(r){ return !isIndice(r['ticker'] || r['code']); });
-    }
     var progressCard = document.getElementById('progress-card');
     if(progressCard) progressCard.style.display = 'block';
     var inserted = 0;
@@ -2636,15 +2621,6 @@ async function saveAnalyse() {
 ══════════════════════════════════════════════════════ */
 async function deleteEntreprise(ticker) {
     if (!confirm("Supprimer l'entreprise " + ticker + " ? Cette action est irréversible.")) return;
-    if (isIndice(ticker)) {
-        if (!confirm("Cet element est un indice BRVM. Les donnees associees seront aussi supprimees. Continuer ?")) return;
-        await sbDel('historique', 'ticker=eq.' + encodeURIComponent(ticker));
-        await sbDel('cours', 'ticker=eq.' + encodeURIComponent(ticker));
-        await sbDel('financials', 'ticker=eq.' + encodeURIComponent(ticker));
-        await sbDel('dividendes_calendrier', 'ticker=eq.' + encodeURIComponent(ticker));
-        await sbDel('analyses', 'ticker=eq.' + encodeURIComponent(ticker));
-        await sbDel('actionnaires', 'ticker=eq.' + encodeURIComponent(ticker));
-    }
     const ok = await sbDel('entreprises', 'ticker=eq.' + encodeURIComponent(ticker));
     if (ok) { toast('Entreprise supprimée'); loadEntreprises(); }
 }
