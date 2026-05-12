@@ -1024,25 +1024,44 @@ function normalizeExcelValue(val, key) {
     if (val === null || val === undefined || val === '') return null;
     if (isDateField(key)) return excelDateToISO(val);
     if (typeof val === 'number') return val;
+
     var s = String(val).trim();
     if (s === '') return null;
-    // PostgreSQL n'accepte PAS les séparateurs de milliers
-    // Il faut TOUJOURS envoyer : 1726.56 (point décimal, pas de virgule/point millier)
-    s = s.replace(/\s/g, ''); // supprimer espaces
-    // Si format "1,726.56" (US) → virgule=millier, point=décimal
+
+    // === POURCENTAGE : "5,2%" ou "5.2%" ou "5%" → 5.2 ===
+    if (/%$/.test(s)) {
+        var numPart = s.replace(/%$/, '').trim().replace(/\s/g, '');
+        // Format FR : "5,2" → virgule décimale
+        if (/^-?\d+,\d+$/.test(numPart)) {
+            numPart = numPart.replace(/,/g, '.');
+        }
+        // Format US/EN : "5.2" ou "1,234.5" → déjà OK ou nettoyer
+        else if (/^-?\d{1,3}(,\d{3})+\.\d+$/.test(numPart)) {
+            numPart = numPart.replace(/,/g, '');
+        }
+        var pct = parseFloat(numPart);
+        if (!isNaN(pct)) {
+            console.warn('[normalizeExcelValue] Pourcentage converti pour ' + key + ': "' + val + '" → ' + pct);
+            return pct;
+        }
+    }
+
+    // Supprimer espaces
+    s = s.replace(/\s/g, '');
+
+    // Format "1,726.56" (US)
     if (/^-?\d{1,3}(,\d{3})+\.\d+$/.test(s)) {
         s = s.replace(/\,/g, '');
     }
-    // Si format "1.726,56" (FR) → point=millier, virgule=décimal
+    // Format "1.726,56" (FR)
     else if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s)) {
         s = s.replace(/\./g, '').replace(/\,/g, '.');
     }
-    // Si juste virgule décimale "266,44625"
+    // Virgule décimale seule "266,44625"
     else if (/^-?\d+,\d+$/.test(s)) {
         s = s.replace(/\,/g, '.');
     }
-    // Si juste point décimal (déjà correct)
-    // Si contient à la fois virgule et point non formatés
+    // Mixte virgule + point
     else if (s.indexOf(',') !== -1 && s.indexOf('.') !== -1) {
         var lastComma = s.lastIndexOf(',');
         var lastPoint = s.lastIndexOf('.');
@@ -1052,7 +1071,31 @@ function normalizeExcelValue(val, key) {
             s = s.replace(/\,/g, '');
         }
     }
+
+    // Nombre pur → OK
     if (/^-?\d+\.?\d*$/.test(s)) return parseFloat(s);
+
+    // EXTRACTION ROBUSTE : champ numérique mais texte pollué
+    if (isNumericField(key)) {
+        var cleaned = s.replace(/[^\d,\.\-]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (cleaned.indexOf(',') !== -1 && cleaned.indexOf('.') === -1) {
+            cleaned = cleaned.replace(/,/g, '.');
+        } else if (cleaned.indexOf(',') !== -1 && cleaned.indexOf('.') !== -1) {
+            var lc = cleaned.lastIndexOf(',');
+            var lp = cleaned.lastIndexOf('.');
+            if (lc > lp) cleaned = cleaned.replace(/\./g, '').replace(/,/g, '.');
+            else cleaned = cleaned.replace(/,/g, '');
+        }
+        var m = cleaned.match(/-?\d+\.?\d*/);
+        if (m) {
+            var n = parseFloat(m[0]);
+            if (!isNaN(n)) {
+                console.warn('[normalizeExcelValue] Extraction numérique pour ' + key + ': "' + val + '" → ' + n);
+                return n;
+            }
+        }
+    }
+
     return s;
 }
 function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
