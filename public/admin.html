@@ -586,8 +586,7 @@
                     </select>
                 </div>
                 <div class="field"><label>Cours cible (FCFA) <span style="color:var(--gold);font-size:9px;">→ "cours_cible"</span></label><input type="number" id="an-cible" placeholder="16000" step="any" oninput="calcPotentiel()"></div>
-<div class="field"><label>Cours de référence (FCFA)</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
-                <div class="field"><label>Cours de référence</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
+                <div class="field"><label>Cours de référence (FCFA)</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
                 <div class="field"><label>Potentiel (calculé)</label><input type="text" id="an-potentiel-display" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
                 <div class="field"><label>Analyste</label><input type="text" id="an-analyste" placeholder="The Capital Research"></div>
                 <div class="field"><label>Date analyse</label><input type="date" id="an-date"></div>
@@ -1714,7 +1713,6 @@ async function prefillFinancialFromTicker() {
     const periodeEl = document.getElementById('fin-periode');
     if (periodeEl && r.periode) periodeEl.value = r.periode;
     toast('Financial ' + r.annee + ' chargé pour ' + ticker, 'ok');
-}
 }
 
 /* ══════════════════════════════════════════════════════
