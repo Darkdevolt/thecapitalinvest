@@ -1197,7 +1197,53 @@ const clrPct  = n => Number(n)>=0 ? 'var(--green)' : 'var(--red)';
 const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
 function clearForm(ids) { ids.forEach(id => set(id, '')); }
 function clearBulk() { set('bulk-csv',''); const bp = document.getElementById('bulk-preview'); if(bp) bp.style.display='none'; }
+/* ── RAFRAÎCHISSEMENT TOKEN SUPABASE ─────────────────────────── */
+async function refreshSession() {
+    const raw = localStorage.getItem(SK);
+    if (!raw) return false;
+    let sess;
+    try { sess = JSON.parse(raw); } catch(e) { return false; }
+    const refresh = sess?.data?.session?.refresh_token || sess?.session?.refresh_token || sess?.refresh_token;
+    if (!refresh) return false;
+    try {
+        const r = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {
+            method: 'POST',
+            headers: { apikey: SB_ANON, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh_token: refresh })
+        });
+        const data = await r.json();
+        if (!r.ok || !data.access_token) return false;
+        if (sess.data && sess.data.session) {
+            sess.data.session.access_token = data.access_token;
+            sess.data.session.refresh_token = data.refresh_token;
+            sess.data.session.expires_at  = data.expires_at;
+            if (data.user) sess.data.user = data.user;
+        } else if (sess.session) {
+            sess.session.access_token = data.access_token;
+            sess.session.refresh_token = data.refresh_token;
+            sess.session.expires_at  = data.expires_at;
+            if (data.user) sess.user = data.user;
+        } else {
+            sess.access_token = data.access_token;
+            sess.refresh_token = data.refresh_token;
+            sess.expires_at = data.expires_at;
+        }
+        localStorage.setItem(SK, JSON.stringify(sess));
+        TK = data.access_token;
+        return true;
+    } catch(e) { return false; }
+}
 
+async function ensureAuth() {
+    const raw = localStorage.getItem(SK);
+    if (!raw) return false;
+    let sess;
+    try { sess = JSON.parse(raw); } catch(e) { return false; }
+    const session = sess?.data?.session || sess?.session || sess;
+    const expiresAt = session?.expires_at;
+    if (expiresAt && (Date.now()/1000) > (expiresAt - 120)) return await refreshSession();
+    return true;
+}
 function sbHeaders(extra) {
     return Object.assign(
         { apikey: SB_ANON, Authorization: 'Bearer ' + TK, 'Content-Type': 'application/json', Prefer: 'return=representation' },
@@ -1242,16 +1288,16 @@ async function sbCount(table, params) {
 
 async function sbPost(table, body, onConflict) {
     try {
-        // Pour dividendes_calendrier : pas d'upsert, INSERT simple pour éviter NOT NULL issues
-        var isDividende = table === 'dividendes_calendrier';
-        var prefer = (onConflict && !isDividende) ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
-        var url = (onConflict && !isDividende) ? SB_REST + '/' + table + '?on_conflict=' + onConflict : SB_REST + '/' + table;
+        // Upsert activé pour TOUTES les tables (dividendes inclus)
+        var prefer = onConflict ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
+        var url    = onConflict ? SB_REST + '/' + table + '?on_conflict=' + onConflict : SB_REST + '/' + table;
 
-        // Pour dividendes : s'assurer que exercice est TOUJOURS présent
-        if (isDividende) {
+        // Garantie exercice = STRING pour dividendes
+        if (table === 'dividendes_calendrier') {
             var payload = Array.isArray(body) ? body : [body];
             payload.forEach(function(item){
                 if (!item.exercice) item.exercice = String(item.annee || new Date().getFullYear());
+                else item.exercice = String(item.exercice);
             });
             body = Array.isArray(body) ? payload : payload[0];
         }
@@ -1260,21 +1306,28 @@ async function sbPost(table, body, onConflict) {
         const t = setTimeout(() => ctrl.abort(), 15000);
         const r = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body), signal: ctrl.signal });
         clearTimeout(t);
+
         if (!r.ok) {
             const e = await r.json().catch(()=>({}));
-            console.error('[sbPost ERROR]', table, e);
             var errMsg = e?.message || e?.details || JSON.stringify(e);
+
+            // Retry automatique si JWT expiré
+            if (/jwt|expired/i.test(errMsg)) {
+                const refreshed = await refreshSession();
+                if (refreshed) {
+                    const retry = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body) });
+                    if (retry.ok) return retry.json();
+                }
+            }
             toast(errMsg + ' [' + table + ']', 'err');
             return null;
         }
         return r.json();
     } catch(e) {
-        console.error('[sbPost NETWORK]', table, e);
         if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
         return null;
     }
 }
-
 async function sbPatch(table, filter, body) {
     try {
         const ctrl = new AbortController();
@@ -2492,6 +2545,16 @@ async function autoCreateTickers() {
 }
 
 async function confirmImport() {
+        var config = currentUpload.config;
+    if (!currentUpload.data.length || !config) return;
+
+    /* 🔒 Vérifier / rafraîchir le token AVANT l'import */
+    const authOk = await ensureAuth();
+    if (!authOk) {
+        toast('Session expirée — reconnectez-vous', 'err');
+        setTimeout(() => { localStorage.removeItem(SK); location.href = 'login.html'; }, 2000);
+        return;
+    }
     var config = currentUpload.config;
     if (!currentUpload.data.length || !config) return;
     var data = currentUpload.data.filter(function(row) {
@@ -2560,10 +2623,11 @@ async function confirmImport() {
                 }
                 if (val !== undefined && val !== '' && val !== null) clean[h] = val;
             });
-            // GARANTIE : exercice TOUJOURS présent pour dividendes
-            if (config.table === 'dividendes_calendrier' && !clean.exercice) {
-                clean.exercice = String(clean.annee || new Date().getFullYear());
-            }
+                // GARANTIE : exercice TOUJOURS présent pour dividendes
+    if (config.table === 'dividendes_calendrier') {
+        if (!clean.exercice) clean.exercice = String(clean.annee || new Date().getFullYear());
+        else clean.exercice = String(clean.exercice);
+    }
             return clean;
         });
         
