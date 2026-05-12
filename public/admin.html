@@ -1166,8 +1166,20 @@ async function sbCount(table, params) {
 
 async function sbPost(table, body, onConflict) {
     try {
-        const prefer = onConflict ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
-        const url = onConflict ? SB_REST + '/' + table + '?on_conflict=' + onConflict : SB_REST + '/' + table;
+        // Pour dividendes_calendrier : pas d'upsert, INSERT simple pour éviter NOT NULL issues
+        var isDividende = table === 'dividendes_calendrier';
+        var prefer = (onConflict && !isDividende) ? 'return=representation,resolution=merge-duplicates' : 'return=representation';
+        var url = (onConflict && !isDividende) ? SB_REST + '/' + table + '?on_conflict=' + onConflict : SB_REST + '/' + table;
+
+        // Pour dividendes : s'assurer que exercice est TOUJOURS présent
+        if (isDividende) {
+            var payload = Array.isArray(body) ? body : [body];
+            payload.forEach(function(item){
+                if (!item.exercice) item.exercice = String(item.annee || new Date().getFullYear());
+            });
+            body = Array.isArray(body) ? payload : payload[0];
+        }
+
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 15000);
         const r = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body), signal: ctrl.signal });
@@ -2109,7 +2121,7 @@ var TEMPLATE_CONFIG = {
     },
     dividendes: {
         name: 'BRVM_Dividendes',
-        headers: ['ticker','annee','montant','date_detachement','date_paiement','statut','notes'],
+        headers: ['ticker','annee','montant','taux_rendement','date_detachement','date_paiement','statut','exercice','notes'],
         required: ['ticker','annee','montant'],
         table: 'dividendes_calendrier', uniqueKey: 'ticker,annee', autoCalc: ['taux_rendement']
     },
@@ -2144,6 +2156,7 @@ async function handleFile(file) {
     currentUpload.filename = file.name;
     currentUpload.config = null;
     currentUpload.data = [];
+    currentUpload.missingTickers = [];
     const uf = document.getElementById('upload-filename');
     const ui = document.getElementById('upload-info');
     const usd = document.getElementById('upload-sheet-detected');
@@ -2163,16 +2176,22 @@ async function handleFile(file) {
     const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '' });
     if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
 
+    // Afficher TOUTES les feuilles disponibles
+    console.log('📊 Feuilles Excel:', workbook.SheetNames);
+    console.log('📊 Première ligne (headers):', jsonData[0]);
+    console.log('📊 Nombre total de lignes:', jsonData.length);
+
     const rawHeaders = jsonData[0];
     const headers = rawHeaders.map(function(h){ return String(h).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,''); });
     const detected = detectTemplate(headers);
 
-    if(uhf) uhf.textContent = headers.length + ' colonnes détectées';
+    if(uhf) uhf.textContent = headers.length + ' colonnes détectées | ' + (jsonData.length - 1) + ' lignes de données';
     if(ucol) ucol.textContent = 'Cols: ' + headers.join(', ');
 
     if (!detected) {
         toast('Template non reconnu — sélectionnez manuellement', 'err');
         console.log('Headers détectés:', headers);
+        console.log('Essayez les templates:', Object.keys(TEMPLATE_CONFIG));
         return;
     }
 
@@ -2182,12 +2201,16 @@ async function handleFile(file) {
     const rows = [];
     for (var i = 1; i < jsonData.length; i++) {
         var row = jsonData[i];
-        if (!row.some(function(cell){ return cell !== ''; })) continue;
+        if (!row.some(function(cell){ return cell !== '' && cell !== null && cell !== undefined; })) continue;
         var obj = {};
-        headers.forEach(function(h, idx){ obj[h] = row[idx] !== undefined ? row[idx] : null; });
+        rawHeaders.forEach(function(rawH, idx){
+            var normH = String(rawH).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
+            obj[normH] = row[idx] !== undefined ? row[idx] : null;
+        });
         rows.push(obj);
     }
     currentUpload.data = rows;
+    console.log('✓ ' + rows.length + ' lignes importées pour template ' + detected);
     showPreview(detected, rows);
 }
 
@@ -2214,7 +2237,10 @@ function detectTemplate(headers) {
         var match = required.filter(function(rh){
             return normHeaders.some(function(h){ return headerMatches(h, rh); });
         }).length;
-        if (match >= Math.ceil(required.length * 0.8)) return key;
+        // Dividendes : besoin de ticker + annee + montant (3/3 = 100%)
+        // Autres : 80% des required
+        var threshold = key === 'dividendes' ? 1.0 : 0.8;
+        if (match >= Math.ceil(required.length * threshold)) return key;
     }
     return null;
 }
@@ -2236,61 +2262,63 @@ async function showPreview(templateKey, rows) {
     const btnConfirm = document.getElementById('btn-confirm-import');
     if(pCard) pCard.style.display = '';
     if(pCount) pCount.textContent = rows.length + ' lignes';
-    
-    var displayHeaders = config.headers.slice();
+
+    // Headers réels du fichier Excel (pas seulement le config)
+    var actualHeaders = rows.length > 0 ? Object.keys(rows[0]) : [];
+    var displayHeaders = actualHeaders.length > 0 ? actualHeaders.slice() : config.headers.slice();
     if (config.autoCalc) config.autoCalc.forEach(function(c){ displayHeaders.push('[AUTO] ' + c); });
-    
+
     const pHead = document.getElementById('preview-thead');
     const pBody = document.getElementById('preview-tbody');
     if(pHead) pHead.innerHTML = '<tr>' + displayHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '<th>Statut</th></tr>';
-    
+
     var insertCount = 0, updateCount = 0, errorCount = 0;
     var previewRows = [];
-    
+
     for (var i = 0; i < Math.min(rows.length, 50); i++) {
         var row = rows[i];
         var errors = [];
-        
-        // ═══════════════════════════════════════
-        // VALIDATION EXPLICITE DU TICKER
-        // ═══════════════════════════════════════
-        var tickerKey = Object.keys(row).find(function(k){
-    return ['ticker','code','symbol','isin','code_valeur'].includes(k.toLowerCase().trim());
-});
-var rawTicker = tickerKey ? row[tickerKey] : null;
-        if (!rawTicker || String(rawTicker).trim() === '') {
+
+        // Mapping des synonymes
+        var mappedRow = {};
+        for (var rawKey in row) {
+            var normKey = normalizeHeader(rawKey);
+            mappedRow[normKey] = row[rawKey];
+        }
+
+        // Détection ticker avec synonymes
+        var tickerVal = mappedRow.ticker || mappedRow.code || mappedRow.symbol || mappedRow.isin || mappedRow.code_valeur;
+        if (!tickerVal || String(tickerVal).trim() === '') {
             errors.push('❌ TICKER MANQUANT (ligne ' + (i + 2) + ')');
         } else {
-            row['ticker'] = String(rawTicker).trim().toUpperCase();
+            mappedRow.ticker = String(tickerVal).trim().toUpperCase();
+            row.ticker = mappedRow.ticker;
         }
-        
+
+        // Validation champs requis avec synonymes
         config.required.forEach(function(req) {
-            if (!row[req] && row[req] !== 0) errors.push(req + ' manquant');
+            var found = false;
+            for (var mk in mappedRow) {
+                if (headerMatches(mk, req)) { found = true; break; }
+            }
+            if (!found && !mappedRow[req] && mappedRow[req] !== 0) errors.push(req + ' manquant');
         });
-        
+
+        // Exercice auto pour dividendes
+        if (templateKey === 'dividendes' && !mappedRow.exercice && mappedRow.exercice !== 0) {
+            mappedRow.exercice = String(mappedRow.annee || mappedRow.year || new Date().getFullYear());
+            row.exercice = mappedRow.exercice;
+        }
+
         var status = errors.length ? 'error' : 'insert';
         if (status === 'insert') insertCount++;
         else errorCount++;
-        
+
         var combined = Object.assign({}, row, { _status: status, _errors: errors, _line: i + 2 });
         previewRows.push(combined);
     }
-    
-    // ═══════════════════════════════════════
-    // AFFICHAGE DU RÉSUMÉ AVEC ERREURS
-    // ═══════════════════════════════════════
-    const iSum = document.getElementById('import-summary');
-    if(iSum){
-        iSum.innerHTML =
-            '<div class="import-stat insert"><div class="number">' + insertCount + '</div><div class="label">Nouveaux</div></div>' +
-            '<div class="import-stat update"><div class="number">' + updateCount + '</div><div class="label">Màj</div></div>' +
-            '<div class="import-stat skip"><div class="number">' + (rows.length - insertCount - updateCount - errorCount) + '</div><div class="label">Ignorés</div></div>' +
-            '<div class="import-stat error"><div class="number" style="color:' + (errorCount ? 'var(--red)' : '') + '">' + errorCount + '</div><div class="label">' + (errorCount ? 'ERREURS' : 'Erreurs') + '</div></div>';
-    }
-    
-    // ═══════════════════════════════════════
-    // MESSAGE D'ALERTE SI ERREURS
-    // ═══════════════════════════════════════
+
+    // Résumé
     var importMsg = document.getElementById('import-msg');
     if (errorCount > 0) {
         if(importMsg) {
@@ -2304,7 +2332,7 @@ var rawTicker = tickerKey ? row[tickerKey] : null;
         }
     } else {
         if(importMsg) {
-            importMsg.innerHTML = '<span style="color:var(--green);">✓ Toutes les lignes sont valides</span>';
+            importMsg.innerHTML = '<span style="color:var(--green);">✓ Toutes les lignes sont valides (' + insertCount + ' lignes)</span>';
             importMsg.className = 'msg ok';
         }
         if(btnConfirm) {
@@ -2313,16 +2341,21 @@ var rawTicker = tickerKey ? row[tickerKey] : null;
             btnConfirm.style.cursor = 'pointer';
         }
     }
-    
-    // ═══════════════════════════════════════
-    // RENDU DU TABLEAU AVEC LIGNES ROUGES
-    // ═══════════════════════════════════════
+
+    // Rendu tableau — TOUTES les colonnes du fichier Excel
     if(pBody){
         pBody.innerHTML = previewRows.map(function(r){
             var cls = r._status === 'error' ? 'error' : 'new';
             var cells = displayHeaders.map(function(h){
                 var clean = h.replace('[AUTO] ','');
-                return '<td>' + (r[clean] != null ? r[clean] : '—') + '</td>';
+                var normClean = normalizeHeader(clean);
+                // Recherche dans toutes les clés du row
+                var val = null;
+                for (var rk in r) {
+                    if (normalizeHeader(rk) === normClean || rk === clean || rk === h) { val = r[rk]; break; }
+                }
+                if (val === null || val === undefined || val === '') val = '—';
+                return '<td>' + val + '</td>';
             }).join('');
             var statusIcon = r._status === 'error' ? '❌' : '✅';
             var titleAttr = (r._errors || []).join(' | ');
@@ -2367,10 +2400,10 @@ async function confirmImport() {
     var config = currentUpload.config;
     if (!currentUpload.data.length || !config) return;
     var data = currentUpload.data.filter(function(row) {
-        var tickerKey = Object.keys(row).find(function(k){
-            return ['ticker','code','symbol','isin'].includes(k.toLowerCase().trim());
-        });
-        return tickerKey && row[tickerKey] && String(row[tickerKey]).trim() !== '';
+        var mapped = {};
+        for (var k in row) mapped[normalizeHeader(k)] = row[k];
+        var tickerVal = mapped.ticker || mapped.code || mapped.symbol || mapped.isin;
+        return tickerVal && String(tickerVal).trim() !== '';
     });
     if (!data.length) { toast('Aucune ligne valide à importer', 'err'); return; }
     var progressCard = document.getElementById('progress-card');
@@ -2385,12 +2418,27 @@ async function confirmImport() {
         if(progress) progress.style.width = Math.round((i / data.length) * 100) + '%';
         if(pText) pText.textContent = 'Envoi lot ' + (Math.floor(i/batchSize)+1) + '...';
         
-        // Préparer les données sans aucune requête préalable
+        // Préparer les données avec mapping des synonymes
         var prepared = batch.map(function(row) {
+            var mapped = {};
+            for (var k in row) mapped[normalizeHeader(k)] = row[k];
             var clean = {};
             config.headers.forEach(function(h) {
-                if (row[h] !== undefined && row[h] !== '') clean[h] = row[h];
+                var val = mapped[h];
+                // Gestion des synonymes pour chaque champ
+                if (h === 'ticker') val = val || mapped.code || mapped.symbol || mapped.isin || mapped.code_valeur;
+                if (h === 'date_seance') val = val || mapped.date || mapped.date_seance;
+                if (h === 'annee') val = val || mapped.year;
+                if (h === 'montant') val = val || mapped.dividende || mapped.valeur;
+                if (h === 'exercice' && config.table === 'dividendes_calendrier') {
+                    val = val || String(mapped.annee || mapped.year || new Date().getFullYear());
+                }
+                if (val !== undefined && val !== '' && val !== null) clean[h] = val;
             });
+            // GARANTIE : exercice TOUJOURS présent pour dividendes
+            if (config.table === 'dividendes_calendrier' && !clean.exercice) {
+                clean.exercice = String(clean.annee || new Date().getFullYear());
+            }
             return clean;
         });
         
