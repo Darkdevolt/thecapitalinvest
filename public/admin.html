@@ -1952,10 +1952,8 @@ async function syncHistFromCours() {
     const rows = await sbGet('cours', 'select=*&order=date_seance.desc&limit=50');
     if (!rows?.length) { if(msg){ msg.textContent = 'Aucun cours à synchroniser'; msg.className = 'msg err'; } return; }
     const mapped = rows.map(function(r){
-        return { ticker: r.ticker, date_seance: r.date_seance, cours_cloture: r.cours,
-                 ouverture: r.ouverture, plus_haut: r.plus_haut, plus_bas: r.plus_bas,
-                 volume: r.volume, variation: r.variation };
-    });
+    return { ticker: r.ticker, date_seance: r.date_seance, cours_cloture: r.cours, variation: r.variation };
+});
     const res = await sbPost('historique', mapped, 'ticker,date_seance');
     if (res) {
         const txt = '✓ ' + mapped.length + ' cours synchronisés vers historique';
