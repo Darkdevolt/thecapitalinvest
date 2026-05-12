@@ -1786,12 +1786,16 @@ function filterDivTable() {
 async function addDividende() {
     const msg  = document.getElementById('div-msg');
     const annee = pi('div-annee');
+    const exerciceVal = v('div-exercice').trim();
     const body = {
         ticker: v('div-ticker'), annee: annee, montant: pf('div-montant'),
-        taux_rendement: pf('div-tx'), date_detachement: v('div-detach')||null,
-        date_paiement: v('div-paie')||null, statut: v('div-statut'), notes: v('div-notes'),
-        exercice: v('div-exercice') || String(annee)
+        taux_rendement: pf('div-tx'),
+        statut: v('div-statut')
     };
+    if (v('div-detach')) body.date_detachement = v('div-detach');
+    if (v('div-paie')) body.date_paiement = v('div-paie');
+    if (v('div-notes')) body.notes = v('div-notes');
+    body.exercice = exerciceVal || String(annee || new Date().getFullYear());
     if (!body.ticker || !body.annee || body.montant == null || !body.exercice) { if(msg){ msg.textContent = 'Ticker, année, montant et exercice obligatoires'; msg.className = 'msg err'; } return; }
     const r = await sbPost('dividendes_calendrier', body, 'ticker,annee');
     if (r) {
@@ -2650,12 +2654,12 @@ async function saveDividende() {
     const body = {
         montant: pf('modal-div-montant'),
         taux_rendement: pf('modal-div-tx'),
-        date_detachement: v('modal-div-detach') || null,
-        date_paiement: v('modal-div-paie') || null,
-        statut: v('modal-div-statut'),
-        exercice: v('modal-div-exercice') || null,
-        notes: v('modal-div-notes')
+        statut: v('modal-div-statut')
     };
+    if (v('modal-div-detach')) body.date_detachement = v('modal-div-detach');
+    if (v('modal-div-paie')) body.date_paiement = v('modal-div-paie');
+    if (v('modal-div-exercice')) body.exercice = v('modal-div-exercice');
+    if (v('modal-div-notes')) body.notes = v('modal-div-notes');
     const r = await sbPatch('dividendes_calendrier', 'id=eq.' + id, body);
     if (r) {
         if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
