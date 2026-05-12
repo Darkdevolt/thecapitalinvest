@@ -1728,7 +1728,8 @@ function renderDivTable(data) {
             '<td class="td-muted">' + fmtDate(r.date_detachement) + '</td>' +
             '<td class="td-muted">' + fmtDate(r.date_paiement) + '</td>' +
             '<td><span class="badge ' + (r.statut==='payé'?'badge-green':r.statut==='prévisionnel'?'badge-orange':'badge-gold') + '">' + (r.statut||'—') + '</span></td>' +
-            `<td><button class="btn btn-danger btn-sm" onclick="deleteDivRow('${r.id}')">✕</button></td>` +
+            '<td><button class="btn btn-outline btn-sm" onclick='editDividende(' + JSON.stringify(r) + ')'>✎</button> ' +
+            `<button class="btn btn-danger btn-sm" onclick="deleteDivRow('${r.id}')">✕</button></td>` +
             '</tr>';
     }).join('');
 }
@@ -1780,6 +1781,7 @@ async function loadAnalyses() {
             '<div style="text-align:right;">' +
               '<span class="badge ' + (r.recommandation==='Acheter'?'badge-green':r.recommandation==='Vendre'?'badge-red':'badge-gold') + '">' + r.recommandation + '</span>' +
               '<div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">' + fmt(r.cours_cible) + '</div>' +
+              '<button class="btn btn-outline btn-sm" style="margin-top:8px;" onclick='editAnalyse(' + JSON.stringify(r) + ')'>✎</button> ' +
               `<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="deleteAnalyseRow('${r.id}')">✕</button>` +
             '</div>' +
             '</div>';
@@ -1806,7 +1808,7 @@ function calcPotentiel() {
 async function addAnalyse() {
     const msg  = document.getElementById('an-msg');
     const body = {
-        ticker: v('an-ticker'), recommandation: v('an-reco'),
+        ticker: v('an-ticker'), titre: v('an-titre'), recommandation: v('an-reco'),
         date_analyse: v('an-date')||new Date().toISOString().split('T')[0],
         analyste: v('an-analyste'), commentaire: v('an-resume')
     };
@@ -2541,7 +2543,7 @@ document.addEventListener('click', function(e){
     if (btn) { deleteIndiceRow(btn.dataset.id); return; }
     btn = e.target.closest('.idx-edit');
     if (btn) {
-        var row = idxData.find(function(r){ return r.id === btn.dataset.id; });
+        var row = idxData.find(function(r){ return String(r.id) === String(btn.dataset.id); });
         if (row) editIndice(row);
         else toast('Indice introuvable', 'err');
     }
@@ -2615,6 +2617,7 @@ async function saveAnalyse() {
     const id  = v('modal-an-id');
     const msg = document.getElementById('modal-an-msg');
     const body = {
+        titre: v('modal-an-titre'),
         recommandation: v('modal-an-reco'),
         analyste: v('modal-an-analyste'),
         commentaire: v('modal-an-resume')
