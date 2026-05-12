@@ -227,6 +227,15 @@
             .form-grid { grid-template-columns:1fr; }
             .main { padding:16px 12px 80px; }
         }
+                .cell-error { background: rgba(248,113,113,0.15) !important; border: 1px solid var(--red) !important; color: var(--red) !important; }
+        .cell-ok { background: rgba(74,222,128,0.08) !important; }
+        .validation-report { padding: 14px 18px; margin-bottom: 12px; background: var(--card); border: 1px solid var(--border); border-radius: 6px; }
+        .validation-report ul { margin: 8px 0 0 16px; padding: 0; font-size: 12px; line-height: 1.8; }
+        .validation-report li { color: var(--red); }
+        .validation-report li.warn { color: var(--orange); }
+        td[contenteditable="true"] { outline: none; cursor: text; }
+        td[contenteditable="true"]:hover { background: rgba(184,150,78,0.08); }
+        td[contenteditable="true"]:focus { background: rgba(184,150,78,0.12); border: 1px solid var(--gold); }
     </style>
 <base target="_blank">
 <base target="_blank">
@@ -2334,17 +2343,18 @@ async function handleFile(file) {
 
     if(usd){ usd.textContent = 'Template : ' + TEMPLATE_CONFIG[detected].name; usd.style.display = ''; }
     currentUpload.config = TEMPLATE_CONFIG[detected];
+        currentUpload.lastTemplateKey = detected;
 
     const rows = [];
     for (var i = 1; i < jsonData.length; i++) {
         var row = jsonData[i];
         if (!row.some(function(cell){ return cell !== '' && cell !== null && cell !== undefined; })) continue;
         var obj = {};
-        rawHeaders.forEach(function(rawH, idx){
-            var normH = String(rawH).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
-            var rawVal = row[idx] !== undefined ? row[idx] : null;
-            obj[normH] = normalizeExcelValue(rawVal, normH);
-        });
+                rawHeaders.forEach(function(rawH, idx){
+                    var normH = String(rawH).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
+                    var rawVal = row[idx] !== undefined ? row[idx] : null;
+                    obj[normH] = rawVal; // on garde le BRUT pour l'affichage et la correction
+                });
         rows.push(obj);
     }
     console.log('📊 Exemple ligne 1:', rows[0]);
@@ -2396,6 +2406,7 @@ function detectTemplate(headers) {
 function forceTemplate(key) {
     if (!key || !TEMPLATE_CONFIG[key]) { toast('Template invalide', 'err'); return; }
     currentUpload.config = TEMPLATE_CONFIG[key];
+        currentUpload.lastTemplateKey = key;
     var usd = document.getElementById('upload-sheet-detected');
     if(usd){ usd.textContent = 'Template forcé : ' + TEMPLATE_CONFIG[key].name; usd.style.display = ''; }
     toast('Template manuel : ' + TEMPLATE_CONFIG[key].name, 'info');
@@ -2403,112 +2414,192 @@ function forceTemplate(key) {
         showPreview(key, currentUpload.data);
     }
 }
+    /* ── VALIDATION & ÉDITION DU PREVIEW ─────────────────────────── */
+function isNumericField(key) {
+    var k = String(key).toLowerCase();
+    return /montant|taux|rendement|valeur|cours|volume|capitalisation|nombre|actions|chiffre|ca|rbe|resultat|net|bpa|dpa|fonds|dettes|actif|cfo|capex|variation|haut|bas|ouverture|cloture|plus_haut|plus_bas|indice/.test(k);
+}
+
+function validateRow(row, lineIndex, config) {
+    var errors = [];
+    var warnings = [];
+    var cleaned = {};
+    var display = {};
+    var mapped = {};
+    for (var k in row) {
+        if (k.indexOf('_') === 0) continue;
+        mapped[k] = row[k];
+    }
+
+    // --- Ticker ---
+    var tickerVal = mapped.ticker || mapped.code || mapped.symbol || mapped.isin || mapped.code_valeur;
+    if (!tickerVal || String(tickerVal).trim() === '') {
+        errors.push("Ligne " + lineIndex + " : le ticker/code est vide.");
+        display.ticker = '';
+    } else {
+        cleaned.ticker = String(tickerVal).trim().toUpperCase();
+        display.ticker = cleaned.ticker;
+    }
+
+    // --- Champs requis ---
+    config.required.forEach(function(req) {
+        var found = false;
+        var rawVal = null;
+        for (var mk in mapped) {
+            if (headerMatches(mk, req)) { found = true; rawVal = mapped[mk]; break; }
+        }
+        if (!found) rawVal = mapped[req];
+        if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') {
+            errors.push("Ligne " + lineIndex + ", colonne '" + req + "' : valeur obligatoire manquante.");
+        }
+    });
+
+    // --- Conversion champ par champ ---
+    config.headers.forEach(function(h) {
+        var rawVal = mapped[h];
+        if (h === 'ticker') rawVal = rawVal || mapped.code || mapped.symbol || mapped.isin || mapped.code_valeur;
+        if (h === 'date_seance') rawVal = rawVal || mapped.date || mapped.date_seance;
+        if (h === 'annee') rawVal = rawVal || mapped.year;
+        if (h === 'montant') rawVal = rawVal || mapped.dividende || mapped.valeur;
+        if (h === 'indice') rawVal = rawVal || mapped.code || mapped.indice;
+
+        var norm = normalizeExcelValue(rawVal, h);
+
+        // Si champ numérique et résultat non-numérique → ERREUR
+        if (isNumericField(h) && norm !== null && typeof norm !== 'number') {
+            errors.push("Ligne " + lineIndex + ", colonne '" + h + "' : '" + rawVal + "' n'est pas un nombre valide.");
+        }
+
+        if (norm !== null && norm !== undefined && norm !== '') {
+            cleaned[h] = norm;
+        }
+        display[h] = (norm !== null && norm !== undefined) ? norm : (rawVal || '');
+    });
+
+    // --- Règles spécifiques Dividendes ---
+    if (config.table === 'dividendes_calendrier') {
+        if (!cleaned.exercice) cleaned.exercice = String(cleaned.annee || new Date().getFullYear());
+        display.exercice = cleaned.exercice;
+        if ((cleaned.montant === undefined || cleaned.montant === null) && display.montant !== 0) {
+            errors.push("Ligne " + lineIndex + " : le montant du dividende est obligatoire et doit être numérique.");
+        }
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors: errors,
+        warnings: warnings,
+        cleaned: cleaned,
+        display: display,
+        original: row
+    };
+}
+
+function updatePreviewCell(lineIdx, field, newVal) {
+    if (!currentUpload.data[lineIdx]) return;
+    currentUpload.data[lineIdx][field] = newVal.trim();
+    // Re-lancer la validation visuelle
+    showPreview(currentUpload.lastTemplateKey, currentUpload.data);
+}
 async function showPreview(templateKey, rows) {
     var config = TEMPLATE_CONFIG[templateKey];
-    const pCard = document.getElementById('preview-card');
-    const pCount = document.getElementById('preview-count');
-    const btnConfirm = document.getElementById('btn-confirm-import');
-    if(pCard) pCard.style.display = '';
-    if(pCount) pCount.textContent = rows.length + ' lignes';
+    if (!config) return;
+    currentUpload.lastTemplateKey = templateKey;
 
-    // Headers réels du fichier Excel (pas seulement le config)
-    var actualHeaders = rows.length > 0 ? Object.keys(rows[0]) : [];
-    var displayHeaders = actualHeaders.length > 0 ? actualHeaders.slice() : config.headers.slice();
-    if (config.autoCalc) config.autoCalc.forEach(function(c){ displayHeaders.push('[AUTO] ' + c); });
-
-    const pHead = document.getElementById('preview-thead');
-    const pBody = document.getElementById('preview-tbody');
-    if(pHead) pHead.innerHTML = '<tr>' + displayHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') + '<th>Statut</th></tr>';
-
-    var insertCount = 0, updateCount = 0, errorCount = 0;
-    var previewRows = [];
-
-    for (var i = 0; i < Math.min(rows.length, 50); i++) {
-        var row = rows[i];
-        var errors = [];
-
-        // Mapping des synonymes
-        var mappedRow = {};
-        for (var rawKey in row) {
-            var normKey = normalizeHeader(rawKey);
-            mappedRow[normKey] = row[rawKey];
-        }
-
-        // Détection ticker avec synonymes
-        var tickerVal = mappedRow.ticker || mappedRow.code || mappedRow.symbol || mappedRow.isin || mappedRow.code_valeur;
-        if (!tickerVal || String(tickerVal).trim() === '') {
-            errors.push('❌ TICKER MANQUANT (ligne ' + (i + 2) + ')');
-        } else {
-            mappedRow.ticker = String(tickerVal).trim().toUpperCase();
-            row.ticker = mappedRow.ticker;
-        }
-
-        // Validation champs requis avec synonymes
-        config.required.forEach(function(req) {
-            var found = false;
-            for (var mk in mappedRow) {
-                if (headerMatches(mk, req)) { found = true; break; }
-            }
-            if (!found && !mappedRow[req] && mappedRow[req] !== 0) errors.push(req + ' manquant');
-        });
-
-        // Exercice auto pour dividendes
-        if (templateKey === 'dividendes' && !mappedRow.exercice && mappedRow.exercice !== 0) {
-            mappedRow.exercice = String(mappedRow.annee || mappedRow.year || new Date().getFullYear());
-            row.exercice = mappedRow.exercice;
-        }
-
-        var status = errors.length ? 'error' : 'insert';
-        if (status === 'insert') insertCount++;
-        else errorCount++;
-
-        var combined = Object.assign({}, row, { _status: status, _errors: errors, _line: i + 2 });
-        previewRows.push(combined);
-    }
-
-    // Résumé
+    var pCard = document.getElementById('preview-card');
+    var pCount = document.getElementById('preview-count');
+    var btnConfirm = document.getElementById('btn-confirm-import');
     var importMsg = document.getElementById('import-msg');
-    if (errorCount > 0) {
-        if(importMsg) {
-            importMsg.innerHTML = '<span style="color:var(--red);font-weight:500;">⚠️ ' + errorCount + ' ligne(s) invalide(s). Corrigez votre fichier avant de confirmer.</span>';
-            importMsg.className = 'msg err';
-        }
-        if(btnConfirm) {
-            btnConfirm.disabled = true;
-            btnConfirm.style.opacity = '0.5';
-            btnConfirm.style.cursor = 'not-allowed';
-        }
-    } else {
-        if(importMsg) {
-            importMsg.innerHTML = '<span style="color:var(--green);">✓ Toutes les lignes sont valides (' + insertCount + ' lignes)</span>';
-            importMsg.className = 'msg ok';
-        }
-        if(btnConfirm) {
-            btnConfirm.disabled = false;
-            btnConfirm.style.opacity = '1';
-            btnConfirm.style.cursor = 'pointer';
-        }
+
+    if (pCard) pCard.style.display = '';
+    if (pCount) pCount.textContent = rows.length + ' lignes';
+
+    // --- Validation de toutes les lignes ---
+    var allResults = [];
+    var totalErrors = 0;
+    var totalWarnings = 0;
+    var errorListHTML = '';
+    var warnListHTML = '';
+
+    for (var i = 0; i < rows.length; i++) {
+        var lineNum = i + 2; // ligne Excel (1 = header)
+        var res = validateRow(rows[i], lineNum, config);
+        allResults.push(res);
+        if (!res.valid) totalErrors += res.errors.length;
+        totalWarnings += res.warnings.length;
+        res.errors.forEach(function(e){
+            errorListHTML += '<li>' + e + '</li>';
+        });
+        res.warnings.forEach(function(w){
+            warnListHTML += '<li class="warn">' + w + '</li>';
+        });
     }
 
-    // Rendu tableau — TOUTES les colonnes du fichier Excel
-    if(pBody){
-        pBody.innerHTML = previewRows.map(function(r){
-            var cls = r._status === 'error' ? 'error' : 'new';
+    // --- Rapport de validation ---
+    var reportHTML = '';
+    if (totalErrors > 0) {
+        reportHTML += '<div style="color:var(--red);font-weight:500;font-size:13px;margin-bottom:6px;">⛔ ' + totalErrors + ' erreur(s) détectée(s) — corrigez les cellules surlignées en rouge ci-dessous.</div>';
+        reportHTML += '<ul style="margin:0 0 0 16px;padding:0;font-size:12px;line-height:1.8;">' + errorListHTML + '</ul>';
+    } else if (totalWarnings > 0) {
+        reportHTML += '<div style="color:var(--orange);font-weight:500;font-size:13px;margin-bottom:6px;">⚠️ ' + totalWarnings + ' valeur(s) corrigée(s) automatiquement.</div>';
+        reportHTML += '<ul style="margin:0 0 0 16px;padding:0;font-size:12px;line-height:1.8;">' + warnListHTML + '</ul>';
+    } else {
+        reportHTML += '<div style="color:var(--green);font-weight:500;font-size:13px;">✅ Toutes les lignes sont valides.</div>';
+    }
+
+    var existingReport = document.getElementById('validation-report');
+    if (existingReport) existingReport.innerHTML = reportHTML;
+    else {
+        var infoBox = document.querySelector('#preview-card .info-box');
+        var reportDiv = document.createElement('div');
+        reportDiv.id = 'validation-report';
+        reportDiv.className = 'validation-report';
+        reportDiv.innerHTML = reportHTML;
+        if (infoBox && infoBox.parentNode) infoBox.parentNode.insertBefore(reportDiv, infoBox);
+    }
+
+    // --- Activation / blocage du bouton ---
+    if (totalErrors > 0) {
+        if (btnConfirm) { btnConfirm.disabled = true; btnConfirm.style.opacity = '0.5'; btnConfirm.style.cursor = 'not-allowed'; }
+        if (importMsg) { importMsg.innerHTML = '<span style="color:var(--red);">Corrigez les erreurs en rouge avant de confirmer.</span>'; importMsg.className = 'msg err'; }
+    } else {
+        if (btnConfirm) { btnConfirm.disabled = false; btnConfirm.style.opacity = '1'; btnConfirm.style.cursor = 'pointer'; }
+        if (importMsg) { importMsg.innerHTML = '<span style="color:var(--green);">' + rows.length + ' ligne(s) prête(s) à importer.</span>'; importMsg.className = 'msg ok'; }
+    }
+
+    // --- Construction du tableau éditable ---
+    var pHead = document.getElementById('preview-thead');
+    var pBody = document.getElementById('preview-tbody');
+    var displayHeaders = config.headers.slice();
+    if (config.table === 'dividendes_calendrier' && displayHeaders.indexOf('exercice') === -1) displayHeaders.push('exercice');
+    displayHeaders.push('_statut');
+
+    if (pHead) {
+        pHead.innerHTML = '<tr>' + displayHeaders.map(function(h){
+            return '<th>' + (h === '_statut' ? 'Statut' : h) + '</th>';
+        }).join('') + '</tr>';
+    }
+
+    if (pBody) {
+        pBody.innerHTML = allResults.map(function(res, idx){
+            var cls = res.valid ? 'cell-ok' : 'cell-error';
             var cells = displayHeaders.map(function(h){
-                var clean = h.replace('[AUTO] ','');
-                var normClean = normalizeHeader(clean);
-                // Recherche dans toutes les clés du row
-                var val = null;
-                for (var rk in r) {
-                    if (normalizeHeader(rk) === normClean || rk === clean || rk === h) { val = r[rk]; break; }
+                if (h === '_statut') {
+                    var statusIcon = res.valid ? '✅' : '❌';
+                    var statusText = res.valid ? 'Prêt' : res.errors[0];
+                    return '<td style="font-size:11px;white-space:normal;max-width:220px;">' + statusIcon + ' ' + statusText + '</td>';
                 }
-                if (val === null || val === undefined || val === '') val = '—';
-                return '<td>' + val + '</td>';
+                var val = res.display[h] !== undefined ? res.display[h] : '';
+                var cellCls = '';
+                // Détecte si ce champ a une erreur sur cette ligne
+                var hasFieldError = res.errors.some(function(e){ return e.indexOf("colonne '" + h + "'") !== -1; });
+                if (hasFieldError) cellCls = 'cell-error';
+                else if (res.valid) cellCls = 'cell-ok';
+                return '<td contenteditable="true" data-field="' + h + '" class="' + cellCls + '" ' +
+                       'onblur="updatePreviewCell(' + idx + ',\'' + h + '\',this.innerText)" ' +
+                       'title="' + (hasFieldError ? 'Cliquez pour corriger' : '') + '">' + (val !== null ? val : '') + '</td>';
             }).join('');
-            var statusIcon = r._status === 'error' ? '❌' : '✅';
-            var titleAttr = (r._errors || []).join(' | ');
-            return '<tr class="preview-row ' + cls + '" title="' + titleAttr + '">' + cells + 
-                   '<td style="font-weight:500;">' + statusIcon + '<br><small style="color:var(--red);">' + titleAttr.substring(0,60) + '</small></td></tr>';
+            return '<tr data-line-idx="' + idx + '">' + cells + '</tr>';
         }).join('');
     }
 }
@@ -2545,104 +2636,74 @@ async function autoCreateTickers() {
 }
 
 async function confirmImport() {
-        var config = currentUpload.config;
-    if (!currentUpload.data.length || !config) return;
-
-    /* 🔒 Vérifier / rafraîchir le token AVANT l'import */
-    const authOk = await ensureAuth();
-    if (!authOk) {
-        toast('Session expirée — reconnectez-vous', 'err');
-        setTimeout(() => { localStorage.removeItem(SK); location.href = 'login.html'; }, 2000);
-        return;
-    }
     var config = currentUpload.config;
     if (!currentUpload.data.length || !config) return;
-    var data = currentUpload.data.filter(function(row) {
-        var mapped = {};
-        for (var k in row) mapped[normalizeHeader(k)] = row[k];
-        var tickerVal = mapped.ticker || mapped.code || mapped.symbol || mapped.isin;
-        return tickerVal && String(tickerVal).trim() !== '';
+
+    // 1. Re-lire les données depuis le tableau (l'utilisateur a pu modifier)
+    var tbody = document.getElementById('preview-tbody');
+    var freshData = [];
+    if (tbody) {
+        var trs = tbody.querySelectorAll('tr[data-line-idx]');
+        trs.forEach(function(tr){
+            var idx = parseInt(tr.dataset.lineIdx);
+            var row = {};
+            // Recopie toutes les clés existantes
+            if (currentUpload.data[idx]) {
+                for (var k in currentUpload.data[idx]) row[k] = currentUpload.data[idx][k];
+            }
+            var cells = tr.querySelectorAll('td[data-field]');
+            cells.forEach(function(td){
+                var field = td.dataset.field;
+                row[field] = td.innerText.trim();
+            });
+            freshData.push(row);
+        });
+    } else {
+        freshData = currentUpload.data.slice();
+    }
+
+    // 2. Re-valider TOUT
+    var allErrors = [];
+    var prepared = [];
+    freshData.forEach(function(row, i){
+        var lineNum = i + 2;
+        var res = validateRow(row, lineNum, config);
+        if (!res.valid) allErrors = allErrors.concat(res.errors);
+        if (res.cleaned && res.cleaned.ticker) prepared.push(res.cleaned);
     });
-    console.log('📊 Template détecté:', config.table, '| Lignes filtrées:', data.length);
-    if (!data.length) { toast('Aucune ligne valide à importer', 'err'); return; }
+
+    if (allErrors.length > 0) {
+        var msgEl = document.getElementById('import-msg');
+        if (msgEl) {
+            msgEl.innerHTML = '<span style="color:var(--red);font-weight:500;">⛔ Import bloqué : ' + allErrors.length + ' erreur(s). Corrigez les cellules rouges dans le tableau.</span>';
+            msgEl.className = 'msg err';
+        }
+        toast('Corrigez les erreurs en rouge avant de confirmer', 'err');
+        return;
+    }
+
+    // 3. Import
     var progressCard = document.getElementById('progress-card');
-    if(progressCard) progressCard.style.display = 'block';
+    if (progressCard) progressCard.style.display = 'block';
     var inserted = 0;
-    var batchSize = 100; // on peut envoyer plus de lignes par lot
+    var batchSize = 100;
     var progress = document.getElementById('import-progress');
     var pText = document.getElementById('progress-text');
-    
-    for (var i = 0; i < data.length; i += batchSize) {
-        var batch = data.slice(i, i + batchSize);
-        if(progress) progress.style.width = Math.round((i / data.length) * 100) + '%';
-        if(pText) pText.textContent = 'Envoi lot ' + (Math.floor(i/batchSize)+1) + '...';
-        
-        // Préparer les données avec mapping des synonymes + normalisation complète
-        var prepared = batch.map(function(row) {
-            var mapped = {};
-            for (var k in row) mapped[normalizeHeader(k)] = row[k];
-            var clean = {};
-            config.headers.forEach(function(h) {
-                var val = mapped[h];
-                // Gestion des synonymes pour chaque champ
-                if (h === 'ticker') val = val || mapped.code || mapped.symbol || mapped.isin || mapped.code_valeur;
-                if (h === 'date_seance') val = val || mapped.date || mapped.date_seance;
-                if (h === 'annee') val = val || mapped.year;
-                if (h === 'montant') val = val || mapped.dividende || mapped.valeur;
-                if (h === 'exercice' && config.table === 'dividendes_calendrier') {
-                    val = val || String(mapped.annee || mapped.year || new Date().getFullYear());
-                }
-                // Normalisation des dates
-                if (isDateField(h)) val = excelDateToISO(val);
-                // Normalisation stricte — PostgreSQL n'accepte pas les milliers
-                if (val !== null && val !== undefined && val !== '') {
-                    var strVal = String(val).trim().replace(/\s/g, '');
-                    // Format "1,726.56" (US) → "1726.56"
-                    if (/^-?\d{1,3}(,\d{3})+\.\d+$/.test(strVal)) {
-                        strVal = strVal.replace(/\,/g, '');
-                    }
-                    // Format "1.726,56" (FR) → "1726.56"
-                    else if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(strVal)) {
-                        strVal = strVal.replace(/\./g, '').replace(/\,/g, '.');
-                    }
-                    // Virgule décimale seule "266,44625"
-                    else if (/^-?\d+,\d+$/.test(strVal)) {
-                        strVal = strVal.replace(/\,/g, '.');
-                    }
-                    // Mixte virgule+point
-                    else if (strVal.indexOf(',') !== -1 && strVal.indexOf('.') !== -1) {
-                        var lastComma = strVal.lastIndexOf(',');
-                        var lastPoint = strVal.lastIndexOf('.');
-                        if (lastComma > lastPoint) {
-                            strVal = strVal.replace(/\./g, '').replace(/\,/g, '.');
-                        } else {
-                            strVal = strVal.replace(/\,/g, '');
-                        }
-                    }
-                    if (/^-?\d+\.?\d*$/.test(strVal)) val = parseFloat(strVal);
-                }
-                if (val !== undefined && val !== '' && val !== null) clean[h] = val;
-            });
-                // GARANTIE : exercice TOUJOURS présent pour dividendes
-    if (config.table === 'dividendes_calendrier') {
-        if (!clean.exercice) clean.exercice = String(clean.annee || new Date().getFullYear());
-        else clean.exercice = String(clean.exercice);
-    }
-            return clean;
-        });
-        
-        if (prepared.length) {
-            var r = await sbPost(config.table, prepared, config.uniqueKey);
-            if (r) inserted += prepared.length;
+
+    for (var i = 0; i < prepared.length; i += batchSize) {
+        var batch = prepared.slice(i, i + batchSize);
+        if (progress) progress.style.width = Math.round((i / prepared.length) * 100) + '%';
+        if (pText) pText.textContent = 'Envoi lot ' + (Math.floor(i / batchSize) + 1) + '/' + Math.ceil(prepared.length / batchSize) + '...';
+        if (batch.length) {
+            var r = await sbPost(config.table, batch, config.uniqueKey);
+            if (r) inserted += batch.length;
         }
     }
-    if(progress) progress.style.width = '100%';
-    if(pText) pText.textContent = 'Terminé !';
-    toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s)');
-    
-    // 👇 NOUVELLE LIGNE : recalcul auto si c'est la table cours
+
+    if (progress) progress.style.width = '100%';
+    if (pText) pText.textContent = 'Terminé !';
+    toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s) sur ' + prepared.length + ' préparée(s)');
     if (config.table === 'cours') await recalcVariations();
-    
     cancelImport();
 }
 function cancelImport() {
