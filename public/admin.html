@@ -1014,8 +1014,13 @@ function normalizeExcelValue(val, key) {
     if (typeof val === 'number') return val;
     var s = String(val).trim();
     if (s === '') return null;
-    // Si c'est un nombre formaté comme string
-    if (/^-?\d+(\.\d+)?$/.test(s)) return parseFloat(s);
+    // Nombre avec virgule (format français) → remplacer par point
+    if (/^-?\d+[\.,]\d+$/.test(s)) {
+        s = s.replace(/\,/g, '.');
+        return parseFloat(s);
+    }
+    // Nombre entier
+    if (/^-?\d+$/.test(s)) return parseFloat(s);
     return s;
 }
 function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
@@ -1235,7 +1240,8 @@ async function sbPost(table, body, onConflict) {
         if (!r.ok) {
             const e = await r.json().catch(()=>({}));
             console.error('[sbPost ERROR]', table, e);
-            toast((e?.message || e?.details || 'Erreur écriture') + ' [' + table + ']', 'err');
+            var errMsg = e?.message || e?.details || JSON.stringify(e);
+            toast(errMsg + ' [' + table + ']', 'err');
             return null;
         }
         return r.json();
@@ -2258,6 +2264,7 @@ async function handleFile(file) {
         });
         rows.push(obj);
     }
+    console.log('📊 Exemple ligne 1:', rows[0]);
     currentUpload.data = rows;
     console.log('✓ ' + rows.length + ' lignes importées pour template ' + detected);
     showPreview(detected, rows);
@@ -2467,7 +2474,7 @@ async function confirmImport() {
         if(progress) progress.style.width = Math.round((i / data.length) * 100) + '%';
         if(pText) pText.textContent = 'Envoi lot ' + (Math.floor(i/batchSize)+1) + '...';
         
-        // Préparer les données avec mapping des synonymes + normalisation dates
+        // Préparer les données avec mapping des synonymes + normalisation complète
         var prepared = batch.map(function(row) {
             var mapped = {};
             for (var k in row) mapped[normalizeHeader(k)] = row[k];
@@ -2484,6 +2491,15 @@ async function confirmImport() {
                 }
                 // Normalisation des dates
                 if (isDateField(h)) val = excelDateToISO(val);
+                // Normalisation des nombres (virgule → point)
+                if (val !== null && val !== undefined && val !== '') {
+                    var strVal = String(val).trim();
+                    if (/^-?\d+[\.,]\d+$/.test(strVal)) {
+                        val = parseFloat(strVal.replace(/\,/g, '.'));
+                    } else if (/^-?\d+$/.test(strVal)) {
+                        val = parseFloat(strVal);
+                    }
+                }
                 if (val !== undefined && val !== '' && val !== null) clean[h] = val;
             });
             // GARANTIE : exercice TOUJOURS présent pour dividendes
