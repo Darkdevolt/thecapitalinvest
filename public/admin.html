@@ -1017,13 +1017,32 @@ function normalizeExcelValue(val, key) {
     if (typeof val === 'number') return val;
     var s = String(val).trim();
     if (s === '') return null;
-    // Format BRVM : point = séparateur de milliers, virgule = décimal
-    // Ex: "1.655,00" → "1655.00" | "266,44625" → "266.44625" | "1 080" → "1080"
-    // Étape 1: supprimer les espaces et points de milliers
-    s = s.replace(/\s/g, '').replace(/\.(?=.*\,)/g, ''); // point avant virgule = millier
-    // Étape 2: remplacer virgule décimale par point
-    s = s.replace(/\,/g, '.');
-    // Si c'est un nombre valide
+    // PostgreSQL n'accepte PAS les séparateurs de milliers
+    // Il faut TOUJOURS envoyer : 1726.56 (point décimal, pas de virgule/point millier)
+    s = s.replace(/\s/g, ''); // supprimer espaces
+    // Si format "1,726.56" (US) → virgule=millier, point=décimal
+    if (/^-?\d{1,3}(,\d{3})+\.\d+$/.test(s)) {
+        s = s.replace(/\,/g, '');
+    }
+    // Si format "1.726,56" (FR) → point=millier, virgule=décimal
+    else if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s)) {
+        s = s.replace(/\./g, '').replace(/\,/g, '.');
+    }
+    // Si juste virgule décimale "266,44625"
+    else if (/^-?\d+,\d+$/.test(s)) {
+        s = s.replace(/\,/g, '.');
+    }
+    // Si juste point décimal (déjà correct)
+    // Si contient à la fois virgule et point non formatés
+    else if (s.indexOf(',') !== -1 && s.indexOf('.') !== -1) {
+        var lastComma = s.lastIndexOf(',');
+        var lastPoint = s.lastIndexOf('.');
+        if (lastComma > lastPoint) {
+            s = s.replace(/\./g, '').replace(/\,/g, '.');
+        } else {
+            s = s.replace(/\,/g, '');
+        }
+    }
     if (/^-?\d+\.?\d*$/.test(s)) return parseFloat(s);
     return s;
 }
@@ -2231,6 +2250,8 @@ async function handleFile(file) {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: 'array', cellDates: true });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+    // raw: true = valeurs brutes (nombres), raw: false = valeurs formatées (strings)
+    // On prend raw: false pour avoir le format affiché dans Excel
     const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
     if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
 
@@ -2510,12 +2531,31 @@ async function confirmImport() {
                 }
                 // Normalisation des dates
                 if (isDateField(h)) val = excelDateToISO(val);
-                // Normalisation des nombres format BRVM
+                // Normalisation stricte — PostgreSQL n'accepte pas les milliers
                 if (val !== null && val !== undefined && val !== '') {
-                    var strVal = String(val).trim();
-                    // Format BRVM : point = millier, virgule = décimal
-                    // "1.655,00" → "1655.00" | "1 080" → "1080" | "266,44625" → "266.44625"
-                    strVal = strVal.replace(/\s/g, '').replace(/\.(?=.*\,)/g, '').replace(/\,/g, '.');
+                    var strVal = String(val).trim().replace(/\s/g, '');
+                    // Format "1,726.56" (US) → "1726.56"
+                    if (/^-?\d{1,3}(,\d{3})+\.\d+$/.test(strVal)) {
+                        strVal = strVal.replace(/\,/g, '');
+                    }
+                    // Format "1.726,56" (FR) → "1726.56"
+                    else if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(strVal)) {
+                        strVal = strVal.replace(/\./g, '').replace(/\,/g, '.');
+                    }
+                    // Virgule décimale seule "266,44625"
+                    else if (/^-?\d+,\d+$/.test(strVal)) {
+                        strVal = strVal.replace(/\,/g, '.');
+                    }
+                    // Mixte virgule+point
+                    else if (strVal.indexOf(',') !== -1 && strVal.indexOf('.') !== -1) {
+                        var lastComma = strVal.lastIndexOf(',');
+                        var lastPoint = strVal.lastIndexOf('.');
+                        if (lastComma > lastPoint) {
+                            strVal = strVal.replace(/\./g, '').replace(/\,/g, '.');
+                        } else {
+                            strVal = strVal.replace(/\,/g, '');
+                        }
+                    }
                     if (/^-?\d+\.?\d*$/.test(strVal)) val = parseFloat(strVal);
                 }
                 if (val !== undefined && val !== '' && val !== null) clean[h] = val;
