@@ -949,6 +949,28 @@ const SB_REST = SB_URL + '/rest/v1';
 const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 let TK = '', ME = null;
+
+/* ── HELPERS BOUTONS & SUPPRESSIONS SÉCURISÉES ──────────────── */
+function doubleConfirm(msg) {
+    if (!confirm(msg)) return false;
+    return confirm('⚠️ Êtes-vous VRAIMENT sûr ? Cette action est irréversible et ne peut pas être annulée.');
+}
+function handleEditCours(el) { editCours(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteCours(el) { deleteCours(el.dataset.ticker, el.dataset.date); }
+function handleDeleteHist(el) { deleteHistRow(el.dataset.id); }
+function handleDeleteAllHist(el) { deleteAllHistoriqueTicker(); }
+function handleEditEnt(el) { openEntModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteEnt(el) { deleteEntreprise(el.dataset.ticker); }
+function handleEditFin(el) { openFinModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteFin(el) { deleteFinancial(el.dataset.id); }
+function handleDeleteDiv(el) { deleteDivRow(el.dataset.id); }
+function handleEditDiv(el) { editDividende(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteAn(el) { deleteAnalyseRow(el.dataset.id); }
+function handleEditAn(el) { editAnalyse(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteBoc(el) { deleteBocRow(el.dataset.id); }
+function handleDeleteIdx(el) { deleteIndiceRow(el.dataset.id); }
+function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
+
 let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [];
 let diagData = null;
 let activeTab = 'dashboard';
@@ -1352,8 +1374,8 @@ function renderCoursTable(data) {
             '<td class="r td-muted">' + fmt(r.plus_haut_52) + '</td>' +
             '<td class="r td-muted">' + fmt(r.plus_bas_52) + '</td>' +
             '<td>' +
-              '<button class="btn btn-outline btn-sm" onclick=\'editCours(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              `<button class="btn btn-danger btn-sm" onclick="deleteCours('${r.ticker}','${r.date_seance}')">✕</button>` +
+              '<button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditCours(this)">✎</button> ' +
+              '<button class="btn btn-danger btn-sm" data-ticker="' + r.ticker + '" data-date="' + r.date_seance + '" onclick="handleDeleteCours(this)">✕</button>' +
             '</td></tr>';
     }).join('');
     if(count) count.textContent = data.length + ' ligne(s)';
@@ -1411,7 +1433,7 @@ async function saveCours() {
 }
 
 async function deleteCours(ticker, date) {
-    if (!confirm('Supprimer le cours ' + ticker + ' du ' + date + ' ?')) return;
+    if (!doubleConfirm('Supprimer le cours ' + ticker + ' du ' + date + ' ?')) return;
     const ok = await sbDel('cours', 'ticker=eq.' + encodeURIComponent(ticker) + '&date_seance=eq.' + date);
     if (ok) { toast('Cours supprimé'); loadCours(); }
 }
@@ -1503,7 +1525,7 @@ async function loadHistoriqueTicker() {
                 '<td class="r td-muted">' + fmt(r.plus_bas) + '</td>' +
                 '<td class="r td-muted">' + fmt(r.volume) + '</td>' +
                 '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
-                `<td><button class="btn btn-danger btn-sm" onclick="deleteHistRow('${r.id}')">✕</button></td>` +
+                '<td><button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteHist(this)">✕</button></td>' +
                 '</tr>';
         }).join('');
         if(btnDel) btnDel.style.display = '';
@@ -1513,13 +1535,14 @@ async function loadHistoriqueTicker() {
 }
 
 async function deleteHistRow(id) {
+    if (!doubleConfirm("Supprimer cette ligne d'historique ?")) return;
     const ok = await sbDel('historique', 'id=eq.' + id);
     if (ok) loadHistoriqueTicker();
 }
 
 async function deleteAllHistoriqueTicker() {
     const ticker = v('hist-ticker-search');
-    if (!ticker || !confirm('Supprimer TOUT l\'historique de ' + ticker + ' ?')) return;
+    if (!ticker || !doubleConfirm('Supprimer TOUT l\'historique de ' + ticker + ' ? Cette action efface toutes les données historiques pour ce ticker.')) return;
     const ok = await sbDel('historique', 'ticker=eq.' + encodeURIComponent(ticker));
     if (ok) { toast('Historique supprimé'); loadHistoriqueTicker(); }
 }
@@ -1549,8 +1572,8 @@ function renderEntTable(data) {
             '<td><span class="badge ' + (r.compartiment==='PRESTIGE'?'badge-gold':'badge-blue') + '">' + (r.compartiment||'—') + '</span></td>' +
             '<td class="td-muted">' + (r.isin||'—') + '</td>' +
             '<td><span class="badge badge-green">Actif</span></td>' +
-            '<td><button class="btn btn-outline btn-sm" onclick=\'openEntModal(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              `<button class="btn btn-danger btn-sm" onclick="deleteEntreprise('${r.ticker}')">✕</button></td>` +
+            '<td><button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditEnt(this)">✎</button> ' +
+              '<button class="btn btn-danger btn-sm" data-ticker="' + r.ticker + '" onclick="handleDeleteEnt(this)">✕</button></td>' +
             '</tr>';
     }).join('');
 }
@@ -1631,8 +1654,8 @@ function renderFinTable(data) {
             '<td class="r td-mono">' + fmt(r.dpa) + '</td>' +
             '<td class="r td-mono">' + fmt(r.dettes_financieres) + '</td>' +
             '<td class="td-muted">' + (r.source||'—') + '</td>' +
-            '<td><button class="btn btn-outline btn-sm" onclick=\'openFinModal(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              '<button class="btn btn-danger btn-sm" onclick="deleteFinancial(\'' + r.id + '\')">✕</button></td>' +
+            '<td><button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditFin(this)">✎</button> ' +
+              '<button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteFin(this)">✕</button></td>' +
             '</tr>';
     }).join('');
 }
@@ -1741,12 +1764,14 @@ function renderDivTable(data) {
             '<td class="td-muted">' + fmtDate(r.date_detachement) + '</td>' +
             '<td class="td-muted">' + fmtDate(r.date_paiement) + '</td>' +
             '<td><span class="badge ' + (r.statut==='payé'?'badge-green':r.statut==='prévisionnel'?'badge-orange':'badge-gold') + '">' + (r.statut||'—') + '</span></td>' +
-            `<td><button class="btn btn-danger btn-sm" onclick="deleteDivRow('${r.id}')">✕</button></td>` +
+            '<td><button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditDiv(this)">✎</button> ' +
+              '<button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteDiv(this)">✕</button></td>' +
             '</tr>';
     }).join('');
 }
 
 async function deleteDivRow(id) {
+    if (!doubleConfirm('Supprimer ce dividende ?')) return;
     const ok = await sbDel('dividendes_calendrier', 'id=eq.' + id);
     if (ok) loadDividendes();
 }
@@ -1793,13 +1818,15 @@ async function loadAnalyses() {
             '<div style="text-align:right;">' +
               '<span class="badge ' + (r.recommandation==='Acheter'?'badge-green':r.recommandation==='Vendre'?'badge-red':'badge-gold') + '">' + r.recommandation + '</span>' +
               '<div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">' + fmt(r.cours_cible) + '</div>' +
-              `<button class="btn btn-danger btn-sm" style="margin-top:8px;" onclick="deleteAnalyseRow('${r.id}')">✕</button>` +
+              '<button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditAn(this)">✎</button> ' +
+              '<button class="btn btn-danger btn-sm" style="margin-top:8px;" data-id="' + r.id + '" onclick="handleDeleteAn(this)">✕</button>' +
             '</div>' +
             '</div>';
     }).join('');
 }
 
 async function deleteAnalyseRow(id) {
+    if (!doubleConfirm('Supprimer cette analyse ?')) return;
     const ok = await sbDel('analyses', 'id=eq.' + id);
     if (ok) loadAnalyses();
 }
@@ -1862,7 +1889,7 @@ function renderUsrTable(data) {
             '<td class="td-muted">' + fmtDate(r.plan_expiry) + '</td>' +
             '<td>' + (r.is_admin?'✓':'—') + '</td>' +
             '<td class="td-muted">' + fmtDate(r.created_at) + '</td>' +
-            '<td><button class="btn btn-outline btn-sm" onclick=\'openUsrModal(' + JSON.stringify(r) + ')\'>✎</button></td>' +
+            '<td><button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditUsr(this)">✎</button></td>' +
             '</tr>';
     }).join('');
 }
@@ -2465,12 +2492,13 @@ async function loadBOC() {
           list.map(function(b){
               return '<tr><td>' + b.date_seance + '</td><td>' + b.fichier_nom + '</td>' +
                      '<td><a href="' + b.fichier_url + '" target="_blank" style="color:var(--gold);">Voir</a></td>' +
-          `<td><button class="btn btn-danger btn-sm" onclick="deleteBocRow('${b.id}')">✕</button></td></tr>`;
+          '<td><button class="btn btn-danger btn-sm" data-id="' + b.id + '" onclick="handleDeleteBoc(this)">✕</button></td></tr>';
           }).join('') + '</tbody></table></div>'
         : '<div style="padding:16px;color:var(--muted);">Aucun BOC.</div>';
 }
 
 async function deleteBocRow(id) {
+    if (!doubleConfirm('Supprimer ce BOC ?')) return;
     const ok = await sbDel('boc', 'id=eq.' + id);
     if (ok) loadBOC();
 }
@@ -2525,8 +2553,8 @@ function renderIndicesTable(data) {
             '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
             '<td class="r td-muted">' + (r.variation_pct != null ? Number(r.variation_pct).toFixed(2) + '%' : '—') + '</td>' +
             '<td>' +
-              '<button class="btn btn-outline btn-sm idx-edit" data-id="' + r.id + '">✎</button> ' +
-              '<button class="btn btn-danger btn-sm idx-del" data-id="' + r.id + '">✕</button>' +
+              '<button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditIdx(this)">✎</button> ' +
+              '<button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteIdx(this)">✕</button>' +
             '</td>' +
             '</tr>';
     }).join('');
@@ -2558,7 +2586,7 @@ async function addIndice() {
 }
 
 async function deleteIndiceRow(id) {
-    if (!confirm("Supprimer cet indice ?")) return;
+    if (!doubleConfirm("Supprimer cet indice ?")) return;
     const ok = await sbDel('indices', 'id=eq.' + id);
     if (ok) loadIndices();
 }
@@ -2591,17 +2619,7 @@ async function saveIndice() {
     }
 }
 
-/* Event delegation pour les boutons indices */
-document.addEventListener('click', function(e){
-    var btn = e.target.closest('.idx-del');
-    if (btn) { deleteIndiceRow(btn.dataset.id); return; }
-    btn = e.target.closest('.idx-edit');
-    if (btn) {
-        var row = idxData.find(function(r){ return String(r.id) === String(btn.dataset.id); });
-        if (row) editIndice(row);
-        else toast('Indice introuvable', 'err');
-    }
-});
+/* Boutons indices : onclick directs via handleEditIdx / handleDeleteIdx */
 
 /* ══════════════════════════════════════════════════════
    DIVIDENDES — ÉDITION
@@ -2689,7 +2707,7 @@ async function saveAnalyse() {
    ENTREPRISES — SUPPRESSION
 ══════════════════════════════════════════════════════ */
 async function deleteEntreprise(ticker) {
-    if (!confirm("Supprimer l'entreprise " + ticker + " ? Cette action est irréversible.")) return;
+    if (!doubleConfirm("Supprimer l'entreprise " + ticker + " ? Cette action est irréversible.")) return;
     const ok = await sbDel('entreprises', 'ticker=eq.' + encodeURIComponent(ticker));
     if (ok) { toast('Entreprise supprimée'); loadEntreprises(); }
 }
@@ -2698,7 +2716,7 @@ async function deleteEntreprise(ticker) {
    FINANCIALS — SUPPRESSION
 ══════════════════════════════════════════════════════ */
 async function deleteFinancial(id) {
-    if (!confirm('Supprimer ce financial ?')) return;
+    if (!doubleConfirm('Supprimer ce financial ?')) return;
     const ok = await sbDel('financials', 'id=eq.' + id);
     if (ok) { toast('Financial supprimé'); loadFinancials(); }
 }
