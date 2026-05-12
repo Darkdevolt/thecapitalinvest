@@ -586,6 +586,7 @@
                     </select>
                 </div>
                 <div class="field"><label>Cours cible (FCFA) <span style="color:var(--gold);font-size:9px;">→ "cours_cible"</span></label><input type="number" id="an-cible" placeholder="16000" step="any" oninput="calcPotentiel()"></div>
+<div class="field"><label>Cours de référence (FCFA)</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
                 <div class="field"><label>Cours de référence</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
                 <div class="field"><label>Potentiel (calculé)</label><input type="text" id="an-potentiel-display" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
                 <div class="field"><label>Analyste</label><input type="text" id="an-analyste" placeholder="The Capital Research"></div>
@@ -1123,7 +1124,7 @@ async function sbGet(table, params) {
 async function sbCount(table, params) {
     try {
         const cleanParams = params ? String(params).replace(/select=[^&]*/g, '').replace(/^&|&$/g, '') : '';
-        const url = SB_REST + '/' + table + '?select=id' + (cleanParams ? '&' + cleanParams : '');
+        const url = SB_REST + '/' + table + '?select=*&limit=0' + (cleanParams ? '&' + cleanParams : '');
         const ctrl = new AbortController();
         const t = setTimeout(() => ctrl.abort(), 8000);
         const r = await fetch(url, {
@@ -1631,7 +1632,7 @@ function renderFinTable(data) {
             '<td class="r td-mono">' + fmt(r.dettes_financieres) + '</td>' +
             '<td class="td-muted">' + (r.source||'—') + '</td>' +
             '<td><button class="btn btn-outline btn-sm" onclick=\'openFinModal(' + JSON.stringify(r) + ')\'>✎</button> ' +
-              '<button class="btn btn-danger btn-sm" onclick="deleteFinancial(' + r.id + ')">✕</button></td>' +
+              '<button class="btn btn-danger btn-sm" onclick="deleteFinancial(\'' + r.id + '\')">✕</button></td>'
             '</tr>';
     }).join('');
 }
@@ -1691,9 +1692,29 @@ async function addFinancial() {
 
 async function prefillFinancialFromTicker() {
     const ticker = v('fin-ticker');
-    if (!ticker) return;
-    const rows = await sbGet('entreprises', 'select=nombre_actions&ticker=eq.' + encodeURIComponent(ticker));
-    if (rows?.[0]?.nombre_actions) set('fin-nb-actions', rows[0].nombre_actions);
+    const annee  = v('fin-annee');
+    if (!ticker) { toast('Entrez un ticker d\'abord', 'err'); return; }
+    let params = 'select=*&ticker=eq.' + encodeURIComponent(ticker) + '&order=annee.desc&limit=1';
+    if (annee) params += '&annee=eq.' + annee;
+    const rows = await sbGet('financials', params);
+    if (!rows || !rows.length) {
+        const ent = await sbGet('entreprises', 'select=nombre_actions&ticker=eq.' + encodeURIComponent(ticker));
+        if (ent?.[0]?.nombre_actions) { set('fin-nb-actions', ent[0].nombre_actions); toast('Nb. actions chargé depuis entreprises', 'info'); }
+        else toast('Aucun financial trouvé pour ' + ticker, 'err');
+        return;
+    }
+    const r = rows[0];
+    set('fin-annee', r.annee);       set('fin-ca', r.chiffre_affaires);
+    set('fin-rbe', r.rbe);           set('fin-rn', r.resultat_net);
+    set('fin-bpa', r.bpa);           set('fin-dpa', r.dpa);
+    set('fin-fp', r.fonds_propres);  set('fin-dettes', r.dettes_financieres);
+    set('fin-actif', r.total_actif); set('fin-nb-actions', r.nombre_actions);
+    set('fin-cfo', r.cash_flow_operationnel); set('fin-capex', r.capex);
+    set('fin-source', r.source);
+    const periodeEl = document.getElementById('fin-periode');
+    if (periodeEl && r.periode) periodeEl.value = r.periode;
+    toast('Financial ' + r.annee + ' chargé pour ' + ticker, 'ok');
+}
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1878,16 +1899,51 @@ async function saveUser() {
 /* ══════════════════════════════════════════════════════
    SCRAPER
 ══════════════════════════════════════════════════════ */
-function runScraper() {
-    const msg = document.getElementById('scraper-msg');
-    if(msg){ msg.textContent = 'Scraper déclenché (simulation)...'; msg.className = 'msg info'; }
-    setTimeout(function(){ if(msg){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; } }, 1500);
+function appendScraperLog(text, type) {
+    var log = document.getElementById('scraper-log');
+    if (!log) return;
+    var d = document.createElement('div');
+    d.className = type || 'info';
+    d.textContent = new Date().toLocaleTimeString('fr-FR') + ' — ' + text;
+    log.appendChild(d);
+    log.scrollTop = log.scrollHeight;
 }
 
-function runFallback() {
+async function runScraper() {
     const msg = document.getElementById('scraper-msg');
-    if(msg){ msg.textContent = 'Recalcul variation...'; msg.className = 'msg info'; }
-    setTimeout(function(){ if(msg){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; } }, 1000);
+    if(msg){ msg.textContent = 'Scraper en cours...'; msg.className = 'msg info'; }
+    appendScraperLog('Lancement du scraper BRVM...', 'info');
+    try {
+        const ctrl = new AbortController();
+        const t = setTimeout(() => ctrl.abort(), 30000);
+        const r = await fetch(SB_URL + '/functions/v1/scrape-brvm', {
+            method: 'POST',
+            headers: { Authorization: 'Bearer ' + TK, 'Content-Type': 'application/json' },
+            signal: ctrl.signal
+        });
+        clearTimeout(t);
+        const data = await r.json().catch(() => ({}));
+        if (r.ok) {
+            appendScraperLog('✓ Scraper terminé : ' + JSON.stringify(data), 'ok');
+            if(msg){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }
+            toast('Scraper terminé', 'ok');
+        } else {
+            appendScraperLog('Erreur scraper : ' + (data?.message || r.status), 'err');
+            if(msg){ msg.textContent = 'Erreur : vérifiez l\'Edge Function'; msg.className = 'msg err'; }
+        }
+    } catch(e) {
+        appendScraperLog('Erreur réseau : ' + e.message, 'err');
+        if(msg){ msg.textContent = e.name === 'AbortError' ? 'Timeout — Edge Function trop lente' : e.message; msg.className = 'msg err'; }
+    }
+}
+
+async function runFallback() {
+    const msg = document.getElementById('scraper-msg');
+    if(msg){ msg.textContent = 'Recalcul en cours...'; msg.className = 'msg info'; }
+    appendScraperLog('Recalcul des variations...', 'info');
+    await recalcVariations();
+    if(msg){ msg.textContent = '✓ Variations recalculées'; msg.className = 'msg ok'; }
+    appendScraperLog('✓ Variations recalculées', 'ok');
 }
 
 async function syncHistFromCours() {
@@ -1901,7 +1957,12 @@ async function syncHistFromCours() {
                  volume: r.volume, variation: r.variation };
     });
     const res = await sbPost('historique', mapped, 'ticker,date_seance');
-    if (res) { if(msg){ msg.textContent = '✓ ' + mapped.length + ' cours synchronisés'; msg.className = 'msg ok'; } }
+    if (res) {
+        const txt = '✓ ' + mapped.length + ' cours synchronisés vers historique';
+        if(msg){ msg.textContent = txt; msg.className = 'msg ok'; }
+        appendScraperLog(txt, 'ok');
+        toast(txt, 'ok');
+    }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -2161,7 +2222,10 @@ async function showPreview(templateKey, rows) {
         // ═══════════════════════════════════════
         // VALIDATION EXPLICITE DU TICKER
         // ═══════════════════════════════════════
-        var rawTicker = row['ticker'] || row['Ticker'] || row['TICKER'] || row['code'] || row['CODE'] || null;
+        var tickerKey = Object.keys(row).find(function(k){
+    return ['ticker','code','symbol','isin','code_valeur'].includes(k.toLowerCase().trim());
+});
+var rawTicker = tickerKey ? row[tickerKey] : null;
         if (!rawTicker || String(rawTicker).trim() === '') {
             errors.push('❌ TICKER MANQUANT (ligne ' + (i + 2) + ')');
         } else {
@@ -2268,8 +2332,15 @@ async function autoCreateTickers() {
 }
 
 async function confirmImport() {
-    var data = currentUpload.data, config = currentUpload.config;
-    if (!data.length || !config) return;
+    var config = currentUpload.config;
+    if (!currentUpload.data.length || !config) return;
+    var data = currentUpload.data.filter(function(row) {
+        var tickerKey = Object.keys(row).find(function(k){
+            return ['ticker','code','symbol','isin'].includes(k.toLowerCase().trim());
+        });
+        return tickerKey && row[tickerKey] && String(row[tickerKey]).trim() !== '';
+    });
+    if (!data.length) { toast('Aucune ligne valide à importer', 'err'); return; }
     var progressCard = document.getElementById('progress-card');
     if(progressCard) progressCard.style.display = 'block';
     var inserted = 0;
@@ -2428,10 +2499,11 @@ async function deleteBocRow(id) {
             }
         }
     }
-    toast(`${updated} variations mises à jour`);
-    loadCours(); // rafraîchir l'affichage
+    const txt = updated + ' variations mises à jour';
+    toast(txt, 'ok');
+    appendScraperLog(txt, 'ok');
+    loadCours();
 }
-
 /* ══════════════════════════════════════════════════════
    INDICES
 ══════════════════════════════════════════════════════ */
@@ -2528,7 +2600,7 @@ document.addEventListener('click', function(e){
     if (btn) { deleteIndiceRow(btn.dataset.id); return; }
     btn = e.target.closest('.idx-edit');
     if (btn) {
-        var row = idxData.find(function(r){ return r.id === btn.dataset.id; });
+        var row = idxData.find(function(r){ return String(r.id) === String(btn.dataset.id); });
         if (row) editIndice(row);
         else toast('Indice introuvable', 'err');
     }
