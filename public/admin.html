@@ -236,6 +236,13 @@
         td[contenteditable="true"] { outline: none; cursor: text; }
         td[contenteditable="true"]:hover { background: rgba(184,150,78,0.08); }
         td[contenteditable="true"]:focus { background: rgba(184,150,78,0.12); border: 1px solid var(--gold); }
+                .row-check { width: 16px; height: 16px; accent-color: var(--gold); cursor: pointer; }
+        .bulk-bar { margin: 0 18px 12px; }
+        .bulk-actions { display: none; gap: 10px; align-items: center; padding: 10px 18px; background: rgba(248,113,113,0.06); border: 1px solid rgba(248,113,113,0.2); border-radius: 4px; }
+        .bulk-actions.active { display: flex; }
+        .bulk-actions span { font-size: 12px; color: var(--muted); }
+        .bulk-actions .btn { font-size: 10px; padding: 6px 12px; }
+        th .row-check { accent-color: var(--gold); }
     </style>
 <base target="_blank">
 <base target="_blank">
@@ -336,7 +343,7 @@
             </div>
             <div class="tw">
                 <table>
-                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Capi.</th><th class="r">H52</th><th class="r">B52</th><th></th></tr></thead>
                     <tbody id="cours-tbody"><tr><td colspan="13"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
             </div>
@@ -409,7 +416,7 @@
                 </div>
                 <div class="tw">
                     <table>
-                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th></th></tr></thead>
                         <tbody id="hist-tbody"><tr><td colspan="9"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
                     </table>
                 </div>
@@ -1099,7 +1106,59 @@ function normalizeExcelValue(val, key) {
     return s;
 }
 function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
+/* ── SUPPRESSION MULTI-LIGNES (BULK DELETE) ─────────────────── */
+var selectedRows = new Set();
 
+function toggleRow(id, el) {
+    if (el.checked) selectedRows.add(id);
+    else selectedRows.delete(id);
+    updateBulkBar();
+}
+
+function toggleAll(ids, el) {
+    if (el.checked) ids.forEach(function(id){ selectedRows.add(id); });
+    else ids.forEach(function(id){ selectedRows.delete(id); });
+    document.querySelectorAll('.row-check[data-id]').forEach(function(cb){
+        cb.checked = el.checked;
+    });
+    updateBulkBar();
+}
+
+function updateBulkBar() {
+    var bars = document.querySelectorAll('.bulk-bar');
+    bars.forEach(function(bar){
+        var count = bar.querySelector('.bulk-count');
+        var actions = bar.querySelector('.bulk-actions');
+        if (count) count.textContent = selectedRows.size + ' sélectionné(s)';
+        if (actions) {
+            if (selectedRows.size > 0) actions.classList.add('active');
+            else actions.classList.remove('active');
+        }
+    });
+}
+
+function resetSelection() {
+    selectedRows.clear();
+    document.querySelectorAll('.row-check').forEach(function(cb){ cb.checked = false; });
+    updateBulkBar();
+}
+
+async function bulkDelete(table, idField, reloadFn, msgLabel) {
+    if (selectedRows.size === 0) { toast('Aucune ligne sélectionnée', 'err'); return; }
+    var ids = Array.from(selectedRows);
+    var label = msgLabel || 'ligne(s)';
+    if (!doubleConfirm('Supprimer ' + ids.length + ' ' + label + ' ? Cette action est irréversible.')) return;
+    if (!doubleConfirm('⚠️ CONFIRMATION FINALE : ' + ids.length + ' ' + label + ' seront définitivement effacées. Continuer ?')) return;
+
+    var deleted = 0;
+    for (var i = 0; i < ids.length; i++) {
+        var ok = await sbDel(table, idField + '=eq.' + ids[i]);
+        if (ok) deleted++;
+    }
+    toast('✓ ' + deleted + '/' + ids.length + ' ' + label + ' supprimée(s)', deleted === ids.length ? 'ok' : 'err');
+    resetSelection();
+    reloadFn();
+}
 let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [], anData = [];
 let diagData = null;
 let activeTab = 'dashboard';
@@ -1552,11 +1611,13 @@ function renderCoursTable(data) {
     const count = document.getElementById('cours-count');
     if (!tb) return;
     if (!data.length) {
-        tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px;">Aucun cours</td></tr>';
+        tb.innerHTML = '<tr><td colspan="13" style="text-align:center;color:var(--muted);padding:20px;">Aucun cours</td></tr>';
         if(count) count.textContent = '0 ligne'; return;
     }
+    resetSelection();
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
+            '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
             '<td class="td-gold">' + r.ticker + '</td>' +
             '<td class="td-muted">' + r.date_seance + '</td>' +
             '<td class="r td-mono">' + fmt(r.cours) + '</td>' +
@@ -1573,7 +1634,28 @@ function renderCoursTable(data) {
               '<button class="btn btn-danger btn-sm" data-ticker="' + r.ticker + '" data-date="' + r.date_seance + '" onclick="handleDeleteCours(this)">✕</button>' +
             '</td></tr>';
     }).join('');
+
+    var existingBar = document.getElementById('bulk-bar-cours');
+    if (!existingBar) {
+        var card = tb.closest('.card');
+        if (card) {
+            var bar = document.createElement('div');
+            bar.id = 'bulk-bar-cours';
+            bar.className = 'bulk-bar';
+            bar.innerHTML = '<div class="bulk-actions">' +
+                '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+                '<button class="btn btn-danger btn-sm" onclick="bulkDeleteCours()">🗑 Supprimer la sélection</button>' +
+                '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
+                '</div>';
+            card.insertBefore(bar, card.querySelector('.tw'));
+        }
+    }
+    updateBulkBar();
     if(count) count.textContent = data.length + ' ligne(s)';
+}
+
+function bulkDeleteCours() {
+    bulkDelete('cours', 'id', loadCours, 'cours');
 }
 
 function filterCoursTable() {
@@ -1709,9 +1791,11 @@ async function loadHistoriqueTicker() {
     if (!histData.length) {
         tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucun historique</td></tr>';
         if(btnDel) btnDel.style.display = 'none';
-    } else {
+       } else {
+        resetSelection();
         tb.innerHTML = histData.map(function(r){
             return '<tr>' +
+                '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
                 '<td class="td-gold">' + r.ticker + '</td>' +
                 '<td class="td-muted">' + r.date_seance + '</td>' +
                 '<td class="r td-mono">' + fmt(r.cours_cloture) + '</td>' +
@@ -1723,10 +1807,26 @@ async function loadHistoriqueTicker() {
                 '<td><button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteHist(this)">✕</button></td>' +
                 '</tr>';
         }).join('');
+
+        var card = tb.closest('.card');
+        var existingBar = document.getElementById('bulk-bar-hist');
+        if (!existingBar && card) {
+            var bar = document.createElement('div');
+            bar.id = 'bulk-bar-hist';
+            bar.className = 'bulk-bar';
+            bar.innerHTML = '<div class="bulk-actions">' +
+                '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+                '<button class="btn btn-danger btn-sm" onclick="bulkDeleteHist()">🗑 Supprimer la sélection</button>' +
+                '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
+                '</div>';
+            card.insertBefore(bar, card.querySelector('.tw'));
+        }
+        updateBulkBar();
         if(btnDel) btnDel.style.display = '';
     }
-    const hCount = document.getElementById('hist-count');
-    if(hCount) hCount.textContent = histData.length + ' ligne(s)';
+
+    function bulkDeleteHist() {
+    bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique');
 }
 function bulkDeleteHist() {
     bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique');
@@ -2006,29 +2106,54 @@ async function addDividende() {
 ══════════════════════════════════════════════════════ */
 async function loadAnalyses() {
     const rows = await sbGet('analyses', 'select=*&order=date_analyse.desc&limit=100');
+    anData = rows || [];
     const list = document.getElementById('an-list');
     const cnt = document.getElementById('an-count');
     if(cnt) cnt.textContent = (rows||[]).length;
     if (!list) return;
     if (!rows?.length) { list.innerHTML = '<div style="padding:18px;color:var(--muted);text-align:center;">Aucune analyse</div>'; return; }
-    list.innerHTML = rows.map(function(r){
-        var resume = (r.resume||'').substring(0,180) + ((r.resume||'').length>180?'...':'');
-        return '<div class="analyse-item">' +
-            '<div style="flex:1;min-width:200px;">' +
-              '<div style="font-family:var(--serif);font-size:15px;color:var(--gold);margin-bottom:4px;">' + (r.titre||'Sans titre') + '</div>' +
-              '<div style="font-size:12px;color:var(--muted);">' + r.ticker + ' · ' + (r.analyste||'—') + ' · ' + fmtDate(r.date_analyse) + '</div>' +
-              '<div style="font-size:12px;color:var(--muted);margin-top:4px;line-height:1.5;">' + resume + '</div>' +
-            '</div>' +
-            '<div style="text-align:right;">' +
-              '<span class="badge ' + (r.recommandation==='Acheter'?'badge-green':r.recommandation==='Vendre'?'badge-red':'badge-gold') + '">' + r.recommandation + '</span>' +
-              '<div style="font-family:var(--mono);font-size:16px;color:var(--cream);margin-top:6px;">' + fmt(r.cours_cible) + '</div>' +
-              '<button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditAn(this)">✎</button> ' +
-              '<button class="btn btn-danger btn-sm" style="margin-top:8px;" data-id="' + r.id + '" onclick="handleDeleteAn(this)">✕</button>' +
-            '</div>' +
+
+    resetSelection();
+    list.innerHTML = '<div class="tw"><table style="width:100%;font-size:13px;">' +
+        '<thead><tr>' +
+        '<th><input type="checkbox" class="row-check" onchange="toggleAll(anData.map(function(r){return r.id}),this)"></th>' +
+        '<th>Titre</th><th>Ticker</th><th>Recommandation</th><th>Cible</th><th>Date</th><th>Actions</th>' +
+        '</tr></thead><tbody>' +
+        rows.map(function(r){
+            var resume = (r.resume || '').substring(0, 180) + ((r.resume || '').length > 180 ? '...' : '');
+            return '<tr>' +
+                '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
+                '<td style="font-family:var(--serif);color:var(--gold);">' + (r.titre || 'Sans titre') + '</td>' +
+                '<td>' + r.ticker + '</td>' +
+                '<td><span class="badge ' + (r.recommandation === 'Acheter' ? 'badge-green' : r.recommandation === 'Vendre' ? 'badge-red' : 'badge-gold') + '">' + r.recommandation + '</span></td>' +
+                '<td class="r td-mono">' + fmt(r.cours_cible) + '</td>' +
+                '<td class="td-muted">' + fmtDate(r.date_analyse) + '</td>' +
+                '<td>' +
+                    '<button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditAn(this)">✎</button> ' +
+                    '<button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteAn(this)">✕</button>' +
+                '</td>' +
+                '</tr>';
+        }).join('') + '</tbody></table></div>';
+
+    var card = list.closest('.card');
+    var existingBar = document.getElementById('bulk-bar-an');
+    if (!existingBar && card) {
+        var bar = document.createElement('div');
+        bar.id = 'bulk-bar-an';
+        bar.className = 'bulk-bar';
+        bar.innerHTML = '<div class="bulk-actions">' +
+            '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+            '<button class="btn btn-danger btn-sm" onclick="bulkDeleteAn()">🗑 Supprimer la sélection</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
             '</div>';
-    }).join('');
+        card.insertBefore(bar, card.querySelector('#an-list'));
+    }
+    updateBulkBar();
 }
 
+function bulkDeleteAn() {
+    bulkDelete('analyses', 'id', loadAnalyses, 'analyses');
+}
 async function deleteAnalyseRow(id) {
     if (!doubleConfirm('Supprimer cette analyse ?')) return;
     const ok = await sbDel('analyses', 'id=eq.' + id);
