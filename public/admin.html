@@ -1644,7 +1644,7 @@ function renderCoursTable(data) {
             bar.className = 'bulk-bar';
             bar.innerHTML = '<div class="bulk-actions">' +
                 '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
-                '<button class="btn btn-danger btn-sm" onclick="bulkDeleteCours()">🗑 Supprimer la sélection</button>' +
+                '<button class="btn btn-danger btn-sm" onclick="()">🗑 Supprimer la sélection</button>' +
                 '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
                 '</div>';
             card.insertBefore(bar, card.querySelector('.tw'));
@@ -1657,7 +1657,23 @@ function renderCoursTable(data) {
 function bulkDeleteCours() {
     bulkDelete('cours', 'id', loadCours, 'cours');
 }
+function handleEditUsr(el) { openUsrModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
 
+function bulkDeleteEnt() {
+    bulkDelete('entreprises', 'ticker', loadEntreprises, 'entreprises');
+}
+function bulkDeleteFin() {
+    bulkDelete('financials', 'id', loadFinancials, 'financials');
+}
+function bulkDeleteDiv() {
+    bulkDelete('dividendes_calendrier', 'id', loadDividendes, 'dividendes');
+}
+function bulkDeleteUsr() {
+    bulkDelete('users', 'id', loadUsers, 'utilisateurs');
+}
+function bulkDeleteIdx() {
+    bulkDelete('indices', 'id', loadIndices, 'indices');
+}
 function filterCoursTable() {
     const f = v('cours-filter').toUpperCase();
     const d = v('cours-date-filter');
