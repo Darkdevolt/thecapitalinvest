@@ -446,7 +446,7 @@
                 </div>
                 <div class="tw">
                     <table>
-                        <thead><tr><th>Ticker</th><th>Nom</th><th>Secteur</th><th>Pays</th><th>Compartiment</th><th>ISIN</th><th>Statut</th><th>Actions</th></tr></thead>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(entData.map(function(r){return r.ticker}),this)"></th><th>Ticker</th><th>Nom</th><th>Secteur</th><th>Pays</th><th>Compartiment</th><th>ISIN</th><th>Statut</th><th>Actions</th></tr></thead>
                         <tbody id="ent-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                     </table>
                 </div>
@@ -535,7 +535,7 @@
                 </div>
                 <div class="tw">
                     <table>
-                        <thead><tr><th>Ticker</th><th>Année</th><th>Période</th><th class="r">CA</th><th class="r">RBE</th><th class="r">Rés. net</th><th class="r">BPA</th><th class="r">DPA</th><th class="r">Dettes fin.</th><th>Source</th><th></th></tr></thead>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(finData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Année</th><th>Période</th><th class="r">CA</th><th class="r">RBE</th><th class="r">Rés. net</th><th class="r">BPA</th><th class="r">DPA</th><th class="r">Dettes fin.</th><th>Source</th><th></th></tr></thead>
                         <tbody id="fin-tbody"><tr><td colspan="11"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                     </table>
                 </div>
@@ -581,7 +581,7 @@
             </div>
             <div class="tw">
                 <table>
-                    <thead><tr><th>Ticker</th><th>Année</th><th>Exercice</th><th class="r">Montant</th><th class="r">Rend.</th><th>Ex-div.</th><th>Paiement</th><th>Statut</th><th></th></tr></thead>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(divData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Année</th><th>Exercice</th><th class="r">Montant</th><th class="r">Rend.</th><th>Ex-div.</th><th>Paiement</th><th>Statut</th><th></th></tr></thead>
                     <tbody id="div-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
             </div>
@@ -646,7 +646,7 @@
             </div>
             <div class="tw">
                 <table>
-                    <thead><tr><th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th><th>Admin</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(usrData.map(function(r){return r.id}),this)"></th><th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th><th>Admin</th><th>Inscrit le</th><th>Actions</th></tr></thead>
                     <tbody id="usr-tbody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
             </div>
@@ -852,8 +852,7 @@
                 </div>
                 <div class="tw">
                     <table>
-                        <thead><tr><th>Indice</th><th>Date</th><th class="r">Valeur</th><th class="r">Variation</th><th class="r">Var. %</th><th></th></tr></thead>
-                        <tbody id="idx-tbody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+<thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(idxData.map(function(r){return r.id}),this)"></th><th>Indice</th><th>Date</th><th class="r">Valeur</th><th class="r">Variation</th><th class="r">Var. %</th><th></th></tr></thead>                        <tbody id="idx-tbody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -1644,7 +1643,7 @@ function renderCoursTable(data) {
             bar.className = 'bulk-bar';
             bar.innerHTML = '<div class="bulk-actions">' +
                 '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
-                '<button class="btn btn-danger btn-sm" onclick="()">🗑 Supprimer la sélection</button>' +
+                '<button class="btn btn-danger btn-sm" onclick="bulkDeleteCours()">🗑 Supprimer la sélection</button>' +
                 '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
                 '</div>';
             card.insertBefore(bar, card.querySelector('.tw'));
@@ -1875,9 +1874,11 @@ function renderEntTable(data) {
     const cnt = document.getElementById('ent-count');
     if(cnt) cnt.textContent = data.length;
     if (!tb) return;
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucune entreprise</td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucune entreprise</td></tr>'; return; }
+    resetSelection();
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
+            '<td><input type="checkbox" class="row-check" data-id="' + r.ticker + '" onchange="toggleRow(\'' + r.ticker + '\',this)"></td>' +
             '<td class="td-gold">' + r.ticker + '</td>' +
             '<td>' + r.nom + '</td>' +
             '<td class="td-muted">' + (r.secteur||'—') + '</td>' +
@@ -1889,6 +1890,21 @@ function renderEntTable(data) {
               '<button class="btn btn-danger btn-sm" data-ticker="' + r.ticker + '" onclick="handleDeleteEnt(this)">✕</button></td>' +
             '</tr>';
     }).join('');
+
+    var card = tb.closest('.card');
+    var existingBar = document.getElementById('bulk-bar-ent');
+    if (!existingBar && card) {
+        var bar = document.createElement('div');
+        bar.id = 'bulk-bar-ent';
+        bar.className = 'bulk-bar';
+        bar.innerHTML = '<div class="bulk-actions">' +
+            '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+            '<button class="btn btn-danger btn-sm" onclick="bulkDeleteEnt()">🗑 Supprimer la sélection</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
+            '</div>';
+        card.insertBefore(bar, card.querySelector('.tw'));
+    }
+    updateBulkBar();
 }
 
 function filterEntTable() {
@@ -1954,9 +1970,11 @@ function renderFinTable(data) {
     const cnt = document.getElementById('fin-count');
     if(cnt) cnt.textContent = data.length;
     if (!tb) return;
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="11" style="text-align:center;color:var(--muted);padding:20px;">Aucun financial</td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px;">Aucun financial</td></tr>'; return; }
+    resetSelection();
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
+            '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
             '<td class="td-gold">' + r.ticker + '</td>' +
             '<td>' + r.annee + '</td>' +
             '<td><span class="badge badge-blue">' + (r.periode||'annuel') + '</span></td>' +
@@ -1971,6 +1989,21 @@ function renderFinTable(data) {
               '<button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteFin(this)">✕</button></td>' +
             '</tr>';
     }).join('');
+
+    var card = tb.closest('.card');
+    var existingBar = document.getElementById('bulk-bar-fin');
+    if (!existingBar && card) {
+        var bar = document.createElement('div');
+        bar.id = 'bulk-bar-fin';
+        bar.className = 'bulk-bar';
+        bar.innerHTML = '<div class="bulk-actions">' +
+            '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+            '<button class="btn btn-danger btn-sm" onclick="bulkDeleteFin()">🗑 Supprimer la sélection</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
+            '</div>';
+        card.insertBefore(bar, card.querySelector('.tw'));
+    }
+    updateBulkBar();
 }
 
 function filterFinTable() {
@@ -2067,9 +2100,11 @@ function renderDivTable(data) {
     const cnt = document.getElementById('div-count');
     if(cnt) cnt.textContent = data.length;
     if (!tb) return;
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucun dividende</td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucun dividende</td></tr>'; return; }
+    resetSelection();
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
+            '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
             '<td class="td-gold">' + r.ticker + '</td>' +
             '<td>' + r.annee + '</td>' +
             '<td class="td-muted">' + (r.exercice||'—') + '</td>' +
@@ -2082,6 +2117,21 @@ function renderDivTable(data) {
               '<button class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteDiv(this)">✕</button></td>' +
             '</tr>';
     }).join('');
+
+    var card = tb.closest('.card');
+    var existingBar = document.getElementById('bulk-bar-div');
+    if (!existingBar && card) {
+        var bar = document.createElement('div');
+        bar.id = 'bulk-bar-div';
+        bar.className = 'bulk-bar';
+        bar.innerHTML = '<div class="bulk-actions">' +
+            '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+            '<button class="btn btn-danger btn-sm" onclick="bulkDeleteDiv()">🗑 Supprimer la sélection</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
+            '</div>';
+        card.insertBefore(bar, card.querySelector('.tw'));
+    }
+    updateBulkBar();
 }
 
 async function deleteDivRow(id) {
@@ -2225,9 +2275,11 @@ function renderUsrTable(data) {
     const cnt = document.getElementById('usr-count');
     if(cnt) cnt.textContent = data.length;
     if (!tb) return;
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Aucun utilisateur</td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:20px;">Aucun utilisateur</td></tr>'; return; }
+    resetSelection();
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
+            '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
             '<td>' + r.email + '</td>' +
             '<td>' + (r.nom||'—') + '</td>' +
             '<td><span class="badge ' + (r.plan==='elite'?'badge-gold':r.plan==='pro'?'badge-blue':'badge-green') + '">' + (r.plan||'free') + '</span></td>' +
@@ -2237,6 +2289,21 @@ function renderUsrTable(data) {
             '<td><button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditUsr(this)">✎</button></td>' +
             '</tr>';
     }).join('');
+
+    var card = tb.closest('.card');
+    var existingBar = document.getElementById('bulk-bar-usr');
+    if (!existingBar && card) {
+        var bar = document.createElement('div');
+        bar.id = 'bulk-bar-usr';
+        bar.className = 'bulk-bar';
+        bar.innerHTML = '<div class="bulk-actions">' +
+            '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+            '<button class="btn btn-danger btn-sm" onclick="bulkDeleteUsr()">🗑 Supprimer la sélection</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
+            '</div>';
+        card.insertBefore(bar, card.querySelector('.tw'));
+    }
+    updateBulkBar();
 }
 
 function filterUsrTable() {
@@ -3036,9 +3103,11 @@ function renderIndicesTable(data) {
     const cnt = document.getElementById('idx-count');
     if(cnt) cnt.textContent = data.length;
     if (!tb) return;
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--muted);padding:20px;">Aucun indice</td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:20px;">Aucun indice</td></tr>'; return; }
+    resetSelection();
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
+            '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
             '<td class="td-gold">' + (r.indice || '—') + '</td>' +
             '<td class="td-muted">' + (r.date_seance || '—') + '</td>' +
             '<td class="r td-mono">' + fmt(r.valeur) + '</td>' +
@@ -3050,6 +3119,21 @@ function renderIndicesTable(data) {
             '</td>' +
             '</tr>';
     }).join('');
+
+    var card = tb.closest('.card');
+    var existingBar = document.getElementById('bulk-bar-idx');
+    if (!existingBar && card) {
+        var bar = document.createElement('div');
+        bar.id = 'bulk-bar-idx';
+        bar.className = 'bulk-bar';
+        bar.innerHTML = '<div class="bulk-actions">' +
+            '<span class="bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+            '<button class="btn btn-danger btn-sm" onclick="bulkDeleteIdx()">🗑 Supprimer la sélection</button>' +
+            '<button class="btn btn-outline btn-sm" onclick="resetSelection();updateBulkBar();">↺ Tout désélectionner</button>' +
+            '</div>';
+        card.insertBefore(bar, card.querySelector('.tw'));
+    }
+    updateBulkBar();
 }
 
 function filterIndicesTable() {
