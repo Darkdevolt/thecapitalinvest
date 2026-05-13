@@ -973,6 +973,7 @@ function doubleConfirm(msg) {
 }
 function handleEditCours(el) { editCours(JSON.parse(decodeURIComponent(el.dataset.row))); }
 function handleDeleteCours(el) { deleteCours(el.dataset.ticker, el.dataset.date); }
+function handleEditUsr(el) { openUsrModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
 function handleDeleteHist(el) { deleteHistRow(el.dataset.id); }
 function handleDeleteAllHist(el) { deleteAllHistoriqueTicker(); }
 function handleEditEnt(el) { openEntModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
@@ -1653,7 +1654,6 @@ function renderCoursTable(data) {
 function bulkDeleteCours() {
     bulkDelete('cours', 'id', loadCours, 'cours');
 }
-function handleEditUsr(el) { openUsrModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
 
 function bulkDeleteEnt() {
     bulkDelete('entreprises', 'ticker', loadEntreprises, 'entreprises');
@@ -2896,6 +2896,21 @@ async function confirmImport() {
         trs.forEach(function(tr){
             var idx = parseInt(tr.dataset.lineIdx);
             var row = {};
+            // VÉRIFICATION DES TICKERS (ajouter ceci)
+    var tickers = [...new Set(prepared.map(r => r.ticker).filter(Boolean))];
+    if (tickers.length && config.table !== 'entreprises') {
+        var check = await verifyTickers(tickers);
+        if (!check.ok) {
+            currentUpload.missingTickers = check.missing;
+            var msgEl = document.getElementById('import-msg');
+            if (msgEl) {
+                msgEl.innerHTML = '<span style="color:var(--orange);">⚠️ Tickers manquants : ' + check.missing.join(', ') + 
+                    '. <button onclick=\"autoCreateTickers()\" class=\"btn btn-orange btn-sm\">Créer automatiquement</button></span>';
+                msgEl.className = 'msg err';
+            }
+            return;
+        }
+    }
             // Recopie toutes les clés existantes
             if (currentUpload.data[idx]) {
                 for (var k in currentUpload.data[idx]) row[k] = currentUpload.data[idx][k];
@@ -3059,29 +3074,40 @@ async function deleteBocRow(id) {
 }
     async function recalcVariations() {
     const rows = await sbGet('cours', 'select=*&order=ticker.asc,date_seance.asc');
-    if (!rows || !rows.length) { toast("Aucun cours trouvé", "err"); return; }
-    let updated = 0;
+    if (!rows?.length) { toast("Aucun cours trouvé", "err"); return; }
+    
+    let updates = [];
     let byTicker = {};
     rows.forEach(r => {
         if (!byTicker[r.ticker]) byTicker[r.ticker] = [];
         byTicker[r.ticker].push(r);
     });
+    
     for (let ticker in byTicker) {
-        let list = byTicker[ticker];
-        // trier par date croissante (au cas où)
-        list.sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance));
+        let list = byTicker[ticker].sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance));
         for (let i = 1; i < list.length; i++) {
             let prev = list[i-1], cur = list[i];
             if (prev.cours && cur.cours && prev.cours > 0) {
-                let varPct = (cur.cours - prev.cours) / prev.cours * 100;
-                await sbPatch('cours', `id=eq.${cur.id}`, { variation: parseFloat(varPct.toFixed(2)) });
-                updated++;
+                let varPct = parseFloat(((cur.cours - prev.cours) / prev.cours * 100).toFixed(2));
+                updates.push({ id: cur.id, variation: varPct });
             }
         }
     }
-    const txt = updated + ' variations mises à jour';
-    toast(txt, 'ok');
-    appendScraperLog(txt, 'ok');
+    
+    // Batch en groupes de 50
+    let updated = 0;
+    for (let i = 0; i < updates.length; i += 50) {
+        let batch = updates.slice(i, i + 50);
+        // Note: Supabase REST ne supporte pas le batch PATCH natif
+        // Alternative: Edge Function ou boucle avec délai
+        for (let u of batch) {
+            await sbPatch('cours', `id=eq.${u.id}`, { variation: u.variation });
+            updated++;
+        }
+        if (i + 50 < updates.length) await new Promise(r => setTimeout(r, 100)); // rate limiting
+    }
+    
+    toast(updated + ' variations mises à jour', 'ok');
     loadCours();
 }
 /* ══════════════════════════════════════════════════════
