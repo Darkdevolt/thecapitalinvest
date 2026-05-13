@@ -336,8 +336,8 @@
             </div>
             <div class="tw">
                 <table>
-                    <thead><tr><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Capi.</th><th class="r">H52</th><th class="r">B52</th><th></th></tr></thead>
-                    <tbody id="cours-tbody"><tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th>
+                    <tbody id="cours-tbody"><tr><td colspan="13"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
             </div>
             <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
@@ -409,7 +409,7 @@
                 </div>
                 <div class="tw">
                     <table>
-                        <thead><tr><th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th></th></tr></thead>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th>
                         <tbody id="hist-tbody"><tr><td colspan="9"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
                     </table>
                 </div>
@@ -1100,7 +1100,7 @@ function normalizeExcelValue(val, key) {
 }
 function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
 
-let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [];
+let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [], anData = [];
 let diagData = null;
 let activeTab = 'dashboard';
 
@@ -1728,7 +1728,9 @@ async function loadHistoriqueTicker() {
     const hCount = document.getElementById('hist-count');
     if(hCount) hCount.textContent = histData.length + ' ligne(s)';
 }
-
+function bulkDeleteHist() {
+    bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique');
+}
 async function deleteHistRow(id) {
     if (!doubleConfirm("Supprimer cette ligne d'historique ?")) return;
     const ok = await sbDel('historique', 'id=eq.' + id);
