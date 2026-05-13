@@ -245,7 +245,6 @@
         th .row-check { accent-color: var(--gold); }
     </style>
 <base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
@@ -1216,14 +1215,14 @@ async function init() {
     try { sess = JSON.parse(s); } catch(e) { location.href = 'login.html'; return; }
 
     // Gère plusieurs formats de session possibles
-    const session = sess?.data?.session || sess?.session || sess;
-    const userObj = sess?.data?.user || sess?.user || null;
+    const session = sess && sess.data && sess.data.session ? sess.data.session : (sess && sess.session ? sess.session : sess);
+    const userObj = sess && sess.data && sess.data.user ? sess.data.user : (sess && sess.user ? sess.user : null);
 
-    TK = session?.access_token || sess?.access_token || '';
+    TK = session && session.access_token ? session.access_token : (sess && sess.access_token ? sess.access_token : '');
     if (!TK) { location.href = 'login.html'; return; }
 
-    const userId    = userObj?.id || sess?.id || null;
-    const userEmail = userObj?.email || sess?.email || '';
+    const userId    = userObj && userObj.id ? userObj.id : (sess && sess.id ? sess.id : null);
+    const userEmail = userObj && userObj.email ? userObj.email : (sess && sess.email ? sess.email : '');
 
     if (!userId) {
         hideLoadingScreen();
@@ -1235,7 +1234,7 @@ async function init() {
 
     try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
+        const t = setTimeout(function() { ctrl.abort(); }, 10000);
 
         const r = await fetch(
             SB_REST + '/users?select=id,is_admin,email,nom&id=eq.' + encodeURIComponent(userId),
@@ -1248,17 +1247,17 @@ async function init() {
             throw new Error('HTTP ' + r.status + ' — ' + errText.substring(0, 200));
         }
 
-        let rows = await r.json().catch(() => []);
+        let rows = await r.json().catch(function() { return []; });
 
-        if (!rows?.length && userEmail) {
+        if (!rows || !rows.length && userEmail) {
             const r2 = await fetch(
                 SB_REST + '/users?select=id,is_admin,email,nom&email=eq.' + encodeURIComponent(userEmail),
                 { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + TK } }
             );
-            rows = await r2.json().catch(() => []);
+            rows = await r2.json().catch(function() { return []; });
         }
 
-        const user = rows?.[0];
+        const user = rows && rows[0] ? rows[0] : null;
         if (!user) {
             hideLoadingScreen();
             showFatalError('Compte introuvable', 'Votre compte n\'existe pas dans la base ou les droits RLS bloquent l\'accès.');
@@ -1267,7 +1266,7 @@ async function init() {
         if (!user.is_admin) {
             hideLoadingScreen();
             showFatalError('Accès refusé', 'Vous n\'avez pas les droits administrateur.');
-            setTimeout(() => { location.href = 'app.html'; }, 2000);
+            setTimeout(function() { location.href = 'app.html'; }, 2000);
             return;
         }
 
@@ -1296,15 +1295,15 @@ async function init() {
 function doLogout() { localStorage.removeItem(SK); location.href = 'login.html'; }
 
 /* ── HELPERS ──────────────────────────────────────────────────── */
-const v   = id => (document.getElementById(id)?.value || '').trim();
-const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
-const pf  = id => { const n = parseFloat(v(id)); return isNaN(n) ? null : n; };
-const pi  = id => { const n = parseInt(v(id)); return isNaN(n) ? null : n; };
-const fmt     = n => n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 4}) : '—';
-const fmtPct  = n => n != null && !isNaN(n) ? (Number(n)>=0?'+':'') + Number(n).toFixed(2) + '%' : '—';
-const clrPct  = n => Number(n)>=0 ? 'var(--green)' : 'var(--red)';
-const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
-function clearForm(ids) { ids.forEach(id => set(id, '')); }
+const v   = function(id) { return (document.getElementById(id) && document.getElementById(id).value || '').trim(); };
+const set = function(id, val) { const el = document.getElementById(id); if (el) el.value = val !== undefined && val !== null ? val : ''; };
+const pf  = function(id) { const n = parseFloat(v(id)); return isNaN(n) ? null : n; };
+const pi  = function(id) { const n = parseInt(v(id)); return isNaN(n) ? null : n; };
+const fmt     = function(n) { return n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 4}) : '—'; };
+const fmtPct  = function(n) { return n != null && !isNaN(n) ? (Number(n)>=0?'+':'') + Number(n).toFixed(2) + '%' : '—'; };
+const clrPct  = function(n) { return Number(n)>=0 ? 'var(--green)' : 'var(--red)'; };
+const fmtDate = function(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; };
+function clearForm(ids) { ids.forEach(function(id) { set(id, ''); }); }
 function clearBulk() { set('bulk-csv',''); const bp = document.getElementById('bulk-preview'); if(bp) bp.style.display='none'; }
 /* ── RAFRAÎCHISSEMENT TOKEN SUPABASE ─────────────────────────── */
 async function refreshSession() {
@@ -1312,7 +1311,7 @@ async function refreshSession() {
     if (!raw) return false;
     let sess;
     try { sess = JSON.parse(raw); } catch(e) { return false; }
-    const refresh = sess?.data?.session?.refresh_token || sess?.session?.refresh_token || sess?.refresh_token;
+    const refresh = sess && sess.data && sess.data.session && sess.data.session.refresh_token ? sess.data.session.refresh_token : (sess && sess.session && sess.session.refresh_token ? sess.session.refresh_token : (sess && sess.refresh_token ? sess.refresh_token : ''));
     if (!refresh) return false;
     try {
         const r = await fetch(SB_URL + '/auth/v1/token?grant_type=refresh_token', {
@@ -1348,26 +1347,27 @@ async function ensureAuth() {
     if (!raw) return false;
     let sess;
     try { sess = JSON.parse(raw); } catch(e) { return false; }
-    const session = sess?.data?.session || sess?.session || sess;
-    const expiresAt = session?.expires_at;
+    const session = sess && sess.data && sess.data.session ? sess.data.session : (sess && sess.session ? sess.session : sess);
+    const expiresAt = session && session.expires_at ? session.expires_at : null;
     if (expiresAt && (Date.now()/1000) > (expiresAt - 120)) return await refreshSession();
     return true;
 }
 function sbHeaders(extra) {
-    return Object.assign(
-        { apikey: SB_ANON, Authorization: 'Bearer ' + TK, 'Content-Type': 'application/json', Prefer: 'return=representation' },
-        extra || {}
-    );
+    var base = { apikey: SB_ANON, Authorization: 'Bearer ' + TK, 'Content-Type': 'application/json', Prefer: 'return=representation' };
+    if (extra) {
+        for (var k in extra) base[k] = extra[k];
+    }
+    return base;
 }
 
 async function sbGet(table, params) {
     try {
         const url = SB_REST + '/' + table + (params ? '?' + params : '');
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
+        const t = setTimeout(function() { ctrl.abort(); }, 10000);
         const r = await fetch(url, { headers: sbHeaders(), signal: ctrl.signal });
         clearTimeout(t);
-        if (!r.ok) { const e = await r.json().catch(()=>({})); toast((e?.message||'Erreur lecture') + ' [' + table + ']', 'err'); return null; }
+        if (!r.ok) { const e = await r.json().catch(function() { return {}; }); toast((e && e.message || 'Erreur lecture') + ' [' + table + ']', 'err'); return null; }
         return r.json();
     } catch(e) {
         if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
@@ -1380,7 +1380,7 @@ async function sbCount(table, params) {
         const cleanParams = params ? String(params).replace(/select=[^&]*/g, '').replace(/^&|&$/g, '') : '';
         const url = SB_REST + '/' + table + '?select=*&limit=0' + (cleanParams ? '&' + cleanParams : '');
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 8000);
+        const t = setTimeout(function() { ctrl.abort(); }, 8000);
         const r = await fetch(url, {
             headers: Object.assign({}, sbHeaders(), { Prefer: 'count=exact', Range: '0-0' }),
             signal: ctrl.signal
@@ -1412,13 +1412,13 @@ async function sbPost(table, body, onConflict) {
         }
 
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 15000);
+        const t = setTimeout(function() { ctrl.abort(); }, 15000);
         const r = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body), signal: ctrl.signal });
         clearTimeout(t);
 
         if (!r.ok) {
-            const e = await r.json().catch(()=>({}));
-            var errMsg = e?.message || e?.details || JSON.stringify(e);
+            const e = await r.json().catch(function() { return {}; });
+            var errMsg = e && e.message || e && e.details || JSON.stringify(e);
 
             // Retry automatique si JWT expiré
             if (/jwt|expired/i.test(errMsg)) {
@@ -1440,10 +1440,10 @@ async function sbPost(table, body, onConflict) {
 async function sbPatch(table, filter, body) {
     try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
+        const t = setTimeout(function() { ctrl.abort(); }, 10000);
         const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'PATCH', headers: sbHeaders(), body: JSON.stringify(body), signal: ctrl.signal });
         clearTimeout(t);
-        if (!r.ok) { const e = await r.json().catch(()=>({})); toast(e?.message||'Erreur MAJ', 'err'); return null; }
+        if (!r.ok) { const e = await r.json().catch(function() { return {}; }); toast(e && e.message || 'Erreur MAJ', 'err'); return null; }
         return r.json();
     } catch(e) {
         if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
@@ -1454,10 +1454,10 @@ async function sbPatch(table, filter, body) {
 async function sbDel(table, filter) {
     try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
+        const t = setTimeout(function() { ctrl.abort(); }, 10000);
         const r = await fetch(SB_REST + '/' + table + '?' + filter, { method:'DELETE', headers: sbHeaders(), signal: ctrl.signal });
         clearTimeout(t);
-        if (!r.ok) { const e = await r.json().catch(()=>({})); toast(e?.message||'Erreur suppression', 'err'); return false; }
+        if (!r.ok) { const e = await r.json().catch(function() { return {}; }); toast(e && e.message || 'Erreur suppression', 'err'); return false; }
         return true;
     } catch(e) {
         if (e.name !== 'AbortError') toast('Réseau: ' + e.message, 'err');
@@ -1525,7 +1525,7 @@ const INDICES_BRV = ['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT',
 function isIndice(ticker) {
     if (!ticker) return false;
     const t = String(ticker).trim().toUpperCase();
-    return INDICES_BRV.includes(t) || t.startsWith('BRVM');
+    return INDICES_BRV.indexOf(t) !== -1 || t.indexOf('BRVM') === 0;
 }
 
 /* ══════════════════════════════════════════════════════
@@ -1539,7 +1539,7 @@ async function loadDashboard() {
         sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
         sbCount('financials'), sbCount('dividendes_calendrier'), sbCount('users')
     ]);
-    const [nEnt, nCours, nHist, nFin, nDiv, nUsers] = counts;
+    const nEnt = counts[0], nCours = counts[1], nHist = counts[2], nFin = counts[3], nDiv = counts[4], nUsers = counts[5];
 
     const kEnt = document.getElementById('k-entreprises'); if(kEnt) kEnt.textContent = nEnt;
     const kCou = document.getElementById('k-cours');       if(kCou) kCou.textContent = nCours;
@@ -1548,23 +1548,21 @@ async function loadDashboard() {
     const kDiv = document.getElementById('k-dividendes');  if(kDiv) kDiv.textContent = nDiv;
     const kUsr = document.getElementById('k-users');       if(kUsr) kUsr.textContent = nUsers;
 
-    const [lastCours, usersPlans] = await Promise.all([
-        sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1'),
-        sbGet('users', 'select=plan')
-    ]);
+    const lastCours = await sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1');
+    const usersPlans = await sbGet('users', 'select=plan');
 
     const plans = { free:0, pro:0, elite:0 };
-    (usersPlans||[]).forEach(function(u){ if (u.plan in plans) plans[u.plan]++; });
+    (usersPlans || []).forEach(function(u){ if (u.plan in plans) plans[u.plan]++; });
     const ksUsr = document.getElementById('ks-users');
     if(ksUsr) ksUsr.textContent = 'Free:' + plans.free + ' Pro:' + plans.pro + ' Elite:' + plans.elite;
     const ksCou = document.getElementById('ks-cours');
-    if(ksCou) ksCou.textContent = 'Dernière: ' + ((lastCours||[])[0]?.date_seance || '—');
+    if(ksCou) ksCou.textContent = 'Dernière: ' + ((lastCours || [])[0] && (lastCours || [])[0].date_seance || '—');
 
     const dashInfo = document.getElementById('dash-info');
     if(dashInfo) {
         dashInfo.innerHTML =
             '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">' +
-            '<div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance :</span> <strong>' + ((lastCours||[])[0]?.date_seance||'—') + '</strong></div>' +
+            '<div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance :</span> <strong>' + ((lastCours || [])[0] && (lastCours || [])[0].date_seance || '—') + '</strong></div>' +
             '<div style="font-size:13px;"><span style="color:var(--muted);">Entreprises :</span> <strong>' + nEnt + '</strong></div>' +
             '<div style="font-size:13px;"><span style="color:var(--muted);">Historique :</span> <strong>' + nHist.toLocaleString('fr-FR') + '</strong></div>' +
             '</div>';
@@ -1577,11 +1575,9 @@ async function loadDashboardAlerts() {
     const panel = document.getElementById('dash-alerts');
     if(!panel) return;
     const alerts = [];
-    const [nullVar, nullCours, nullClot] = await Promise.all([
-        sbCount('cours', 'variation=is.null'),
-        sbCount('cours', 'cours=lte.0'),
-        sbCount('historique', 'cours_cloture=is.null')
-    ]);
+    const nullVar = await sbCount('cours', 'variation=is.null');
+    const nullCours = await sbCount('cours', 'cours=lte.0');
+    const nullClot = await sbCount('historique', 'cours_cloture=is.null');
     if (nullVar   > 0) alerts.push({ type:'warn', msg: nullVar   + ' cours sans variation' });
     if (nullCours > 0) alerts.push({ type:'err',  msg: nullCours + ' cours ≤ 0' });
     if (nullClot  > 0) alerts.push({ type:'warn', msg: nullClot  + ' historique sans cours_cloture' });
@@ -1675,7 +1671,7 @@ function filterCoursTable() {
     const f = v('cours-filter').toUpperCase();
     const d = v('cours-date-filter');
     renderCoursTable(coursData.filter(function(r){
-        return (!f || (r.ticker||'').includes(f)) && (!d || r.date_seance === d);
+        return (!f || (r.ticker||'').indexOf(f) !== -1) && (!d || r.date_seance === d);
     }));
 }
 
@@ -1808,7 +1804,7 @@ async function loadHistoriqueTicker() {
     if (!histData.length) {
         tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucun historique</td></tr>';
         if(btnDel) btnDel.style.display = 'none';
-       } else {
+    } else {
         resetSelection();
         tb.innerHTML = histData.map(function(r){
             return '<tr>' +
@@ -1841,6 +1837,7 @@ async function loadHistoriqueTicker() {
         updateBulkBar();
         if(btnDel) btnDel.style.display = '';
     }
+}
 
 async function deleteAllHistoriqueTicker() {
     const ticker = v('hist-ticker-search');
@@ -1899,7 +1896,7 @@ function renderEntTable(data) {
 
 function filterEntTable() {
     const f = v('ent-search').toLowerCase();
-    renderEntTable(entData.filter(function(r){ return !f || (r.ticker+r.nom+(r.secteur||'')+(r.pays||'')).toLowerCase().includes(f); }));
+    renderEntTable(entData.filter(function(r){ return !f || (r.ticker+r.nom+(r.secteur||'')+(r.pays||'')).toLowerCase().indexOf(f) !== -1; }));
 }
 
 function openEntModal(row) {
@@ -1948,7 +1945,7 @@ async function loadFinancials() {
     finData = rows || [];
     renderFinTable(finData);
     const years = [];
-    finData.forEach(function(r){ if (!years.includes(r.annee)) years.push(r.annee); });
+    finData.forEach(function(r){ if (years.indexOf(r.annee) === -1) years.push(r.annee); });
     years.sort(function(a,b){ return b-a; });
     const sel = document.getElementById('fin-year-filter');
     if(sel) sel.innerHTML = '<option value="">Toutes années</option>' + years.map(function(y){ return '<option value="' + y + '">' + y + '</option>'; }).join('');
@@ -2000,7 +1997,7 @@ function filterFinTable() {
     const f = v('fin-filter').toUpperCase();
     const y = v('fin-year-filter');
     renderFinTable(finData.filter(function(r){
-        return (!f || (r.ticker||'').includes(f)) && (!y || String(r.annee) === y);
+        return (!f || (r.ticker||'').indexOf(f) !== -1) && (!y || String(r.annee) === y);
     }));
 }
 
@@ -2058,7 +2055,7 @@ async function prefillFinancialFromTicker() {
     const rows = await sbGet('financials', params);
     if (!rows || !rows.length) {
         const ent = await sbGet('entreprises', 'select=nombre_actions&ticker=eq.' + encodeURIComponent(ticker));
-        if (ent?.[0]?.nombre_actions) { set('fin-nb-actions', ent[0].nombre_actions); toast('Nb. actions chargé depuis entreprises', 'info'); }
+        if (ent && ent[0] && ent[0].nombre_actions) { set('fin-nb-actions', ent[0].nombre_actions); toast('Nb. actions chargé depuis entreprises', 'info'); }
         else toast('Aucun financial trouvé pour ' + ticker, 'err');
         return;
     }
@@ -2132,7 +2129,7 @@ async function deleteDivRow(id) {
 
 function filterDivTable() {
     const f = v('div-filter').toLowerCase();
-    renderDivTable(divData.filter(function(r){ return !f || (r.ticker+(r.notes||'')).toLowerCase().includes(f); }));
+    renderDivTable(divData.filter(function(r){ return !f || (r.ticker+(r.notes||'')).toLowerCase().indexOf(f) !== -1; }));
 }
 
 async function addDividende() {
@@ -2165,9 +2162,9 @@ async function loadAnalyses() {
     anData = rows || [];
     const list = document.getElementById('an-list');
     const cnt = document.getElementById('an-count');
-    if(cnt) cnt.textContent = (rows||[]).length;
+    if(cnt) cnt.textContent = (rows || []).length;
     if (!list) return;
-    if (!rows?.length) { list.innerHTML = '<div style="padding:18px;color:var(--muted);text-align:center;">Aucune analyse</div>'; return; }
+    if (!rows || !rows.length) { list.innerHTML = '<div style="padding:18px;color:var(--muted);text-align:center;">Aucune analyse</div>'; return; }
 
     resetSelection();
     list.innerHTML = '<div class="tw"><table style="width:100%;font-size:13px;">' +
@@ -2301,7 +2298,7 @@ function filterUsrTable() {
     const f = v('usr-search').toLowerCase();
     const p = v('usr-plan-filter');
     renderUsrTable(usrData.filter(function(r){
-        return (!f || (r.email+(r.nom||'')).toLowerCase().includes(f)) && (!p || r.plan === p);
+        return (!f || (r.email+(r.nom||'')).toLowerCase().indexOf(f) !== -1) && (!p || r.plan === p);
     }));
 }
 
@@ -2344,20 +2341,20 @@ async function runScraper() {
     appendScraperLog('Lancement du scraper BRVM...', 'info');
     try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 30000);
+        const t = setTimeout(function() { ctrl.abort(); }, 30000);
         const r = await fetch(SB_URL + '/functions/v1/scrape-brvm', {
             method: 'POST',
             headers: { Authorization: 'Bearer ' + TK, 'Content-Type': 'application/json' },
             signal: ctrl.signal
         });
         clearTimeout(t);
-        const data = await r.json().catch(() => ({}));
+        const data = await r.json().catch(function() { return {}; });
         if (r.ok) {
             appendScraperLog('✓ Scraper terminé : ' + JSON.stringify(data), 'ok');
             if(msg){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }
             toast('Scraper terminé', 'ok');
         } else {
-            appendScraperLog('Erreur scraper : ' + (data?.message || r.status), 'err');
+            appendScraperLog('Erreur scraper : ' + (data && data.message || r.status), 'err');
             if(msg){ msg.textContent = 'Erreur : vérifiez l\'Edge Function'; msg.className = 'msg err'; }
         }
     } catch(e) {
@@ -2379,7 +2376,7 @@ async function syncHistFromCours() {
     const msg = document.getElementById('scraper-msg');
     if(msg){ msg.textContent = 'Sync en cours...'; msg.className = 'msg info'; }
     const rows = await sbGet('cours', 'select=*&order=date_seance.desc&limit=50');
-    if (!rows?.length) { if(msg){ msg.textContent = 'Aucun cours à synchroniser'; msg.className = 'msg err'; } return; }
+    if (!rows || !rows.length) { if(msg){ msg.textContent = 'Aucun cours à synchroniser'; msg.className = 'msg err'; } return; }
     const mapped = rows.map(function(r){
     return { ticker: r.ticker, date_seance: r.date_seance, cours_cloture: r.cours, variation: r.variation };
 });
@@ -2402,7 +2399,7 @@ async function runDiagnostic() {
         sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
         sbCount('financials'), sbCount('dividendes_calendrier')
     ]);
-    const [nEnt, nCours, nHist, nFin, nDiv] = counts;
+    const nEnt = counts[0], nCours = counts[1], nHist = counts[2], nFin = counts[3], nDiv = counts[4];
     const total = 5;
     const ok = [nEnt>0, nCours>0, nHist>0, nFin>0, nDiv>0].filter(Boolean).length;
     const score = Math.round(ok/total*100);
@@ -2446,7 +2443,7 @@ async function loadCoursErreurs() {
     const panel = document.getElementById('cours-erreurs-panel');
     const rows  = await sbGet('cours', 'select=*&or=(cours.lte.0,variation.is.null)&limit=50');
     if (!panel) return;
-    if (!rows?.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Aucun cours invalide</div>'; return; }
+    if (!rows || !rows.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Aucun cours invalide</div>'; return; }
     panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th><th>Date</th><th>Cours</th><th>Variation</th></tr></thead><tbody>' +
         rows.map(function(r){
             return '<tr><td>' + r.ticker + '</td><td>' + r.date_seance + '</td>' +
@@ -2460,8 +2457,8 @@ async function loadTickersSansFinancials() {
     const ents  = await sbGet('entreprises', 'select=ticker');
     const fins  = await sbGet('financials',  'select=ticker');
     if (!panel) return;
-    const finSet  = new Set((fins||[]).map(function(f){ return f.ticker; }));
-    const missing = (ents||[]).filter(function(e){ return !finSet.has(e.ticker); });
+    const finSet  = new Set((fins || []).map(function(f){ return f.ticker; }));
+    const missing = (ents || []).filter(function(e){ return !finSet.has(e.ticker); });
     if (!missing.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Tous les tickers ont des financials</div>'; return; }
     panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th></tr></thead><tbody>' +
         missing.map(function(e){ return '<tr><td>' + e.ticker + '</td></tr>'; }).join('') +
@@ -2615,9 +2612,9 @@ function headerMatches(detected, expected) {
     var norm = normalizeHeader(detected);
     if (norm === expected) return true;
     for (var syn in TEMPLATE_SYNONYMS) {
-        if (TEMPLATE_SYNONYMS[syn].includes(expected) && TEMPLATE_SYNONYMS[syn].includes(norm)) return true;
-        if (syn === expected && TEMPLATE_SYNONYMS[syn].includes(norm)) return true;
-        if (syn === norm && TEMPLATE_SYNONYMS[syn].includes(expected)) return true;
+        if (TEMPLATE_SYNONYMS[syn].indexOf(expected) !== -1 && TEMPLATE_SYNONYMS[syn].indexOf(norm) !== -1) return true;
+        if (syn === expected && TEMPLATE_SYNONYMS[syn].indexOf(norm) !== -1) return true;
+        if (syn === norm && TEMPLATE_SYNONYMS[syn].indexOf(expected) !== -1) return true;
     }
     return false;
 }
@@ -3055,37 +3052,37 @@ async function deleteBocRow(id) {
 }
     async function recalcVariations() {
     const rows = await sbGet('cours', 'select=*&order=ticker.asc,date_seance.asc');
-    if (!rows?.length) { toast("Aucun cours trouvé", "err"); return; }
+    if (!rows || !rows.length) { toast("Aucun cours trouvé", "err"); return; }
     
     let updates = [];
     let byTicker = {};
-    rows.forEach(r => {
+    rows.forEach(function(r) {
         if (!byTicker[r.ticker]) byTicker[r.ticker] = [];
         byTicker[r.ticker].push(r);
     });
     
-    for (let ticker in byTicker) {
-        let list = byTicker[ticker].sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance));
-        for (let i = 1; i < list.length; i++) {
-            let prev = list[i-1], cur = list[i];
+    for (var ticker in byTicker) {
+        var list = byTicker[ticker].sort(function(a,b) { return new Date(a.date_seance) - new Date(b.date_seance); });
+        for (var i = 1; i < list.length; i++) {
+            var prev = list[i-1], cur = list[i];
             if (prev.cours && cur.cours && prev.cours > 0) {
-                let varPct = parseFloat(((cur.cours - prev.cours) / prev.cours * 100).toFixed(2));
+                var varPct = parseFloat(((cur.cours - prev.cours) / prev.cours * 100).toFixed(2));
                 updates.push({ id: cur.id, variation: varPct });
             }
         }
     }
     
     // Batch en groupes de 50
-    let updated = 0;
-    for (let i = 0; i < updates.length; i += 50) {
-        let batch = updates.slice(i, i + 50);
+    var updated = 0;
+    for (var i = 0; i < updates.length; i += 50) {
+        var batch = updates.slice(i, i + 50);
         // Note: Supabase REST ne supporte pas le batch PATCH natif
         // Alternative: Edge Function ou boucle avec délai
-        for (let u of batch) {
-            await sbPatch('cours', `id=eq.${u.id}`, { variation: u.variation });
+        for (var j = 0; j < batch.length; j++) {
+            await sbPatch('cours', 'id=eq.' + batch[j].id, { variation: batch[j].variation });
             updated++;
         }
-        if (i + 50 < updates.length) await new Promise(r => setTimeout(r, 100)); // rate limiting
+        if (i + 50 < updates.length) await new Promise(function(resolve) { setTimeout(resolve, 100); }); // rate limiting
     }
     
     toast(updated + ' variations mises à jour', 'ok');
@@ -3143,7 +3140,7 @@ function filterIndicesTable() {
     const f = v('idx-filter').toUpperCase();
     const d = v('idx-date-filter');
     renderIndicesTable(idxData.filter(function(r){
-        return (!f || (r.indice||'').includes(f)) && (!d || r.date_seance === d);
+        return (!f || (r.indice||'').indexOf(f) !== -1) && (!d || r.date_seance === d);
     }));
 }
 
@@ -3246,7 +3243,7 @@ async function prefillAnalyseFromTicker() {
     const ticker = v('an-ticker');
     if (!ticker) return;
     const rows = await sbGet('cours', 'select=cours&order=date_seance.desc&limit=1&ticker=eq.' + encodeURIComponent(ticker));
-    if (rows?.[0]?.cours) {
+    if (rows && rows[0] && rows[0].cours) {
         set('an-cours', rows[0].cours);
         calcPotentiel();
     }
