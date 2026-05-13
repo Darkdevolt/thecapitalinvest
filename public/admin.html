@@ -245,6 +245,7 @@
         th .row-check { accent-color: var(--gold); }
     </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -1787,6 +1788,10 @@ function parseBulkPreview() {
     if(msg){ msg.textContent = lines.length + ' lignes détectées'; msg.className = 'msg info'; }
 }
 
+function bulkDeleteHist() {
+    bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique');
+}
+
 async function loadHistoriqueTicker() {
     const ticker = v('hist-ticker-search');
     const from   = v('hist-date-from');
@@ -1836,16 +1841,6 @@ async function loadHistoriqueTicker() {
         updateBulkBar();
         if(btnDel) btnDel.style.display = '';
     }
-
-    function bulkDeleteHist() {
-    bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique');
-}
-
-async function deleteHistRow(id) {
-    if (!doubleConfirm("Supprimer cette ligne d'historique ?")) return;
-    const ok = await sbDel('historique', 'id=eq.' + id);
-    if (ok) loadHistoriqueTicker();
-}
 
 async function deleteAllHistoriqueTicker() {
     const ticker = v('hist-ticker-search');
@@ -2896,21 +2891,7 @@ async function confirmImport() {
         trs.forEach(function(tr){
             var idx = parseInt(tr.dataset.lineIdx);
             var row = {};
-            // VÉRIFICATION DES TICKERS (ajouter ceci)
-    var tickers = [...new Set(prepared.map(r => r.ticker).filter(Boolean))];
-    if (tickers.length && config.table !== 'entreprises') {
-        var check = await verifyTickers(tickers);
-        if (!check.ok) {
-            currentUpload.missingTickers = check.missing;
-            var msgEl = document.getElementById('import-msg');
-            if (msgEl) {
-                msgEl.innerHTML = '<span style="color:var(--orange);">⚠️ Tickers manquants : ' + check.missing.join(', ') + 
-                    '. <button onclick=\"autoCreateTickers()\" class=\"btn btn-orange btn-sm\">Créer automatiquement</button></span>';
-                msgEl.className = 'msg err';
-            }
-            return;
-        }
-    }
+
             // Recopie toutes les clés existantes
             if (currentUpload.data[idx]) {
                 for (var k in currentUpload.data[idx]) row[k] = currentUpload.data[idx][k];
