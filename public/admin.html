@@ -245,9 +245,6 @@
         th .row-check { accent-color: var(--gold); }
     </style>
 <base target="_blank">
-<base target="_blank">
-<base target="_blank">
-<base target="_blank">
 </head>
 <body>
 
@@ -1843,9 +1840,7 @@ async function loadHistoriqueTicker() {
     function bulkDeleteHist() {
     bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique');
 }
-function bulkDeleteHist() {
-    bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique');
-}
+
 async function deleteHistRow(id) {
     if (!doubleConfirm("Supprimer cette ligne d'historique ?")) return;
     const ok = await sbDel('historique', 'id=eq.' + id);
@@ -2242,6 +2237,7 @@ async function addAnalyse() {
     const msg  = document.getElementById('an-msg');
     const body = {
         ticker: v('an-ticker'), recommandation: v('an-reco'),
+        titre: v('an-titre'),
         date_analyse: v('an-date')||new Date().toISOString().split('T')[0],
         analyste: v('an-analyste'), commentaire: v('an-resume')
     };
@@ -3267,6 +3263,7 @@ async function saveAnalyse() {
     const id  = v('modal-an-id');
     const msg = document.getElementById('modal-an-msg');
     const body = {
+        titre: v('modal-an-titre'),
         recommandation: v('modal-an-reco'),
         analyste: v('modal-an-analyste'),
         commentaire: v('modal-an-resume')
