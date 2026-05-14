@@ -1,95 +1,32 @@
-import { CONFIG } from './config.js';
-import { setToken, ensureAuth } from './api.js';
-import {
-    toast, showLoadingScreen, hideLoadingScreen, showFatalError,
-    closeModal, openModal, clearForm, v, set, pf, pi, fmt, fmtPct, clrPct, fmtDate,
-    toggleRow, toggleAll, resetSelection, updateBulkBar, isIndice, doubleConfirm
-} from './utils.js';
+'use strict';
 
-// ── Imports des panels (lazy + initial) ──
-import { loadDashboard } from './dashboard.js';
-
+let TK = '', ME = null;
+let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [], anData = [];
+let diagData = null;
 let activeTab = 'dashboard';
-let ME = null;
 
-// ── Rendre fonctions disponibles pour les onclick inline ──
-window.switchTab = switchTab;
-window.switchSubTab = switchSubTab;
-window.doLogout = doLogout;
-window.closeModal = closeModal;
-window.openModal = openModal;
-window.clearForm = clearForm;
-window.toggleRow = toggleRow;
-window.toggleAll = toggleAll;
-window.resetSelection = resetSelection;
-window.doubleConfirm = doubleConfirm;
-
-// ── Navigation ──
-const tabLoaders = {
-    dashboard:    () => import('./dashboard.js').then(m => m.loadDashboard()),
-    cours:        () => import('./cours.js').then(m => m.loadCours()),
-    historique:   () => {},
-    entreprises:  () => import('./entreprises.js').then(m => m.loadEntreprises()),
-    financials:   () => import('./financials.js').then(m => m.loadFinancials()),
-    dividendes:   () => import('./dividendes.js').then(m => m.loadDividendes()),
-    analyses:     () => import('./analyses.js').then(m => m.loadAnalyses()),
-    utilisateurs: () => import('./utilisateurs.js').then(m => m.loadUsers()),
-    scraper:      () => {},
-    import:       () => {},
-    diagnostic:   () => {},
-    indices:      () => import('./indices.js').then(m => m.loadIndices())
-};
-
-export function switchTab(name, el) {
-    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
-    const panel = document.getElementById('panel-' + name);
-    if (panel) panel.classList.add('active');
-    if (el && el.classList) el.classList.add('active');
-    if (name !== activeTab) {
-        activeTab = name;
-        const loader = tabLoaders[name];
-        if (typeof loader === 'function') loader();
-    }
-}
-
-export function switchSubTab(prefix, panelName, el) {
-    if (!el) return;
-    const container = el.closest('.tab-panel');
-    if (!container) return;
-    container.querySelectorAll('.sub-tab').forEach(t => t.classList.remove('active'));
-    el.classList.add('active');
-    ['ligne','bulk','view','list','add'].forEach(p => {
-        const e2 = document.getElementById(prefix + '-panel-' + p);
-        if (e2) e2.style.display = 'none';
-    });
-    const target = document.getElementById(prefix + '-panel-' + panelName);
-    if (target) target.style.display = '';
-}
-
-// ── Auth & Init ──
+/* ── INIT ───────────────────────────────────────────────────── */
 async function init() {
     showLoadingScreen('Vérification de la session...');
 
-    const s = localStorage.getItem(CONFIG.SK);
+    const s = localStorage.getItem(SK);
     if (!s) { location.href = 'login.html'; return; }
 
     let sess;
     try { sess = JSON.parse(s); } catch(e) { location.href = 'login.html'; return; }
 
-    const session = sess?.data?.session ?? sess?.session ?? sess;
-    const userObj = sess?.data?.user ?? sess?.user ?? null;
-    const token = session?.access_token ?? sess?.access_token ?? '';
+    const session = sess && sess.data && sess.data.session ? sess.data.session : (sess && sess.session ? sess.session : sess);
+    const userObj = sess && sess.data && sess.data.user ? sess.data.user : (sess && sess.user ? sess.user : null);
 
-    if (!token) { location.href = 'login.html'; return; }
-    setToken(token);
+    TK = session && session.access_token ? session.access_token : (sess && sess.access_token ? sess.access_token : '');
+    if (!TK) { location.href = 'login.html'; return; }
 
-    const userId    = userObj?.id ?? sess?.id ?? null;
-    const userEmail = userObj?.email ?? sess?.email ?? '';
+    const userId    = userObj && userObj.id ? userObj.id : (sess && sess.id ? sess.id : null);
+    const userEmail = userObj && userObj.email ? userObj.email : (sess && sess.email ? sess.email : '');
 
     if (!userId) {
         hideLoadingScreen();
-        showFatalError('Session invalide', 'Identifiant utilisateur introuvable. Essayez de vous reconnecter.');
+        showFatalError('Session invalide', 'Identifiant utilisateur introuvable dans la session. Essayez de vous reconnecter.');
         return;
     }
 
@@ -97,11 +34,11 @@ async function init() {
 
     try {
         const ctrl = new AbortController();
-        const t = setTimeout(() => ctrl.abort(), 10000);
+        const t = setTimeout(function() { ctrl.abort(); }, 10000);
 
         const r = await fetch(
-            CONFIG.SB_URL + '/rest/v1/users?select=id,is_admin,email,nom&id=eq.' + encodeURIComponent(userId),
-            { headers: { apikey: CONFIG.SB_ANON, Authorization: 'Bearer ' + token }, signal: ctrl.signal }
+            SB_REST + '/users?select=id,is_admin,email,nom&id=eq.' + encodeURIComponent(userId),
+            { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + TK }, signal: ctrl.signal }
         );
         clearTimeout(t);
 
@@ -110,17 +47,17 @@ async function init() {
             throw new Error('HTTP ' + r.status + ' — ' + errText.substring(0, 200));
         }
 
-        let rows = await r.json().catch(() => []);
+        let rows = await r.json().catch(function() { return []; });
 
-        if ((!rows || !rows.length) && userEmail) {
+        if (!rows || !rows.length && userEmail) {
             const r2 = await fetch(
-                CONFIG.SB_URL + '/rest/v1/users?select=id,is_admin,email,nom&email=eq.' + encodeURIComponent(userEmail),
-                { headers: { apikey: CONFIG.SB_ANON, Authorization: 'Bearer ' + token } }
+                SB_REST + '/users?select=id,is_admin,email,nom&email=eq.' + encodeURIComponent(userEmail),
+                { headers: { apikey: SB_ANON, Authorization: 'Bearer ' + TK } }
             );
-            rows = await r2.json().catch(() => []);
+            rows = await r2.json().catch(function() { return []; });
         }
 
-        const user = rows?.[0] ?? null;
+        const user = rows && rows[0] ? rows[0] : null;
         if (!user) {
             hideLoadingScreen();
             showFatalError('Compte introuvable', 'Votre compte n\'existe pas dans la base ou les droits RLS bloquent l\'accès.');
@@ -129,7 +66,7 @@ async function init() {
         if (!user.is_admin) {
             hideLoadingScreen();
             showFatalError('Accès refusé', 'Vous n\'avez pas les droits administrateur.');
-            setTimeout(() => location.href = 'app.html', 2000);
+            setTimeout(function() { location.href = 'app.html'; }, 2000);
             return;
         }
 
@@ -146,7 +83,8 @@ async function init() {
         if (e.name === 'AbortError') {
             showFatalError(
                 'Délai dépassé',
-                'La connexion a pris trop de temps.<br><br>• Token expiré<br>• RLS Supabase restrictif<br>• Problème réseau'
+                'La connexion a pris trop de temps.<br><br>' +
+                '• Token expiré<br>• RLS Supabase restrictif<br>• Problème réseau'
             );
         } else {
             showFatalError('Erreur de connexion', e.message || 'Erreur inconnue');
@@ -154,14 +92,122 @@ async function init() {
     }
 }
 
-function doLogout() {
-    localStorage.removeItem(CONFIG.SK);
-    location.href = 'login.html';
+function doLogout() { localStorage.removeItem(SK); location.href = 'login.html'; }
+
+/* ── NAVIGATION ───────────────────────────────────────────────── */
+const tabLoaders = {
+    dashboard:    loadDashboard,
+    cours:        loadCours,
+    historique:   function(){},
+    entreprises:  loadEntreprises,
+    financials:   loadFinancials,
+    dividendes:   loadDividendes,
+    analyses:     loadAnalyses,
+    utilisateurs: loadUsers,
+    import:       function(){},
+    indices:      loadIndices
+};
+
+function switchTab(name, el) {
+    document.querySelectorAll('.tab-panel').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.admin-tab').forEach(function(t){ t.classList.remove('active'); });
+    const panel = document.getElementById('panel-' + name);
+    if (panel) panel.classList.add('active');
+    if (el && el.classList) el.classList.add('active');
+    if (name !== activeTab) { activeTab = name; if (typeof tabLoaders[name] === 'function') tabLoaders[name](); }
 }
 
-// ── Démarrage ──
-init().catch(err => {
-    console.error('Fatal init error:', err);
-    hideLoadingScreen();
-    showFatalError('Erreur fatale', err.message || 'Erreur inconnue');
-});
+function switchSubTab(prefix, panel, el) {
+    if (!el) return;
+    const container = el.closest('.tab-panel');
+    if (!container) return;
+    container.querySelectorAll('.sub-tab').forEach(function(t){ t.classList.remove('active'); });
+    el.classList.add('active');
+    ['ligne','bulk','view','list','add'].forEach(function(p){
+        const e2 = document.getElementById(prefix + '-panel-' + p);
+        if (e2) e2.style.display = 'none';
+    });
+    const target = document.getElementById(prefix + '-panel-' + panel);
+    if (target) target.style.display = '';
+}
+
+/* ── SUPPRESSION MULTI-LIGNES (BULK DELETE) ─────────────────── */
+var selectedRows = new Set();
+
+function toggleRow(id, el) {
+    if (el.checked) selectedRows.add(id);
+    else selectedRows.delete(id);
+    updateBulkBar();
+}
+
+function toggleAll(ids, el) {
+    if (el.checked) ids.forEach(function(id){ selectedRows.add(id); });
+    else ids.forEach(function(id){ selectedRows.delete(id); });
+    document.querySelectorAll('.row-check[data-id]').forEach(function(cb){
+        cb.checked = el.checked;
+    });
+    updateBulkBar();
+}
+
+function updateBulkBar() {
+    var bars = document.querySelectorAll('.bulk-bar');
+    bars.forEach(function(bar){
+        var count = bar.querySelector('.bulk-count');
+        var actions = bar.querySelector('.bulk-actions');
+        if (count) count.textContent = selectedRows.size + ' sélectionné(s)';
+        if (actions) {
+            if (selectedRows.size > 0) actions.classList.add('active');
+            else actions.classList.remove('active');
+        }
+    });
+}
+
+function resetSelection() {
+    selectedRows.clear();
+    document.querySelectorAll('.row-check').forEach(function(cb){ cb.checked = false; });
+    updateBulkBar();
+}
+
+async function bulkDelete(table, idField, reloadFn, msgLabel) {
+    if (selectedRows.size === 0) { toast('Aucune ligne sélectionnée', 'err'); return; }
+    var ids = Array.from(selectedRows);
+    var label = msgLabel || 'ligne(s)';
+    if (!doubleConfirm('Supprimer ' + ids.length + ' ' + label + ' ? Cette action est irréversible.')) return;
+    if (!doubleConfirm('⚠️ CONFIRMATION FINALE : ' + ids.length + ' ' + label + ' seront définitivement effacées. Continuer ?')) return;
+
+    var deleted = 0;
+    for (var i = 0; i < ids.length; i++) {
+        var ok = await sbDel(table, idField + '=eq.' + ids[i]);
+        if (ok) deleted++;
+    }
+    toast('✓ ' + deleted + '/' + ids.length + ' ' + label + ' supprimée(s)', deleted === ids.length ? 'ok' : 'err');
+    resetSelection();
+    reloadFn();
+}
+
+/* ── HANDLERS BOUTONS & SUPPRESSIONS SÉCURISÉES ──────────────── */
+function handleEditCours(el) { editCours(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteCours(el) { deleteCours(el.dataset.ticker, el.dataset.date); }
+function handleEditUsr(el) { openUsrModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteHist(el) { deleteHistRow(el.dataset.id); }
+function handleDeleteAllHist(el) { deleteAllHistoriqueTicker(); }
+function handleEditEnt(el) { openEntModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteEnt(el) { deleteEntreprise(el.dataset.ticker); }
+function handleEditFin(el) { openFinModal(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteFin(el) { deleteFinancial(el.dataset.id); }
+function handleDeleteDiv(el) { deleteDivRow(el.dataset.id); }
+function handleEditDiv(el) { editDividende(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteAn(el) { deleteAnalyseRow(el.dataset.id); }
+function handleEditAn(el) { editAnalyse(JSON.parse(decodeURIComponent(el.dataset.row))); }
+function handleDeleteBoc(el) { deleteBocRow(el.dataset.id); }
+function handleDeleteIdx(el) { deleteIndiceRow(el.dataset.id); }
+function handleEditIdx(el) { editIndice(JSON.parse(decodeURIComponent(el.dataset.row))); }
+
+function bulkDeleteCours() { bulkDelete('cours', 'id', loadCours, 'cours'); }
+function bulkDeleteEnt() { bulkDelete('entreprises', 'ticker', loadEntreprises, 'entreprises'); }
+function bulkDeleteFin() { bulkDelete('financials', 'id', loadFinancials, 'financials'); }
+function bulkDeleteDiv() { bulkDelete('dividendes_calendrier', 'id', loadDividendes, 'dividendes'); }
+function bulkDeleteUsr() { bulkDelete('users', 'id', loadUsers, 'utilisateurs'); }
+function bulkDeleteIdx() { bulkDelete('indices', 'id', loadIndices, 'indices'); }
+function bulkDeleteAn() { bulkDelete('analyses', 'id', loadAnalyses, 'analyses'); }
+function bulkDeleteHist() { bulkDelete('historique', 'id', loadHistoriqueTicker, 'lignes historique'); }
