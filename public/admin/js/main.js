@@ -75,7 +75,8 @@ async function init() {
         if (adminUserEl) adminUserEl.textContent = ME.email;
 
         hideLoadingScreen();
-        await loadDashboard();
+        if (typeof loadDashboard === 'function') await loadDashboard();
+        else console.warn('[main] loadDashboard non disponible');
 
     } catch(e) {
         console.error('Init error:', e);
@@ -96,16 +97,16 @@ function doLogout() { localStorage.removeItem(SK); location.href = 'login.html';
 
 /* ── NAVIGATION ───────────────────────────────────────────────── */
 const tabLoaders = {
-    dashboard:    loadDashboard,
-    cours:        loadCours,
-    historique:   loadHistoriqueTicker,
-    entreprises:  loadEntreprises,
-    financials:   loadFinancials,
-    dividendes:   loadDividendes,
-    analyses:     loadAnalyses,
-    utilisateurs: loadUsers,
+    dashboard:    function(){ if(typeof loadDashboard === 'function') loadDashboard(); },
+    cours:        function(){ if(typeof loadCours === 'function') loadCours(); },
+    historique:   function(){ if(typeof loadHistoriqueTicker === 'function') loadHistoriqueTicker(); },
+    entreprises:  function(){ if(typeof loadEntreprises === 'function') loadEntreprises(); },
+    financials:   function(){ if(typeof loadFinancials === 'function') loadFinancials(); },
+    dividendes:   function(){ if(typeof loadDividendes === 'function') loadDividendes(); },
+    analyses:     function(){ if(typeof loadAnalyses === 'function') loadAnalyses(); },
+    utilisateurs: function(){ if(typeof loadUsers === 'function') loadUsers(); },
     import:       function(){},
-    indices:      loadIndices
+    indices:      function(){ if(typeof loadIndices === 'function') loadIndices(); }
 };
 
 function switchTab(name, el) {
