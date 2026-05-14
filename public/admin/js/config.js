@@ -1,8 +1,15 @@
-export const CONFIG = {
+const CONFIG = {
     SK: 'tc_session',
     SB_URL: 'https://otsiwiwlnowxeolbbgvm.supabase.co',
+    SB_REST: 'https://otsiwiwlnowxeolbbgvm.supabase.co/rest/v1',
     SB_ANON: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY',
     INDICES_BRV: ['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT','BRVM FINANCE','BRVM DISTRIBUTION','BRVM INDUSTRIE','BRVM AGRICULTURE','BRVM SERVICES PUBLICS','BRVM AUTRES SECTEURS']
 };
 
-export const SB_REST = CONFIG.SB_URL + '/rest/v1';
+let TK = '';
+let ME = null;
+let coursData = [], finData = [], divData = [], entData = [], usrData = [], histData = [], idxData = [], anData = [];
+let diagData = null;
+let activeTab = 'dashboard';
+let currentUpload = { data: [], config: null, filename: '' };
+let selectedRows = new Set();
