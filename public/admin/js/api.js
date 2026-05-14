@@ -114,12 +114,12 @@ async function sbPost(table, body, onConflict) {
 
             if (errMsg) {
                 if (errMsg.indexOf('foreign key') !== -1) {
-                    var t = body && body.ticker ? ' "' + body.ticker + '"' : '';
-                    errMsg = '⚠️ Ticker' + t + ' inexistant — créez-le d\'abord dans l\'onglet Entreprises.';
+                    var tickerLabel = body && body.ticker ? ' "' + body.ticker + '"' : '';
+                    errMsg = '⚠️ Ticker' + tickerLabel + ' inexistant — créez-le d\'abord dans l\'onglet Entreprises.';
                 } else if (errMsg.indexOf('duplicate') !== -1 || errMsg.indexOf('unique') !== -1) {
-                    var t = body && body.ticker ? ' pour ' + body.ticker : '';
-                    var d = body && body.date_seance ? ' du ' + body.date_seance : (body && body.annee ? ' ' + body.annee : '');
-                    errMsg = '⚠️ Entrée déjà existante' + t + d + ' — utilisez ✎ pour modifier.';
+                    var tickerLabel2 = body && body.ticker ? ' pour ' + body.ticker : '';
+                    var dateLabel = body && body.date_seance ? ' du ' + body.date_seance : (body && body.annee ? ' ' + body.annee : '');
+                    errMsg = '⚠️ Entrée déjà existante' + tickerLabel2 + dateLabel + ' — utilisez ✎ pour modifier.';
                 } else if (errMsg.indexOf('null value') !== -1 || errMsg.indexOf('not-null') !== -1) {
                     errMsg = '⚠️ Un champ obligatoire est vide — vérifiez ticker, date et valeur principale.';
                 } else if (errMsg.indexOf('invalid input syntax') !== -1) {
@@ -159,13 +159,6 @@ async function sbPatch(table, filter, body) {
         if (!r.ok) {
             const e = await r.json().catch(function() { return {}; });
             var raw = e && e.message || e && e.details || 'Erreur MAJ';
-            if (raw.indexOf('foreign key') !== -1)       raw = '⚠️ Référence invalide — le Je vais continuer le découpage des fichiers restants. Voici la suite complète :
-
----
-
-### 5. `public/admin/js/api.js` (suite)
-
-```javascript
             if (raw.indexOf('foreign key') !== -1)       raw = '⚠️ Référence invalide — le ticker lié n\'existe pas.';
             else if (raw.indexOf('duplicate') !== -1 || raw.indexOf('unique') !== -1) raw = '⚠️ Doublon — cette entrée existe déjà.';
             else if (raw.indexOf('null value') !== -1)   raw = '⚠️ Champ obligatoire vide.';
