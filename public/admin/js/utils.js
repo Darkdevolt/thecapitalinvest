@@ -1,37 +1,32 @@
-// ── DOM Helpers ──
-export const v   = (id) => (document.getElementById(id)?.value || '').trim();
-export const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val ?? ''; };
-export const pf  = (id) => { const n = parseFloat(v(id)); return isNaN(n) ? null : n; };
-export const pi  = (id) => { const n = parseInt(v(id)); return isNaN(n) ? null : n; };
+const v   = function(id) { return (document.getElementById(id) && document.getElementById(id).value || '').trim(); };
+const set = function(id, val) { const el = document.getElementById(id); if (el) el.value = val !== undefined && val !== null ? val : ''; };
+const pf  = function(id) { const n = parseFloat(v(id)); return isNaN(n) ? null : n; };
+const pi  = function(id) { const n = parseInt(v(id)); return isNaN(n) ? null : n; };
+const fmt     = function(n) { return n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 4}) : '—'; };
+const fmtPct  = function(n) { return n != null && !isNaN(n) ? (Number(n)>=0?'+':'') + Number(n).toFixed(2) + '%' : '—'; };
+const clrPct  = function(n) { return Number(n)>=0 ? 'var(--green)' : 'var(--red)'; };
+const fmtDate = function(d) { return d ? new Date(d).toLocaleDateString('fr-FR') : '—'; };
 
-// ── Formatters ──
-export const fmt     = (n) => n != null && !isNaN(n) ? Number(n).toLocaleString('fr-FR', {minimumFractionDigits: 0, maximumFractionDigits: 4}) : '—';
-export const fmtPct  = (n) => n != null && !isNaN(n) ? (Number(n)>=0?'+':'') + Number(n).toFixed(2) + '%' : '—';
-export const clrPct  = (n) => Number(n)>=0 ? 'var(--green)' : 'var(--red)';
-export const fmtDate = (d) => d ? new Date(d).toLocaleDateString('fr-FR') : '—';
+function clearForm(ids) { ids.forEach(function(id) { set(id, ''); }); }
+function clearBulk() { set('bulk-csv',''); const bp = document.getElementById('bulk-preview'); if(bp) bp.style.display='none'; }
 
-export function clearForm(ids) { ids.forEach(id => set(id, '')); }
-export function clearBulk() { set('bulk-csv',''); const bp = document.getElementById('bulk-preview'); if(bp) bp.style.display='none'; }
-
-// ── Notifications ──
-export function toast(msg, type = 'ok') {
+function toast(msg, type) {
+    type = type || 'ok';
     const c = document.getElementById('toast-container');
     if (!c) return;
     const t = document.createElement('div');
-    t.className = `toast ${type}`;
+    t.className = 'toast ' + type;
     t.textContent = msg;
     c.appendChild(t);
-    setTimeout(() => t.remove(), 4000);
+    setTimeout(function(){ t.remove(); }, 4000);
 }
 
-// ── Sécurité ──
-export function doubleConfirm(msg) {
+function doubleConfirm(msg) {
     if (!confirm(msg)) return false;
     return confirm('⚠️ Êtes-vous VRAIMENT sûr ? Cette action est irréversible et ne peut pas être annulée.');
 }
 
-// ── Écran de chargement ──
-export function showLoadingScreen(msg) {
+function showLoadingScreen(msg) {
     const screen = document.getElementById('loading-screen');
     const msgEl  = document.getElementById('loading-msg');
     if (screen) {
@@ -47,14 +42,14 @@ export function showLoadingScreen(msg) {
     if (freshMsg) freshMsg.textContent = msg || 'Chargement...';
 }
 
-export function hideLoadingScreen() {
+function hideLoadingScreen() {
     const screen = document.getElementById('loading-screen');
     const app    = document.getElementById('app-wrapper');
     if (screen) screen.style.display = 'none';
     if (app)    app.style.display = '';
 }
 
-export function showFatalError(title, details) {
+function showFatalError(title, details) {
     const screen = document.getElementById('loading-screen');
     if (screen) {
         screen.innerHTML =
@@ -72,21 +67,33 @@ export function showFatalError(title, details) {
     }
 }
 
-// ── Modals ──
-export function closeModal(id) { const el = document.getElementById(id); if(el) el.classList.remove('open'); }
-export function openModal(id)  { const el = document.getElementById(id); if(el) el.classList.add('open'); }
+function closeModal(id) { const el = document.getElementById(id); if(el) el.classList.remove('open'); }
+function openModal(id)  { const el = document.getElementById(id); if(el) el.classList.add('open'); }
 
-// ── Excel / Import helpers ──
-export function isDateField(key) {
+function switchSubTab(prefix, panel, el) {
+    if (!el) return;
+    const container = el.closest('.tab-panel');
+    if (!container) return;
+    container.querySelectorAll('.sub-tab').forEach(function(t){ t.classList.remove('active'); });
+    el.classList.add('active');
+    ['ligne','bulk','view','list','add'].forEach(function(p){
+        const e2 = document.getElementById(prefix + '-panel-' + p);
+        if (e2) e2.style.display = 'none';
+    });
+    const target = document.getElementById(prefix + '-panel-' + panel);
+    if (target) target.style.display = '';
+}
+
+function isDateField(key) {
     return /date|detachement|paiement|intro|entree|analyse|expiry/.test(String(key).toLowerCase());
 }
 
-export function isNumericField(key) {
+function isNumericField(key) {
     const k = String(key).toLowerCase();
     return /montant|taux|rendement|valeur|cours|volume|capitalisation|nombre|actions|chiffre|ca|rbe|resultat|net|bpa|dpa|fonds|dettes|actif|cfo|capex|variation|haut|bas|ouverture|cloture|plus_haut|plus_bas|indice/.test(k);
 }
 
-export function excelDateToISO(val) {
+function excelDateToISO(val) {
     if (!val && val !== 0) return null;
     if (typeof val === 'string') {
         const s = val.trim();
@@ -113,11 +120,11 @@ export function excelDateToISO(val) {
     if (n >= 60) date = new Date(date.getTime() + 24 * 60 * 60 * 1000);
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, '0');
-    const d = String(date.getDate()).padStart(2, '0');
+    const d = String(val.getDate()).padStart(2, '0');
     return y + '-' + m + '-' + d;
 }
 
-export function normalizeExcelValue(val, key) {
+function normalizeExcelValue(val, key) {
     if (val === null || val === undefined || val === '') return null;
     if (isDateField(key)) return excelDateToISO(val);
     if (typeof val === 'number') return val;
@@ -136,12 +143,12 @@ export function normalizeExcelValue(val, key) {
     s = s.replace(/\s/g, '');
 
     if (/^-?\d{1,3}(,\d{3})+\.\d+$/.test(s)) s = s.replace(/\,/g, '');
-    else if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s)) s = s.replace(/\./g, '').replace(/\,/g, '.');
-    else if (/^-?\d+,\d+$/.test(s)) s = s.replace(/\,/g, '.');
+    else if (/^-?\d{1,3}(\.\d{3})+,\d+$/.test(s)) s = s.replace(/\./g, '').replace(/,/g, '.');
+    else if (/^-?\d+,\d+$/.test(s)) s = s.replace(/,/g, '.');
     else if (s.indexOf(',') !== -1 && s.indexOf('.') !== -1) {
         const lastComma = s.lastIndexOf(',');
         const lastPoint = s.lastIndexOf('.');
-        if (lastComma > lastPoint) s = s.replace(/\./g, '').replace(/\,/g, '.');
+        if (lastComma > lastPoint) s = s.replace(/\./g, '').replace(/,/g, '.');
         else s = s.replace(/\,/g, '');
     }
 
@@ -166,11 +173,11 @@ export function normalizeExcelValue(val, key) {
     return s;
 }
 
-export function normalizeHeader(h) {
+function normalizeHeader(h) {
     return String(h).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
 }
 
-export function headerMatches(detected, expected, synonyms) {
+function headerMatches(detected, expected, synonyms) {
     const norm = normalizeHeader(detected);
     if (norm === expected) return true;
     for (const syn in synonyms) {
@@ -181,30 +188,27 @@ export function headerMatches(detected, expected, synonyms) {
     return false;
 }
 
-// ── Suppression multi-lignes ──
-export const selectedRows = new Set();
-
-export function toggleRow(id, el) {
+function toggleRow(id, el) {
     if (el.checked) selectedRows.add(id);
     else selectedRows.delete(id);
     updateBulkBar();
 }
 
-export function toggleAll(ids, el) {
-    if (el.checked) ids.forEach(id => selectedRows.add(id));
-    else ids.forEach(id => selectedRows.delete(id));
-    document.querySelectorAll('.row-check[data-id]').forEach(cb => cb.checked = el.checked);
+function toggleAll(ids, el) {
+    if (el.checked) ids.forEach(function(id){ selectedRows.add(id); });
+    else ids.forEach(function(id){ selectedRows.delete(id); });
+    document.querySelectorAll('.row-check[data-id]').forEach(function(cb){ cb.checked = el.checked; });
     updateBulkBar();
 }
 
-export function resetSelection() {
+function resetSelection() {
     selectedRows.clear();
-    document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+    document.querySelectorAll('.row-check').forEach(function(cb){ cb.checked = false; });
     updateBulkBar();
 }
 
-export function updateBulkBar() {
-    document.querySelectorAll('.bulk-bar').forEach(bar => {
+function updateBulkBar() {
+    document.querySelectorAll('.bulk-bar').forEach(function(bar){
         const count = bar.querySelector('.bulk-count');
         const actions = bar.querySelector('.bulk-actions');
         if (count) count.textContent = selectedRows.size + ' sélectionné(s)';
@@ -215,7 +219,7 @@ export function updateBulkBar() {
     });
 }
 
-export async function bulkDelete(table, idField, reloadFn, msgLabel, sbDelFn) {
+function bulkDelete(table, idField, reloadFn, msgLabel) {
     if (selectedRows.size === 0) { toast('Aucune ligne sélectionnée', 'err'); return; }
     const ids = Array.from(selectedRows);
     const label = msgLabel || 'ligne(s)';
@@ -223,18 +227,20 @@ export async function bulkDelete(table, idField, reloadFn, msgLabel, sbDelFn) {
     if (!doubleConfirm('⚠️ CONFIRMATION FINALE : ' + ids.length + ' ' + label + ' seront définitivement effacées. Continuer ?')) return;
 
     let deleted = 0;
-    for (let i = 0; i < ids.length; i++) {
-        const ok = await sbDelFn(table, idField + '=eq.' + ids[i]);
-        if (ok) deleted++;
-    }
-    toast('✓ ' + deleted + '/' + ids.length + ' ' + label + ' supprimée(s)', deleted === ids.length ? 'ok' : 'err');
-    resetSelection();
-    reloadFn();
+    const promises = ids.map(function(id) {
+        return sbDel(table, idField + '=eq.' + id).then(function(ok) {
+            if (ok) deleted++;
+        });
+    });
+    Promise.all(promises).then(function() {
+        toast('✓ ' + deleted + '/' + ids.length + ' ' + label + ' supprimée(s)', deleted === ids.length ? 'ok' : 'err');
+        resetSelection();
+        reloadFn();
+    });
 }
 
-// ── Indice helper ──
-export function isIndice(ticker) {
+function isIndice(ticker) {
     if (!ticker) return false;
     const t = String(ticker).trim().toUpperCase();
-    return ['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT','BRVM FINANCE','BRVM DISTRIBUTION','BRVM INDUSTRIE','BRVM AGRICULTURE','BRVM SERVICES PUBLICS','BRVM AUTRES SECTEURS'].indexOf(t) !== -1 || t.indexOf('BRVM') === 0;
+    return CONFIG.INDICES_BRV.indexOf(t) !== -1 || t.indexOf('BRVM') === 0;
 }
