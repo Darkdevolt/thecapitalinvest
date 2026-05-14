@@ -98,7 +98,7 @@ function doLogout() { localStorage.removeItem(SK); location.href = 'login.html';
 const tabLoaders = {
     dashboard:    loadDashboard,
     cours:        loadCours,
-    historique:   function(){},
+    historique:   loadHistoriqueTicker,
     entreprises:  loadEntreprises,
     financials:   loadFinancials,
     dividendes:   loadDividendes,
