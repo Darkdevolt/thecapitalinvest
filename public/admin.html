@@ -1420,6 +1420,11 @@ async function sbPost(table, body, onConflict) {
             const e = await r.json().catch(function() { return {}; });
             var errMsg = e && e.message || e && e.details || JSON.stringify(e);
 
+// Message clair pour FK violation
+if (errMsg && errMsg.indexOf('foreign key') !== -1) {
+    errMsg = '⚠️ Ticker inexistant — créez d\'abord "' + (body && body.ticker ? body.ticker : '?') + '" dans l\'onglet Entreprises avant d\'insérer un cours.';
+}
+
             // Retry automatique si JWT expiré
             if (/jwt|expired/i.test(errMsg)) {
                 const refreshed = await refreshSession();
