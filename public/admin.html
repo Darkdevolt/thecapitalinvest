@@ -12,7 +12,7 @@
 </head>
 <body>
 
-<!-- Écran de chargement -->
+<!-- Écran de chargement initial -->
 <div id="loading-screen">
     <div style="font-family:var(--serif);font-size:22px;font-weight:700;letter-spacing:3px;color:var(--cream);">THE <span style="color:var(--gold);">·</span> CAPITAL</div>
     <div class="spinner" style="border-top-color:var(--gold);border-color:var(--border);border-width:3px;border-style:solid;border-radius:50%;width:32px;height:32px;animation:spin .8s linear infinite;"></div>
@@ -20,624 +20,612 @@
 </div>
 
 <div id="app-wrapper" style="display:none;">
-    <div id="toast-container"></div>
 
-    <div class="topbar">
-        <a href="index.html" class="topbar-logo">THE <span>·</span> CAPITAL</a>
-        <span class="admin-badge">Admin</span>
-        <div class="topbar-right">
-            <span class="topbar-user" id="admin-user"></span>
-            <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+<div id="toast-container"></div>
+
+<div class="topbar">
+    <a href="index.html" class="topbar-logo">THE <span>·</span> CAPITAL</a>
+    <span class="admin-badge">Admin</span>
+    <div class="topbar-right">
+        <span class="topbar-user" id="admin-user"></span>
+        <button class="btn-logout" onclick="doLogout()">Déconnexion</button>
+    </div>
+</div>
+
+<div class="admin-nav">
+    <button class="admin-tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
+    <button class="admin-tab" onclick="switchTab('cours',this)">Cours</button>
+    <button class="admin-tab" onclick="switchTab('historique',this)">Historique</button>
+    <button class="admin-tab" onclick="switchTab('entreprises',this)">Entreprises</button>
+    <button class="admin-tab" onclick="switchTab('financials',this)">Financials</button>
+    <button class="admin-tab" onclick="switchTab('dividendes',this)">Dividendes</button>
+    <button class="admin-tab" onclick="switchTab('analyses',this)">Analyses</button>
+    <button class="admin-tab" onclick="switchTab('utilisateurs',this)">Utilisateurs</button>
+    <button class="admin-tab" onclick="switchTab('scraper',this)">Scraper</button>
+    <button class="admin-tab" onclick="switchTab('import',this)">Import Excel</button>
+    <button class="admin-tab" onclick="switchTab('diagnostic',this)">Diagnostic</button>
+    <button class="admin-tab" onclick="switchTab('indices',this)">Indices</button>
+</div>
+
+<div class="main">
+
+    <div class="tab-panel active" id="panel-dashboard">
+        <div class="section-header"><div class="section-title">Vue d'ensemble <em>admin</em></div><button class="btn btn-outline btn-sm" onclick="loadDashboard()">↺ Actualiser</button></div>
+        <div class="kpi-row">
+            <div class="kpi"><div class="kpi-label">Entreprises</div><div class="kpi-value" id="k-entreprises">—</div></div>
+            <div class="kpi"><div class="kpi-label">Cours</div><div class="kpi-value" id="k-cours">—</div><div class="kpi-sub" id="ks-cours"></div></div>
+            <div class="kpi"><div class="kpi-label">Historique</div><div class="kpi-value" id="k-historique">—</div></div>
+            <div class="kpi"><div class="kpi-label">Financials</div><div class="kpi-value" id="k-financials">—</div></div>
+            <div class="kpi"><div class="kpi-label">Dividendes</div><div class="kpi-value" id="k-dividendes">—</div></div>
+            <div class="kpi"><div class="kpi-label">Utilisateurs</div><div class="kpi-value" id="k-users">—</div><div class="kpi-sub" id="ks-users"></div></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">État de la base</span><span id="dash-ts" style="font-size:11px;margin-left:auto;font-family:var(--mono);color:var(--muted)"></span></div>
+            <div style="padding:18px;" id="dash-info"><div class="loading"><div class="spinner"></div><p>Chargement...</p></div></div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">Alertes & anomalies</span></div>
+            <div style="padding:18px;" id="dash-alerts"><div class="loading"><div class="spinner"></div></div></div>
         </div>
     </div>
 
-    <div class="admin-nav">
-        <button class="admin-tab active" data-tab="dashboard" onclick="switchTab('dashboard',this)">Dashboard</button>
-        <button class="admin-tab" data-tab="cours" onclick="switchTab('cours',this)">Cours</button>
-        <button class="admin-tab" data-tab="historique" onclick="switchTab('historique',this)">Historique</button>
-        <button class="admin-tab" data-tab="entreprises" onclick="switchTab('entreprises',this)">Entreprises</button>
-        <button class="admin-tab" data-tab="financials" onclick="switchTab('financials',this)">Financials</button>
-        <button class="admin-tab" data-tab="dividendes" onclick="switchTab('dividendes',this)">Dividendes</button>
-        <button class="admin-tab" data-tab="analyses" onclick="switchTab('analyses',this)">Analyses</button>
-        <button class="admin-tab" data-tab="utilisateurs" onclick="switchTab('utilisateurs',this)">Utilisateurs</button>
-        <button class="admin-tab" data-tab="scraper" onclick="switchTab('scraper',this)">Scraper</button>
-        <button class="admin-tab" data-tab="import" onclick="switchTab('import',this)">Import Excel</button>
-        <button class="admin-tab" data-tab="diagnostic" onclick="switchTab('diagnostic',this)">Diagnostic</button>
-        <button class="admin-tab" data-tab="indices" onclick="switchTab('indices',this)">Indices</button>
+    <div class="tab-panel" id="panel-cours">
+        <div class="section-header"><div class="section-title">Cours <em>BRVM</em></div></div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · cours · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong> · capitalisation · plus_haut_52 · plus_bas_52</div>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Ajouter / Modifier un cours</span></div>
+            <div class="form-grid">
+                <div class="field"><label>Ticker *</label><input type="text" id="c-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+                <div class="field"><label>Date séance *</label><input type="date" id="c-date"></div>
+                <div class="field"><label>Cours clôture * (FCFA)</label><input type="number" id="c-cours" placeholder="14500" step="any"></div>
+                <div class="field"><label>Ouverture</label><input type="number" id="c-ouv" placeholder="14400" step="any"></div>
+                <div class="field"><label>Plus haut</label><input type="number" id="c-haut" placeholder="14600" step="any"></div>
+                <div class="field"><label>Plus bas</label><input type="number" id="c-bas" placeholder="14350" step="any"></div>
+                <div class="field"><label>Volume (titres)</label><input type="number" id="c-vol" placeholder="1200" step="1"></div>
+                <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="c-var" placeholder="0.69" step="any"></div>
+                <div class="field"><label>Capitalisation</label><input type="number" id="c-capi" placeholder="0" step="any"></div>
+                <div class="field"><label>+ haut 52 semaines</label><input type="number" id="c-h52" placeholder="15000" step="any"></div>
+                <div class="field"><label>+ bas 52 semaines</label><input type="number" id="c-b52" placeholder="12000" step="any"></div>
+            </div>
+            <div class="actions-row">
+                <button class="btn btn-primary" onclick="addCours()">Enregistrer le cours</button>
+                <button class="btn btn-outline btn-sm" onclick="clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi','c-h52','c-b52'])">Effacer</button>
+                <span id="c-msg" class="msg"></span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Derniers cours enregistrés</span>
+                <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                    <input type="text" id="cours-filter" placeholder="Filtrer ticker..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterCoursTable()">
+                    <input type="date" id="cours-date-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" oninput="filterCoursTable()">
+                    <button class="btn btn-outline btn-sm" onclick="loadCours()">↺</button>
+                </div>
+            </div>
+            <div class="tw">
+                <table>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Capi.</th><th class="r">H52</th><th class="r">B52</th><th></th></tr></thead>
+                    <tbody id="cours-tbody"><tr><td colspan="13"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                </table>
+            </div>
+            <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
+        </div>
     </div>
 
-    <div class="main">
-        <!-- ========== DASHBOARD ========== -->
-        <div class="tab-panel active" id="panel-dashboard">
-            <div class="section-header">
-                <div class="section-title">Vue d'ensemble <em>admin</em></div>
-                <button class="btn btn-outline btn-sm" onclick="loadDashboard()">↺ Actualiser</button>
-            </div>
-            <div class="kpi-row">
-                <div class="kpi"><div class="kpi-label">Entreprises</div><div class="kpi-value" id="k-entreprises">—</div></div>
-                <div class="kpi"><div class="kpi-label">Cours</div><div class="kpi-value" id="k-cours">—</div><div class="kpi-sub" id="ks-cours"></div></div>
-                <div class="kpi"><div class="kpi-label">Historique</div><div class="kpi-value" id="k-historique">—</div></div>
-                <div class="kpi"><div class="kpi-label">Financials</div><div class="kpi-value" id="k-financials">—</div></div>
-                <div class="kpi"><div class="kpi-label">Dividendes</div><div class="kpi-value" id="k-dividendes">—</div></div>
-                <div class="kpi"><div class="kpi-label">Utilisateurs</div><div class="kpi-value" id="k-users">—</div><div class="kpi-sub" id="ks-users"></div></div>
-            </div>
-            <div class="card">
-                <div class="card-header"><span class="card-title">État de la base</span><span id="dash-ts" style="font-size:11px;margin-left:auto;font-family:var(--mono);color:var(--muted)"></span></div>
-                <div style="padding:18px;" id="dash-info"><div class="loading"><div class="spinner"></div><p>Chargement...</p></div></div>
-            </div>
-            <div class="card">
-                <div class="card-header"><span class="card-title">Alertes & anomalies</span></div>
-                <div style="padding:18px;" id="dash-alerts"><div class="loading"><div class="spinner"></div></div></div>
-            </div>
+    <div class="tab-panel" id="panel-historique">
+        <div class="section-header"><div class="section-title">Historique <em>cours</em></div></div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · <strong>cours_cloture</strong> · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong></div>
+        <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchSubTab('hist','ligne',this)">Ligne unique</button>
+            <button class="sub-tab" onclick="switchSubTab('hist','bulk',this)">Import CSV</button>
+            <button class="sub-tab" onclick="switchSubTab('hist','view',this)">Consulter</button>
         </div>
-
-        <!-- ========== COURS ========== -->
-        <div class="tab-panel" id="panel-cours">
-            <div class="section-header"><div class="section-title">Cours <em>BRVM</em></div></div>
-            <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · cours · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong> · capitalisation · plus_haut_52 · plus_bas_52</div>
-            <div class="card" style="margin-bottom:16px;">
-                <div class="card-header"><span class="card-title">Ajouter / Modifier un cours</span></div>
+        <div id="hist-panel-ligne">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Ajouter un cours historique</span></div>
                 <div class="form-grid">
-                    <div class="field"><label>Ticker *</label><input type="text" id="c-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                    <div class="field"><label>Date séance *</label><input type="date" id="c-date"></div>
-                    <div class="field"><label>Cours clôture * (FCFA)</label><input type="number" id="c-cours" placeholder="14500" step="any"></div>
-                    <div class="field"><label>Ouverture</label><input type="number" id="c-ouv" placeholder="14400" step="any"></div>
-                    <div class="field"><label>Plus haut</label><input type="number" id="c-haut" placeholder="14600" step="any"></div>
-                    <div class="field"><label>Plus bas</label><input type="number" id="c-bas" placeholder="14350" step="any"></div>
-                    <div class="field"><label>Volume (titres)</label><input type="number" id="c-vol" placeholder="1200" step="1"></div>
-                    <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="c-var" placeholder="0.69" step="any"></div>
-                    <div class="field"><label>Capitalisation</label><input type="number" id="c-capi" placeholder="0" step="any"></div>
-                    <div class="field"><label>+ haut 52 semaines</label><input type="number" id="c-h52" placeholder="15000" step="any"></div>
-                    <div class="field"><label>+ bas 52 semaines</label><input type="number" id="c-b52" placeholder="12000" step="any"></div>
+                    <div class="field"><label>Ticker *</label><input type="text" id="h-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+                    <div class="field"><label>Date séance *</label><input type="date" id="h-date"></div>
+                    <div class="field"><label>Cours clôture * <span style="color:var(--gold);font-size:9px;">→ "cours_cloture"</span></label><input type="number" id="h-cloture" placeholder="14500" step="any"></div>
+                    <div class="field"><label>Ouverture</label><input type="number" id="h-ouverture" placeholder="14400" step="any"></div>
+                    <div class="field"><label>Plus haut</label><input type="number" id="h-haut" placeholder="14600" step="any"></div>
+                    <div class="field"><label>Plus bas</label><input type="number" id="h-bas" placeholder="14350" step="any"></div>
+                    <div class="field"><label>Volume</label><input type="number" id="h-vol" placeholder="1200"></div>
+                    <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
                 </div>
                 <div class="actions-row">
-                    <button class="btn btn-primary" onclick="addCours()">Enregistrer le cours</button>
-                    <button class="btn btn-outline btn-sm" onclick="clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi','c-h52','c-b52'])">Effacer</button>
-                    <span id="c-msg" class="msg"></span>
+                    <button class="btn btn-primary" onclick="addHistorique()">Enregistrer</button>
+                    <span id="h-msg" class="msg"></span>
                 </div>
             </div>
+        </div>
+        <div id="hist-panel-bulk" style="display:none;">
             <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Derniers cours enregistrés</span>
-                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                        <input type="text" id="cours-filter" placeholder="Filtrer ticker..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterCoursTable()">
-                        <input type="date" id="cours-date-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" oninput="filterCoursTable()">
-                        <button class="btn btn-outline btn-sm" onclick="loadCours()">↺</button>
-                    </div>
-                </div>
-                <div class="tw">
-                    <table>
-                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Capi.</th><th class="r">H52</th><th class="r">B52</th><th></th></tr></thead>
-                        <tbody id="cours-tbody"><tr><td colspan="13"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-                    </table>
-                </div>
-                <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
-            </div>
-        </div>
-
-        <!-- ========== HISTORIQUE ========== -->
-        <div class="tab-panel" id="panel-historique">
-            <div class="section-header"><div class="section-title">Historique <em>cours</em></div></div>
-            <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · <strong>cours_cloture</strong> · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong></div>
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="switchSubTab('hist','ligne',this)">Ligne unique</button>
-                <button class="sub-tab" onclick="switchSubTab('hist','bulk',this)">Import CSV</button>
-                <button class="sub-tab" onclick="switchSubTab('hist','view',this)">Consulter</button>
-            </div>
-            <div id="hist-panel-ligne">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Ajouter un cours historique</span></div>
-                    <div class="form-grid">
-                        <div class="field"><label>Ticker *</label><input type="text" id="h-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                        <div class="field"><label>Date séance *</label><input type="date" id="h-date"></div>
-                        <div class="field"><label>Cours clôture * <span style="color:var(--gold);font-size:9px;">→ "cours_cloture"</span></label><input type="number" id="h-cloture" placeholder="14500" step="any"></div>
-                        <div class="field"><label>Ouverture</label><input type="number" id="h-ouverture" placeholder="14400" step="any"></div>
-                        <div class="field"><label>Plus haut</label><input type="number" id="h-haut" placeholder="14600" step="any"></div>
-                        <div class="field"><label>Plus bas</label><input type="number" id="h-bas" placeholder="14350" step="any"></div>
-                        <div class="field"><label>Volume</label><input type="number" id="h-vol" placeholder="1200"></div>
-                        <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
-                    </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="addHistorique()">Enregistrer</button>
-                        <span id="h-msg" class="msg"></span>
-                    </div>
-                </div>
-            </div>
-            <div id="hist-panel-bulk" style="display:none;">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Import CSV en masse</span></div>
-                    <div style="padding:18px;">
-                        <div class="info-box" style="margin:0 0 12px;">
-                            <strong>Format CSV :</strong> ticker,date_seance,cours_cloture,ouverture,plus_haut,plus_bas,volume,variation<br>
-                            <span style="margin-top:4px;display:block;">Date YYYY-MM-DD. Max 500 lignes.</span>
-                        </div>
-                        <textarea class="csv-area" id="bulk-csv" placeholder="SNTS,2024-01-15,14500,14400,14600,14350,1200,0.69&#10;ECOBANK,2024-01-15,11250,11200,11300,11150,850,-0.44"></textarea>
-                    </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="importBulk()">Importer</button>
-                        <button class="btn btn-outline btn-sm" onclick="parseBulkPreview()">Aperçu</button>
-                        <button class="btn btn-outline btn-sm" onclick="clearBulk()">Effacer</button>
-                        <span id="bulk-msg" class="msg"></span>
-                    </div>
-                    <div id="bulk-preview" style="display:none;padding:0 18px 14px;">
-                        <div class="progress-bar"><div class="progress-fill" id="bulk-progress" style="width:0%"></div></div>
-                        <div class="tw"><table id="bulk-preview-table" style="font-size:12px;">
-                            <thead><tr><th>Ticker</th><th>Date</th><th>Clôture</th><th>Vol.</th><th>Variation%</th><th>Statut</th></tr></thead>
-                            <tbody id="bulk-preview-tbody"></tbody>
-                        </table></div>
-                    </div>
-                </div>
-            </div>
-            <div id="hist-panel-view" style="display:none;">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Consulter l'historique</span>
-                        <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                            <input type="text" id="hist-ticker-search" placeholder="Ex: SNTS" style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;width:110px;" oninput="this.value=this.value.toUpperCase()">
-                            <input type="date" id="hist-date-from" style="padding:5px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;">
-                            <input type="date" id="hist-date-to"   style="padding:5px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;">
-                            <button class="btn btn-primary btn-sm" onclick="loadHistoriqueTicker()">Charger</button>
-                        </div>
-                    </div>
-                    <div class="tw">
-                        <table>
-                            <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th></th></tr></thead>
-                            <tbody id="hist-tbody"><tr><td colspan="9"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
-                        </table>
-                    </div>
-                    <div class="actions-row">
-                        <span id="hist-count" style="font-size:11px;color:var(--muted);"></span>
-                        <button class="btn btn-danger btn-sm" id="btn-del-all-hist" style="display:none;" onclick="deleteAllHistoriqueTicker()">🗑 Supprimer tout ce ticker</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== ENTREPRISES ========== -->
-        <div class="tab-panel" id="panel-entreprises">
-            <div class="section-header"><div class="section-title">Entreprises <em>BRVM</em></div></div>
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="switchSubTab('ent','list',this)">Liste</button>
-                <button class="sub-tab" onclick="switchSubTab('ent','add',this)">Ajouter</button>
-            </div>
-            <div id="ent-panel-list">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Sociétés cotées</span>
-                        <span class="card-count" id="ent-count"></span>
-                        <div style="display:flex;gap:8px;margin-left:auto;">
-                            <input type="text" id="ent-search" placeholder="Rechercher..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:130px;" oninput="filterEntTable()">
-                            <button class="btn btn-outline btn-sm" onclick="loadEntreprises()">↺</button>
-                        </div>
-                    </div>
-                    <div class="tw">
-                        <table>
-                            <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(entData.map(function(r){return r.ticker}),this)"></th><th>Ticker</th><th>Nom</th><th>Secteur</th><th>Pays</th><th>Compartiment</th><th>ISIN</th><th>Statut</th><th>Actions</th></tr></thead>
-                            <tbody id="ent-tbody"><tr><td colspan="9"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-            <div id="ent-panel-add" style="display:none;">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Nouvelle société cotée</span></div>
-                    <div class="form-grid">
-                        <div class="field"><label>Ticker *</label><input type="text" id="ne-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                        <div class="field"><label>Nom *</label><input type="text" id="ne-nom" placeholder="Sonatel SA"></div>
-                        <div class="field"><label>Secteur</label><input type="text" id="ne-secteur" placeholder="Télécommunications"></div>
-                        <div class="field"><label>Pays</label>
-                            <select id="ne-pays">
-                                <option value="">— Sélectionner —</option>
-                                <option>Bénin</option><option>Burkina Faso</option><option>Côte d'Ivoire</option>
-                                <option>Guinée-Bissau</option><option>Mali</option><option>Niger</option>
-                                <option>Sénégal</option><option>Togo</option>
-                            </select>
-                        </div>
-                        <div class="field"><label>Compartiment</label>
-                            <select id="ne-compart"><option value="PRINCIPAL">Principal</option><option value="PRESTIGE">Prestige</option></select>
-                        </div>
-                        <div class="field"><label>ISIN</label><input type="text" id="ne-isin" placeholder="SN0000000000"></div>
-                        <div class="field"><label>Description</label><input type="text" id="ne-desc" placeholder="Courte description"></div>
-                        <div class="field"><label>Nb. actions <span style="color:var(--gold);font-size:9px;">→ "nombre_actions"</span></label><input type="number" id="ne-actions" placeholder="9600000"></div>
-                    </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="addEntreprise()">Créer la société</button>
-                        <span id="ne-msg" class="msg"></span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== FINANCIALS ========== -->
-        <div class="tab-panel" id="panel-financials">
-            <div class="section-header"><div class="section-title">Données <em>financières</em></div></div>
-            <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · annee · periode · chiffre_affaires · <strong>rbe</strong> · resultat_net · bpa · dpa · fonds_propres · nombre_actions · <strong>dettes_financieres</strong> · <strong>cash_flow_operationnel</strong> · capex · total_actif</div>
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="switchSubTab('fin','add',this)">Ajouter</button>
-                <button class="sub-tab" onclick="switchSubTab('fin','list',this)">Consulter</button>
-            </div>
-            <div id="fin-panel-add">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Ajouter / Modifier un financial</span></div>
-                    <div class="form-grid">
-                        <div class="field"><label>Ticker *</label><input type="text" id="fin-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                        <div class="field"><label>Année *</label><input type="number" id="fin-annee" placeholder="2024"></div>
-                        <div class="field"><label>Période</label>
-                            <select id="fin-periode">
-                                <option value="annuel">Annuel</option>
-                                <option value="S1">Semestriel S1</option><option value="S2">Semestriel S2</option>
-                                <option value="T1">Trimestriel T1</option><option value="T2">T2</option><option value="T3">T3</option><option value="T4">T4</option>
-                            </select>
-                        </div>
-                        <div class="field"><label>Chiffre d'affaires</label><input type="number" id="fin-ca" placeholder="900000" step="any"></div>
-                        <div class="field"><label>RBE <span style="color:var(--gold);font-size:9px;">→ "rbe"</span></label><input type="number" id="fin-rbe" placeholder="250000" step="any"></div>
-                        <div class="field"><label>Résultat net</label><input type="number" id="fin-rn" placeholder="168000" step="any"></div>
-                        <div class="field"><label>BPA (FCFA/action)</label><input type="number" id="fin-bpa" placeholder="17500" step="any"></div>
-                        <div class="field"><label>DPA (FCFA/action)</label><input type="number" id="fin-dpa" placeholder="12000" step="any"></div>
-                        <div class="field"><label>Fonds propres</label><input type="number" id="fin-fp" placeholder="620000" step="any"></div>
-                        <div class="field"><label>Dettes financières <span style="color:var(--gold);font-size:9px;">→ "dettes_financieres"</span></label><input type="number" id="fin-dettes" placeholder="0" step="any"></div>
-                        <div class="field"><label>Total actif</label><input type="number" id="fin-actif" placeholder="0" step="any"></div>
-                        <div class="field"><label>Nb. actions</label><input type="number" id="fin-nb-actions" placeholder="9600000"></div>
-                        <div class="field"><label>Cash-flow opérationnel <span style="color:var(--gold);font-size:9px;">→ "cash_flow_operationnel"</span></label><input type="number" id="fin-cfo" placeholder="0" step="any"></div>
-                        <div class="field"><label>CAPEX</label><input type="number" id="fin-capex" placeholder="0" step="any"></div>
-                        <div class="field"><label>Source</label><input type="text" id="fin-source" placeholder="Rapport annuel 2024"></div>
-                    </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="addFinancial()">Enregistrer</button>
-                        <button class="btn btn-outline btn-sm" onclick="prefillFinancialFromTicker()">↑ Charger ticker existant</button>
-                        <span id="fin-msg" class="msg"></span>
-                    </div>
-                </div>
-            </div>
-            <div id="fin-panel-list" style="display:none;">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Financials enregistrés</span>
-                        <span class="card-count" id="fin-count"></span>
-                        <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                            <input type="text" id="fin-filter" placeholder="Filtrer ticker..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:100px;" oninput="filterFinTable()">
-                            <select id="fin-year-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="filterFinTable()"><option value="">Toutes années</option></select>
-                            <button class="btn btn-outline btn-sm" onclick="loadFinancials()">↺</button>
-                        </div>
-                    </div>
-                    <div class="tw">
-                        <table>
-                            <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(finData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Année</th><th>Période</th><th class="r">CA</th><th class="r">RBE</th><th class="r">Rés. net</th><th class="r">BPA</th><th class="r">DPA</th><th class="r">Dettes fin.</th><th>Source</th><th></th></tr></thead>
-                            <tbody id="fin-tbody"><tr><td colspan="12"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== DIVIDENDES ========== -->
-        <div class="tab-panel" id="panel-dividendes">
-            <div class="section-header"><div class="section-title">Dividendes <em>distribués</em></div></div>
-            <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · annee · montant · taux_rendement · <strong>date_detachement</strong> · date_paiement · statut · exercice · notes</div>
-            <div class="card" style="margin-bottom:16px;">
-                <div class="card-header"><span class="card-title">Ajouter / modifier un dividende</span></div>
-                <div class="form-grid">
-                    <div class="field"><label>Ticker *</label><input type="text" id="div-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                    <div class="field"><label>Année *</label><input type="number" id="div-annee" placeholder="2024"></div>
-                    <div class="field"><label>Montant (FCFA) *</label><input type="number" id="div-montant" placeholder="12000" step="any"></div>
-                    <div class="field"><label>Taux rendement (%)</label><input type="number" id="div-tx" placeholder="5.2" step="any"></div>
-                    <div class="field"><label>Date ex-dividende <span style="color:var(--gold);font-size:9px;">→ "date_detachement"</span></label><input type="date" id="div-detach"></div>
-                    <div class="field"><label>Date paiement</label><input type="date" id="div-paie"></div>
-                    <div class="field"><label>Statut</label>
-                        <select id="div-statut">
-                            <option value="confirmé">Confirmé</option>
-                            <option value="prévisionnel">Prévisionnel</option>
-                            <option value="payé">Payé</option>
-                        </select>
-                    </div>
-                    <div class="field"><label>Exercice * <span style="color:var(--gold);font-size:9px;">→ "exercice"</span></label><input type="text" id="div-exercice" placeholder="2024-2025"></div>
-                    <div class="field"><label>Notes</label><input type="text" id="div-notes" placeholder="Acompte / Solde..."></div>
-                </div>
-                <div class="actions-row">
-                    <button class="btn btn-primary" onclick="addDividende()">Enregistrer</button>
-                    <span id="div-msg" class="msg"></span>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Dividendes enregistrés</span>
-                    <span class="card-count" id="div-count"></span>
-                    <div style="display:flex;gap:8px;margin-left:auto;">
-                        <input type="text" id="div-filter" placeholder="Filtrer..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:100px;" oninput="filterDivTable()">
-                        <button class="btn btn-outline btn-sm" onclick="loadDividendes()">↺</button>
-                    </div>
-                </div>
-                <div class="tw">
-                    <table>
-                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(divData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Année</th><th>Exercice</th><th class="r">Montant</th><th class="r">Rend.</th><th>Ex-div.</th><th>Paiement</th><th>Statut</th><th></th></tr></thead>
-                        <tbody id="div-tbody"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== ANALYSES ========== -->
-        <div class="tab-panel" id="panel-analyses">
-            <div class="section-header"><div class="section-title">Recommandations <em>analystes</em></div></div>
-            <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · <strong>titre</strong> · recommandation · <strong>resume</strong> · date_analyse · analyste · <strong>cours_cible</strong></div>
-            <div class="card" style="margin-bottom:16px;">
-                <div class="card-header"><span class="card-title">Publier une recommandation</span></div>
-                <div class="form-grid">
-                    <div class="field"><label>Ticker *</label><input type="text" id="an-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                    <div class="field"><label>Titre <span style="color:var(--gold);font-size:9px;">→ "titre"</span></label><input type="text" id="an-titre" placeholder="Analyse fondamentale SNTS 2024"></div>
-                    <div class="field"><label>Recommandation *</label>
-                        <select id="an-reco">
-                            <option value="Acheter">Acheter</option><option value="Renforcer">Renforcer</option>
-                            <option value="Conserver">Conserver</option><option value="Alléger">Alléger</option>
-                            <option value="Vendre">Vendre</option>
-                        </select>
-                    </div>
-                    <div class="field"><label>Cours cible (FCFA) <span style="color:var(--gold);font-size:9px;">→ "cours_cible"</span></label><input type="number" id="an-cible" placeholder="16000" step="any" oninput="calcPotentiel()"></div>
-                    <div class="field"><label>Cours de référence (FCFA)</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
-                    <div class="field"><label>Potentiel (calculé)</label><input type="text" id="an-potentiel-display" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
-                    <div class="field"><label>Analyste</label><input type="text" id="an-analyste" placeholder="The Capital Research"></div>
-                    <div class="field"><label>Date analyse</label><input type="date" id="an-date"></div>
-                    <div class="field" style="grid-column:1/-1;">
-                        <label>Commentaire / Analyse <span style="color:var(--gold);font-size:9px;">→ colonne "commentaire"</span></label>
-                        <textarea id="an-resume" rows="4" placeholder="Analyse fondamentale, contexte macro, catalyseurs, risques..."></textarea>
-                    </div>
-                </div>
-                <div class="actions-row">
-                    <button class="btn btn-primary" onclick="addAnalyse()">Publier la recommandation</button>
-                    <button class="btn btn-outline btn-sm" onclick="prefillAnalyseFromTicker()">↑ Charger dernier cours</button>
-                    <span id="an-msg" class="msg"></span>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Recommandations publiées</span>
-                    <span class="card-count" id="an-count"></span>
-                    <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadAnalyses()">↺</button>
-                </div>
-                <div id="an-list"><div class="loading"><div class="spinner"></div></div></div>
-            </div>
-        </div>
-
-        <!-- ========== UTILISATEURS ========== -->
-        <div class="tab-panel" id="panel-utilisateurs">
-            <div class="section-header"><div class="section-title">Gestion <em>utilisateurs</em></div></div>
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Comptes inscrits</span>
-                    <span class="card-count" id="usr-count"></span>
-                    <div style="display:flex;gap:8px;margin-left:auto;">
-                        <input type="text" id="usr-search" placeholder="Chercher email/nom..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:160px;" oninput="filterUsrTable()">
-                        <select id="usr-plan-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="filterUsrTable()">
-                            <option value="">Tous plans</option>
-                            <option value="free">Free</option><option value="pro">Pro</option><option value="elite">Elite</option>
-                        </select>
-                        <button class="btn btn-outline btn-sm" onclick="loadUsers()">↺</button>
-                    </div>
-                </div>
-                <div class="tw">
-                    <table>
-                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(usrData.map(function(r){return r.id}),this)"></th><th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th><th>Admin</th><th>Inscrit le</th><th>Actions</th></tr></thead>
-                        <tbody id="usr-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== SCRAPER ========== -->
-        <div class="tab-panel" id="panel-scraper">
-            <div class="section-header"><div class="section-title">Scraper <em>BRVM</em></div></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Contrôle manuel</span></div>
-                    <div style="padding:18px;display:flex;flex-direction:column;gap:10px;">
-                        <button class="btn btn-primary" onclick="runScraper()">▶ Lancer le scraper BRVM</button>
-                        <button class="btn btn-orange" onclick="runFallback()">↺ Recalculer variation</button>
-                        <button class="btn btn-blue" onclick="syncHistFromCours()">⇅ Sync cours → historique</button>
-                        <button class="btn btn-green" onclick="recalcVariations()">⟳ Recalculer toutes les variations</button>
-                        <span id="scraper-msg" class="msg"></span>
-                    </div>
-                    <div style="padding:0 18px 12px;font-size:11px;color:rgba(245,240,232,0.25);">Cron auto : lundi–vendredi à 22h00 UTC</div>
-                </div>
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Statut dernière exécution</span></div>
-                    <div style="padding:14px;"><div class="log-box" id="scraper-log">Aucune exécution récente.</div></div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header"><span class="card-title">Import BOC</span></div>
-                <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
-                    <div class="field"><label>Date de séance *</label><input type="date" id="boc-date"></div>
-                    <div class="field"><label>Nom du fichier</label><input type="text" id="boc-nom" placeholder="BOC_2026-05-01.pdf"></div>
-                    <div class="field"><label>Fichier PDF (upload)</label><input type="file" id="boc-file" accept=".pdf"></div>
-                </div>
-                <div style="padding:0 18px 12px;font-size:11px;color:var(--muted);">Vous pouvez soit indiquer une URL, soit téléverser un PDF.</div>
-                <div style="padding:0 18px 12px;">
-                    <div class="field"><label>URL du PDF (alternative)</label><input type="text" id="boc-url" placeholder="https://..."></div>
-                </div>
-                <div class="actions-row">
-                    <button class="btn btn-primary" onclick="importBOC()">Enregistrer le BOC</button>
-                    <span id="boc-msg" class="msg"></span>
-                </div>
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">BOC enregistrés</span>
-                        <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadBOC()">↺ Charger</button>
-                    </div>
-                    <div id="boc-list">
-                        <div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger pour afficher les BOC.</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- ========== IMPORT EXCEL ========== -->
-        <div class="tab-panel" id="panel-import">
-            <div class="section-header"><div class="section-title">Import <em>Excel</em></div></div>
-            <div class="card" style="margin-bottom:16px;">
-                <div class="card-header"><span class="card-title">Templates Excel</span></div>
+                <div class="card-header"><span class="card-title">Import CSV en masse</span></div>
                 <div style="padding:18px;">
-                    <div class="template-grid">
-                        <div class="template-card" onclick="downloadTemplate('entreprises')"><div class="icon">🏢</div><div class="name">Entreprises</div><div class="desc">43 sociétés BRVM</div></div>
-                        <div class="template-card" onclick="downloadTemplate('cours')"><div class="icon">📈</div><div class="name">Cours & Historique</div><div class="desc">Cours + historique</div></div>
-                        <div class="template-card" onclick="downloadTemplate('financials')"><div class="icon">📊</div><div class="name">Financials</div><div class="desc">Données financières</div></div>
-                        <div class="template-card" onclick="downloadTemplate('dividendes')"><div class="icon">💰</div><div class="name">Dividendes</div><div class="desc">Calendrier dividendes</div></div>
-                        <div class="template-card" onclick="downloadTemplate('indices')"><div class="icon">📉</div><div class="name">Indices BRVM</div><div class="desc">Indices de marché</div></div>
-                        <div class="template-card" onclick="downloadTemplate('actionnaires')"><div class="icon">👥</div><div class="name">Actionnariat</div><div class="desc">Actionnaires significatifs</div></div>
-                    </div>
-                </div>
-            </div>
-            <div class="card" style="margin-bottom:16px;">
-                <div class="card-header"><span class="card-title">Uploader un fichier Excel</span></div>
-                <div style="padding:18px;">
-                    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('excel-file').click()">
-                        <div class="drop-zone-icon">📁</div>
-                        <div class="drop-zone-text">Glissez-déposez votre fichier ou cliquez</div>
-                        <div class="drop-zone-hint">.xlsx, .xls, .csv — Max 5MB</div>
-                    </div>
-                    <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelect(event)">
-                    <div id="upload-info" style="margin-top:12px;display:none;">
-                        <div id="upload-template-alert" style="display:none;margin:8px 0;padding:8px 12px;background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);border-radius:4px;color:var(--orange);font-size:12px;">
-                            ⚠️ Template non détecté automatiquement. Sélectionnez manuellement ci-dessous.
-                        </div>
-                        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                            <span id="upload-filename" style="font-size:13px;color:var(--cream);"></span>
-                            <span id="upload-sheet-detected" class="badge badge-gold" style="display:none;">Template détecté</span>
-                            <span id="upload-headers-found" style="font-size:11px;color:var(--muted);"></span>
-                        </div>
-                        <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:11px;color:var(--muted);">Forcer le template :</span>
-                            <select id="manual-template" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="forceTemplate(this.value)">
-                                <option value="">— Auto —</option>
-                                <option value="entreprises">Entreprises</option>
-                                <option value="cours">Cours</option>
-                                <option value="financials">Financials</option>
-                                <option value="dividendes">Dividendes</option>
-                                <option value="indices">Indices</option>
-                                <option value="actionnaires">Actionnaires</option>
-                            </select>
-                            <span id="upload-colonnes" style="font-size:11px;color:var(--muted);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="card" id="preview-card" style="display:none;margin-bottom:16px;">
-                <div class="card-header"><span class="card-title">Prévisualisation</span><span id="preview-count" class="card-count"></span></div>
-                <div class="import-summary" id="import-summary"></div>
-                <div style="padding:0 18px 12px;">
                     <div class="info-box" style="margin:0 0 12px;">
-                        <strong>Calculs automatiques :</strong>
-                        <span class="calc-badge">↻ Variation %</span>
-                        <span class="calc-badge">↻ Capitalisation</span>
-                        <span class="calc-badge">↻ ROE</span>
-                        <span class="calc-badge">↻ Rendement dividende</span>
+                        <strong>Format CSV :</strong> ticker,date_seance,cours_cloture,ouverture,plus_haut,plus_bas,volume,variation<br>
+                        <span style="margin-top:4px;display:block;">Date YYYY-MM-DD. Max 500 lignes.</span>
+                    </div>
+                    <textarea class="csv-area" id="bulk-csv" placeholder="SNTS,2024-01-15,14500,14400,14600,14350,1200,0.69&#10;ECOBANK,2024-01-15,11250,11200,11300,11150,850,-0.44"></textarea>
+                </div>
+                <div class="actions-row">
+                    <button class="btn btn-primary" onclick="importBulk()">Importer</button>
+                    <button class="btn btn-outline btn-sm" onclick="parseBulkPreview()">Aperçu</button>
+                    <button class="btn btn-outline btn-sm" onclick="clearBulk()">Effacer</button>
+                    <span id="bulk-msg" class="msg"></span>
+                </div>
+                <div id="bulk-preview" style="display:none;padding:0 18px 14px;">
+                    <div class="progress-bar"><div class="progress-fill" id="bulk-progress" style="width:0%"></div></div>
+                    <div class="tw"><table id="bulk-preview-table" style="font-size:12px;">
+                        <thead><tr><th>Ticker</th><th>Date</th><th>Clôture</th><th>Vol.</th><th>Variation%</th><th>Statut</th></tr></thead>
+                        <tbody id="bulk-preview-tbody"></tbody>
+                    </table></div>
+                </div>
+            </div>
+        </div>
+        <div id="hist-panel-view" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Consulter l'historique</span>
+                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                        <input type="text" id="hist-ticker-search" placeholder="Ex: SNTS" style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;width:110px;" oninput="this.value=this.value.toUpperCase()">
+                        <input type="date" id="hist-date-from" style="padding:5px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;">
+                        <input type="date" id="hist-date-to"   style="padding:5px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;">
+                        <button class="btn btn-primary btn-sm" onclick="loadHistoriqueTicker()">Charger</button>
                     </div>
                 </div>
-                <div class="tw" style="padding:0 18px 18px;">
-                    <table class="preview-table">
-                        <thead id="preview-thead"><tr></tr></thead>
-                        <tbody id="preview-tbody"></tbody>
+                <div class="tw">
+                    <table>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th></th></tr></thead>
+                        <tbody id="hist-tbody"><tr><td colspan="9"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
                     </table>
                 </div>
                 <div class="actions-row">
-                    <button class="btn btn-primary" id="btn-confirm-import" onclick="confirmImport()">✓ Confirmer l'import</button>
-                    <button class="btn btn-outline btn-sm" onclick="cancelImport()">✕ Annuler</button>
-                    <span id="import-msg" class="msg"></span>
-                </div>
-            </div>
-            <div class="card" id="progress-card" style="display:none;">
-                <div class="card-header"><span class="card-title">Insertion en cours</span></div>
-                <div style="padding:18px;">
-                    <div class="progress-bar"><div class="progress-fill" id="import-progress" style="width:0%"></div></div>
-                    <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--muted);">
-                        <span id="progress-text">Préparation...</span>
-                        <span id="progress-pct">0%</span>
-                    </div>
-                    <div id="progress-log" style="margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--muted);max-height:120px;overflow-y:auto;"></div>
+                    <span id="hist-count" style="font-size:11px;color:var(--muted);"></span>
+                    <button class="btn btn-danger btn-sm" id="btn-del-all-hist" style="display:none;" onclick="deleteAllHistoriqueTicker()">🗑 Supprimer tout ce ticker</button>
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- ========== DIAGNOSTIC ========== -->
-        <div class="tab-panel" id="panel-diagnostic">
-            <div class="section-header"><div class="section-title">Diagnostic <em>plateforme</em></div>
-                <button class="btn btn-primary btn-sm" onclick="runDiagnostic()">▶ Lancer</button>
-                <button class="btn btn-outline btn-sm" onclick="exportDiagnostic()">⬇ Exporter</button>
-            </div>
-            <div id="diag-health-bar" style="margin-bottom:16px;display:none;">
-                <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:6px;">
-                    <span style="font-size:22px;" id="diag-health-icon">—</span>
-                    <div>
-                        <div style="font-weight:500;font-size:14px;" id="diag-health-title">—</div>
-                        <div style="font-size:12px;color:var(--muted);" id="diag-health-sub">—</div>
+    <div class="tab-panel" id="panel-entreprises">
+        <div class="section-header"><div class="section-title">Entreprises <em>BRVM</em></div></div>
+        <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchSubTab('ent','list',this)">Liste</button>
+            <button class="sub-tab" onclick="switchSubTab('ent','add',this)">Ajouter</button>
+        </div>
+        <div id="ent-panel-list">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Sociétés cotées</span>
+                    <span class="card-count" id="ent-count"></span>
+                    <div style="display:flex;gap:8px;margin-left:auto;">
+                        <input type="text" id="ent-search" placeholder="Rechercher..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:130px;" oninput="filterEntTable()">
+                        <button class="btn btn-outline btn-sm" onclick="loadEntreprises()">↺</button>
                     </div>
-                    <div style="margin-left:auto;font-family:var(--mono);font-size:24px;" id="diag-score">—</div>
                 </div>
-            </div>
-            <div id="diag-result">
-                <div class="card"><div style="padding:24px;color:var(--muted);text-align:center;font-size:13px;">Cliquez sur "Lancer le diagnostic".</div></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Cours invalides</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadCoursErreurs()">Charger</button></div>
-                    <div id="cours-erreurs-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
-                </div>
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Tickers sans financials</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadTickersSansFinancials()">Charger</button></div>
-                    <div id="tickers-sans-fin-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
+                <div class="tw">
+                    <table>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(entData.map(function(r){return r.ticker}),this)"></th><th>Ticker</th><th>Nom</th><th>Secteur</th><th>Pays</th><th>Compartiment</th><th>ISIN</th><th>Statut</th><th>Actions</th></tr></thead>
+                        <tbody id="ent-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                    </table>
                 </div>
             </div>
         </div>
-
-        <!-- ========== INDICES ========== -->
-        <div class="tab-panel" id="panel-indices">
-            <div class="section-header"><div class="section-title">Indices <em>BRVM</em></div></div>
-            <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> indice · date_seance · valeur · variation · variation_pct</div>
-            <div class="sub-tabs">
-                <button class="sub-tab active" onclick="switchSubTab('idx','add',this)">Ajouter</button>
-                <button class="sub-tab" onclick="switchSubTab('idx','list',this)">Consulter</button>
-            </div>
-            <div id="idx-panel-add">
-                <div class="card">
-                    <div class="card-header"><span class="card-title">Ajouter / modifier un indice</span></div>
-                    <div class="form-grid">
-                        <div class="field"><label>Code indice *</label><input type="text" id="idx-indice" placeholder="BRVM10" oninput="this.value=this.value.toUpperCase()"></div>
-                        <div class="field"><label>Date séance *</label><input type="date" id="idx-date"></div>
-                        <div class="field"><label>Valeur *</label><input type="number" id="idx-valeur" placeholder="185.42" step="any"></div>
-                        <div class="field"><label>Variation</label><input type="number" id="idx-var" placeholder="0.85" step="any"></div>
-                        <div class="field"><label>Variation %</label><input type="number" id="idx-varpct" placeholder="0.46" step="any"></div>
+        <div id="ent-panel-add" style="display:none;">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Nouvelle société cotée</span></div>
+                <div class="form-grid">
+                    <div class="field"><label>Ticker *</label><input type="text" id="ne-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+                    <div class="field"><label>Nom *</label><input type="text" id="ne-nom" placeholder="Sonatel SA"></div>
+                    <div class="field"><label>Secteur</label><input type="text" id="ne-secteur" placeholder="Télécommunications"></div>
+                    <div class="field"><label>Pays</label>
+                        <select id="ne-pays">
+                            <option value="">— Sélectionner —</option>
+                            <option>Bénin</option><option>Burkina Faso</option><option>Côte d'Ivoire</option>
+                            <option>Guinée-Bissau</option><option>Mali</option><option>Niger</option>
+                            <option>Sénégal</option><option>Togo</option>
+                        </select>
                     </div>
-                    <div class="actions-row">
-                        <button class="btn btn-primary" onclick="addIndice()">Enregistrer</button>
-                        <button class="btn btn-outline btn-sm" onclick="clearForm(['idx-indice','idx-date','idx-valeur','idx-var','idx-varpct'])">Effacer</button>
-                        <span id="idx-msg" class="msg"></span>
+                    <div class="field"><label>Compartiment</label>
+                        <select id="ne-compart"><option value="PRINCIPAL">Principal</option><option value="PRESTIGE">Prestige</option></select>
                     </div>
+                    <div class="field"><label>ISIN</label><input type="text" id="ne-isin" placeholder="SN0000000000"></div>
+                    <div class="field"><label>Description</label><input type="text" id="ne-desc" placeholder="Courte description"></div>
+                    <div class="field"><label>Nb. actions <span style="color:var(--gold);font-size:9px;">→ "nombre_actions"</span></label><input type="number" id="ne-actions" placeholder="9600000"></div>
+                </div>
+                <div class="actions-row">
+                    <button class="btn btn-primary" onclick="addEntreprise()">Créer la société</button>
+                    <span id="ne-msg" class="msg"></span>
                 </div>
             </div>
-            <div id="idx-panel-list" style="display:none;">
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Indices enregistrés</span>
-                        <span class="card-count" id="idx-count"></span>
-                        <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                            <input type="text" id="idx-filter" placeholder="Filtrer indice..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterIndicesTable()">
-                            <input type="date" id="idx-date-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" oninput="filterIndicesTable()">
-                            <button class="btn btn-outline btn-sm" onclick="loadIndices()">↺</button>
-                        </div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-financials">
+        <div class="section-header"><div class="section-title">Données <em>financières</em></div></div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · annee · periode · chiffre_affaires · <strong>rbe</strong> · resultat_net · bpa · dpa · fonds_propres · nombre_actions · <strong>dettes_financieres</strong> · <strong>cash_flow_operationnel</strong> · capex · total_actif</div>
+        <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchSubTab('fin','add',this)">Ajouter</button>
+            <button class="sub-tab" onclick="switchSubTab('fin','list',this)">Consulter</button>
+        </div>
+        <div id="fin-panel-add">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Ajouter / Modifier un financial</span></div>
+                <div class="form-grid">
+                    <div class="field"><label>Ticker *</label><input type="text" id="fin-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+                    <div class="field"><label>Année *</label><input type="number" id="fin-annee" placeholder="2024"></div>
+                    <div class="field"><label>Période</label>
+                        <select id="fin-periode">
+                            <option value="annuel">Annuel</option>
+                            <option value="S1">Semestriel S1</option><option value="S2">Semestriel S2</option>
+                            <option value="T1">Trimestriel T1</option><option value="T2">T2</option><option value="T3">T3</option><option value="T4">T4</option>
+                        </select>
                     </div>
-                    <div class="tw">
-                        <table>
-                            <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(idxData.map(function(r){return r.id}),this)"></th><th>Indice</th><th>Date</th><th class="r">Valeur</th><th class="r">Variation</th><th class="r">Var. %</th><th></th></tr></thead>
-                            <tbody id="idx-tbody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-                        </table>
+                    <div class="field"><label>Chiffre d'affaires</label><input type="number" id="fin-ca" placeholder="900000" step="any"></div>
+                    <div class="field"><label>RBE <span style="color:var(--gold);font-size:9px;">→ "rbe"</span></label><input type="number" id="fin-rbe" placeholder="250000" step="any"></div>
+                    <div class="field"><label>Résultat net</label><input type="number" id="fin-rn" placeholder="168000" step="any"></div>
+                    <div class="field"><label>BPA (FCFA/action)</label><input type="number" id="fin-bpa" placeholder="17500" step="any"></div>
+                    <div class="field"><label>DPA (FCFA/action)</label><input type="number" id="fin-dpa" placeholder="12000" step="any"></div>
+                    <div class="field"><label>Fonds propres</label><input type="number" id="fin-fp" placeholder="620000" step="any"></div>
+                    <div class="field"><label>Dettes financières <span style="color:var(--gold);font-size:9px;">→ "dettes_financieres"</span></label><input type="number" id="fin-dettes" placeholder="0" step="any"></div>
+                    <div class="field"><label>Total actif</label><input type="number" id="fin-actif" placeholder="0" step="any"></div>
+                    <div class="field"><label>Nb. actions</label><input type="number" id="fin-nb-actions" placeholder="9600000"></div>
+                    <div class="field"><label>Cash-flow opérationnel <span style="color:var(--gold);font-size:9px;">→ "cash_flow_operationnel"</span></label><input type="number" id="fin-cfo" placeholder="0" step="any"></div>
+                    <div class="field"><label>CAPEX</label><input type="number" id="fin-capex" placeholder="0" step="any"></div>
+                    <div class="field"><label>Source</label><input type="text" id="fin-source" placeholder="Rapport annuel 2024"></div>
+                </div>
+                <div class="actions-row">
+                    <button class="btn btn-primary" onclick="addFinancial()">Enregistrer</button>
+                    <button class="btn btn-outline btn-sm" onclick="prefillFinancialFromTicker()">↑ Charger ticker existant</button>
+                    <span id="fin-msg" class="msg"></span>
+                </div>
+            </div>
+        </div>
+        <div id="fin-panel-list" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Financials enregistrés</span>
+                    <span class="card-count" id="fin-count"></span>
+                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                        <input type="text" id="fin-filter" placeholder="Filtrer ticker..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:100px;" oninput="filterFinTable()">
+                        <select id="fin-year-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="filterFinTable()"><option value="">Toutes années</option></select>
+                        <button class="btn btn-outline btn-sm" onclick="loadFinancials()">↺</button>
+                    </div>
+                </div>
+                <div class="tw">
+                    <table>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(finData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Année</th><th>Période</th><th class="r">CA</th><th class="r">RBE</th><th class="r">Rés. net</th><th class="r">BPA</th><th class="r">DPA</th><th class="r">Dettes fin.</th><th>Source</th><th></th></tr></thead>
+                        <tbody id="fin-tbody"><tr><td colspan="11"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-dividendes">
+        <div class="section-header"><div class="section-title">Dividendes <em>distribués</em></div></div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · annee · montant · taux_rendement · <strong>date_detachement</strong> · date_paiement · statut · exercice · notes</div>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Ajouter / modifier un dividende</span></div>
+            <div class="form-grid">
+                <div class="field"><label>Ticker *</label><input type="text" id="div-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+                <div class="field"><label>Année *</label><input type="number" id="div-annee" placeholder="2024"></div>
+                <div class="field"><label>Montant (FCFA) *</label><input type="number" id="div-montant" placeholder="12000" step="any"></div>
+                <div class="field"><label>Taux rendement (%)</label><input type="number" id="div-tx" placeholder="5.2" step="any"></div>
+                <div class="field"><label>Date ex-dividende <span style="color:var(--gold);font-size:9px;">→ "date_detachement"</span></label><input type="date" id="div-detach"></div>
+                <div class="field"><label>Date paiement</label><input type="date" id="div-paie"></div>
+                <div class="field"><label>Statut</label>
+                    <select id="div-statut">
+                        <option value="confirmé">Confirmé</option>
+                        <option value="prévisionnel">Prévisionnel</option>
+                        <option value="payé">Payé</option>
+                    </select>
+                </div>
+                <div class="field"><label>Exercice * <span style="color:var(--gold);font-size:9px;">→ "exercice"</span></label><input type="text" id="div-exercice" placeholder="2024-2025"></div>
+                <div class="field"><label>Notes</label><input type="text" id="div-notes" placeholder="Acompte / Solde..."></div>
+            </div>
+            <div class="actions-row">
+                <button class="btn btn-primary" onclick="addDividende()">Enregistrer</button>
+                <span id="div-msg" class="msg"></span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Dividendes enregistrés</span>
+                <span class="card-count" id="div-count"></span>
+                <div style="display:flex;gap:8px;margin-left:auto;">
+                    <input type="text" id="div-filter" placeholder="Filtrer..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:100px;" oninput="filterDivTable()">
+                    <button class="btn btn-outline btn-sm" onclick="loadDividendes()">↺</button>
+                </div>
+            </div>
+            <div class="tw">
+                <table>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(divData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Année</th><th>Exercice</th><th class="r">Montant</th><th class="r">Rend.</th><th>Ex-div.</th><th>Paiement</th><th>Statut</th><th></th></tr></thead>
+                    <tbody id="div-tbody"><tr><td colspan="8"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-analyses">
+        <div class="section-header"><div class="section-title">Recommandations <em>analystes</em></div></div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · <strong>titre</strong> · recommandation · <strong>resume</strong> · date_analyse · analyste · <strong>cours_cible</strong></div>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Publier une recommandation</span></div>
+            <div class="form-grid">
+                <div class="field"><label>Ticker *</label><input type="text" id="an-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
+                <div class="field"><label>Titre <span style="color:var(--gold);font-size:9px;">→ "titre"</span></label><input type="text" id="an-titre" placeholder="Analyse fondamentale SNTS 2024"></div>
+                <div class="field"><label>Recommandation *</label>
+                    <select id="an-reco">
+                        <option value="Acheter">Acheter</option><option value="Renforcer">Renforcer</option>
+                        <option value="Conserver">Conserver</option><option value="Alléger">Alléger</option>
+                        <option value="Vendre">Vendre</option>
+                    </select>
+                </div>
+                <div class="field"><label>Cours cible (FCFA) <span style="color:var(--gold);font-size:9px;">→ "cours_cible"</span></label><input type="number" id="an-cible" placeholder="16000" step="any" oninput="calcPotentiel()"></div>
+                <div class="field"><label>Cours de référence (FCFA)</label><input type="number" id="an-cours" placeholder="14500" step="any" oninput="calcPotentiel()"></div>
+                <div class="field"><label>Potentiel (calculé)</label><input type="text" id="an-potentiel-display" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+                <div class="field"><label>Analyste</label><input type="text" id="an-analyste" placeholder="The Capital Research"></div>
+                <div class="field"><label>Date analyse</label><input type="date" id="an-date"></div>
+                <div class="field" style="grid-column:1/-1;">
+                    <label>Commentaire / Analyse <span style="color:var(--gold);font-size:9px;">→ colonne "commentaire"</span></label>
+                    <textarea id="an-resume" rows="4" placeholder="Analyse fondamentale, contexte macro, catalyseurs, risques..."></textarea>
+                </div>
+            </div>
+            <div class="actions-row">
+                <button class="btn btn-primary" onclick="addAnalyse()">Publier la recommandation</button>
+                <button class="btn btn-outline btn-sm" onclick="prefillAnalyseFromTicker()">↑ Charger dernier cours</button>
+                <span id="an-msg" class="msg"></span>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Recommandations publiées</span>
+                <span class="card-count" id="an-count"></span>
+                <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadAnalyses()">↺</button>
+            </div>
+            <div id="an-list"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-utilisateurs">
+        <div class="section-header"><div class="section-title">Gestion <em>utilisateurs</em></div></div>
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Comptes inscrits</span>
+                <span class="card-count" id="usr-count"></span>
+                <div style="display:flex;gap:8px;margin-left:auto;">
+                    <input type="text" id="usr-search" placeholder="Chercher email/nom..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:160px;" oninput="filterUsrTable()">
+                    <select id="usr-plan-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="filterUsrTable()">
+                        <option value="">Tous plans</option>
+                        <option value="free">Free</option><option value="pro">Pro</option><option value="elite">Elite</option>
+                    </select>
+                    <button class="btn btn-outline btn-sm" onclick="loadUsers()">↺</button>
+                </div>
+            </div>
+            <div class="tw">
+                <table>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(usrData.map(function(r){return r.id}),this)"></th><th>Email</th><th>Nom</th><th>Plan</th><th>Expiration</th><th>Admin</th><th>Inscrit le</th><th>Actions</th></tr></thead>
+                    <tbody id="usr-tbody"><tr><td colspan="7"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-scraper">
+        <div class="section-header"><div class="section-title">Scraper <em>BRVM</em></div></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Contrôle manuel</span></div>
+                <div style="padding:18px;display:flex;flex-direction:column;gap:10px;">
+                    <button class="btn btn-primary" onclick="runScraper()">▶ Lancer le scraper BRVM</button>
+                    <button class="btn btn-orange" onclick="runFallback()">↺ Recalculer variation</button>
+                    <button class="btn btn-blue" onclick="syncHistFromCours()">⇅ Sync cours → historique</button>
+                    <button class="btn btn-green" onclick="recalcVariations()">⟳ Recalculer toutes les variations</button>
+                    <span id="scraper-msg" class="msg"></span>
+                </div>
+                <div style="padding:0 18px 12px;font-size:11px;color:rgba(245,240,232,0.25);">Cron auto : lundi–vendredi à 22h00 UTC</div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Statut dernière exécution</span></div>
+                <div style="padding:14px;"><div class="log-box" id="scraper-log">Aucune exécution récente.</div></div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><span class="card-title">Import BOC</span></div>
+            <div style="padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;">
+                <div class="field"><label>Date de séance *</label><input type="date" id="boc-date"></div>
+                <div class="field"><label>Nom du fichier</label><input type="text" id="boc-nom" placeholder="BOC_2026-05-01.pdf"></div>
+                <div class="field"><label>Fichier PDF (upload)</label><input type="file" id="boc-file" accept=".pdf"></div>
+            </div>
+            <div style="padding:0 18px 12px;font-size:11px;color:var(--muted);">Vous pouvez soit indiquer une URL, soit téléverser un PDF.</div>
+            <div style="padding:0 18px 12px;">
+                <div class="field"><label>URL du PDF (alternative)</label><input type="text" id="boc-url" placeholder="https://..."></div>
+            </div>
+            <div class="actions-row">
+                <button class="btn btn-primary" onclick="importBOC()">Enregistrer le BOC</button>
+                <span id="boc-msg" class="msg"></span>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">BOC enregistrés</span>
+                    <button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadBOC()">↺ Charger</button>
+                </div>
+                <div id="boc-list">
+                    <div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger pour afficher les BOC.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-import">
+        <div class="section-header"><div class="section-title">Import <em>Excel</em></div></div>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Templates Excel</span></div>
+            <div style="padding:18px;">
+                <div class="template-grid">
+                    <div class="template-card" onclick="downloadTemplate('entreprises')"><div class="icon">🏢</div><div class="name">Entreprises</div><div class="desc">43 sociétés BRVM</div></div>
+                    <div class="template-card" onclick="downloadTemplate('cours')"><div class="icon">📈</div><div class="name">Cours & Historique</div><div class="desc">Cours + historique</div></div>
+                    <div class="template-card" onclick="downloadTemplate('financials')"><div class="icon">📊</div><div class="name">Financials</div><div class="desc">Données financières</div></div>
+                    <div class="template-card" onclick="downloadTemplate('dividendes')"><div class="icon">💰</div><div class="name">Dividendes</div><div class="desc">Calendrier dividendes</div></div>
+                    <div class="template-card" onclick="downloadTemplate('indices')"><div class="icon">📉</div><div class="name">Indices BRVM</div><div class="desc">Indices de marché</div></div>
+                    <div class="template-card" onclick="downloadTemplate('actionnaires')"><div class="icon">👥</div><div class="name">Actionnariat</div><div class="desc">Actionnaires significatifs</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Uploader un fichier Excel</span></div>
+            <div style="padding:18px;">
+                <div class="drop-zone" id="drop-zone" onclick="document.getElementById('excel-file').click()">
+                    <div class="drop-zone-icon">📁</div>
+                    <div class="drop-zone-text">Glissez-déposez votre fichier ou cliquez</div>
+                    <div class="drop-zone-hint">.xlsx, .xls, .csv — Max 5MB</div>
+                </div>
+                <input type="file" id="excel-file" accept=".xlsx,.xls,.csv" style="display:none;" onchange="handleFileSelect(event)">
+                <div id="upload-info" style="margin-top:12px;display:none;">
+                    <div id="upload-template-alert" style="display:none;margin:8px 0;padding:8px 12px;background:rgba(251,146,60,0.1);border:1px solid rgba(251,146,60,0.3);border-radius:4px;color:var(--orange);font-size:12px;">
+                        ⚠️ Template non détecté automatiquement. Sélectionnez manuellement ci-dessous.
+                    </div>
+                    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                        <span id="upload-filename" style="font-size:13px;color:var(--cream);"></span>
+                        <span id="upload-sheet-detected" class="badge badge-gold" style="display:none;">Template détecté</span>
+                        <span id="upload-headers-found" style="font-size:11px;color:var(--muted);"></span>
+                    </div>
+                    <div style="margin-top:10px;display:flex;align-items:center;gap:8px;">
+                        <span style="font-size:11px;color:var(--muted);">Forcer le template :</span>
+                        <select id="manual-template" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" onchange="forceTemplate(this.value)">
+                            <option value="">— Auto —</option>
+                            <option value="entreprises">Entreprises</option>
+                            <option value="cours">Cours</option>
+                            <option value="financials">Financials</option>
+                            <option value="dividendes">Dividendes</option>
+                            <option value="indices">Indices</option>
+                            <option value="actionnaires">Actionnaires</option>
+                        </select>
+                        <span id="upload-colonnes" style="font-size:11px;color:var(--muted);max-width:400px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
                     </div>
                 </div>
             </div>
         </div>
+        <div class="card" id="preview-card" style="display:none;margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Prévisualisation</span><span id="preview-count" class="card-count"></span></div>
+            <div class="import-summary" id="import-summary"></div>
+            <div style="padding:0 18px 12px;">
+                <div class="info-box" style="margin:0 0 12px;">
+                    <strong>Calculs automatiques :</strong>
+                    <span class="calc-badge">↻ Variation %</span>
+                    <span class="calc-badge">↻ Capitalisation</span>
+                    <span class="calc-badge">↻ ROE</span>
+                    <span class="calc-badge">↻ Rendement dividende</span>
+                </div>
+            </div>
+            <div class="tw" style="padding:0 18px 18px;">
+                <table class="preview-table">
+                    <thead id="preview-thead"><tr></tr></thead>
+                    <tbody id="preview-tbody"></tbody>
+                </table>
+            </div>
+            <div class="actions-row">
+                <button class="btn btn-primary" id="btn-confirm-import" onclick="confirmImport()">✓ Confirmer l'import</button>
+                <button class="btn btn-outline btn-sm" onclick="cancelImport()">✕ Annuler</button>
+                <span id="import-msg" class="msg"></span>
+            </div>
+        </div>
+        <div class="card" id="progress-card" style="display:none;">
+            <div class="card-header"><span class="card-title">Insertion en cours</span></div>
+            <div style="padding:18px;">
+                <div class="progress-bar"><div class="progress-fill" id="import-progress" style="width:0%"></div></div>
+                <div style="display:flex;justify-content:space-between;margin-top:8px;font-size:12px;color:var(--muted);">
+                    <span id="progress-text">Préparation...</span>
+                    <span id="progress-pct">0%</span>
+                </div>
+                <div id="progress-log" style="margin-top:12px;font-family:var(--mono);font-size:11px;color:var(--muted);max-height:120px;overflow-y:auto;"></div>
+            </div>
+        </div>
+    </div>
 
-    </div><!-- /.main -->
+    <div class="tab-panel" id="panel-diagnostic">
+        <div class="section-header"><div class="section-title">Diagnostic <em>plateforme</em></div>
+            <button class="btn btn-primary btn-sm" onclick="runDiagnostic()">▶ Lancer</button>
+            <button class="btn btn-outline btn-sm" onclick="exportDiagnostic()">⬇ Exporter</button>
+        </div>
+        <div id="diag-health-bar" style="margin-bottom:16px;display:none;">
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:6px;">
+                <span style="font-size:22px;" id="diag-health-icon">—</span>
+                <div>
+                    <div style="font-weight:500;font-size:14px;" id="diag-health-title">—</div>
+                    <div style="font-size:12px;color:var(--muted);" id="diag-health-sub">—</div>
+                </div>
+                <div style="margin-left:auto;font-family:var(--mono);font-size:24px;" id="diag-score">—</div>
+            </div>
+        </div>
+        <div id="diag-result">
+            <div class="card"><div style="padding:24px;color:var(--muted);text-align:center;font-size:13px;">Cliquez sur "Lancer le diagnostic".</div></div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px;">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Cours invalides</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadCoursErreurs()">Charger</button></div>
+                <div id="cours-erreurs-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><span class="card-title">Tickers sans financials</span><button class="btn btn-outline btn-sm" style="margin-left:auto;" onclick="loadTickersSansFinancials()">Charger</button></div>
+                <div id="tickers-sans-fin-panel"><div style="padding:16px;color:var(--muted);font-size:12px;">Cliquez Charger.</div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="tab-panel" id="panel-indices">
+        <div class="section-header"><div class="section-title">Indices <em>BRVM</em></div></div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> indice · date_seance · valeur · variation · variation_pct</div>
+        <div class="sub-tabs">
+            <button class="sub-tab active" onclick="switchSubTab('idx','add',this)">Ajouter</button>
+            <button class="sub-tab" onclick="switchSubTab('idx','list',this)">Consulter</button>
+        </div>
+        <div id="idx-panel-add">
+            <div class="card">
+                <div class="card-header"><span class="card-title">Ajouter / modifier un indice</span></div>
+                <div class="form-grid">
+                    <div class="field"><label>Code indice *</label><input type="text" id="idx-indice" placeholder="BRVM10" oninput="this.value=this.value.toUpperCase()"></div>
+                    <div class="field"><label>Date séance *</label><input type="date" id="idx-date"></div>
+                    <div class="field"><label>Valeur *</label><input type="number" id="idx-valeur" placeholder="185.42" step="any"></div>
+                    <div class="field"><label>Variation</label><input type="number" id="idx-var" placeholder="0.85" step="any"></div>
+                    <div class="field"><label>Variation %</label><input type="number" id="idx-varpct" placeholder="0.46" step="any"></div>
+                </div>
+                <div class="actions-row">
+                    <button class="btn btn-primary" onclick="addIndice()">Enregistrer</button>
+                    <button class="btn btn-outline btn-sm" onclick="clearForm(['idx-indice','idx-date','idx-valeur','idx-var','idx-varpct'])">Effacer</button>
+                    <span id="idx-msg" class="msg"></span>
+                </div>
+            </div>
+        </div>
+        <div id="idx-panel-list" style="display:none;">
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Indices enregistrés</span>
+                    <span class="card-count" id="idx-count"></span>
+                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
+                        <input type="text" id="idx-filter" placeholder="Filtrer indice..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterIndicesTable()">
+                        <input type="date" id="idx-date-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" oninput="filterIndicesTable()">
+                        <button class="btn btn-outline btn-sm" onclick="loadIndices()">↺</button>
+                    </div>
+                </div>
+                <div class="tw">
+                    <table>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(idxData.map(function(r){return r.id}),this)"></th><th>Indice</th><th>Date</th><th class="r">Valeur</th><th class="r">Variation</th><th class="r">Var. %</th><th></th></tr></thead>
+                        <tbody id="idx-tbody"><tr><td colspan="6"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /.main -->
+
 </div><!-- /#app-wrapper -->
 
-<!-- MODALS -->
+<!-- Modals -->
 <div class="inline-edit" id="modal-entreprise">
     <div class="modal">
         <div class="modal-title" id="modal-ent-title">Modifier l'entreprise</div>
@@ -803,6 +791,29 @@
 </div>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<script type="module" src="admin/js/main.js"></script>
+<script src="admin/js/config.js"></script>
+<script src="admin/js/utils.js"></script>
+<script src="admin/js/api.js"></script>
+<script src="admin/js/main.js"></script>
+<script src="admin/js/dashboard.js"></script>
+<script src="admin/js/cours.js"></script>
+<script src="admin/js/historique.js"></script>
+<script src="admin/js/entreprises.js"></script>
+<script src="admin/js/financials.js"></script>
+<script src="admin/js/dividendes.js"></script>
+<script src="admin/js/analyses.js"></script>
+<script src="admin/js/utilisateurs.js"></script>
+<script src="admin/js/scraper.js"></script>
+<script src="admin/js/import.js"></script>
+<script src="admin/js/diagnostic.js"></script>
+<script src="admin/js/indices.js"></script>
+<script>
+init().catch(function(err){
+    console.error('Fatal init error:', err);
+    hideLoadingScreen();
+    showFatalError('Erreur fatale', err.message || 'Erreur inconnue');
+});
+</script>
+
 </body>
 </html>
