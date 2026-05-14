@@ -1443,14 +1443,6 @@ async function sbPost(table, body, onConflict) {
 
             // Retry automatique si JWT expiré
             if (/jwt|expired/i.test(errMsg)) {
-
-// Message clair pour FK violation
-if (errMsg && errMsg.indexOf('foreign key') !== -1) {
-    errMsg = '⚠️ Ticker inexistant — créez d\'abord "' + (body && body.ticker ? body.ticker : '?') + '" dans l\'onglet Entreprises avant d\'insérer un cours.';
-}
-
-            // Retry automatique si JWT expiré
-            if (/jwt|expired/i.test(errMsg)) {
                 const refreshed = await refreshSession();
                 if (refreshed) {
                     const retry = await fetch(url, { method:'POST', headers: sbHeaders({ Prefer: prefer }), body: JSON.stringify(body) });
