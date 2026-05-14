@@ -1,18 +1,24 @@
 /* ══════════════════════════════════════════════════════
-   HISTORIQUE — Ligne unique | Import CSV | Consultation
+   HISTORIQUE.JS — Chargement
 ══════════════════════════════════════════════════════ */
+console.log('[historique.js] Fichier chargé ✓');
 
-// ── État global partagé avec main.js (bulk actions) ──
+// ── Vérification dépendances critiques ──
+if (typeof sbGet !== 'function' || typeof sbPost !== 'function' || typeof sbDel !== 'function') {
+    console.error('[historique.js] ERREUR : sbGet / sbPost / sbDel non disponibles. Vérifiez que api.js est bien chargé AVANT historique.js dans admin.html');
+}
+
+// ── État global ──
 if (typeof window.histData === 'undefined') window.histData = [];
 
-// ── Fallbacks formatage (si utils.js défaillant) ──
+// ── Fallbacks si utils.js/main.js défaillants ──
 const _fmt    = (typeof fmt === 'function')    ? fmt    : v => (v == null || v === '') ? '—' : String(v);
 const _fmtPct = (typeof fmtPct === 'function')  ? fmtPct : v => (v == null || v === '') ? '—' : String(v) + '%';
 const _clrPct = (typeof clrPct === 'function')  ? clrPct : () => 'inherit';
-const _toast  = (typeof toast === 'function')   ? toast  : msg => console.log('[toast]', msg);
-const _confirm= (typeof doubleConfirm === 'function') ? doubleConfirm : msg => confirm(msg);
+const _toast  = (typeof toast === 'function')   ? toast  : m => console.log('[toast]', m);
+const _confirm= (typeof doubleConfirm === 'function') ? doubleConfirm : m => confirm(m);
 
-// ── Helpers DOM locaux ──
+// ── Helpers DOM ──
 const _v   = id => { const el = document.getElementById(id); return el ? el.value : ''; };
 const _set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
 
@@ -31,7 +37,7 @@ function escapeHtml(text) {
 async function addHistorique() {
     const msg = document.getElementById('h-msg');
     const body = {
-        ticker: (_v('h-ticker') || '').toUpperCase(),
+        ticker: (_v('h-ticker') || '').toUpperCase().trim(),
         date_seance: _v('h-date'),
         cours_cloture: parseFloat(_v('h-cloture')),
         ouverture: parseFloat(_v('h-ouverture')) || null,
@@ -55,8 +61,8 @@ async function addHistorique() {
             if (msg) { msg.textContent = 'Échec de l\'enregistrement'; msg.className = 'msg err'; }
         }
     } catch (err) {
-        console.error('addHistorique', err);
-        if (msg) { msg.textContent = 'Erreur réseau'; msg.className = 'msg err'; }
+        console.error('[historique.js] addHistorique erreur:', err);
+        if (msg) { msg.textContent = 'Erreur réseau / serveur'; msg.className = 'msg err'; }
     }
 }
 
@@ -72,7 +78,7 @@ async function importBulk() {
     const rows = [];
     for (const line of lines) {
         const p = line.split(',');
-        const [ticker, date, cloture, ouv, haut, bas, vol, vari] = p;
+        const ticker = p[0], date = p[1], cloture = p[2], ouv = p[3], haut = p[4], bas = p[5], vol = p[6], vari = p[7];
         if (!ticker || !date) continue;
         rows.push({
             ticker: ticker.trim().toUpperCase(),
@@ -99,8 +105,8 @@ async function importBulk() {
             if (msg) { msg.textContent = 'Échec de l\'import'; msg.className = 'msg err'; }
         }
     } catch (err) {
-        console.error('importBulk', err);
-        if (msg) { msg.textContent = 'Erreur réseau'; msg.className = 'msg err'; }
+        console.error('[historique.js] importBulk erreur:', err);
+        if (msg) { msg.textContent = 'Erreur réseau / serveur'; msg.className = 'msg err'; }
     }
 }
 
@@ -137,14 +143,18 @@ function parseBulkPreview() {
 }
 
 /* ══════════════════════════════════════════════════════
-   3. CONSULTATION / TABLEAU
+   3. CONSULTATION TABLEAU
 ══════════════════════════════════════════════════════ */
 async function loadHistoriqueTicker() {
     const ticker = _v('hist-ticker-search');
     const from = _v('hist-date-from');
     const to = _v('hist-date-to');
     const tb = document.getElementById('hist-tbody');
-    if (!tb) return;
+
+    if (!tb) {
+        console.error('[historique.js] Élément #hist-tbody introuvable dans le DOM');
+        return;
+    }
 
     if (!ticker) {
         tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Entrez un ticker et cliquez Charger</td></tr>';
@@ -160,8 +170,11 @@ async function loadHistoriqueTicker() {
     if (to)   params += '&date_seance=lte.' + encodeURIComponent(to);
 
     try {
+        console.log('[historique.js] Requête Supabase:', params);
         const rows = await sbGet('historique', params);
         window.histData = rows || [];
+        console.log('[historique.js] Résultat:', window.histData.length, 'lignes');
+
         const btnDel = document.getElementById('btn-del-all-hist');
 
         if (!window.histData.length) {
@@ -175,7 +188,7 @@ async function loadHistoriqueTicker() {
 
         tb.innerHTML = window.histData.map(r => `
             <tr>
-                <td><input type="checkbox" class="row-check" data-id="${r.id}"></td>
+                <td><input type="checkbox" class="row-check" data-id="${escapeHtml(r.id)}"></td>
                 <td class="td-gold">${escapeHtml(r.ticker)}</td>
                 <td class="td-muted">${r.date_seance}</td>
                 <td class="r td-mono">${_fmt(r.cours_cloture)}</td>
@@ -184,7 +197,7 @@ async function loadHistoriqueTicker() {
                 <td class="r td-muted">${_fmt(r.plus_bas)}</td>
                 <td class="r td-muted">${_fmt(r.volume)}</td>
                 <td class="r" style="color:${_clrPct(r.variation)};font-family:var(--mono);">${_fmtPct(r.variation)}</td>
-                <td><button class="btn btn-danger btn-sm btn-del-hist" data-id="${r.id}">✕</button></td>
+                <td><button class="btn btn-danger btn-sm btn-del-hist" data-id="${escapeHtml(r.id)}">✕</button></td>
             </tr>
         `).join('');
 
@@ -195,8 +208,8 @@ async function loadHistoriqueTicker() {
         if (btnDel) btnDel.style.display = '';
 
     } catch (err) {
-        console.error('loadHistoriqueTicker', err);
-        tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Erreur de chargement</td></tr>';
+        console.error('[historique.js] loadHistoriqueTicker erreur:', err);
+        tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Erreur de chargement des données</td></tr>';
     }
 }
 
@@ -213,7 +226,7 @@ async function deleteHistRow(id) {
             loadHistoriqueTicker();
         }
     } catch (err) {
-        console.error('deleteHistRow', err);
+        console.error('[historique.js] deleteHistRow erreur:', err);
         _toast('Erreur suppression');
     }
 }
@@ -221,7 +234,7 @@ async function deleteHistRow(id) {
 async function deleteAllHistoriqueTicker() {
     const ticker = _v('hist-ticker-search');
     if (!ticker) return;
-    if (!_confirm('Supprimer TOUT l\'historique de ' + ticker + ' ? Cette action efface toutes les données historiques pour ce ticker.')) return;
+    if (!_confirm('Supprimer TOUT l\'historique de ' + ticker + ' ?')) return;
     try {
         const ok = await sbDel('historique', 'ticker=eq.' + encodeURIComponent(ticker));
         if (ok) {
@@ -229,7 +242,7 @@ async function deleteAllHistoriqueTicker() {
             loadHistoriqueTicker();
         }
     } catch (err) {
-        console.error('deleteAllHistoriqueTicker', err);
+        console.error('[historique.js] deleteAllHistoriqueTicker erreur:', err);
         _toast('Erreur suppression');
     }
 }
@@ -285,9 +298,8 @@ function updateHistBulkCount() {
 }
 
 async function runBulkDeleteHist() {
-    // Si main.js expose déjà bulkDeleteHist, on l'utilise
     if (typeof bulkDeleteHist === 'function') {
-        return bulkDeleteHist();
+        return bulkDeleteHist(); // utilise main.js s'il existe
     }
     const checked = document.querySelectorAll('#hist-tbody .row-check:checked');
     const ids = Array.from(checked).map(cb => cb.dataset.id).filter(Boolean);
@@ -308,10 +320,12 @@ async function runBulkDeleteHist() {
 }
 
 /* ══════════════════════════════════════════════════════
-   6. ÉVÉNEMENTS (delegation)
+   6. ÉVÉNEMENTS (délégation — attachée UNE SEULE FOIS)
 ══════════════════════════════════════════════════════ */
 function attachHistTableEvents(tb) {
-    if (!tb) return;
+    if (!tb || tb.dataset.histEvents === '1') return;
+    tb.dataset.histEvents = '1';
+
     tb.addEventListener('change', e => {
         if (e.target.classList.contains('row-check')) {
             const id = e.target.dataset.id;
@@ -319,6 +333,7 @@ function attachHistTableEvents(tb) {
             updateHistBulkCount();
         }
     });
+
     tb.addEventListener('click', e => {
         const btn = e.target.closest('.btn-del-hist');
         if (btn) {
@@ -329,7 +344,7 @@ function attachHistTableEvents(tb) {
 }
 
 /* ══════════════════════════════════════════════════════
-   7. COMPATIBILITÉ INLINE
+   7. COMPATIBILITÉ INLINE onclick
 ══════════════════════════════════════════════════════ */
 function handleDeleteHist(btn) {
     if (btn && btn.dataset && btn.dataset.id) deleteHistRow(btn.dataset.id);
