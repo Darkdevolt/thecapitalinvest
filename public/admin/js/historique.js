@@ -1,14 +1,13 @@
 /* ══════════════════════════════════════════════════════
-   HISTORIQUE.JS — Autonome, compatible main.js
+   HISTORIQUE.JS — Aligné sur le schéma Supabase réel
+   Mapping : ouverture → cours_ouverture
 ══════════════════════════════════════════════════════ */
 
 console.log('[HIST] Chargement historique.js');
 
-// ── Variables globales (partagées avec main.js si présent) ──
 if (typeof window.histData === 'undefined') window.histData = [];
-var histData = window.histData;   // alias local
+var histData = window.histData;
 
-// ── Bulk selection autonome ──
 if (typeof window.selectedRows === 'undefined') window.selectedRows = new Set();
 var histSelected = window.selectedRows;
 
@@ -24,7 +23,6 @@ function histResetSelection() {
     updateHistBulkCount();
 }
 
-// ── Fallbacks ──
 const _fmt    = (typeof fmt === 'function')    ? fmt    : v => (v == null || v === '') ? '—' : String(v);
 const _fmtPct = (typeof fmtPct === 'function')  ? fmtPct : v => (v == null || v === '') ? '—' : String(v) + '%';
 const _clrPct = (typeof clrPct === 'function')  ? clrPct : () => 'inherit';
@@ -49,7 +47,7 @@ async function addHistorique() {
         ticker: (_v('h-ticker') || '').toUpperCase().trim(),
         date_seance: _v('h-date'),
         cours_cloture: parseFloat(_v('h-cloture')),
-        ouverture: parseFloat(_v('h-ouverture')) || null,
+        cours_ouverture: parseFloat(_v('h-ouverture')) || null,
         plus_haut: parseFloat(_v('h-haut')) || null,
         plus_bas: parseFloat(_v('h-bas')) || null,
         volume: parseInt(_v('h-vol'), 10) || null,
@@ -89,7 +87,7 @@ async function importBulk() {
             ticker: p[0].trim().toUpperCase(),
             date_seance: p[1].trim(),
             cours_cloture: parseFloat(p[2]),
-            ouverture: parseFloat(p[3]) || null,
+            cours_ouverture: parseFloat(p[3]) || null,
             plus_haut: parseFloat(p[4]) || null,
             plus_bas: parseFloat(p[5]) || null,
             volume: parseInt(p[6], 10) || null,
@@ -153,7 +151,6 @@ async function loadHistoriqueTicker() {
         return;
     }
 
-    // Spinner de chargement
     tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;"><div class="spinner" style="border-top-color:var(--gold);border-color:var(--border);border-width:2px;border-style:solid;border-radius:50%;width:20px;height:20px;animation:spin .8s linear infinite;display:inline-block;vertical-align:middle;margin-right:8px;"></div>Chargement...</td></tr>';
 
     let params = 'select=*&ticker=eq.' + encodeURIComponent(ticker) + '&order=date_seance.desc';
@@ -166,7 +163,7 @@ async function loadHistoriqueTicker() {
         console.log('[HIST] Réponse:', rows);
 
         histData = rows || [];
-        window.histData = histData;   // synchronise avec main.js
+        window.histData = histData;
 
         const btnDel = $('btn-del-all-hist');
 
@@ -184,7 +181,7 @@ async function loadHistoriqueTicker() {
             '<td class="td-gold">' + escapeHtml(r.ticker) + '</td>' +
             '<td class="td-muted">' + r.date_seance + '</td>' +
             '<td class="r td-mono">' + _fmt(r.cours_cloture) + '</td>' +
-            '<td class="r td-muted">' + _fmt(r.ouverture) + '</td>' +
+            '<td class="r td-muted">' + _fmt(r.cours_ouverture) + '</td>' +
             '<td class="r td-muted">' + _fmt(r.plus_haut) + '</td>' +
             '<td class="r td-muted">' + _fmt(r.plus_bas) + '</td>' +
             '<td class="r td-muted">' + _fmt(r.volume) + '</td>' +
@@ -272,7 +269,6 @@ function updateHistBulkCount() {
 }
 
 async function runBulkDeleteHist() {
-    // Si main.js fonctionne, utilise sa version globale
     if (typeof bulkDeleteHist === 'function' && typeof selectedRows !== 'undefined') {
         return bulkDeleteHist();
     }
