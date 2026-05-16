@@ -1,15 +1,11 @@
-/* ══════════════════════════════════════════════════════
-   HISTORIQUE.JS — Aligné sur le schéma Supabase réel
-   Mapping : ouverture → cours_ouverture
-══════════════════════════════════════════════════════ */
+(function() {
+"use strict";
 
 console.log('[HIST] Chargement historique.js');
 
-if (typeof window.histData === 'undefined') window.histData = [];
-var histData = window.histData;
-
-if (typeof window.selectedRows === 'undefined') window.selectedRows = new Set();
-var histSelected = window.selectedRows;
+/* ── Variables locales à ce fichier, pas de conflit avec main.js ── */
+var histData = window.histData || [];
+var histSelected = window.selectedRows || new Set();
 
 function histToggleRow(id, el) {
     if (el.checked) histSelected.add(id);
@@ -301,3 +297,5 @@ window.runBulkDeleteHist = runBulkDeleteHist;
 window.histToggleRow = histToggleRow;
 window.histResetSelection = histResetSelection;
 window.updateHistBulkCount = updateHistBulkCount;
+
+})();
