@@ -3,7 +3,6 @@
 
 console.log('[HIST] Chargement historique.js');
 
-/* ── Variables locales à ce fichier, pas de conflit avec main.js ── */
 var histData = window.histData || [];
 var histSelected = window.selectedRows || new Set();
 
@@ -32,6 +31,61 @@ const _set = (id, val) => { const el = $(id); if (el) el.value = val; };
 function escapeHtml(t) {
     if (t == null) return '';
     return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/* ══════════════════════════════════════════════════════
+   CALCUL AUTO VARIATION
+══════════════════════════════════════════════════════ */
+async function calcAutoVariation(ticker, date_seance, cours_cloture) {
+    if (!ticker || !date_seance || !cours_cloture) return null;
+    try {
+        const params = 'select=cours_cloture&ticker=eq.' + encodeURIComponent(ticker) + '&date_seance=lt.' + encodeURIComponent(date_seance) + '&order=date_seance.desc&limit=1';
+        const rows = await sbGet('historique', params);
+        if (rows && rows[0] && rows[0].cours_cloture != null) {
+            const prev = parseFloat(rows[0].cours_cloture);
+            const curr = parseFloat(cours_cloture);
+            if (prev > 0) {
+                return parseFloat(((curr - prev) / prev * 100).toFixed(2));
+            }
+        }
+    } catch(e) { console.error('[HIST] calcAutoVariation:', e); }
+    return null;
+}
+
+async function calcAutoVariationFromForm() {
+    const ticker = _v('h-ticker');
+    const date   = _v('h-date');
+    const cours  = parseFloat(_v('h-cloture'));
+    const msg    = $('h-msg');
+    if (!ticker || !date || isNaN(cours)) {
+        if(msg) { msg.textContent = 'Remplir ticker, date et clôture d\'abord'; msg.className = 'msg err'; }
+        return;
+    }
+    const val = await calcAutoVariation(ticker, date, cours);
+    if (val != null) {
+        _set('h-var', val);
+        if(msg) { msg.textContent = '↻ Variation calculée : ' + val + '%'; msg.className = 'msg ok'; }
+    } else {
+        if(msg) { msg.textContent = 'Aucun cours précédent trouvé pour ce ticker'; msg.className = 'msg info'; }
+    }
+}
+
+async function calcAutoVariationFromModal() {
+    const ticker = _v('modal-hist-ticker');
+    const date   = _v('modal-hist-date');
+    const cours  = pf('modal-hist-cloture');
+    const msg    = $('modal-hist-msg');
+    if (!ticker || !date || isNaN(cours)) {
+        if(msg) { msg.textContent = 'Clôture requise'; msg.className = 'msg err'; }
+        return;
+    }
+    const val = await calcAutoVariation(ticker, date, cours);
+    if (val != null) {
+        _set('modal-hist-var', val);
+        if(msg) { msg.textContent = '↻ Variation calculée : ' + val + '%'; msg.className = 'msg ok'; }
+    } else {
+        if(msg) { msg.textContent = 'Aucun cours précédent trouvé'; msg.className = 'msg info'; }
+    }
 }
 
 /* ══════════════════════════════════════════════════════
@@ -182,7 +236,7 @@ async function loadHistoriqueTicker() {
             '<td class="r td-muted">' + _fmt(r.plus_bas) + '</td>' +
             '<td class="r td-muted">' + _fmt(r.volume) + '</td>' +
             '<td class="r" style="color:' + _clrPct(r.variation) + ';font-family:var(--mono);">' + _fmtPct(r.variation) + '</td>' +
-            '<td><button class="btn btn-danger btn-sm" data-id="' + escapeHtml(r.id) + '" onclick="deleteHistRow(\'' + escapeHtml(r.id) + '\')">✕</button></td>' +
+            '<td><button class="btn btn-outline btn-sm" onclick="editHistorique(\'' + escapeHtml(r.id) + '\')">✎</button> <button class="btn btn-danger btn-sm" data-id="' + escapeHtml(r.id) + '" onclick="deleteHistRow(\'' + escapeHtml(r.id) + '\')">✕</button></td>' +
             '</tr>').join('');
 
         ensureBulkBarHist();
@@ -196,7 +250,53 @@ async function loadHistoriqueTicker() {
 }
 
 /* ══════════════════════════════════════════════════════
-   4. SUPPRESSIONS
+   4. ÉDITION (MODAL)
+══════════════════════════════════════════════════════ */
+function editHistorique(id) {
+    const row = histData.find(r => String(r.id) === String(id));
+    if (!row) return;
+    const info = document.getElementById('modal-hist-info');
+    if(info) info.textContent = row.ticker + ' — ' + row.date_seance;
+    _set('modal-hist-id', row.id || '');
+    _set('modal-hist-ticker', row.ticker || '');
+    _set('modal-hist-date', row.date_seance || '');
+    _set('modal-hist-cloture', row.cours_cloture != null ? row.cours_cloture : '');
+    _set('modal-hist-ouverture', row.cours_ouverture != null ? row.cours_ouverture : '');
+    _set('modal-hist-haut', row.plus_haut != null ? row.plus_haut : '');
+    _set('modal-hist-bas', row.plus_bas != null ? row.plus_bas : '');
+    _set('modal-hist-vol', row.volume != null ? row.volume : '');
+    _set('modal-hist-var', row.variation != null ? row.variation : '');
+    if (typeof openModal === 'function') openModal('modal-historique');
+}
+
+async function saveHistorique() {
+    const id  = _v('modal-hist-id');
+    const msg = $('modal-hist-msg');
+    const body = {
+        cours_cloture: pf('modal-hist-cloture'),
+        cours_ouverture: pf('modal-hist-ouverture'),
+        plus_haut: pf('modal-hist-haut'),
+        plus_bas: pf('modal-hist-bas'),
+        volume: pi('modal-hist-vol'),
+        variation: pf('modal-hist-var')
+    };
+    try {
+        const r = await sbPatch('historique', 'id=eq.' + encodeURIComponent(id), body);
+        if (r) {
+            if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
+            if (typeof closeModal === 'function') closeModal('modal-historique');
+            loadHistoriqueTicker();
+        } else {
+            if(msg){ msg.textContent = 'Échec modification'; msg.className = 'msg err'; }
+        }
+    } catch (e) {
+        console.error('[HIST] saveHistorique:', e);
+        if(msg){ msg.textContent = 'Erreur réseau'; msg.className = 'msg err'; }
+    }
+}
+
+/* ══════════════════════════════════════════════════════
+   5. SUPPRESSIONS
 ══════════════════════════════════════════════════════ */
 async function deleteHistRow(id) {
     if (!id) return;
@@ -230,7 +330,7 @@ async function deleteAllHistoriqueTicker() {
 }
 
 /* ══════════════════════════════════════════════════════
-   5. BULK BAR
+   6. BULK BAR
 ══════════════════════════════════════════════════════ */
 function ensureBulkBarHist() {
     const tb = $('hist-tbody');
@@ -285,17 +385,21 @@ async function runBulkDeleteHist() {
 }
 
 /* ══════════════════════════════════════════════════════
-   6. EXPOSITION GLOBALE
+   7. EXPOSITION GLOBALE
 ══════════════════════════════════════════════════════ */
 window.addHistorique = addHistorique;
 window.importBulk = importBulk;
 window.parseBulkPreview = parseBulkPreview;
 window.loadHistoriqueTicker = loadHistoriqueTicker;
+window.editHistorique = editHistorique;
+window.saveHistorique = saveHistorique;
 window.deleteHistRow = deleteHistRow;
 window.deleteAllHistoriqueTicker = deleteAllHistoriqueTicker;
 window.runBulkDeleteHist = runBulkDeleteHist;
 window.histToggleRow = histToggleRow;
 window.histResetSelection = histResetSelection;
 window.updateHistBulkCount = updateHistBulkCount;
+window.calcAutoVariationFromForm = calcAutoVariationFromForm;
+window.calcAutoVariationFromModal = calcAutoVariationFromModal;
 
 })();
