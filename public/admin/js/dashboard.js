@@ -1,61 +1,92 @@
 /* ══════════════════════════════════════════════════════
-   DASHBOARD
+   DASHBOARD — ALERTES PRÉCISES (remplace loadDashboardAlerts)
 ══════════════════════════════════════════════════════ */
-async function loadDashboard() {
-    const tsEl = document.getElementById('dash-ts');
-    if (tsEl) tsEl.textContent = new Date().toLocaleString('fr-FR');
-
-    const counts = await Promise.all([
-        sbCount('entreprises'), sbCount('cours'), sbCount('historique'),
-        sbCount('financials'), sbCount('dividendes_calendrier'), sbCount('users')
-    ]);
-    const nEnt = counts[0], nCours = counts[1], nHist = counts[2], nFin = counts[3], nDiv = counts[4], nUsers = counts[5];
-
-    const kEnt = document.getElementById('k-entreprises'); if(kEnt) kEnt.textContent = nEnt;
-    const kCou = document.getElementById('k-cours');       if(kCou) kCou.textContent = nCours;
-    const kHis = document.getElementById('k-historique');  if(kHis) kHis.textContent = nHist;
-    const kFin = document.getElementById('k-financials');  if(kFin) kFin.textContent = nFin;
-    const kDiv = document.getElementById('k-dividendes');  if(kDiv) kDiv.textContent = nDiv;
-    const kUsr = document.getElementById('k-users');       if(kUsr) kUsr.textContent = nUsers;
-
-    const lastCours = await sbGet('cours', 'select=date_seance&order=date_seance.desc&limit=1');
-    const usersPlans = await sbGet('users', 'select=plan');
-
-    const plans = { free:0, pro:0, elite:0 };
-    (usersPlans || []).forEach(function(u){ if (u.plan in plans) plans[u.plan]++; });
-    const ksUsr = document.getElementById('ks-users');
-    if(ksUsr) ksUsr.textContent = 'Free:' + plans.free + ' Pro:' + plans.pro + ' Elite:' + plans.elite;
-    const ksCou = document.getElementById('ks-cours');
-    if(ksCou) ksCou.textContent = 'Dernière: ' + ((lastCours || [])[0] && (lastCours || [])[0].date_seance || '—');
-
-    const dashInfo = document.getElementById('dash-info');
-    if(dashInfo) {
-        dashInfo.innerHTML =
-            '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;">' +
-            '<div style="font-size:13px;"><span style="color:var(--muted);">Dernière séance :</span> <strong>' + ((lastCours || [])[0] && (lastCours || [])[0].date_seance || '—') + '</strong></div>' +
-            '<div style="font-size:13px;"><span style="color:var(--muted);">Entreprises :</span> <strong>' + nEnt + '</strong></div>' +
-            '<div style="font-size:13px;"><span style="color:var(--muted);">Historique :</span> <strong>' + nHist.toLocaleString('fr-FR') + '</strong></div>' +
-            '</div>';
-    }
-
-    await loadDashboardAlerts();
-}
 
 async function loadDashboardAlerts() {
     const panel = document.getElementById('dash-alerts');
     if(!panel) return;
-    const alerts = [];
-    const nullVar = await sbCount('cours', 'variation=is.null');
-    const nullCours = await sbCount('cours', 'cours=lte.0');
-    const nullClot = await sbCount('historique', 'cours_cloture=is.null');
-    if (nullVar   > 0) alerts.push({ type:'warn', msg: nullVar   + ' cours sans variation' });
-    if (nullCours > 0) alerts.push({ type:'err',  msg: nullCours + ' cours ≤ 0' });
-    if (nullClot  > 0) alerts.push({ type:'warn', msg: nullClot  + ' historique sans cours_cloture' });
-    if (!alerts.length) { panel.innerHTML = '<div style="color:var(--green);font-size:13px;">✓ Aucune anomalie.</div>'; return; }
-    panel.innerHTML = alerts.map(function(a){
-        return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border-s);">' +
-               '<span style="font-size:16px;">' + (a.type==='err'?'⚠':'ℹ') + '</span>' +
-               '<span style="font-size:13px;color:' + (a.type==='err'?'var(--red)':'var(--orange)') + ';">' + a.msg + '</span>' +
-               '</div>';
-    }).join('');
+
+    // Appel RPC Supabase (POST /rest/v1/rpc/get_aberrations)
+    let aberrations = [];
+    try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_aberrations`, {
+            method: 'POST',
+            headers: {
+                'apikey': SUPABASE_KEY,
+                'Authorization': `Bearer ${SUPABASE_KEY}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ limit_per_type: 10 })
+        });
+        if (resp.ok) aberrations = await resp.json();
+    } catch(e) {
+        console.error('Erreur RPC get_aberrations:', e);
+    }
+
+    if (!aberrations || aberrations.length === 0) {
+        panel.innerHTML = '<div style="color:var(--green);font-size:13px;padding:12px 0;">✓ Aucune anomalie détectée. Base propre.</div>';
+        return;
+    }
+
+    // Compteurs globaux
+    const errs = aberrations.filter(a => a.severity === 'err').length;
+    const warns = aberrations.filter(a => a.severity === 'warn').length;
+
+    let html = `<div style="display:flex;gap:20px;margin-bottom:16px;font-size:12px;font-weight:600;">
+        <span style="color:var(--red);">● ${errs} CRITIQUES</span>
+        <span style="color:var(--orange);">● ${warns} AVERTISSEMENTS</span>
+        <span style="color:var(--muted);margin-left:auto;">${aberrations.length} lignes concernées</span>
+    </div>`;
+
+    // Groupe par type d'anomalie
+    const byType = {};
+    aberrations.forEach(a => {
+        if (!byType[a.anomalie_type]) byType[a.anomalie_type] = [];
+        byType[a.anomalie_type].push(a);
+    });
+
+    for (const [type, items] of Object.entries(byType)) {
+        const isErr = items[0].severity === 'err';
+        const color = isErr ? 'var(--red)' : 'var(--orange)';
+        const bg = isErr ? 'rgba(239,68,68,0.08)' : 'rgba(249,115,22,0.08)';
+
+        html += `<div style="margin-bottom:20px;border:1px solid var(--border-s);border-radius:8px;overflow:hidden;">
+            <div style="background:${bg};padding:10px 14px;font-weight:600;font-size:13px;color:${color};display:flex;justify-content:space-between;align-items:center;">
+                <span>${type}</span>
+                <span style="font-size:11px;opacity:0.8;background:rgba(0,0,0,0.2);padding:2px 8px;border-radius:4px;">${items.length} ligne(s)</span>
+            </div>
+            <div style="padding:8px 14px;">`;
+
+        // Header tableau
+        html += `<div style="display:grid;grid-template-columns:70px 90px 110px 1fr 90px;gap:10px;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1px solid var(--border-s);padding:4px 0;font-weight:600;">
+            <div>Ticker</div>
+            <div>Date</div>
+            <div>Valeur actuelle</div>
+            <div>Détail / Attendu</div>
+            <div>Source</div>
+        </div>`;
+
+        // Lignes
+        items.forEach(item => {
+            html += `<div style="display:grid;grid-template-columns:70px 90px 110px 1fr 90px;gap:10px;font-size:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);align-items:center;">
+                <div><strong style="color:${color};">${item.ticker}</strong></div>
+                <div style="font-family:monospace;font-size:11px;">${item.date_seance}</div>
+                <div style="font-family:monospace;color:${color};">${item.valeur_actuelle}</div>
+                <div style="color:var(--muted);font-size:11px;">${item.valeur_attendue}</div>
+                <div><span style="background:rgba(255,255,255,0.05);padding:3px 8px;border-radius:4px;font-size:10px;text-transform:uppercase;">${item.source_table}</span></div>
+            </div>`;
+        });
+
+        // Lien vers correction
+        const targetPanel = items[0].source_table === 'historique' ? 'historique' : 'cours';
+        html += `<div style="padding-top:8px;font-size:11px;">
+            <a href="#" onclick="showPanel('${targetPanel}');return false;" style="color:var(--accent);text-decoration:none;">
+                → Voir toutes les lignes dans le panel ${targetPanel}
+            </a>
+        </div>`;
+
+        html += `</div></div>`;
+    }
+
+    panel.innerHTML = html;
 }
