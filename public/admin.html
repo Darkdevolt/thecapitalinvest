@@ -84,8 +84,7 @@
                 <div class="field"><label>Volume (titres)</label><input type="number" id="c-vol" placeholder="1200" step="1"></div>
                 <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="c-var" placeholder="0.69" step="any"></div>
                 <div class="field"><label>Capitalisation</label><input type="number" id="c-capi" placeholder="0" step="any"></div>
-                <div class="field"><label>+ haut 52 semaines</label><input type="number" id="c-h52" placeholder="15000" step="any"></div>
-                <div class="field"><label>+ bas 52 semaines</label><input type="number" id="c-b52" placeholder="12000" step="any"></div>
+               
             </div>
             <div class="actions-row">
                 <button class="btn btn-primary" onclick="addCours()">Enregistrer le cours</button>
@@ -104,8 +103,8 @@
             </div>
             <div class="tw">
                 <table>
-                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Capi.</th><th class="r">H52</th><th class="r">B52</th><th></th></tr></thead>
-                    <tbody id="cours-tbody"><tr><td colspan="13"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Val. totale</th><th></th></tr></thead>
+                    <tbody id="cours-tbody"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
             </div>
             <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
@@ -662,8 +661,7 @@
             <div class="field"><label>Volume</label><input type="number" id="modal-cours-vol"></div>
             <div class="field"><label>Variation %</label><input type="number" id="modal-cours-var" step="any"></div>
             <div class="field"><label>Capitalisation</label><input type="number" id="modal-cours-capi" step="any"></div>
-            <div class="field"><label>+ haut 52s</label><input type="number" id="modal-cours-h52" step="any"></div>
-            <div class="field"><label>+ bas 52s</label><input type="number" id="modal-cours-b52" step="any"></div>
+            
         </div>
         <div class="modal-actions">
             <button class="btn btn-outline btn-sm" onclick="closeModal('modal-cours')">Annuler</button>
