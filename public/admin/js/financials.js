@@ -18,13 +18,6 @@ function renderFinTable(data) {
     const cnt = document.getElementById('fin-count');
     if(cnt) cnt.textContent = data.length;
     if (!tb) return;
-    if (!data  Je continue avec les fichiers restants :
-
----
-
-### 11. `public/admin/js/financials.js` (suite)
-
-```javascript
     if (!data.length) { tb.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--muted);padding:20px;">Aucun financial</td></tr>'; return; }
     resetSelection();
     tb.innerHTML = data.map(function(r){
