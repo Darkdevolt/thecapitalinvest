@@ -130,7 +130,7 @@
                     <div class="field"><label>Plus haut</label><input type="number" id="h-haut" placeholder="14600" step="any"></div>
                     <div class="field"><label>Plus bas</label><input type="number" id="h-bas" placeholder="14350" step="any"></div>
                     <div class="field"><label>Volume</label><input type="number" id="h-vol" placeholder="1200"></div>
-                    <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
+                    <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span> <button type="button" class="btn btn-outline btn-sm" style="margin-left:6px;font-size:10px;padding:2px 6px;" onclick="calcAutoVariationFromForm()">↻ Auto</button></label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
                 </div>
                 <div class="actions-row">
                     <button class="btn btn-primary" onclick="addHistorique()">Enregistrer</button>
@@ -787,7 +787,32 @@
         <span id="modal-an-msg" class="msg" style="display:block;margin-top:8px;"></span>
     </div>
 </div>
+</div>
 
+<div class="inline-edit" id="modal-historique">
+    <div class="modal">
+        <div class="modal-title">Modifier le cours historique</div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;" id="modal-hist-info"></div>
+        <input type="hidden" id="modal-hist-id">
+        <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
+            <div class="field"><label>Ticker</label><input type="text" id="modal-hist-ticker" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Date séance</label><input type="text" id="modal-hist-date" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
+            <div class="field"><label>Cours clôture</label><input type="number" id="modal-hist-cloture" step="any" oninput="calcAutoVariationFromModal()"></div>
+            <div class="field"><label>Ouverture</label><input type="number" id="modal-hist-ouverture" step="any"></div>
+            <div class="field"><label>Plus haut</label><input type="number" id="modal-hist-haut" step="any"></div>
+            <div class="field"><label>Plus bas</label><input type="number" id="modal-hist-bas" step="any"></div>
+            <div class="field"><label>Volume</label><input type="number" id="modal-hist-vol"></div>
+            <div class="field"><label>Variation % <button type="button" class="btn btn-outline btn-sm" style="margin-left:8px;font-size:10px;padding:2px 6px;" onclick="calcAutoVariationFromModal()">↻ Auto</button></label><input type="number" id="modal-hist-var" step="any"></div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-outline btn-sm" onclick="closeModal('modal-historique')">Annuler</button>
+            <button class="btn btn-primary btn-sm" onclick="saveHistorique()">Enregistrer</button>
+        </div>
+        <span id="modal-hist-msg" class="msg" style="display:block;margin-top:8px;"></span>
+    </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="admin/js/config.js"></script>
 <script src="admin/js/utils.js"></script>
