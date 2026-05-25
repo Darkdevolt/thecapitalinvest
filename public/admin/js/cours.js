@@ -67,10 +67,18 @@ function filterCoursTable() {
 
 async function addCours() {
     const msg  = document.getElementById('c-msg');
+    
+    // RÉCUPÉRATION DES VALEURS AVEC VÉRIFICATION
+    const ticker = v('c-ticker');
+    const date = v('c-date');
+    const cours = pf('c-cours');
+    
+    console.log('DEBUG - Valeurs récupérées:', { ticker, date, cours });
+    
     const body = {
-        ticker: v('c-ticker'),
-        date_seance: v('c-date'),
-        cours_cloture: pf('c-cours'),
+        ticker: ticker,
+        date_seance: date,
+        cours_cloture: cours,
         cours_ouverture: pf('c-ouv'),
         plus_haut: pf('c-haut'),
         plus_bas: pf('c-bas'),
@@ -78,12 +86,33 @@ async function addCours() {
         variation: pf('c-var'),
         valeur_totale: pf('c-capi')
     };
-    if (!body.ticker || !body.date_seance || body.cours_cloture == null) {
-        if(msg){ msg.textContent = 'Ticker, date et cours obligatoires'; msg.className = 'msg err'; } return;
+    
+    // VÉRIFICATION CORRIGÉE - Plus stricte
+    const hasTicker = ticker && ticker.trim().length > 0;
+    const hasDate = date && date.trim().length > 0;
+    const hasCours = cours !== null && cours !== undefined && !isNaN(cours) && cours !== '';
+    
+    console.log('DEBUG - Validation:', { hasTicker, hasDate, hasCours });
+    
+    if (!hasTicker || !hasDate || !hasCours) {
+        let erreurs = [];
+        if (!hasTicker) erreurs.push('Ticker');
+        if (!hasDate) erreurs.push('Date');
+        if (!hasCours) erreurs.push('Cours');
+        
+        if(msg){ 
+            msg.textContent = '⚠️ Champs obligatoires vides : ' + erreurs.join(', '); 
+            msg.className = 'msg err'; 
+        } 
+        return;
     }
+    
     const r = await sbPost('cours', body, 'ticker,date_seance');
     if (r) {
-        if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
+        if(msg){ 
+            msg.textContent = '✓ Enregistré'; 
+            msg.className = 'msg ok'; 
+        }
         clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi']);
         loadCours();
     }
