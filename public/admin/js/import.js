@@ -428,7 +428,10 @@ async function confirmImport() {
     if (progress) progress.style.width = '100%';
     if (pText) pText.textContent = 'Terminé !';
     toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s) sur ' + prepared.length + ' préparée(s)');
-    if (config.table === 'cours' || config.table === 'historique') await recalcVariations();
+    if (config.table === 'cours' || config.table === 'historique') {
+    await recalcVariations();
+    await supabase.rpc('recalculer_variations');
+}
     cancelImport();
 }
 
