@@ -129,18 +129,60 @@ function forceTemplate(key) {
     }
 }
 
+function resolveFieldValue(row, config, field) {
+    // 1. Cherche le nom exact du champ dans la ligne
+    var rawVal = row[field];
+    if (rawVal !== undefined && rawVal !== null && rawVal !== '') return rawVal;
+
+    // 2. Cherche via fieldMap du template
+    if (config.fieldMap && config.fieldMap[field]) {
+        for (var a = 0; a < config.fieldMap[field].length; a++) {
+            var alias = config.fieldMap[field][a];
+            // a) nom exact dans l'objet row
+            if (row[alias] !== undefined && row[alias] !== null && row[alias] !== '') {
+                return row[alias];
+            }
+            // b) version normalisée
+            for (var rk in row) {
+                var normRk = String(rk).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
+                var normAlias = String(alias).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
+                if (normRk === normAlias && row[rk] !== undefined && row[rk] !== null && row[rk] !== '') {
+                    return row[rk];
+                }
+            }
+        }
+    }
+
+    // 3. Fallbacks durs (compatibilité)
+    if (field === 'ticker') return row.code || row.symbol || row.isin || row.code_valeur;
+    if (field === 'date_seance') return row.date || row.date_seance;
+    if (field === 'annee') return row.year;
+    if (field === 'montant') return row.dividende || row.valeur;
+    if (field === 'indice') return row.code || row.indice;
+    if (field === 'cours_cloture') return row.cours || row.cloture || row.cours_cloture;
+    if (field === 'cours_ouverture') return row.ouverture || row.cours_ouverture || row.ouv;
+    if (field === 'plus_haut') return row.haut || row.plus_haut || row.high;
+    if (field === 'plus_bas') return row.bas || row.plus_bas || row.low;
+    if (field === 'volume') return row.vol || row.quantite || row.volume;
+    if (field === 'variation') return row.var || row.pct || row.variation_pct || row.variation;
+    if (field === 'valeur_totale') return row.capitalisation || row.capi || row.cap || row.valeur_totale;
+
+    return undefined;
+}
+
 function validateRow(row, lineIndex, config) {
     var errors = [];
     var warnings = [];
     var cleaned = {};
     var display = {};
     var mapped = {};
-    for (var k in row) {
-        if (k.indexOf('_') === 0) continue;
-        mapped[k] = row[k];
-    }
 
-    var tickerVal = mapped.ticker || mapped.code || mapped.symbol || mapped.isin || mapped.code_valeur;
+    // Résolution de TOUS les champs via fieldMap + fallback
+    config.headers.forEach(function(h) {
+        mapped[h] = resolveFieldValue(row, config, h);
+    });
+
+    var tickerVal = mapped.ticker;
     if (!tickerVal || String(tickerVal).trim() === '') {
         errors.push("Ligne " + lineIndex + " : le ticker/code est vide.");
         display.ticker = '';
@@ -149,56 +191,17 @@ function validateRow(row, lineIndex, config) {
         display.ticker = cleaned.ticker;
     }
 
+    // Vérification des champs required avec résolution fieldMap
     config.required.forEach(function(req) {
-        var found = false;
-        var rawVal = null;
-        for (var mk in mapped) {
-            if (headerMatches(mk, req)) { found = true; rawVal = mapped[mk]; break; }
-        }
-        if (!found) rawVal = mapped[req];
+        var rawVal = mapped[req];
         if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') {
             errors.push("Ligne " + lineIndex + ", colonne '" + req + "' : valeur obligatoire manquante.");
         }
     });
 
+    // Traitement de chaque champ
     config.headers.forEach(function(h) {
         var rawVal = mapped[h];
-
-        // === MAPPING DES CHAMPS EXCEL → TABLE ===
-        // 1. Cherche via fieldMap du template
-        if ((rawVal === undefined || rawVal === null || rawVal === '') && config.fieldMap && config.fieldMap[h]) {
-            for (var a = 0; a < config.fieldMap[h].length; a++) {
-                var alias = config.fieldMap[h][a];
-                var normAlias = normalizeHeader(alias);
-                // a) nom exact dans l'objet mapped
-                if (mapped[alias] !== undefined && mapped[alias] !== null && mapped[alias] !== '') {
-                    rawVal = mapped[alias];
-                    break;
-                }
-                // b) version normalisée
-                for (var mk in mapped) {
-                    if (normalizeHeader(mk) === normAlias && mapped[mk] !== undefined && mapped[mk] !== null && mapped[mk] !== '') {
-                        rawVal = mapped[mk];
-                        break;
-                    }
-                }
-                if (rawVal !== undefined && rawVal !== null && rawVal !== '') break;
-            }
-        }
-
-        // 2. Fallbacks durs (compatibilité)
-        if (h === 'ticker') rawVal = rawVal || mapped.code || mapped.symbol || mapped.isin || mapped.code_valeur;
-        if (h === 'date_seance') rawVal = rawVal || mapped.date || mapped.date_seance;
-        if (h === 'annee') rawVal = rawVal || mapped.year;
-        if (h === 'montant') rawVal = rawVal || mapped.dividende || mapped.valeur;
-        if (h === 'indice') rawVal = rawVal || mapped.code || mapped.indice;
-        if (h === 'cours_cloture') rawVal = rawVal || mapped.cours || mapped.cloture || mapped.cours_cloture;
-        if (h === 'cours_ouverture') rawVal = rawVal || mapped.ouverture || mapped.cours_ouverture || mapped.ouv;
-        if (h === 'plus_haut') rawVal = rawVal || mapped.haut || mapped.plus_haut || mapped.high;
-        if (h === 'plus_bas') rawVal = rawVal || mapped.bas || mapped.plus_bas || mapped.low;
-        if (h === 'volume') rawVal = rawVal || mapped.vol || mapped.quantite || mapped.volume;
-        if (h === 'variation') rawVal = rawVal || mapped.var || mapped.pct || mapped.variation_pct || mapped.variation;
-        if (h === 'valeur_totale') rawVal = rawVal || mapped.capitalisation || mapped.capi || mapped.cap || mapped.valeur_totale;
 
         var norm = normalizeExcelValue(rawVal, h);
 
