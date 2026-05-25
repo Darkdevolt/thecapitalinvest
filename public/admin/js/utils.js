@@ -84,24 +84,45 @@ function showFatalError(title, details) {
 /* ── CONVERSION EXCEL DATES ─────────────────────────────────── */
 function excelDateToISO(val) {
     if (!val && val !== 0) return null;
+    
+    // Déjà une date ISO
     if (typeof val === 'string') {
         var s = val.trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        
+        // DD/MM/YYYY ou DD-MM-YYYY
+        if (/^\d{2}[\/\-]\d{2}[\/\-]\d{4}$/.test(s)) {
+            var sep = s.indexOf('/') !== -1 ? '/' : '-';
+            var p = s.split(sep);
+            return p[2] + '-' + p[1] + '-' + p[0];
+        }
+        
+        // M/D/YY ou MM/DD/YY (format US court — sécurité)
+        if (/^\d{1,2}\/\d{1,2}\/\d{2}$/.test(s)) {
+            var p = s.split('/');
+            var m = p[0].padStart(2, '0');
+            var d = p[1].padStart(2, '0');
+            var y = parseInt(p[2], 10);
+            y = y < 50 ? 2000 + y : 1900 + y;
+            return y + '-' + m + '-' + d;
+        }
+        
+        // MM/DD/YYYY (format US long)
         if (/^\d{2}\/\d{2}\/\d{4}$/.test(s)) {
             var p = s.split('/');
-            return p[2] + '-' + p[1] + '-' + p[0];
-        }
-        if (/^\d{2}-\d{2}-\d{4}$/.test(s)) {
-            var p = s.split('-');
-            return p[2] + '-' + p[1] + '-' + p[0];
+            return p[2] + '-' + p[0] + '-' + p[1];
         }
     }
+    
+    // Objet Date natif (quand cellDates: true + raw: true)
     if (val instanceof Date) {
         var y = val.getFullYear();
         var m = String(val.getMonth() + 1).padStart(2, '0');
         var d = String(val.getDate()).padStart(2, '0');
         return y + '-' + m + '-' + d;
     }
+    
+    // Serial number Excel
     var n = Number(val);
     if (isNaN(n) || n <= 0) return null;
     var epoch = new Date(1899, 11, 30);
