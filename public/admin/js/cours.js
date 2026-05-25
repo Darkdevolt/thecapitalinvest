@@ -1,31 +1,17 @@
 /* ══════════════════════════════════════════════════════
-   COURS — Aligné sur le schéma Supabase réel
-   Mapping : cours→cours_cloture | ouverture→cours_ouverture
-   capitalisation→valeur_totale | suppression 52 semaines
-
-   DÉPENDANCES REQUISES (doivent être chargées AVANT ce fichier):
-   - supabase-js (client Supabase initialisé)
-   - utils.js avec : v, pf, pi, set, sbGet, sbPost, sbPatch, sbDel
-   - ui.js avec : fmt, fmtPct, clrPct, doubleConfirm, toast, openModal, closeModal
-   - styles CSS pour : .card, .tw, .bulk-bar, .btn, etc.
+   COURS — Validation précise et messages d'erreur détaillés
 ══════════════════════════════════════════════════════ */
 
 (function() {
     'use strict';
 
-    // ══════════════════════════════════════════════════════
-    // VARIABLES D'ÉTAT (encapsulées dans la closure)
-    // ══════════════════════════════════════════════════════
     let coursData = [];
     let selectedIds = new Set();
 
     // ══════════════════════════════════════════════════════
-    // FONCTIONS UTILITAIRES LOCALES (sécurisées)
+    // UTILITAIRES
     // ══════════════════════════════════════════════════════
 
-    /**
-     * Échappe les caractères HTML pour éviter XSS
-     */
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
         return String(str)
@@ -36,18 +22,145 @@
             .replace(/'/g, '&#039;');
     }
 
-    /**
-     * Vérifie si un nombre est valide (accepte 0, rejette null/undefined/NaN)
-     */
     function isValidNumber(val) {
         return val !== null && val !== undefined && !isNaN(val) && typeof val === 'number';
     }
 
-    /**
-     * Vérifie si une chaîne est non-vide après trim
-     */
     function isNonEmptyString(str) {
         return typeof str === 'string' && str.trim().length > 0;
+    }
+
+    /**
+     * Validation stricte du format date YYYY-MM-DD
+     */
+    function isValidISODate(str) {
+        if (!isNonEmptyString(str)) return false;
+        // Format YYYY-MM-DD uniquement
+        const regex = /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
+        if (!regex.test(str.trim())) return false;
+        
+        // Vérification que la date existe réellement (pas 2026-02-30)
+        const d = new Date(str.trim());
+        return d instanceof Date && !isNaN(d) && 
+               d.toISOString().slice(0, 10) === str.trim();
+    }
+
+    /**
+     * Normalise une date M/D/YY ou MM/DD/YY → YYYY-MM-DD
+     * Retourne null si impossible
+     */
+    function normalizeDate(dateStr) {
+        if (!dateStr) return null;
+        const s = String(dateStr).trim();
+        
+        // Déjà au bon format ?
+        if (isValidISODate(s)) return s;
+        
+        // Format M/D/YY ou MM/DD/YY
+        const usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (usMatch) {
+            let [, m, d, y] = usMatch;
+            let year = parseInt(y, 10);
+            if (y.length === 2) {
+                year = year < 50 ? 2000 + year : 1900 + year;
+            }
+            const iso = `${year}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+            return isValidISODate(iso) ? iso : null;
+        }
+        
+        return null;
+    }
+
+    // ══════════════════════════════════════════════════════
+    // VALIDATION PRÉCISE (retourne un tableau d'erreurs)
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Valide une ligne de cours et retourne un tableau d'erreurs détaillées.
+     * Chaque erreur est un objet : { champ, valeur, message }
+     */
+    function validateCoursRow(row, ligneNum) {
+        const errors = [];
+        const prefix = ligneNum ? `[Ligne ${ligneNum}] ` : '';
+
+        // ─── TICKER ───
+        const ticker = row.ticker;
+        if (!isNonEmptyString(ticker)) {
+            errors.push({
+                champ: 'ticker',
+                valeur: ticker,
+                message: prefix + 'Ticker MANQUANT : le symbole boursier est obligatoire.'
+            });
+        } else if (ticker.trim().length < 2) {
+            errors.push({
+                champ: 'ticker',
+                valeur: ticker,
+                message: prefix + `Ticker TROP COURT (« ${escapeHtml(ticker.trim())} ») : minimum 2 caractères.`
+            });
+        }
+
+        // ─── DATE ───
+        const date = row.date_seance || row.date;
+        if (!isNonEmptyString(date)) {
+            errors.push({
+                champ: 'date_seance',
+                valeur: date,
+                message: prefix + 'Date MANQUANTE : la date de séance est obligatoire.'
+            });
+        } else {
+            const normalized = normalizeDate(date);
+            if (!normalized) {
+                errors.push({
+                    champ: 'date_seance',
+                    valeur: date,
+                    message: prefix + `Date INVALIDE (« ${escapeHtml(date)} ») : format attendu YYYY-MM-DD (ex: 2026-05-25). Format américain détecté ? Essayez d'abord de convertir MM/DD/YY.`
+                });
+            }
+        }
+
+        // ─── COURS DE CLÔTURE ───
+        const cours = row.cours_cloture !== undefined ? row.cours_cloture : row.cours;
+        if (cours === null || cours === undefined || cours === '') {
+            errors.push({
+                champ: 'cours_cloture',
+                valeur: cours,
+                message: prefix + 'Cours de clôture MANQUANT : valeur principale obligatoire.'
+            });
+        } else if (isNaN(Number(cours))) {
+            errors.push({
+                champ: 'cours_cloture',
+                valeur: cours,
+                message: prefix + `Cours de clôture INCORRECT (« ${escapeHtml(cours)} ») : ce n'est pas un nombre valide.`
+            });
+        } else if (Number(cours) < 0) {
+            errors.push({
+                champ: 'cours_cloture',
+                valeur: cours,
+                message: prefix + `Cours de clôture NÉGATIF (« ${cours} ») : le prix ne peut pas être négatif.`
+            });
+        }
+
+        // ─── CHAMPS OPTIONNELS (warnings si format mauvais mais pas bloquant) ───
+        const champsOptionnels = [
+            { key: 'cours_ouverture', val: row.cours_ouverture, nom: 'Cours d\'ouverture' },
+            { key: 'plus_haut', val: row.plus_haut, nom: 'Plus haut' },
+            { key: 'plus_bas', val: row.plus_bas, nom: 'Plus bas' },
+            { key: 'volume', val: row.volume, nom: 'Volume' },
+            { key: 'variation', val: row.variation, nom: 'Variation' },
+            { key: 'valeur_totale', val: row.valeur_totale, nom: 'Valeur totale' }
+        ];
+
+        champsOptionnels.forEach(c => {
+            if (c.val !== null && c.val !== undefined && c.val !== '' && isNaN(Number(c.val))) {
+                errors.push({
+                    champ: c.key,
+                    valeur: c.val,
+                    message: prefix + `${c.nom} IGNORÉ (« ${escapeHtml(c.val)} ») : valeur non-numérique, le champ sera mis à NULL.`
+                });
+            }
+        });
+
+        return errors;
     }
 
     // ══════════════════════════════════════════════════════
@@ -88,9 +201,8 @@
 
         tb.innerHTML = data.map(function(r) {
             const isSelected = selectedIds.has(r.id);
-            // Utilisation d'attributs data-* séparés au lieu de JSON encodé (XSS-safe)
             return '<tr>' +
-                '<td><input type="checkbox" class="row-check" data-id="' + escapeHtml(r.id) + '" ' + (isSelected ? 'checked' : '') + ' onchange="window.CoursApp.toggleRow('' + escapeHtml(r.id) + '',this)"></td>' +
+                '<td><input type="checkbox" class="row-check" data-id="' + escapeHtml(r.id) + '" ' + (isSelected ? 'checked' : '') + ' onchange="window.CoursApp.toggleRow(\'' + escapeHtml(r.id) + '\',this)"></td>' +
                 '<td class="td-gold">' + escapeHtml(r.ticker) + '</td>' +
                 '<td class="td-muted">' + escapeHtml(r.date_seance) + '</td>' +
                 '<td class="r td-mono">' + fmt(r.cours_cloture) + '</td>' +
@@ -127,7 +239,7 @@
 
     function renderBulkBar() {
         var existingBar = document.getElementById('bulk-bar-cours');
-        if (existingBar) return; // Déjà rendu
+        if (existingBar) return;
 
         var card = document.getElementById('cours-tbody')?.closest('.card');
         if (!card) return;
@@ -209,69 +321,58 @@
     }
 
     // ══════════════════════════════════════════════════════
-    // CRÉATION (ADD)
+    // CRÉATION (ADD) — VALIDATION PRÉCISE
     // ══════════════════════════════════════════════════════
 
     async function addCours() {
         const msg = document.getElementById('c-msg');
 
         // ─── RÉCUPÉRATION ───
-        const ticker = v('c-ticker');
-        const date = v('c-date');
-        const cours = pf('c-cours');
-        const ouv = pf('c-ouv');
-        const haut = pf('c-haut');
-        const bas = pf('c-bas');
-        const vol = pi('c-vol');
-        const variation = pf('c-var');
-        const capi = pf('c-capi');
-
-        console.log('[addCours] Valeurs récupérées:', { 
-            ticker, date, cours, ouv, haut, bas, vol, variation, capi 
-        });
-
-        // ─── VALIDATION STRICTE ───
-        const errors = [];
-
-        if (!isNonEmptyString(ticker)) {
-            errors.push('Ticker obligatoire');
-        }
-
-        if (!isNonEmptyString(date)) {
-            errors.push('Date obligatoire');
-        }
-
-        // COURS : doit être un nombre valide (0 est accepté !)
-        if (!isValidNumber(cours)) {
-            errors.push('Cours de clôture obligatoire (nombre valide)');
-        }
-
-        if (errors.length > 0) {
-            const errorMsg = '⚠️ ' + errors.join(' | ');
-            console.warn('[addCours] Validation échouée:', errors);
-            if (msg) { 
-                msg.textContent = errorMsg; 
-                msg.className = 'msg err'; 
-            }
-            return;
-        }
-
-        // ─── CONSTRUCTION DU BODY (champs optionnels = undefined, pas null) ───
-        // Supabase préfère undefined pour les champs optionnels (pas de mise à jour)
-        // ou null explicite si vous voulez vider le champ
-        const body = {
-            ticker: ticker.trim().toUpperCase(),
-            date_seance: date,
-            cours_cloture: cours
+        const row = {
+            ticker: v('c-ticker'),
+            date_seance: v('c-date'),
+            cours_cloture: pf('c-cours'),
+            cours_ouverture: pf('c-ouv'),
+            plus_haut: pf('c-haut'),
+            plus_bas: pf('c-bas'),
+            volume: pi('c-vol'),
+            variation: pf('c-var'),
+            valeur_totale: pf('c-capi')
         };
 
-        // Ajouter les champs optionnels UNIQUEMENT s'ils sont valides
-        if (isValidNumber(ouv)) body.cours_ouverture = ouv;
-        if (isValidNumber(haut)) body.plus_haut = haut;
-        if (isValidNumber(bas)) body.plus_bas = bas;
-        if (isValidNumber(vol)) body.volume = vol;
-        if (isValidNumber(variation)) body.variation = variation;
-        if (isValidNumber(capi)) body.valeur_totale = capi;
+        console.log('[addCours] Valeurs récupérées:', row);
+
+        // ─── VALIDATION PRÉCISE ───
+        const errors = validateCoursRow(row);
+        
+        if (errors.length > 0) {
+            // On filtre seulement les erreurs bloquantes (pas les warnings optionnels)
+            const blockingErrors = errors.filter(e => !e.message.includes('IGNORÉ'));
+            
+            if (blockingErrors.length > 0) {
+                const errorMsg = '❌ ' + blockingErrors.map(e => e.message).join(' | ');
+                console.warn('[addCours] Validation échouée:', blockingErrors);
+                if (msg) { 
+                    msg.innerHTML = errorMsg; 
+                    msg.className = 'msg err'; 
+                }
+                return;
+            }
+        }
+
+        // ─── CONSTRUCTION DU BODY ───
+        const body = {
+            ticker: row.ticker.trim().toUpperCase(),
+            date_seance: normalizeDate(row.date_seance) || row.date_seance.trim(),
+            cours_cloture: row.cours_cloture
+        };
+
+        if (isValidNumber(row.cours_ouverture)) body.cours_ouverture = row.cours_ouverture;
+        if (isValidNumber(row.plus_haut)) body.plus_haut = row.plus_haut;
+        if (isValidNumber(row.plus_bas)) body.plus_bas = row.plus_bas;
+        if (isValidNumber(row.volume)) body.volume = row.volume;
+        if (isValidNumber(row.variation)) body.variation = row.variation;
+        if (isValidNumber(row.valeur_totale)) body.valeur_totale = row.valeur_totale;
 
         console.log('[addCours] Body envoyé:', body);
 
@@ -287,7 +388,6 @@
                 clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi']);
                 loadCours();
             } else {
-                // sbPost a retourné null/undefined → erreur déjà loggée
                 if (msg) { 
                     msg.textContent = '✗ Erreur lors de l\'enregistrement'; 
                     msg.className = 'msg err'; 
@@ -303,11 +403,65 @@
     }
 
     // ══════════════════════════════════════════════════════
+    // IMPORT EN MASSE — VALIDATION LIGNE PAR LIGNE
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Valide un lot de données pour import et retourne un rapport détaillé.
+     * À utiliser dans ton fichier d'import (import.js ou équivalent).
+     */
+    function validateImportBatch(rows) {
+        const rapport = {
+            total: rows.length,
+            valides: [],
+            erreurs: [], // { ligne, champ, valeur, message }
+            resume: ''
+        };
+
+        rows.forEach((row, index) => {
+            const ligneNum = index + 1;
+            const errors = validateCoursRow(row, ligneNum);
+            const blocking = errors.filter(e => !e.message.includes('IGNORÉ'));
+
+            if (blocking.length === 0) {
+                // Normaliser la date avant stockage
+                const normalizedRow = {
+                    ...row,
+                    date_seance: normalizeDate(row.date_seance || row.date)
+                };
+                rapport.valides.push(normalizedRow);
+            } else {
+                rapport.erreurs.push(...blocking);
+            }
+        });
+
+        const nbErreurs = rapport.erreurs.length;
+        const nbValides = rapport.valides.length;
+        
+        if (nbErreurs === 0) {
+            rapport.resume = `✅ ${nbValides}/${rapport.total} lignes prêtes à importer.`;
+        } else {
+            // Grouper les erreurs par type pour le résumé
+            const parChamp = {};
+            rapport.erreurs.forEach(e => {
+                parChamp[e.champ] = (parChamp[e.champ] || 0) + 1;
+            });
+            
+            const details = Object.entries(parChamp)
+                .map(([champ, count]) => `${count}× ${champ}`)
+                .join(', ');
+                
+            rapport.resume = `⚠️ ${nbValides}/${rapport.total} lignes valides. ${nbErreurs} erreur(s) détectée(s) : ${details}.`;
+        }
+
+        return rapport;
+    }
+
+    // ══════════════════════════════════════════════════════
     // ÉDITION (EDIT)
     // ══════════════════════════════════════════════════════
 
     function handleEditCours(btn) {
-        // Récupération sécurisée depuis les attributs data-*
         const row = {
             id: btn.getAttribute('data-id'),
             ticker: btn.getAttribute('data-ticker'),
@@ -351,7 +505,6 @@
         const body = {};
         const cours = pf('modal-cours-val');
 
-        // Validation : cours de clôture obligatoire même en édit
         if (!isValidNumber(cours)) {
             if (msg) { msg.textContent = '✗ Cours de clôture obligatoire'; msg.className = 'msg err'; }
             return;
@@ -421,7 +574,7 @@
     }
 
     // ══════════════════════════════════════════════════════
-    // EXPOSITION PUBLIQUE (évite les conflits de nom global)
+    // EXPOSITION PUBLIQUE
     // ══════════════════════════════════════════════════════
 
     window.CoursApp = {
@@ -437,7 +590,11 @@
         toggleRow: toggleRow,
         resetSelection: resetSelection,
         updateBulkBar: updateBulkBar,
-        bulkDeleteCours: bulkDeleteCours
+        bulkDeleteCours: bulkDeleteCours,
+        // Nouvelles fonctions exposées pour l'import
+        validateCoursRow: validateCoursRow,
+        validateImportBatch: validateImportBatch,
+        normalizeDate: normalizeDate
     };
 
 })();
