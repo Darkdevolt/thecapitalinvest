@@ -100,7 +100,16 @@ function detectTemplate(headers) {
         var config = TEMPLATE_CONFIG[key];
         var required = config.required;
         var match = required.filter(function(rh){
-            return normHeaders.some(function(h){ return headerMatches(h, rh); });
+            // Match direct
+            if (normHeaders.some(function(h){ return headerMatches(h, rh); })) return true;
+            // Match via fieldMap (nouveau)
+            if (config.fieldMap && config.fieldMap[rh]) {
+                return config.fieldMap[rh].some(function(alias){
+                    var normAlias = normalizeHeader(alias);
+                    return normHeaders.indexOf(normAlias) !== -1;
+                });
+            }
+            return false;
         }).length;
         var threshold = key === 'dividendes' ? 1.0 : 0.8;
         if (match >= Math.ceil(required.length * threshold)) return key;
@@ -154,11 +163,42 @@ function validateRow(row, lineIndex, config) {
 
     config.headers.forEach(function(h) {
         var rawVal = mapped[h];
+
+        // === MAPPING DES CHAMPS EXCEL → TABLE ===
+        // 1. Cherche via fieldMap du template
+        if ((rawVal === undefined || rawVal === null || rawVal === '') && config.fieldMap && config.fieldMap[h]) {
+            for (var a = 0; a < config.fieldMap[h].length; a++) {
+                var alias = config.fieldMap[h][a];
+                var normAlias = normalizeHeader(alias);
+                // a) nom exact dans l'objet mapped
+                if (mapped[alias] !== undefined && mapped[alias] !== null && mapped[alias] !== '') {
+                    rawVal = mapped[alias];
+                    break;
+                }
+                // b) version normalisée
+                for (var mk in mapped) {
+                    if (normalizeHeader(mk) === normAlias && mapped[mk] !== undefined && mapped[mk] !== null && mapped[mk] !== '') {
+                        rawVal = mapped[mk];
+                        break;
+                    }
+                }
+                if (rawVal !== undefined && rawVal !== null && rawVal !== '') break;
+            }
+        }
+
+        // 2. Fallbacks durs (compatibilité)
         if (h === 'ticker') rawVal = rawVal || mapped.code || mapped.symbol || mapped.isin || mapped.code_valeur;
         if (h === 'date_seance') rawVal = rawVal || mapped.date || mapped.date_seance;
         if (h === 'annee') rawVal = rawVal || mapped.year;
         if (h === 'montant') rawVal = rawVal || mapped.dividende || mapped.valeur;
         if (h === 'indice') rawVal = rawVal || mapped.code || mapped.indice;
+        if (h === 'cours_cloture') rawVal = rawVal || mapped.cours || mapped.cloture || mapped.cours_cloture;
+        if (h === 'cours_ouverture') rawVal = rawVal || mapped.ouverture || mapped.cours_ouverture || mapped.ouv;
+        if (h === 'plus_haut') rawVal = rawVal || mapped.haut || mapped.plus_haut || mapped.high;
+        if (h === 'plus_bas') rawVal = rawVal || mapped.bas || mapped.plus_bas || mapped.low;
+        if (h === 'volume') rawVal = rawVal || mapped.vol || mapped.quantite || mapped.volume;
+        if (h === 'variation') rawVal = rawVal || mapped.var || mapped.pct || mapped.variation_pct || mapped.variation;
+        if (h === 'valeur_totale') rawVal = rawVal || mapped.capitalisation || mapped.capi || mapped.cap || mapped.valeur_totale;
 
         var norm = normalizeExcelValue(rawVal, h);
 
@@ -385,7 +425,7 @@ async function confirmImport() {
     if (progress) progress.style.width = '100%';
     if (pText) pText.textContent = 'Terminé !';
     toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s) sur ' + prepared.length + ' préparée(s)');
-    if (config.table === 'cours') await recalcVariations();
+    if (config.table === 'cours' || config.table === 'historique') await recalcVariations();
     cancelImport();
 }
 
