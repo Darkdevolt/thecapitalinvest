@@ -26,9 +26,24 @@ const TEMPLATE_CONFIG = {
     },
     cours: {
         name: 'BRVM_Cours',
-        headers: ['ticker','date_seance','cours','ouverture','plus_haut','plus_bas','volume','capitalisation','plus_haut_52','plus_bas_52'],
-        required: ['ticker','date_seance','cours'],
-        table: 'cours', uniqueKey: 'ticker,date_seance', autoCalc: ['variation']
+        headers: ['ticker','date_seance','cours_cloture','cours_ouverture','plus_haut','plus_bas','volume','variation','valeur_totale','plus_haut_52','plus_bas_52'],
+        required: ['ticker','date_seance','cours_cloture'],
+        table: 'historique',
+        uniqueKey: 'ticker,date_seance',
+        autoCalc: ['variation'],
+        fieldMap: {
+            'ticker': ['ticker','code','symbol','isin','code_valeur'],
+            'date_seance': ['date_seance','date'],
+            'cours_cloture': ['cours','cloture','cours_cloture'],
+            'cours_ouverture': ['ouverture','cours_ouverture','ouv'],
+            'plus_haut': ['plus_haut','haut','high'],
+            'plus_bas': ['plus_bas','bas','low'],
+            'volume': ['volume','vol','quantite'],
+            'variation': ['variation','var','pct','variation_pct'],
+            'valeur_totale': ['capitalisation','valeur_totale','capi','cap'],
+            'plus_haut_52': ['plus_haut_52','haut_52','high_52'],
+            'plus_bas_52': ['plus_bas_52','bas_52','low_52']
+        }
     },
     financials: {
         name: 'BRVM_Financials',
