@@ -435,7 +435,7 @@
 
     async function loadCours() {
         try {
-            const recent = await sbGet('cours', 'select=*&order=date_seance.desc&limit=100');
+            const recent = await sbGet('historique', 'select=*&order=date_seance.desc&limit=100');
             coursData = recent || [];
 
             if (coursData.length) {
@@ -461,7 +461,7 @@
         const dateStr = d.toISOString().slice(0, 10);
 
         const filter = tickers.map(t => 'ticker.eq.' + encodeURIComponent(t)).join(',');
-        const history = await sbGet('cours', `select=ticker,cours_cloture&date_seance=gte.${dateStr}&ticker=or.(${filter})`);
+        const history = await sbGet('historique', `select=ticker,cours_cloture&date_seance=gte.${dateStr}&ticker=or.(${filter})`);
 
         stats52 = {};
         (history || []).forEach(row => {
@@ -507,7 +507,7 @@
                 '<td class="r td-muted">' + fmt(r.plus_bas) + '</td>' +
                 '<td class="r td-muted">' + fmt(r.volume) + '</td>' +
                 '<td class="r" style="color:' + clrPct(r.variation) + ';font-family:var(--mono);">' + fmtPct(r.variation) + '</td>' +
-                '<td class="r td-muted">' + fmt(r.valeur_totale) + '</td>' +
+                '<td class="r td-muted">' + fmt(r.valeur_totale || r.capitalisation) + '</td>' +
                 '<td class="r td-muted">' + fmt(s52.haut) + '</td>' +
                 '<td class="r td-muted">' + fmt(s52.bas) + '</td>' +
                 '<td>' +
@@ -520,7 +520,7 @@
                     'data-bas="' + escapeHtml(r.plus_bas) + '" ' +
                     'data-vol="' + escapeHtml(r.volume) + '" ' +
                     'data-var="' + escapeHtml(r.variation) + '" ' +
-                    'data-capi="' + escapeHtml(r.valeur_totale) + '" ' +
+                    'data-capi="' + escapeHtml(r.valeur_totale || r.capitalisation) + '" ' +
                     'data-id="' + escapeHtml(r.id) + '" ' +
                     'onclick="window.CoursApp.handleEditCours(this)">✎</button> ' +
                   '<button class="btn btn-danger btn-sm" ' +
@@ -604,7 +604,7 @@
 
         for (const id of selectedIds) {
             try {
-                const ok = await sbDel('cours', 'id=eq.' + encodeURIComponent(id));
+                const ok = await sbDel('historique', 'id=eq.' + encodeURIComponent(id));
                 if (ok) successCount++;
                 else errorCount++;
             } catch (err) {
@@ -678,7 +678,7 @@
         console.log('[addCours] Body envoyé:', body);
 
         try {
-            const r = await sbPost('cours', body, 'ticker,date_seance');
+            const r = await sbPost('historique', body, 'ticker,date_seance');
             if (r) {
                 if (msg) { 
                     msg.textContent = '✓ Cours enregistré'; 
@@ -688,7 +688,7 @@
                 loadCours();
             } else {
                 if (msg) { 
-                    msg.textContent = '✗ Erreur lors de l\'enregistrement'; 
+                    msg.textContent = '✗ Erreur lors de l'enregistrement'; 
                     msg.className = 'msg err'; 
                 }
             }
@@ -771,7 +771,7 @@
         if (isValidNumber(capi)) body.valeur_totale = capi;
 
         try {
-            const r = await sbPatch('cours', 'id=eq.' + encodeURIComponent(id), body);
+            const r = await sbPatch('historique', 'id=eq.' + encodeURIComponent(id), body);
             if (r) { 
                 if (msg) { msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; } 
                 closeModal('modal-cours'); 
@@ -804,7 +804,7 @@
         if (!doubleConfirm('Supprimer le cours ' + ticker + ' du ' + date + ' ?')) return;
 
         try {
-            const ok = await sbDel('cours', 'ticker=eq.' + encodeURIComponent(ticker) + '&date_seance=eq.' + encodeURIComponent(date));
+            const ok = await sbDel('historique', 'ticker=eq.' + encodeURIComponent(ticker) + '&date_seance=eq.' + encodeURIComponent(date));
             if (ok) { 
                 toast('Cours supprimé'); 
                 loadCours(); 
