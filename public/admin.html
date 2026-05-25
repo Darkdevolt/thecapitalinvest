@@ -9,6 +9,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="admin/css/admin.css">
     <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -71,7 +72,7 @@
 
     <div class="tab-panel" id="panel-cours">
         <div class="section-header"><div class="section-title">Cours <em>BRVM</em></div></div>
-        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · cours · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong> · capitalisation · plus_haut_52 · plus_bas_52</div>
+        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · cours · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong> · capitalisation · <strong>+haut_52s (calculé)</strong> · <strong>+bas_52s (calculé)</strong></div>
         <div class="card" style="margin-bottom:16px;">
             <div class="card-header"><span class="card-title">Ajouter / Modifier un cours</span></div>
             <div class="form-grid">
@@ -103,8 +104,8 @@
             </div>
             <div class="tw">
                 <table>
-                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Val. totale</th><th></th></tr></thead>
-                    <tbody id="cours-tbody"><tr><td colspan="10"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
+                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Val. totale</th><th class="r">+Haut 52S</th><th class="r">+Bas 52S</th><th></th></tr></thead>
+                    <tbody id="cours-tbody"><tr><td colspan="13"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
                 </table>
             </div>
             <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
@@ -176,8 +177,8 @@
                 </div>
                 <div class="tw">
                     <table>
-                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th></th></tr></thead>
-                        <tbody id="hist-tbody"><tr><td colspan="10"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
+                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Capitalisation</th><th></th></tr></thead>
+                        <tbody id="hist-tbody"><tr><td colspan="11"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
                     </table>
                 </div>
                 <div class="actions-row">
