@@ -36,7 +36,7 @@ async function handleFile(file) {
     const data = await file.arrayBuffer();
     const workbook = XLSX.read(data, { type: 'array', cellDates: true });
     const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: false });
+    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1, defval: '', raw: true });
     if (!jsonData.length || jsonData.length < 2) { toast('Fichier vide ou invalide', 'err'); return; }
 
     console.log('📊 Feuilles Excel:', workbook.SheetNames);
