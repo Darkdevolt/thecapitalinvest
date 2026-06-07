@@ -66,13 +66,21 @@ async function handleFile(file) {
     currentUpload.config = TEMPLATE_CONFIG[detected];
     currentUpload.lastTemplateKey = detected;
 
-    // ═══ DÉTECTION DOUBLE EN-TÊTE ═══
+    // ═══════════════════════════════════════════════════════
+    // DÉTECTION MULTI EN-TÊTES (jusqu'à 4 lignes identiques)
+    // ═══════════════════════════════════════════════════════
     var startRow = 1;
-    if (jsonData[1] && jsonData[1].every(function(v, idx) { 
-        return String(v).toLowerCase().trim() === String(rawHeaders[idx]).toLowerCase().trim(); 
-    })) {
-        startRow = 2;
-        console.log('📊 Double en-tête détecté, début des données à la ligne 3');
+    while (startRow < 5 && jsonData[startRow] && jsonData[startRow].length > 0) {
+        var isHeaderRow = jsonData[startRow].every(function(v, idx) {
+            if (idx >= rawHeaders.length) return false;
+            return String(v).toLowerCase().trim() === String(rawHeaders[idx]).toLowerCase().trim();
+        });
+        if (isHeaderRow) {
+            startRow++;
+            console.log('📊 Ligne en-tête duplicate détectée, données commencent ligne ' + (startRow + 1));
+        } else {
+            break;
+        }
     }
 
     const rows = [];
@@ -84,6 +92,8 @@ async function handleFile(file) {
             var normH = String(rawH).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
             var rawVal = row[idx] !== undefined ? row[idx] : null;
             obj[normH] = rawVal;
+            // Garder aussi le nom original pour les alias
+            obj[rawH] = rawVal;
         });
         rows.push(obj);
     }
@@ -192,7 +202,7 @@ function validateRow(row, lineIndex, config) {
         errors.push("Ligne " + lineIndex + " : le " + idField + " est vide.");
         display[idField] = '';
     } else {
-        cleaned[idField] = String(idVal).trim().toUpperCase();
+        cleaned[idField] = String(idVal).trim();
         display[idField] = cleaned[idField];
     }
 
@@ -207,9 +217,21 @@ function validateRow(row, lineIndex, config) {
     // Traitement de chaque champ
     config.headers.forEach(function(h) {
         var rawVal = mapped[h];
-        var norm = normalizeExcelValue(rawVal, h);
+        
+        // ═══ FIX CRITIQUE : indice et autres champs texte ne sont pas numériques ═══
+        var norm;
+        if (h === 'indice' || h === 'nom' || h === 'nom_complet' || h === 'pays' || h === 'secteur' || 
+            h === 'compartiment' || h === 'description' || h === 'site_web' || h === 'siege_social' || 
+            h === 'actif' || h === 'dirigeant' || h === 'logo_url' || h === 'code_naf' || 
+            h === 'periode' || h === 'source' || h === 'statut' || h === 'notes' || h === 'devise' || 
+            h === 'type_dividende' || h === 'exercice' || h === 'nom_actionnaire' || 
+            h === 'type_actionnaire' || h === 'pays_origine' || h === 'nature') {
+            norm = rawVal;
+        } else {
+            norm = normalizeExcelValue(rawVal, h);
+        }
 
-        if (isNumericField(h) && norm !== null && typeof norm !== 'number') {
+        if (isNumericField(h) && h !== 'indice' && norm !== null && typeof norm !== 'number') {
             errors.push("Ligne " + lineIndex + ", colonne '" + h + "' : '" + rawVal + "' n'est pas un nombre valide.");
         }
 
@@ -492,7 +514,7 @@ function downloadTemplate(type) {
         montant: 12000, date_detachement: '2026-06-15',
         date_paiement: '2026-07-01', statut: 'confirmé', notes: 'Acompte',
         devise: 'XOF', type_dividende: 'cash', exercice: '2024-2025',
-        indice: 'BRVM10', valeur: 185.42, variation: 0.85, variation_pct: 0.46,
+        indice: 'BRVM C', valeur: 185.42, variation: 0.85, variation_pct: 0.46,
         nom_actionnaire: 'État du Sénégal', pourcentage: 55,
         type_actionnaire: 'État', pays_origine: 'Sénégal',
         date_entree: '2000-01-01', nature: 'Actionnaire majoritaire'
