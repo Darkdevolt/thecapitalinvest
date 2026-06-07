@@ -158,7 +158,7 @@ function resolveFieldValue(row, config, field) {
     if (field === 'date_seance') return row.date || row.date_seance;
     if (field === 'annee') return row.year;
     if (field === 'montant') return row.dividende || row.valeur;
-    if (field === 'indice') return row.code || row.indice;
+    if (field === 'indice') return row.code || row.indice || row.nom_indice;
     if (field === 'cours_cloture') return row.cours || row.cloture || row.cours_cloture;
     if (field === 'cours_ouverture') return row.ouverture || row.cours_ouverture || row.ouv;
     if (field === 'plus_haut') return row.haut || row.plus_haut || row.high;
@@ -182,13 +182,16 @@ function validateRow(row, lineIndex, config) {
         mapped[h] = resolveFieldValue(row, config, h);
     });
 
-    var tickerVal = mapped.ticker;
-    if (!tickerVal || String(tickerVal).trim() === '') {
-        errors.push("Ligne " + lineIndex + " : le ticker/code est vide.");
-        display.ticker = '';
+    // ═══ TICKER / INDICE (selon la table cible) ═══
+    var idVal = mapped.ticker || mapped.indice || mapped.code;
+    var idField = config.table === 'indices' ? 'indice' : 'ticker';
+
+    if (!idVal || String(idVal).trim() === '') {
+        errors.push("Ligne " + lineIndex + " : le " + idField + " est vide.");
+        display[idField] = '';
     } else {
-        cleaned.ticker = String(tickerVal).trim().toUpperCase();
-        display.ticker = cleaned.ticker;
+        cleaned[idField] = String(idVal).trim().toUpperCase();
+        display[idField] = cleaned[idField];
     }
 
     // Vérification des champs required avec résolution fieldMap
@@ -395,7 +398,7 @@ async function confirmImport() {
         var lineNum = i + 2;
         var res = validateRow(row, lineNum, config);
         if (!res.valid) allErrors = allErrors.concat(res.errors);
-        if (res.cleaned && res.cleaned.ticker) prepared.push(res.cleaned);
+        if (res.cleaned && (res.cleaned.ticker || res.cleaned.indice)) prepared.push(res.cleaned);
     });
 
     if (allErrors.length > 0) {
@@ -406,6 +409,22 @@ async function confirmImport() {
         }
         toast('Corrigez les erreurs en rouge avant de confirmer', 'err');
         return;
+    }
+
+    // Vérification des tickers entreprises (sauf pour indices)
+    var tickers = prepared.map(function(r){ return r.ticker; }).filter(Boolean);
+    if (config.table !== 'indices' && tickers.length > 0) {
+        var verify = await verifyTickers(tickers);
+        if (!verify.ok) {
+            currentUpload.missingTickers = verify.missing;
+            var msgEl = document.getElementById('import-msg');
+            if (msgEl) {
+                msgEl.innerHTML = '<span style="color:var(--orange);">⚠️ ' + verify.missing.length + ' ticker(s) inconnus : ' + verify.missing.join(', ') + '. <button onclick="autoCreateTickers()" class="btn btn-sm" style="margin-left:8px;">Créer automatiquement</button></span>';
+                msgEl.className = 'msg warn';
+            }
+            toast(verify.missing.length + ' ticker(s) inconnus — créez-les avant d\'importer', 'warn');
+            return;
+        }
     }
 
     var progressCard = document.getElementById('progress-card');
@@ -429,9 +448,9 @@ async function confirmImport() {
     if (pText) pText.textContent = 'Terminé !';
     toast('✅ Import terminé : ' + inserted + ' ligne(s) importée(s) sur ' + prepared.length + ' préparée(s)');
     if (config.table === 'cours' || config.table === 'historique') {
-    await recalcVariations();
-    await supabase.rpc('recalculer_variations');
-}
+        await recalcVariations();
+        await supabase.rpc('recalculer_variations');
+    }
     cancelImport();
 }
 
