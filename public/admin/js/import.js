@@ -66,8 +66,17 @@ async function handleFile(file) {
     currentUpload.config = TEMPLATE_CONFIG[detected];
     currentUpload.lastTemplateKey = detected;
 
+    // ═══ DÉTECTION DOUBLE EN-TÊTE ═══
+    var startRow = 1;
+    if (jsonData[1] && jsonData[1].every(function(v, idx) { 
+        return String(v).toLowerCase().trim() === String(rawHeaders[idx]).toLowerCase().trim(); 
+    })) {
+        startRow = 2;
+        console.log('📊 Double en-tête détecté, début des données à la ligne 3');
+    }
+
     const rows = [];
-    for (var i = 1; i < jsonData.length; i++) {
+    for (var i = startRow; i < jsonData.length; i++) {
         var row = jsonData[i];
         if (!row.some(function(cell){ return cell !== '' && cell !== null && cell !== undefined; })) continue;
         var obj = {};
@@ -100,9 +109,7 @@ function detectTemplate(headers) {
         var config = TEMPLATE_CONFIG[key];
         var required = config.required;
         var match = required.filter(function(rh){
-            // Match direct
             if (normHeaders.some(function(h){ return headerMatches(h, rh); })) return true;
-            // Match via fieldMap (nouveau)
             if (config.fieldMap && config.fieldMap[rh]) {
                 return config.fieldMap[rh].some(function(alias){
                     var normAlias = normalizeHeader(alias);
@@ -130,19 +137,15 @@ function forceTemplate(key) {
 }
 
 function resolveFieldValue(row, config, field) {
-    // 1. Cherche le nom exact du champ dans la ligne
     var rawVal = row[field];
     if (rawVal !== undefined && rawVal !== null && rawVal !== '') return rawVal;
 
-    // 2. Cherche via fieldMap du template
     if (config.fieldMap && config.fieldMap[field]) {
         for (var a = 0; a < config.fieldMap[field].length; a++) {
             var alias = config.fieldMap[field][a];
-            // a) nom exact dans l'objet row
             if (row[alias] !== undefined && row[alias] !== null && row[alias] !== '') {
                 return row[alias];
             }
-            // b) version normalisée
             for (var rk in row) {
                 var normRk = String(rk).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
                 var normAlias = String(alias).toLowerCase().trim().replace(/[\s\-]+/g,'_').replace(/[^a-z0-9_]/g,'');
@@ -153,12 +156,12 @@ function resolveFieldValue(row, config, field) {
         }
     }
 
-    // 3. Fallbacks durs (compatibilité)
+    // Fallbacks durs
     if (field === 'ticker') return row.code || row.symbol || row.isin || row.code_valeur;
     if (field === 'date_seance') return row.date || row.date_seance;
     if (field === 'annee') return row.year;
     if (field === 'montant') return row.dividende || row.valeur;
-    if (field === 'indice') return row.code || row.indice || row.nom_indice;
+    if (field === 'indice') return row.code || row.indice || row.nom_indice || row.libelle;
     if (field === 'cours_cloture') return row.cours || row.cloture || row.cours_cloture;
     if (field === 'cours_ouverture') return row.ouverture || row.cours_ouverture || row.ouv;
     if (field === 'plus_haut') return row.haut || row.plus_haut || row.high;
@@ -177,14 +180,13 @@ function validateRow(row, lineIndex, config) {
     var display = {};
     var mapped = {};
 
-    // Résolution de TOUS les champs via fieldMap + fallback
     config.headers.forEach(function(h) {
         mapped[h] = resolveFieldValue(row, config, h);
     });
 
-    // ═══ TICKER / INDICE (selon la table cible) ═══
-    var idVal = mapped.ticker || mapped.indice || mapped.code;
+    // ═══ IDENTIFICATION (ticker ou indice selon la table) ═══
     var idField = config.table === 'indices' ? 'indice' : 'ticker';
+    var idVal = mapped[idField] || mapped.code || mapped.symbol;
 
     if (!idVal || String(idVal).trim() === '') {
         errors.push("Ligne " + lineIndex + " : le " + idField + " est vide.");
@@ -194,7 +196,7 @@ function validateRow(row, lineIndex, config) {
         display[idField] = cleaned[idField];
     }
 
-    // Vérification des champs required avec résolution fieldMap
+    // Vérification des champs required
     config.required.forEach(function(req) {
         var rawVal = mapped[req];
         if (rawVal === undefined || rawVal === null || String(rawVal).trim() === '') {
@@ -205,7 +207,6 @@ function validateRow(row, lineIndex, config) {
     // Traitement de chaque champ
     config.headers.forEach(function(h) {
         var rawVal = mapped[h];
-
         var norm = normalizeExcelValue(rawVal, h);
 
         if (isNumericField(h) && norm !== null && typeof norm !== 'number') {
