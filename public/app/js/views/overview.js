@@ -2,14 +2,67 @@
 // VIEW — Overview / Tableau de bord
 // ═══════════════════════════════════════
 
-// ═══════════════════════════════════════
-// OVERVIEW
-// ═══════════════════════════════════════
+// Helper : découvre et regroupe les indices par nom, en gardant le plus récent
+function getLatestIndices() {
+  const map = {};
+  (allIndices || []).forEach(row => {
+    if (!row?.indice || !row?.date_seance) return;
+    const name = String(row.indice).trim();
+    if (!map[name] || new Date(row.date_seance) > new Date(map[name].date_seance)) {
+      map[name] = row;
+    }
+  });
+  return map; // { "BRVM C": {...}, "BRVM 30": {...}, ... }
+}
+
+// Helper : historique complet d'un indice précis (pour le graphique)
+function getIndiceHistory(indiceName, maxDays = 30) {
+  return (allIndices || [])
+    .filter(r => r?.indice && String(r.indice).trim() === indiceName && r?.valeur != null)
+    .sort((a, b) => new Date(a.date_seance) - new Date(b.date_seance))
+    .slice(-maxDays);
+}
+
 function renderOverview() {
-  const indices = allIndices || [];
+  const latest = getLatestIndices();
+  const indiceNames = Object.keys(latest);
   
+  // Debug : affiche dans la console ce qui est découvert
+  console.log('[Overview] Indices découverts :', indiceNames, latest);
+
+  // ─── Mapping des 3 cards statiques vers les noms d'indices réels ───
+  // On essaie plusieurs variantes de nom car la BRVM peut écrire différemment
+  const findIndice = (candidates) => {
+    for (const c of candidates) {
+      const found = indiceNames.find(n => n.toLowerCase() === c.toLowerCase());
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const mapCard = {
+    composite: {
+      candidates: ['BRVM C', 'BRVM Composite', 'COMPOSITE', 'BRVM_C', 'BRVM COMPOSITE'],
+      id: 'idx-composite',
+      chgId: 'idx-composite-chg',
+      defaultLabel: 'BRVM Composite'
+    },
+    brvm30: {
+      candidates: ['BRVM 30', 'BRVM30', '30', 'BRVM_30'],
+      id: 'idx-30',
+      chgId: 'idx-30-chg',
+      defaultLabel: 'BRVM 30'
+    },
+    prestige: {
+      candidates: ['BRVM Prestige', 'BRVMPrestige', 'PRESTIGE', 'BRVM_Prestige', 'BRVM PRESTIGE'],
+      id: 'idx-prestige',
+      chgId: 'idx-prestige-chg',
+      defaultLabel: 'BRVM Prestige'
+    }
+  };
+
   const setIdx = (id, val, chgId, chg) => {
-    const el = document.getElementById(id); 
+    const el = document.getElementById(id);
     const ce = document.getElementById(chgId);
     if (el) el.textContent = (val != null && !isNaN(+val)) ? fmt(+val, 2) : '—';
     if (ce) {
@@ -20,35 +73,43 @@ function renderOverview() {
     }
   };
 
+  // Remplir les 3 cards
+  let lastDate = null;
+  Object.values(mapCard).forEach(card => {
+    const realName = findIndice(card.candidates);
+    const data = realName ? latest[realName] : null;
+    
+    if (data) {
+      setIdx(card.id, data.valeur, card.chgId, data.variation);
+      if (data.date_seance) lastDate = data.date_seance;
+      
+      // Met à jour le label aussi pour refléter le vrai nom trouvé
+      const labelEl = document.querySelector(`#${card.id}`)?.previousElementSibling;
+      if (labelEl && realName && realName !== card.defaultLabel) {
+        labelEl.textContent = realName; // adapte si le nom diffère
+      }
+    } else {
+      setIdx(card.id, null, card.chgId, null);
+    }
+  });
+
+  // Date de la dernière séance
+  const lastSessionEl = document.getElementById('lastSession');
+  if (lastSessionEl) {
+    lastSessionEl.textContent = lastDate ? 'Séance ' + fmtDate(lastDate) : '—';
+  }
+
+  // ─── Graphique Composite ───
+  // On prend "BRVM C" par défaut, sinon le premier indice disponible
+  const chartTarget = findIndice(['BRVM C', 'BRVM Composite', 'COMPOSITE']) || indiceNames[0];
   let chartLabels = [], chartVals = [];
   
-  if (indices.length >= 2) {
-    const [l, p] = [indices[0], indices[1]];
-    setIdx('idx-composite', l?.brvm_composite, 'idx-composite-chg', (l?.brvm_composite ?? 0) - (p?.brvm_composite ?? 0));
-    setIdx('idx-30', l?.brvm_30, 'idx-30-chg', (l?.brvm_30 ?? 0) - (p?.brvm_30 ?? 0));
-    setIdx('idx-prestige', l?.brvm_prestige, 'idx-prestige-chg', (l?.brvm_prestige ?? 0) - (p?.brvm_prestige ?? 0));
-    
-    const lastSessionEl = document.getElementById('lastSession');
-    if (lastSessionEl) lastSessionEl.textContent = l?.date_seance ? 'Séance ' + fmtDate(l.date_seance) : '—';
-    
-    const rev = [...indices].slice(0, 30).reverse();
-    chartLabels = rev.map(d => d?.date_seance ? new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '?');
-    chartVals = rev.map(d => d?.brvm_composite ?? 0);
-  } else if (indices.length === 1) {
-    const l = indices[0];
-    setIdx('idx-composite', l?.brvm_composite, 'idx-composite-chg', 0);
-    setIdx('idx-30', l?.brvm_30, 'idx-30-chg', 0);
-    setIdx('idx-prestige', l?.brvm_prestige, 'idx-prestige-chg', 0);
-    
-    const lastSessionEl = document.getElementById('lastSession');
-    if (lastSessionEl) lastSessionEl.textContent = l?.date_seance ? 'Séance ' + fmtDate(l.date_seance) : '—';
-  } else {
-    ['idx-composite', 'idx-30', 'idx-prestige'].forEach(id => {
-      const el = document.getElementById(id);
-      if (el) el.textContent = '—';
-    });
-    const lastSessionEl = document.getElementById('lastSession');
-    if (lastSessionEl) lastSessionEl.textContent = 'Aucune donnée indice';
+  if (chartTarget) {
+    const history = getIndiceHistory(chartTarget, 30);
+    chartLabels = history.map(d => 
+      d?.date_seance ? new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '?'
+    );
+    chartVals = history.map(d => d?.valeur ?? 0);
   }
 
   if (compositeChartInst) {
@@ -125,7 +186,7 @@ function renderTopMovers() {
         <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--cream)">${c.ticker}</div>
         <div style="font-size:11px;color:var(--dim)">${fmt(c.cours)} FCFA</div>
       </div>
-      <span class="stat-change ${cls}" style="font-family:var(--mono);font-size:12px">${v>0?'▲':v<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>
+      <span class="stat-change ${cls}" style="font-family:var(--mono);font-size:12px">${v>0?'▲':v<<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>
     </div>`;
   }).join('');
 }
