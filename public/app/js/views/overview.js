@@ -12,7 +12,7 @@ function getLatestIndices() {
       map[name] = row;
     }
   });
-  return map; // { "BRVM C": {...}, "BRVM 30": {...}, ... }
+  return map; // { "BRVM C": {valeur: 404.59, variation: 0.28, ...}, ... }
 }
 
 // Helper : historique complet d'un indice précis (pour le graphique)
@@ -30,8 +30,7 @@ function renderOverview() {
   // Debug : affiche dans la console ce qui est découvert
   console.log('[Overview] Indices découverts :', indiceNames, latest);
 
-  // ─── Mapping des 3 cards statiques vers les noms d'indices réels ───
-  // On essaie plusieurs variantes de nom car la BRVM peut écrire différemment
+  // ─── Mapping des 3 cards vers les noms d'indices réels ───
   const findIndice = (candidates) => {
     for (const c of candidates) {
       const found = indiceNames.find(n => n.toLowerCase() === c.toLowerCase());
@@ -45,19 +44,19 @@ function renderOverview() {
       candidates: ['BRVM C', 'BRVM Composite', 'COMPOSITE', 'BRVM_C', 'BRVM COMPOSITE'],
       id: 'idx-composite',
       chgId: 'idx-composite-chg',
-      defaultLabel: 'BRVM Composite'
+      labelId: null // on garde le label HTML tel quel
     },
     brvm30: {
       candidates: ['BRVM 30', 'BRVM30', '30', 'BRVM_30'],
       id: 'idx-30',
       chgId: 'idx-30-chg',
-      defaultLabel: 'BRVM 30'
+      labelId: null
     },
     prestige: {
       candidates: ['BRVM Prestige', 'BRVMPrestige', 'PRESTIGE', 'BRVM_Prestige', 'BRVM PRESTIGE'],
       id: 'idx-prestige',
       chgId: 'idx-prestige-chg',
-      defaultLabel: 'BRVM Prestige'
+      labelId: null
     }
   };
 
@@ -82,12 +81,6 @@ function renderOverview() {
     if (data) {
       setIdx(card.id, data.valeur, card.chgId, data.variation);
       if (data.date_seance) lastDate = data.date_seance;
-      
-      // Met à jour le label aussi pour refléter le vrai nom trouvé
-      const labelEl = document.querySelector(`#${card.id}`)?.previousElementSibling;
-      if (labelEl && realName && realName !== card.defaultLabel) {
-        labelEl.textContent = realName; // adapte si le nom diffère
-      }
     } else {
       setIdx(card.id, null, card.chgId, null);
     }
@@ -100,7 +93,6 @@ function renderOverview() {
   }
 
   // ─── Graphique Composite ───
-  // On prend "BRVM C" par défaut, sinon le premier indice disponible
   const chartTarget = findIndice(['BRVM C', 'BRVM Composite', 'COMPOSITE']) || indiceNames[0];
   let chartLabels = [], chartVals = [];
   
