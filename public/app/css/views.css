@@ -93,3 +93,289 @@
 .screener-filters label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); display: block; margin-bottom: 4px; }
 .screener-filters input, .screener-filters select { width: 100%; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 13px; color: var(--cream); outline: none; }
 .screener-filters input:focus, .screener-filters select:focus { border-color: var(--gold); }
+/* ═══════════════════════════════════════
+   PORTEFEUILLE — KPIs
+══════════════════════════════════════════════════════ */
+.portf-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1200px) {
+  .portf-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .portf-kpi-grid { grid-template-columns: 1fr; }
+}
+
+.portf-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: all 0.2s;
+}
+
+.portf-kpi:hover {
+  border-color: var(--gold-dim);
+  transform: translateY(-2px);
+}
+
+.portf-kpi-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 8px;
+}
+
+.portf-kpi-value {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--cream);
+}
+
+.portf-kpi-sub {
+  font-size: 11px;
+  color: var(--dim);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════
+   PORTEFEUILLE — Allocation Bars
+══════════════════════════════════════════════════════ */
+.alloc-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.04);
+}
+
+.alloc-bar:last-child { border-bottom: none; }
+
+.alloc-label {
+  font-size: 12px;
+  color: var(--muted);
+  width: 100px;
+  flex-shrink: 0;
+}
+
+.alloc-track {
+  flex: 1;
+  height: 8px;
+  background: var(--border2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.alloc-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.alloc-pct {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--cream);
+  width: 50px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════
+   PORTEFEUILLE — Corrélation Matrix
+══════════════════════════════════════════════════════ */
+.corr-matrix {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+}
+
+.corr-cell {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.15s;
+}
+
+.corr-cell:hover {
+  transform: scale(1.1);
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.corr-cell.header {
+  font-size: 9px;
+  color: var(--dim);
+  background: none;
+  cursor: default;
+}
+
+.corr-cell.header:hover { transform: none; box-shadow: none; }
+
+.corr-cell.diag {
+  background: var(--border2);
+  color: var(--dim);
+}
+
+.corr-cell.pos { color: var(--green); }
+.corr-cell.neg { color: var(--red); }
+
+/* ═══════════════════════════════════════
+   PORTEFEUILLE — Dividend Stats
+══════════════════════════════════════════════════════ */
+.div-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.04);
+}
+
+.div-stat-row:last-child { border-bottom: none; }
+
+.div-stat-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.div-stat-value {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--gold-light);
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════
+   PORTEFEUILLE — Benchmark Comparison
+══════════════════════════════════════════════════════ */
+.bench-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.04);
+}
+
+.bench-row:last-child { border-bottom: none; }
+
+.bench-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.bench-value {
+  font-family: var(--mono);
+  font-size: 14px;
+  color: var(--cream);
+  font-weight: 500;
+}
+
+.bench-value.outperf { color: var(--green); }
+.bench-value.underperf { color: var(--red); }
+
+/* ═══════════════════════════════════════
+   PORTEFEUILLE — Concentration
+══════════════════════════════════════════════════════ */
+.conc-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.04);
+}
+
+.conc-item:last-child { border-bottom: none; }
+
+.conc-rank {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  width: 24px;
+}
+
+.conc-ticker {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--gold);
+  width: 60px;
+}
+
+.conc-bar-wrap {
+  flex: 1;
+  height: 6px;
+  background: var(--border2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.conc-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--gold);
+  transition: width 0.5s ease;
+}
+
+.conc-pct {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--cream);
+  width: 50px;
+  text-align: right;
+}
+
+/* ═══════════════════════════════════════
+   TABLEAU POSITIONS — Hover
+══════════════════════════════════════════════════════ */
+#pfTable tr {
+  transition: background 0.15s;
+  cursor: pointer;
+}
+
+#pfTable tr:hover {
+  background: rgba(184,150,78,0.03);
+}
+
+/* ═══════════════════════════════════════
+   CHART TABS (réutilisé)
+══════════════════════════════════════════════════════ */
+.chart-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.year-tab {
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.year-tab.active {
+  background: rgba(184,150,78,0.1);
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.year-tab:hover:not(.active) {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+}
