@@ -31,6 +31,17 @@ function removePosition(id) {
   toast('Position supprimée', 'success');
 }
 
+// Helper : récupère le vrai dernier cours depuis l'historique (pas allCours qui est obsolète)
+function getLatestPriceFromHistory(ticker) {
+  if (!Array.isArray(allCoursHistorique)) return null;
+  const hist = allCoursHistorique
+    .filter(c => c.ticker === ticker && c.date_seance)
+    .sort((a, b) => new Date(a.date_seance) - new Date(b.date_seance));
+  if (!hist.length) return null;
+  const last = hist[hist.length - 1];
+  return last.cours_cloture || last.cours_normal || last.cours;
+}
+
 function renderPortfolio() {
   const pf = getPortfolio();
   const byTicker = {};
@@ -38,8 +49,11 @@ function renderPortfolio() {
 
   let totalValue = 0, totalInvested = 0;
   const rows = pf.map(p => {
+    // Priorité 1 : historique (vrai dernier cours)
+    // Priorité 2 : allCours (fallback)
+    const histPrice = getLatestPriceFromHistory(p.ticker);
     const current = byTicker[p.ticker];
-    const currentPrice = current?.cours || p.price;
+    const currentPrice = histPrice || current?.cours || p.price;
     const value = p.qty * currentPrice;
     const invested = p.qty * p.price;
     const pl = value - invested;
