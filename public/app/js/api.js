@@ -130,3 +130,62 @@ function doLogout() {
   localStorage.removeItem(SK);
   window.location.reload();
 }
+
+
+
+// ═══════════════════════════════════════════════════════
+// LOAD ALL DATA — Ajout allCoursHistorique
+// ═══════════════════════════════════════════════════════
+async function loadAll() {
+  try {
+    // Données existantes
+    const [cours, boc, analyses, financials, entreprises, indices] = await Promise.all([
+      sb('cours_latest'),
+      sb('boc'),
+      sb('analyses'),
+      sb('financials'),
+      sb('entreprises'),
+      sb('indices')
+    ]);
+
+    allCours = cours || [];
+    allBoc = boc || [];
+    allAnalyses = analyses || [];
+    allFinancials = financials || [];
+    allEntreprises = entreprises || [];
+    allIndices = indices || [];
+
+    // AJOUT : données historiques
+    try {
+      const historique = await sb('historique', { order: 'date_seance.asc' });
+      allCoursHistorique = historique || [];
+    } catch (e) {
+      console.warn('historique non chargé:', e.message);
+      allCoursHistorique = [];
+    }
+
+    // Exposer globalement
+    window.allCours = allCours;
+    window.allBoc = allBoc;
+    window.allAnalyses = allAnalyses;
+    window.allFinancials = allFinancials;
+    window.allEntreprises = allEntreprises;
+    window.allIndices = allIndices;
+    window.allCoursHistorique = allCoursHistorique;
+
+    // Build entMap
+    entMap = {};
+    allEntreprises.forEach(e => { if (e.ticker) entMap[e.ticker] = e; });
+
+    // Dispatch event pour notifier que les données sont prêtes
+    window.dispatchEvent(new Event('dataLoaded'));
+
+    // Render initial view
+    if (typeof renderOverview === 'function') renderOverview();
+    if (typeof renderTitres === 'function') renderTitres();
+
+  } catch (e) {
+    console.error('Erreur chargement données:', e);
+    toast('Erreur de chargement des données', 'error');
+  }
+}
