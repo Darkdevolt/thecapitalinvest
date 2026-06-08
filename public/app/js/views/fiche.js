@@ -11,16 +11,39 @@ async function openFiche(ticker, from, noHash) {
   nav('fiche', noHash);
   if (!noHash) history.replaceState(null, '', '#fiche=' + ticker);
 
-  const cours = allCours.find(c => c.ticker === ticker) || {};
   const ent = allEntreprises.find(e => e.ticker === ticker) || {};
   const fins = allFinancials.filter(f => f.ticker === ticker).sort((a,b) => b.annee - a.annee);
   const ans = allAnalyses.filter(a => a.ticker === ticker);
+
+  // ─── CHARGER L'HISTORIQUE EN PREMIER pour avoir le vrai dernier cours ───
+  let latestCours = null;
+  try {
+    const histResult = await sb('historique', { 
+      ticker: `eq.${ticker}`, 
+      order: 'date_seance.desc',
+      limit: 5000
+    });
+    ficheHistorique = Array.isArray(histResult) ? histResult.reverse() : [];
+    if (!ficheHistorique.length) {
+      toast('Aucun historique disponible pour ' + ticker, 'warn');
+    } else {
+      // Le dernier point de l'historique = le vrai cours le plus récent
+      latestCours = ficheHistorique[ficheHistorique.length - 1];
+    }
+  } catch(e) {
+    ficheHistorique = [];
+    toast('Erreur historique ' + ticker + ': ' + e.message, 'warn');
+    console.error('Historique error:', e);
+  }
+
+  // Fallback sur allCours si pas d'historique
+  const cours = latestCours || allCours.find(c => c.ticker === ticker) || {};
 
   document.getElementById('ficheTickerLabel').textContent = ticker;
   document.getElementById('ficheCompany').textContent = ent.nom || ticker;
   document.getElementById('ficheSector').textContent = ent.secteur || getSector(ticker);
   document.getElementById('fichePays').textContent = ent.pays || '';
-  document.getElementById('fichePrice').textContent = fmt(cours.cours);
+  document.getElementById('fichePrice').textContent = fmt(cours.cours_cloture || cours.cours_normal || cours.cours);
   document.getElementById('ficheMeta').textContent = `Dernière séance : ${fmtDate(cours.date_seance)} · Volume : ${fmt(cours.volume)}`;
 
   const v = parseFloat(cours.variation);
@@ -28,8 +51,8 @@ async function openFiche(ticker, from, noHash) {
   document.getElementById('ficheChange').innerHTML = !isNaN(v)
     ? `<span style="color:${cl}">${v>0?'▲':v<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>` : '';
 
+  const cp = parseFloat(cours.cours_cloture || cours.cours_normal || cours.cours);
   const f0 = fins[0];
-  const cp = parseFloat(cours.cours);
   document.getElementById('r-per').textContent = (f0?.bpa && cp && f0.bpa > 0) ? (cp/f0.bpa).toFixed(1) + 'x' : '—';
   document.getElementById('r-rdt').textContent = (f0?.dpa && cp && cp > 0) ? ((f0.dpa/cp)*100).toFixed(2) + '%' : '—';
   document.getElementById('r-pan').textContent = (f0?.fonds_propres && f0?.nombre_actions && f0.nombre_actions > 0 && cp)
@@ -50,21 +73,6 @@ async function openFiche(ticker, from, noHash) {
 
   ficheChartPeriod = 30;
   document.querySelectorAll('#view-fiche .year-tab').forEach((b,i) => b.classList.toggle('active', i===0));
-  try {
-    const histResult = await sb('historique', { 
-      ticker: `eq.${ticker}`, 
-      order: 'date_seance.desc',
-      limit: 5000
-    });
-    ficheHistorique = Array.isArray(histResult) ? histResult.reverse() : [];
-    if (!ficheHistorique.length) {
-      toast('Aucun historique disponible pour ' + ticker, 'warn');
-    }
-  } catch(e) {
-    ficheHistorique = [];
-    toast('Erreur historique ' + ticker + ': ' + e.message, 'warn');
-    console.error('Historique error:', e);
-  }
   renderFicheChart();
 }
 
@@ -83,7 +91,7 @@ function showFinYear(idx, btn) {
     btn.classList.add('active');
   }
   const f = (window._ficheFins||[])[idx]; if (!f) return;
-  const cp = parseFloat((window._ficheCours||{}).cours);
+  const cp = parseFloat((window._ficheCours||{}).cours_cloture || (window._ficheCours||{}).cours_normal || (window._ficheCours||{}).cours);
   document.getElementById('r-per').textContent = (f.bpa && cp && f.bpa > 0) ? (cp/f.bpa).toFixed(1)+'x' : '—';
   document.getElementById('r-rdt').textContent = (f.dpa && cp && cp > 0) ? ((f.dpa/cp)*100).toFixed(2)+'%' : '—';
   document.getElementById('r-pan').textContent = (f.fonds_propres && f.nombre_actions && f.nombre_actions > 0 && cp) ? (cp/(f.fonds_propres/f.nombre_actions)).toFixed(2)+'x' : '—';
@@ -115,7 +123,7 @@ function renderFicheChart() {
   }
   const labels = data.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
   const vals = data.map(d => d.cours_cloture || d.cours_normal || 0);
-  
+
   const validVals = vals.filter(v => v > 0);
   const periodHigh = validVals.length ? Math.max(...validVals) : 0;
   const periodLow = validVals.length ? Math.min(...validVals) : 0;
