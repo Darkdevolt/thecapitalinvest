@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════
 // VIEW — Portefeuille Simulé
 // ═══════════════════════════════════════════════════════
-// NOTE: fmt, fmtM, fmtPct sont définis dans utils.js (chargé AVANT ce fichier)
+// NOTE: fmt, fmtM, fmtDate sont définis dans utils.js (chargé AVANT)
 
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
@@ -9,30 +9,77 @@ function getPortfolio() {
 }
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
 
-function getLatestPriceFromHistory(ticker) {
-  if (!Array.isArray(window.allCoursHistorique)) return null;
-  const hist = window.allCoursHistorique
-    .filter(c => c.ticker === ticker && c.date_seance)
-    .sort((a, b) => new Date(a.date_seance) - new Date(b.date_seance));
-  if (!hist.length) return null;
-  const last = hist[hist.length - 1];
-  return last.cours_cloture || last.cours_normal || last.cours;
+// ═══════════════════════════════════════════════════════
+// RÉCUPÉRATION DU COURS ACTUEL
+// ═══════════════════════════════════════════════════════
+function getLatestPrice(ticker) {
+  if (!ticker) return null;
+  const t = ticker.toUpperCase().trim();
+
+  // 1. Chercher dans les cours du jour (allCours) — PRIORITAIRE
+  if (Array.isArray(window.allCours) && window.allCours.length > 0) {
+    const coursJour = window.allCours.find(c => {
+      const ct = (c.ticker || '').toUpperCase().trim();
+      const ci = (c.code_isin || '').toUpperCase().trim();
+      const cl = (c.libelle || '').toUpperCase().trim();
+      return ct === t || ci === t || cl === t || ct.startsWith(t) || t.startsWith(ct);
+    });
+    if (coursJour) {
+      const prix = coursJour.cours_cloture || coursJour.dernier_cours || coursJour.cours || coursJour.prix;
+      if (prix != null) return +prix;
+    }
+  }
+
+  // 2. Fallback sur l'historique (allCoursHistorique)
+  if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
+    const hist = window.allCoursHistorique
+      .filter(c => {
+        const ct = (c.ticker || '').toUpperCase().trim();
+        return ct === t || ct.startsWith(t) || t.startsWith(ct);
+      })
+      .sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
+    if (hist.length) {
+      const last = hist[0];
+      const prix = last.cours_cloture || last.cours_normal || last.cours || last.prix;
+      if (prix != null) return +prix;
+    }
+  }
+
+  // 3. Dernier recours: chercher dans allIndices
+  if (Array.isArray(window.allIndices) && window.allIndices.length > 0) {
+    const idx = window.allIndices.find(c => {
+      const ct = (c.ticker || c.nom || '').toUpperCase().trim();
+      return ct === t || ct.startsWith(t);
+    });
+    if (idx) {
+      const prix = idx.valeur || idx.cours || idx.dernier;
+      if (prix != null) return +prix;
+    }
+  }
+
+  return null;
 }
 
 // ═══════════════════════════════════════════════════════
-// FORMATAGE — utilise les helpers de utils.js
+// ACTIONS
 // ═══════════════════════════════════════════════════════
-// fmt, fmtM, fmtPct sont déjà définis globalement dans utils.js
-// On ne les redéclare PAS pour éviter SyntaxError
-
 window.addPosition = function() {
   const ticker = document.getElementById('pfTicker').value.trim().toUpperCase();
   const qty = parseInt(document.getElementById('pfQty').value);
   const price = parseFloat(document.getElementById('pfPrice').value);
   const date = document.getElementById('pfDate').value;
-  if (!ticker || !qty || !price) { toast('Remplissez tous les champs', 'warn'); return; }
+  if (!ticker || !qty || !price || qty <= 0 || price <= 0) { 
+    toast('Remplissez tous les champs correctement', 'warn'); 
+    return; 
+  }
   const pf = getPortfolio();
-  pf.push({ id: Date.now(), ticker, qty, price, date: date || new Date().toISOString().split('T')[0] });
+  pf.push({ 
+    id: Date.now(), 
+    ticker, 
+    qty, 
+    price, 
+    date: date || new Date().toISOString().split('T')[0] 
+  });
   savePortfolio(pf);
   renderPortfolio();
   toast('Position ajoutée', 'success');
@@ -47,6 +94,9 @@ window.removePosition = function(id) {
   toast('Position supprimée', 'success');
 }
 
+// ═══════════════════════════════════════════════════════
+// RENDU
+// ═══════════════════════════════════════════════════════
 window.renderPortfolio = function() {
   console.log('renderPortfolio appelé');
   const pf = getPortfolio();
@@ -76,13 +126,12 @@ window.renderPortfolio = function() {
     return;
   }
 
-  // Calculs basiques
+  // Calculs
   let totalValue = 0, totalInvested = 0;
   const rows = [];
 
   pf.forEach(p => {
-    const histPrice = getLatestPriceFromHistory(p.ticker);
-    const currentPrice = histPrice || p.price;
+    const currentPrice = getLatestPrice(p.ticker) || p.price;
     const value = p.qty * currentPrice;
     const invested = p.qty * p.price;
     const pl = value - invested;
@@ -118,11 +167,12 @@ window.renderPortfolio = function() {
   if (tbody) {
     tbody.innerHTML = rows.map(p => {
       const plClass = p.pl >= 0 ? 'up' : 'down';
+      const priceFound = getLatestPrice(p.ticker) !== null;
       return `<tr>
         <td style="padding:10px 12px;"><span style="font-family:var(--mono);color:var(--gold)">${p.ticker}</span></td>
         <td style="padding:10px 12px;text-align:right">${fmt(p.qty)}</td>
         <td style="padding:10px 12px;text-align:right">${fmt(p.price, 2)}</td>
-        <td style="padding:10px 12px;text-align:right">${fmt(p.currentPrice, 2)}</td>
+        <td style="padding:10px 12px;text-align:right;color:${priceFound ? 'inherit' : 'var(--dim)'}">${fmt(p.currentPrice, 2)}${!priceFound ? ' <small style="color:var(--dim)">(est.)</small>' : ''}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmt(p.plPct, 2)}%</td>
         <td style="padding:10px 12px;text-align:right">${fmtM(p.value)}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.pl>=0?'var(--green)':'var(--red)'}">${p.pl >= 0 ? '+' : ''}${fmtM(p.pl)}</td>
