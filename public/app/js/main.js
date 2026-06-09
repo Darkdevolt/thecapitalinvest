@@ -141,6 +141,14 @@ async function loadAll() {
 
     entMap = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
 
+    // Exposer globalement pour toutes les vues
+    window.allCours = allCours;
+    window.allBoc = allBoc;
+    window.allAnalyses = allAnalyses;
+    window.allFinancials = allFinancials;
+    window.allEntreprises = allEntreprises;
+    window.allIndices = allIndices;
+
     renderOverview();
     renderTitres();
     renderBoc();
