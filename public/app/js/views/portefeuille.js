@@ -19,6 +19,8 @@ function getLatestPriceFromHistory(ticker) {
 }
 
 function fmt(n) { return n == null ? '—' : n.toLocaleString('fr-FR', { maximumFractionDigits: 2 }); }
+function fmtM(n) { return n == null ? '—' : (n / 1e6).toFixed(2) + 'M'; }
+function fmtPct(n) { return n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
 
 function addPosition() {
   const ticker = document.getElementById('pfTicker').value;
