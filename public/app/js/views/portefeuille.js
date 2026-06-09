@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Portefeuille Simulé (VERSION TEST MINIMALE)
+// VIEW — Portefeuille Simulé
 // ═══════════════════════════════════════════════════════
+// NOTE: fmt, fmtM, fmtPct sont définis dans utils.js (chargé AVANT ce fichier)
 
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
@@ -18,10 +19,14 @@ function getLatestPriceFromHistory(ticker) {
   return last.cours_cloture || last.cours_normal || last.cours;
 }
 
-function fmt(n) { return n == null ? '—' : n.toLocaleString('fr-FR', { maximumFractionDigits: 2 }); }
+// ═══════════════════════════════════════════════════════
+// FORMATAGE — utilise les helpers de utils.js
+// ═══════════════════════════════════════════════════════
+// fmt, fmtM, fmtPct sont déjà définis globalement dans utils.js
+// On ne les redéclare PAS pour éviter SyntaxError
 
 window.addPosition = function() {
-  const ticker = document.getElementById('pfTicker').value;
+  const ticker = document.getElementById('pfTicker').value.trim().toUpperCase();
   const qty = parseInt(document.getElementById('pfQty').value);
   const price = parseFloat(document.getElementById('pfPrice').value);
   const date = document.getElementById('pfDate').value;
@@ -100,7 +105,7 @@ window.renderPortfolio = function() {
     pfPL.style.color = totalPL >= 0 ? 'var(--green)' : 'var(--red)';
   }
   if (pfReturn) {
-    pfReturn.textContent = fmtPct(totalReturn);
+    pfReturn.textContent = fmt(totalReturn, 2) + '%';
     pfReturn.style.color = totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
   }
   if (pfVol) pfVol.textContent = '—';
@@ -116,13 +121,13 @@ window.renderPortfolio = function() {
       return `<tr>
         <td style="padding:10px 12px;"><span style="font-family:var(--mono);color:var(--gold)">${p.ticker}</span></td>
         <td style="padding:10px 12px;text-align:right">${fmt(p.qty)}</td>
-        <td style="padding:10px 12px;text-align:right">${fmt(p.price)}</td>
-        <td style="padding:10px 12px;text-align:right">${fmt(p.currentPrice)}</td>
-        <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmtPct(p.plPct)}</td>
+        <td style="padding:10px 12px;text-align:right">${fmt(p.price, 2)}</td>
+        <td style="padding:10px 12px;text-align:right">${fmt(p.currentPrice, 2)}</td>
+        <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmt(p.plPct, 2)}%</td>
         <td style="padding:10px 12px;text-align:right">${fmtM(p.value)}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.pl>=0?'var(--green)':'var(--red)'}">${p.pl >= 0 ? '+' : ''}${fmtM(p.pl)}</td>
-        <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmtPct(p.plPct)}</td>
-        <td style="padding:10px 12px;text-align:right">${fmt(totalValue > 0 ? (p.value/totalValue*100) : 0)}%</td>
+        <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmt(p.plPct, 2)}%</td>
+        <td style="padding:10px 12px;text-align:right">${fmt(totalValue > 0 ? (p.value/totalValue*100) : 0, 2)}%</td>
         <td style="padding:10px 12px;text-align:right">—</td>
         <td style="padding:10px 12px;text-align:right">—</td>
         <td style="padding:10px 12px;text-align:center"><button onclick="removePosition(${p.id})" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:none;color:var(--dim);font-size:11px;cursor:pointer">🗑</button></td>
@@ -133,7 +138,6 @@ window.renderPortfolio = function() {
   // Graphiques placeholder
   const valueCanvas = document.getElementById('chartPortfolioValue');
   if (valueCanvas && typeof Chart !== 'undefined') {
-    // Simple line chart
     const ctx = valueCanvas.getContext('2d');
     ctx.clearRect(0, 0, valueCanvas.width, valueCanvas.height);
   }
