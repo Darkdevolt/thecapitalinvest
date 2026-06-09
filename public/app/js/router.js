@@ -63,6 +63,11 @@ function nav(id, noHash) {
     if (parentBtn) parentBtn.classList.add('active');
   }
   if (!noHash) setHashForView(id);
+
+  // Appeler le render spécifique à la vue
+  if (id === 'portefeuille' && typeof renderPortfolio === 'function') {
+    setTimeout(() => renderPortfolio(), 50); // petit délai pour s'assurer que le DOM est prêt
+  }
   document.getElementById('globalSearchResults').classList.remove('open');
   closeDropdowns();
   updateBreadcrumb(id);
