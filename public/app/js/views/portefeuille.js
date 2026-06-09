@@ -19,10 +19,8 @@ function getLatestPriceFromHistory(ticker) {
 }
 
 function fmt(n) { return n == null ? '—' : n.toLocaleString('fr-FR', { maximumFractionDigits: 2 }); }
-function fmtM(n) { return n == null ? '—' : (n / 1e6).toFixed(2) + 'M'; }
-function fmtPct(n) { return n == null ? '—' : (n >= 0 ? '+' : '') + n.toFixed(2) + '%'; }
 
-function addPosition() {
+window.addPosition = function() {
   const ticker = document.getElementById('pfTicker').value;
   const qty = parseInt(document.getElementById('pfQty').value);
   const price = parseFloat(document.getElementById('pfPrice').value);
@@ -37,14 +35,14 @@ function addPosition() {
   document.getElementById('pfPrice').value = '';
 }
 
-function removePosition(id) {
+window.removePosition = function(id) {
   const pf = getPortfolio().filter(p => p.id !== id);
   savePortfolio(pf);
   renderPortfolio();
   toast('Position supprimée', 'success');
 }
 
-function renderPortfolio() {
+window.renderPortfolio = function() {
   console.log('renderPortfolio appelé');
   const pf = getPortfolio();
 
@@ -141,7 +139,7 @@ function renderPortfolio() {
   }
 }
 
-function initPortefeuille() {
+window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
   renderPortfolio();
 }
