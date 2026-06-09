@@ -151,8 +151,8 @@ async function loadAll() {
     atInit();
     initGlobalSearch();
     runScreener();
-    renderPortfolio();
-    renderAlerts();
+    try { if (typeof renderPortfolio === "function") renderPortfolio(); else console.warn("renderPortfolio not loaded yet"); } catch(e) { console.warn("renderPortfolio error:", e); }
+    try { if (typeof renderAlerts === "function") renderAlerts(); } catch(e) { console.warn("renderAlerts error:", e); }
     parseHash();
   } catch(e) {
     toast('Erreur globale de chargement: ' + e.message, 'error');
