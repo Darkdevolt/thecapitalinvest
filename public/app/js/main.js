@@ -145,10 +145,6 @@ async function loadAll() {
       allCoursHistorique = [];
       console.warn('Erreur chargement historique:', results[6].reason);
     }
-    else { 
-      allIndices = [];
-      toast('Erreur chargement indices: ' + results[5].reason, 'warn');
-    }
 
     entMap = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
 
