@@ -116,6 +116,7 @@ async function loadAll() {
       sb('financials', { order: 'annee.desc,periode.desc', limit: 500 }),
       sb('entreprises', { limit: 500 }),
       sb('indices', { order: 'date_seance.desc', limit: 90 }),
+      sb('historique', { order: 'date_seance.asc' }),
     ]);
 
     if (results[0].status === 'fulfilled') allCours = results[0].value || [];
@@ -139,6 +140,16 @@ async function loadAll() {
       toast('Erreur chargement indices: ' + results[5].reason, 'warn');
     }
 
+    if (results[6].status === 'fulfilled') allCoursHistorique = results[6].value || [];
+    else {
+      allCoursHistorique = [];
+      console.warn('Erreur chargement historique:', results[6].reason);
+    }
+    else { 
+      allIndices = [];
+      toast('Erreur chargement indices: ' + results[5].reason, 'warn');
+    }
+
     entMap = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
 
     // Exposer globalement pour toutes les vues
@@ -148,6 +159,7 @@ async function loadAll() {
     window.allFinancials = allFinancials;
     window.allEntreprises = allEntreprises;
     window.allIndices = allIndices;
+    window.allCoursHistorique = allCoursHistorique;
 
     renderOverview();
     renderTitres();
