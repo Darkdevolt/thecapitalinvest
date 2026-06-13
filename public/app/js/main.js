@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// MAIN — Entry Point
+// MAIN — Entry Point (CORRIGÉ)
 // ═══════════════════════════════════════
 
 // Auth & Init — BLOCAGE STRICT
@@ -105,7 +105,7 @@ function doLogout() {
 }
 
 // ═══════════════════════════════════════
-// LOAD — 100% SUPABASE
+// LOAD — 100% SUPABASE (CORRIGÉ)
 // ═══════════════════════════════════════
 async function loadAll() {
   try {
@@ -157,6 +157,9 @@ async function loadAll() {
     window.allIndices = allIndices;
     window.allCoursHistorique = allCoursHistorique;
 
+    // CORRECTION : Dispatch dataLoaded AVANT les renders
+    window.dispatchEvent(new Event('dataLoaded'));
+
     renderOverview();
     renderTitres();
     renderBoc();
@@ -167,7 +170,10 @@ async function loadAll() {
     atInit();
     initGlobalSearch();
     runScreener();
-    try { if (typeof renderPortfolio === "function") renderPortfolio(); else console.warn("renderPortfolio not loaded yet"); } catch(e) { console.warn("renderPortfolio error:", e); }
+    
+    // CORRECTION : Supprimé l'appel direct à renderPortfolio()
+    // renderPortfolio() est maintenant géré par initPortefeuille() qui écoute dataLoaded
+    
     try { if (typeof renderAlerts === "function") renderAlerts(); } catch(e) { console.warn("renderAlerts error:", e); }
     parseHash();
   } catch(e) {
