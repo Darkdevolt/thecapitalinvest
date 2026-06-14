@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Portefeuille Simulé (VERSION CORRIGÉE)
+// VIEW — Portefeuille Simulé (VERSION SYNCHRONE CORRIGÉE)
 // ═══════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════
@@ -10,9 +10,6 @@ let pfSectorChartInst = null;
 let pfGeoChartInst = null;
 let pfPLChartInst = null;
 
-// Cache des cours pour éviter les appels répétés
-const _priceCache = {};
-
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
   catch { return []; }
@@ -20,54 +17,35 @@ function getPortfolio() {
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
 
 // ═══════════════════════════════════════════════════════
-// RÉCUPÉRATION DU COURS ACTUEL — MÊME LOGIQUE QUE FICHE.JS
+// RÉCUPÉRATION DU COURS ACTUEL — MÊME LOGIQUE QUE TITRES.JS
 // ═══════════════════════════════════════════════════════
 
 /**
- * Récupère le dernier cours d'un ticker.
- * Méthode 1 (primaire) : Appel Supabase comme dans fiche.js
- * Méthode 2 (fallback) : allCours du jour
- * Méthode 3 (dernier recours) : prix d'achat
+ * Récupère le cours actuel d'un ticker depuis allCours (données déjà chargées)
+ * MÊME MÉTHODE QUE titres.js : allCours.find(c => c.ticker === ticker)
  */
-async function fetchLatestPrice(ticker) {
+function getLatestPrice(ticker) {
   if (!ticker) return null;
   const t = ticker.toUpperCase().trim();
 
-  // Vérifier le cache d'abord (valide 30 secondes)
-  const now = Date.now();
-  if (_priceCache[t] && (now - _priceCache[t].time) < 30000) {
-    return _priceCache[t].price;
-  }
-
-  // ── MÉTHODE 1 : Appel Supabase direct (comme fiche.js) ──
-  try {
-    const histResult = await sb('historique', { 
-      ticker: `eq.${t}`, 
-      order: 'date_seance.desc',
-      limit: 1
-    });
-
-    if (Array.isArray(histResult) && histResult.length > 0) {
-      const last = histResult[0];
-      const prix = +(last.cours_cloture || last.cours_normal || last.cours || 0);
-      if (prix > 0) {
-        _priceCache[t] = { price: prix, time: now };
-        return prix;
-      }
-    }
-  } catch (e) {
-    console.warn('fetchLatestPrice Supabase error pour', t, e.message);
-  }
-
-  // ── MÉTHODE 2 : Fallback sur allCours (comme titres.js) ──
+  // ── Méthode 1 : allCours (cours du jour, déjà chargé dans main.js) ──
   if (Array.isArray(window.allCours) && window.allCours.length > 0) {
     const cours = window.allCours.find(c => c.ticker === t);
     if (cours) {
-      const prix = +(cours.cours_cloture || cours.cours_normal || cours.cours || 0);
-      if (prix > 0) {
-        _priceCache[t] = { price: prix, time: now };
-        return prix;
-      }
+      const prix = +(cours.cours_cloture || cours.cours_normal || cours.cours || cours.dernier_cours || 0);
+      if (prix > 0) return prix;
+    }
+  }
+
+  // ── Méthode 2 : allCoursHistorique (dernier point = plus récent) ──
+  // Note: allCoursHistorique est trié ASC (du plus ancien au plus récent)
+  if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
+    const histForTicker = window.allCoursHistorique.filter(c => c.ticker === t);
+    if (histForTicker.length > 0) {
+      // Le dernier élément est le plus récent (tri ASC)
+      const last = histForTicker[histForTicker.length - 1];
+      const prix = +(last.cours_cloture || last.cours_normal || last.cours || 0);
+      if (prix > 0) return prix;
     }
   }
 
@@ -75,32 +53,57 @@ async function fetchLatestPrice(ticker) {
 }
 
 /**
- * Version synchrone pour les cas où on ne peut pas attendre
- * Utilise uniquement allCours (données déjà chargées)
+ * Récupère l'historique complet d'un ticker depuis allCoursHistorique
  */
-function getLatestPriceSync(ticker) {
-  if (!ticker) return null;
+function getTickerHistory(ticker) {
+  if (!ticker || !Array.isArray(window.allCoursHistorique)) return [];
   const t = ticker.toUpperCase().trim();
+  return window.allCoursHistorique.filter(c => c.ticker === t);
+}
 
-  // Cache
-  const now = Date.now();
-  if (_priceCache[t] && (now - _priceCache[t].time) < 30000) {
-    return _priceCache[t].price;
+/**
+ * Récupère le cours à une date spécifique depuis l'historique
+ */
+function getPriceAtDate(ticker, dateStr) {
+  const hist = getTickerHistory(ticker);
+  if (!hist.length) return null;
+
+  // Chercher exactement cette date
+  const exact = hist.find(c => c.date_seance === dateStr);
+  if (exact) {
+    return +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
   }
 
-  // allCours uniquement
-  if (Array.isArray(window.allCours) && window.allCours.length > 0) {
-    const cours = window.allCours.find(c => c.ticker === t);
-    if (cours) {
-      const prix = +(cours.cours_cloture || cours.cours_normal || cours.cours || 0);
-      if (prix > 0) {
-        _priceCache[t] = { price: prix, time: now };
-        return prix;
-      }
-    }
+  // Sinon, dernier cours avant cette date
+  const before = hist
+    .filter(c => c.date_seance <= dateStr)
+    .sort((a, b) => new Date(b.date_seance) - new Date(a.date_seance));
+  if (before.length) {
+    return +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || 0);
   }
 
   return null;
+}
+
+/**
+ * Calcule le 52-week high/low depuis allCoursHistorique
+ */
+function get52WeekHigh(ticker) {
+  const hist = getTickerHistory(ticker);
+  if (!hist.length) return null;
+  const vals = hist
+    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0))
+    .filter(v => v > 0);
+  return vals.length ? Math.max(...vals) : null;
+}
+
+function get52WeekLow(ticker) {
+  const hist = getTickerHistory(ticker);
+  if (!hist.length) return null;
+  const vals = hist
+    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0))
+    .filter(v => v > 0);
+  return vals.length ? Math.min(...vals) : null;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -115,8 +118,7 @@ function stdDev(arr) {
 
 function calcVolatility(returns) {
   if (!returns || returns.length < 2) return 0;
-  const dailyStd = stdDev(returns);
-  return dailyStd * Math.sqrt(252);
+  return stdDev(returns) * Math.sqrt(252);
 }
 
 function calcSharpe(returns, riskFreeRate = 0.05) {
@@ -200,48 +202,10 @@ function getDividendYield(ticker) {
   return 0;
 }
 
-async function get52WeekHigh(ticker) {
-  if (!ticker) return null;
-  const t = ticker.toUpperCase().trim();
-  try {
-    const hist = await sb('historique', { 
-      ticker: `eq.${t}`, 
-      order: 'date_seance.desc',
-      limit: 260 // ~1 an de trading
-    });
-    if (Array.isArray(hist) && hist.length > 0) {
-      const vals = hist
-        .map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0))
-        .filter(v => v > 0);
-      return vals.length ? Math.max(...vals) : null;
-    }
-  } catch(e) { console.warn('get52WeekHigh error:', e.message); }
-  return null;
-}
-
-async function get52WeekLow(ticker) {
-  if (!ticker) return null;
-  const t = ticker.toUpperCase().trim();
-  try {
-    const hist = await sb('historique', { 
-      ticker: `eq.${t}`, 
-      order: 'date_seance.desc',
-      limit: 260
-    });
-    if (Array.isArray(hist) && hist.length > 0) {
-      const vals = hist
-        .map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0))
-        .filter(v => v > 0);
-      return vals.length ? Math.min(...vals) : null;
-    }
-  } catch(e) { console.warn('get52WeekLow error:', e.message); }
-  return null;
-}
-
 // ═══════════════════════════════════════════════════════
-// HISTORIQUE DU PORTEFEUILLE
+// HISTORIQUE DU PORTEFEUILLE — VERSION SYNCHRONE
 // ═══════════════════════════════════════════════════════
-async function getPortfolioHistory(periodDays = 99999) {
+function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
   if (!pf.length) return { dates: [], values: [], pls: [] };
 
@@ -263,24 +227,6 @@ async function getPortfolioHistory(periodDays = 99999) {
   const values = [];
   const pls = [];
 
-  // Récupérer l'historique pour chaque ticker en une seule fois
-  const tickerHistories = {};
-  for (const p of pf) {
-    const t = p.ticker.toUpperCase().trim();
-    if (!tickerHistories[t]) {
-      try {
-        const hist = await sb('historique', { 
-          ticker: `eq.${t}`, 
-          order: 'date_seance.asc',
-          limit: 5000
-        });
-        tickerHistories[t] = Array.isArray(hist) ? hist : [];
-      } catch(e) {
-        tickerHistories[t] = [];
-      }
-    }
-  }
-
   for (const date of dates) {
     let dayValue = 0;
     let dayInvested = 0;
@@ -289,27 +235,7 @@ async function getPortfolioHistory(periodDays = 99999) {
     for (const p of pf) {
       const buyDate = new Date(p.date || p.id);
       if (date >= buyDate) {
-        const t = p.ticker.toUpperCase().trim();
-        const hist = tickerHistories[t] || [];
-
-        // Chercher le prix à cette date
-        const dayCours = hist.find(c => c.date_seance === ds);
-        let priceAtDate;
-
-        if (dayCours) {
-          priceAtDate = +(dayCours.cours_cloture || dayCours.cours_normal || dayCours.cours || p.price);
-        } else {
-          // Dernier cours connu avant cette date
-          const before = hist
-            .filter(c => c.date_seance <= ds)
-            .sort((a, b) => new Date(b.date_seance) - new Date(a.date_seance));
-          if (before.length) {
-            priceAtDate = +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || p.price);
-          } else {
-            priceAtDate = p.price;
-          }
-        }
-
+        const priceAtDate = getPriceAtDate(p.ticker, ds) || p.price;
         dayValue += p.qty * priceAtDate;
         dayInvested += p.qty * p.price;
       }
@@ -320,6 +246,30 @@ async function getPortfolioHistory(periodDays = 99999) {
   }
 
   return { dates, values, pls };
+}
+
+// ═══════════════════════════════════════════════════════
+// CALCUL DU CMP (Coût Moyen Pondéré)
+// ═══════════════════════════════════════════════════════
+function calculateCMP(positions) {
+  // Groupe par ticker
+  const byTicker = {};
+  positions.forEach(p => {
+    const t = p.ticker.toUpperCase().trim();
+    if (!byTicker[t]) {
+      byTicker[t] = { totalQty: 0, totalCost: 0, positions: [] };
+    }
+    byTicker[t].totalQty += p.qty;
+    byTicker[t].totalCost += p.qty * p.price;
+    byTicker[t].positions.push(p);
+  });
+
+  // Calculer CMP pour chaque ticker
+  const cmp = {};
+  for (const [ticker, data] of Object.entries(byTicker)) {
+    cmp[ticker] = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
+  }
+  return cmp;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -334,6 +284,13 @@ window.addPosition = function() {
   if (!ticker || !qty || !price || qty <= 0 || price <= 0) { 
     toast('Remplissez tous les champs correctement', 'warn'); 
     return; 
+  }
+
+  // Vérifier que le ticker existe dans allCours
+  const exists = Array.isArray(window.allCours) && window.allCours.some(c => c.ticker === ticker);
+  if (!exists) {
+    toast('Ticker non trouvé dans la base BRVM', 'warn');
+    return;
   }
 
   const pf = getPortfolio();
@@ -359,9 +316,9 @@ window.removePosition = function(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RENDU PRINCIPAL — VERSION ASYNCHRONE
+// RENDU PRINCIPAL — VERSION SYNCHRONE
 // ═══════════════════════════════════════════════════════
-window.renderPortfolio = async function() {
+window.renderPortfolio = function() {
   console.log('renderPortfolio appelé');
 
   const pf = getPortfolio();
@@ -383,9 +340,8 @@ window.renderPortfolio = async function() {
     return;
   }
 
-  // ── Récupérer tous les cours en parallèle ──
-  const pricePromises = pf.map(p => fetchLatestPrice(p.ticker));
-  const prices = await Promise.all(pricePromises);
+  // ── Calculer CMP par ticker ──
+  const cmp = calculateCMP(pf);
 
   // ── Calculs par position ──
   let totalValue = 0, totalInvested = 0;
@@ -393,8 +349,8 @@ window.renderPortfolio = async function() {
   const sectors = {};
   const pays = {};
 
-  pf.forEach((p, i) => {
-    const currentPrice = prices[i] || p.price;
+  pf.forEach(p => {
+    const currentPrice = getLatestPrice(p.ticker) || p.price;
     const value = p.qty * currentPrice;
     const invested = p.qty * p.price;
     const pl = value - invested;
@@ -409,14 +365,25 @@ window.renderPortfolio = async function() {
     const py = getPays(p.ticker);
     pays[py] = (pays[py] || 0) + value;
 
-    rows.push({ ...p, currentPrice, value, invested, pl, plPct, sector: s, pays: py, priceFound: prices[i] !== null });
+    rows.push({ 
+      ...p, 
+      currentPrice, 
+      value, 
+      invested, 
+      pl, 
+      plPct, 
+      sector: s, 
+      pays: py,
+      cmp: cmp[p.ticker.toUpperCase().trim()] || p.price,
+      priceFound: getLatestPrice(p.ticker) !== null
+    });
   });
 
   const totalPL = totalValue - totalInvested;
   const totalReturn = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
   // ── Historique pour stats avancées ──
-  const hist = await getPortfolioHistory(252);
+  const hist = getPortfolioHistory(252);
 
   // Calcul des rendements journaliers
   const dailyReturns = [];
@@ -431,7 +398,7 @@ window.renderPortfolio = async function() {
   const vol = calcVolatility(dailyReturns);
   const sharpe = calcSharpe(dailyReturns);
   const maxDD = calcMaxDrawdown(hist.values);
-  const beta = 1.0; // placeholder
+  const beta = 1.0;
 
   // ── Update KPIs ──
   if (pfTotal) pfTotal.textContent = fmtM(totalValue) + ' FCFA';
@@ -454,20 +421,24 @@ window.renderPortfolio = async function() {
   if (pfDD) pfDD.textContent = maxDD > 0 ? '-' + fmt(maxDD, 2) + '%' : '—';
   if (pfBeta) pfBeta.textContent = fmt(beta, 2);
 
-  // ── Tableau ──
+  // ── Tableau avec CMP ──
   const tbody = document.getElementById('pfTable');
   if (tbody) {
     tbody.innerHTML = rows.map(p => {
+      const high52 = get52WeekHigh(p.ticker);
+      const low52 = get52WeekLow(p.ticker);
       return `<tr>
         <td style="padding:10px 12px;"><span style="font-family:var(--mono);color:var(--gold)">${p.ticker}</span></td>
         <td style="padding:10px 12px;text-align:right">${fmt(p.qty)}</td>
         <td style="padding:10px 12px;text-align:right">${fmt(p.price, 2)}</td>
+        <td style="padding:10px 12px;text-align:right">${fmt(p.cmp, 2)}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.priceFound ? 'inherit' : 'var(--dim)'}">${fmt(p.currentPrice, 2)}${!p.priceFound ? ' <small style="color:var(--dim)">(est.)</small>' : ''}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmt(p.plPct, 2)}%</td>
         <td style="padding:10px 12px;text-align:right">${fmtM(p.value)}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.pl>=0?'var(--green)':'var(--red)'}">${p.pl >= 0 ? '+' : ''}${fmtM(p.pl)}</td>
-        <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmt(p.plPct, 2)}%</td>
         <td style="padding:10px 12px;text-align:right">${fmt(totalValue > 0 ? (p.value/totalValue*100) : 0, 2)}%</td>
+        <td style="padding:10px 12px;text-align:right">${high52 ? fmt(high52, 2) : '—'}</td>
+        <td style="padding:10px 12px;text-align:right">${low52 ? fmt(low52, 2) : '—'}</td>
         <td style="padding:10px 12px;text-align:center"><button onclick="removePosition(${p.id})" style="padding:4px 10px;border-radius:6px;border:1px solid var(--border2);background:none;color:var(--dim);font-size:11px;cursor:pointer">🗑</button></td>
       </tr>`;
     }).join('');
@@ -811,7 +782,7 @@ function renderBenchmark(rows, hist) {
 // ═══════════════════════════════════════════════════════
 // MATRICE DE CORRÉLATION
 // ═══════════════════════════════════════════════════════
-async function renderCorrelationMatrix(pf) {
+function renderCorrelationMatrix(pf) {
   const el = document.getElementById('correlationMatrix');
   if (!el) return;
 
@@ -823,27 +794,14 @@ async function renderCorrelationMatrix(pf) {
   const tickers = pf.map(p => p.ticker.toUpperCase().trim());
   const returns = {};
 
-  // Récupérer l'historique pour chaque ticker
-  for (const t of tickers) {
-    try {
-      const hist = await sb('historique', { 
-        ticker: `eq.${t}`, 
-        order: 'date_seance.asc',
-        limit: 260
-      });
-      if (Array.isArray(hist) && hist.length > 1) {
-        const prices = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
-        returns[t] = [];
-        for (let i = 1; i < prices.length; i++) {
-          returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
-        }
-      } else {
-        returns[t] = [];
-      }
-    } catch(e) {
-      returns[t] = [];
+  tickers.forEach(t => {
+    const hist = getTickerHistory(t);
+    const prices = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
+    returns[t] = [];
+    for (let i = 1; i < prices.length; i++) {
+      returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
     }
-  }
+  });
 
   const minLen = Math.min(...Object.values(returns).map(r => r.length));
   if (minLen < 5) {
