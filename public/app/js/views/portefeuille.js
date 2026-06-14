@@ -902,3 +902,4 @@ window.initPortefeuille = function() {
   window._pfPeriod = window._pfPeriod || 99999;
   renderPortfolio();
 }
+
