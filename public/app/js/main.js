@@ -170,10 +170,12 @@ async function loadAll() {
     atInit();
     initGlobalSearch();
     runScreener();
-    
-    // CORRECTION : Supprimé l'appel direct à renderPortfolio()
-    // renderPortfolio() est maintenant géré par initPortefeuille() qui écoute dataLoaded
-    
+
+    // CORRECTION : Appeler initPortefeuille après que les données soient chargées
+    if (typeof initPortefeuille === 'function') {
+      initPortefeuille();
+    }
+
     try { if (typeof renderAlerts === "function") renderAlerts(); } catch(e) { console.warn("renderAlerts error:", e); }
     parseHash();
   } catch(e) {
