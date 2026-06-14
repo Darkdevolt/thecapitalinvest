@@ -3,6 +3,14 @@
 // ═══════════════════════════════════════════════════════
 // NOTE: fmt, fmtM, fmtDate, chartOpts, mkDataset sont dans utils.js
 
+// ═══════════════════════════════════════════════════════
+// VARIABLES GLOBALES DES GRAPHIQUES
+// ═══════════════════════════════════════════════════════
+let pfValueChartInst = null;
+let pfSectorChartInst = null;
+let pfGeoChartInst = null;
+let pfPLChartInst = null;
+
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
   catch { return []; }
@@ -14,6 +22,11 @@ function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringi
 // ═══════════════════════════════════════════════════════
 function getLatestPrice(ticker) {
   if (!ticker) return null;
+  // Vérifier que les données sont chargées
+  if (!window.allCours && !window.allCoursHistorique && !window.allIndices) {
+    console.warn('getLatestPrice: données non chargées');
+    return null;
+  }
   const t = ticker.toUpperCase().trim();
 
   // 1. Cours du jour (allCours) — PRIORITAIRE
@@ -309,6 +322,13 @@ window.removePosition = function(id) {
 // ═══════════════════════════════════════════════════════
 window.renderPortfolio = function() {
   console.log('renderPortfolio appelé');
+
+  // Vérifier que les données sont disponibles
+  if (!window.allCours && !window.allCoursHistorique) {
+    console.warn('renderPortfolio: données non chargées, report...');
+    return;
+  }
+
   const pf = getPortfolio();
 
   // ── KPIs refs ──
