@@ -11,7 +11,7 @@ setInterval(() => {
 }, 1000);
 
 const TITLES = {
-  overview:'Vue d'ensemble — BRVM',
+  overview:"Vue d'ensemble — BRVM",
   titres:'Titres BRVM',
   boc:'BOC — Bulletin Officiel',
   analyses:'Recommandations',
@@ -152,12 +152,16 @@ function parseHash() {
   const h = location.hash;
   if (h.startsWith('#fiche=')) {
     const ticker = h.replace('#fiche=', '');
-    openFiche(ticker, 'titres', true);
+    if (typeof openFiche === 'function') {
+      openFiche(ticker, 'titres', true);
+    }
     return;
   }
   if (h.startsWith('#analyse=')) {
     const id = h.replace('#analyse=', '');
-    openAnalyseDetail(+id, true);
+    if (typeof openAnalyseDetail === 'function') {
+      openAnalyseDetail(+id, true);
+    }
     return;
   }
   const map = { '#titres':'titres', '#boc':'boc', '#analyses':'analyses', '#analyse-detail':'analyse-detail', '#analyse-technique':'analyse-technique', '#analyse-fondamentale':'analyse-fondamentale', '#screener':'screener', '#portefeuille':'portefeuille', '#alertes':'alertes', '#financials':'financials', '#financials-detail':'financials-detail', '#publications':'publications', '#formation':'formation' };
