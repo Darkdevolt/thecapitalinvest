@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Portefeuille Simulé (VERSION SYNCHRONE CORRIGÉE)
+// VIEW — Portefeuille Simulé (VERSION CORRIGÉE v2)
 // ═══════════════════════════════════════════════════════
 
 // ═══════════════════════════════════════════════════════
@@ -17,18 +17,12 @@ function getPortfolio() {
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
 
 // ═══════════════════════════════════════════════════════
-// RÉCUPÉRATION DU COURS ACTUEL — MÊME LOGIQUE QUE TITRES.JS
+// RÉCUPÉRATION DU COURS ACTUEL
 // ═══════════════════════════════════════════════════════
-
-/**
- * Récupère le cours actuel d'un ticker depuis allCours (données déjà chargées)
- * MÊME MÉTHODE QUE titres.js : allCours.find(c => c.ticker === ticker)
- */
 function getLatestPrice(ticker) {
   if (!ticker) return null;
   const t = ticker.toUpperCase().trim();
 
-  // ── Méthode 1 : allCours (cours du jour, déjà chargé dans main.js) ──
   if (Array.isArray(window.allCours) && window.allCours.length > 0) {
     const cours = window.allCours.find(c => c.ticker === t);
     if (cours) {
@@ -37,12 +31,9 @@ function getLatestPrice(ticker) {
     }
   }
 
-  // ── Méthode 2 : allCoursHistorique (dernier point = plus récent) ──
-  // Note: allCoursHistorique est trié ASC (du plus ancien au plus récent)
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const histForTicker = window.allCoursHistorique.filter(c => c.ticker === t);
     if (histForTicker.length > 0) {
-      // Le dernier élément est le plus récent (tri ASC)
       const last = histForTicker[histForTicker.length - 1];
       const prix = +(last.cours_cloture || last.cours_normal || last.cours || 0);
       if (prix > 0) return prix;
@@ -52,29 +43,21 @@ function getLatestPrice(ticker) {
   return null;
 }
 
-/**
- * Récupère l'historique complet d'un ticker depuis allCoursHistorique
- */
 function getTickerHistory(ticker) {
   if (!ticker || !Array.isArray(window.allCoursHistorique)) return [];
   const t = ticker.toUpperCase().trim();
   return window.allCoursHistorique.filter(c => c.ticker === t);
 }
 
-/**
- * Récupère le cours à une date spécifique depuis l'historique
- */
 function getPriceAtDate(ticker, dateStr) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
 
-  // Chercher exactement cette date
   const exact = hist.find(c => c.date_seance === dateStr);
   if (exact) {
     return +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
   }
 
-  // Sinon, dernier cours avant cette date
   const before = hist
     .filter(c => c.date_seance <= dateStr)
     .sort((a, b) => new Date(b.date_seance) - new Date(a.date_seance));
@@ -85,9 +68,6 @@ function getPriceAtDate(ticker, dateStr) {
   return null;
 }
 
-/**
- * Calcule le 52-week high/low depuis allCoursHistorique
- */
 function get52WeekHigh(ticker) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
@@ -203,7 +183,7 @@ function getDividendYield(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HISTORIQUE DU PORTEFEUILLE — VERSION SYNCHRONE
+// HISTORIQUE DU PORTEFEUILLE — CORRIGÉ
 // ═══════════════════════════════════════════════════════
 function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
@@ -249,10 +229,9 @@ function getPortfolioHistory(periodDays = 99999) {
 }
 
 // ═══════════════════════════════════════════════════════
-// CALCUL DU CMP (Coût Moyen Pondéré)
+// CALCUL DU CMP
 // ═══════════════════════════════════════════════════════
 function calculateCMP(positions) {
-  // Groupe par ticker
   const byTicker = {};
   positions.forEach(p => {
     const t = p.ticker.toUpperCase().trim();
@@ -264,12 +243,34 @@ function calculateCMP(positions) {
     byTicker[t].positions.push(p);
   });
 
-  // Calculer CMP pour chaque ticker
   const cmp = {};
   for (const [ticker, data] of Object.entries(byTicker)) {
     cmp[ticker] = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
   }
   return cmp;
+}
+
+// ═══════════════════════════════════════════════════════
+// PEUPLER LE SELECT DES TICKERS
+// ═══════════════════════════════════════════════════════
+function populateTickerSelect() {
+  const select = document.getElementById('pfTicker');
+  if (!select) return;
+
+  // Vider sauf la première option
+  while (select.options.length > 1) {
+    select.remove(1);
+  }
+
+  if (!Array.isArray(window.allCours) || window.allCours.length === 0) return;
+
+  const tickers = [...new Set(window.allCours.map(c => c.ticker).filter(Boolean))].sort();
+  tickers.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    select.appendChild(opt);
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -286,7 +287,6 @@ window.addPosition = function() {
     return; 
   }
 
-  // Vérifier que le ticker existe dans allCours
   const exists = Array.isArray(window.allCours) && window.allCours.some(c => c.ticker === ticker);
   if (!exists) {
     toast('Ticker non trouvé dans la base BRVM', 'warn');
@@ -316,14 +316,12 @@ window.removePosition = function(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RENDU PRINCIPAL — VERSION SYNCHRONE
+// RENDU PRINCIPAL — CORRIGÉ (utilise window._pfPeriod)
 // ═══════════════════════════════════════════════════════
 window.renderPortfolio = function() {
-  console.log('renderPortfolio appelé');
-
+  console.log('renderPortfolio appelé, période:', window._pfPeriod);
   const pf = getPortfolio();
 
-  // ── KPIs refs ──
   const pfTotal = document.getElementById('pfTotal');
   const pfInvested = document.getElementById('pfInvested');
   const pfPL = document.getElementById('pfPL');
@@ -382,8 +380,9 @@ window.renderPortfolio = function() {
   const totalPL = totalValue - totalInvested;
   const totalReturn = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
-  // ── Historique pour stats avancées ──
-  const hist = getPortfolioHistory(252);
+  // ── CORRECTION : utiliser window._pfPeriod au lieu de 252 en dur ──
+  const periodDays = window._pfPeriod || 99999;
+  const hist = getPortfolioHistory(periodDays);
 
   // Calcul des rendements journaliers
   const dailyReturns = [];
@@ -421,7 +420,7 @@ window.renderPortfolio = function() {
   if (pfDD) pfDD.textContent = maxDD > 0 ? '-' + fmt(maxDD, 2) + '%' : '—';
   if (pfBeta) pfBeta.textContent = fmt(beta, 2);
 
-  // ── Tableau avec CMP ──
+  // ── Tableau ──
   const tbody = document.getElementById('pfTable');
   if (tbody) {
     tbody.innerHTML = rows.map(p => {
@@ -444,38 +443,46 @@ window.renderPortfolio = function() {
     }).join('');
   }
 
-  // ── Compteur de positions ──
+  // ── Compteur ──
   const countEl = document.getElementById('pfPositionCount');
   if (countEl) countEl.textContent = `${pf.length} position${pf.length > 1 ? 's' : ''}`;
 
   // ── GRAPHIQUES ──
   renderPortfolioCharts(rows, totalValue, sectors, pays, hist);
-
-  // ── Concentration ──
   renderConcentration(rows, totalValue);
-
-  // ── Dividendes ──
   renderDividends(rows);
-
-  // ── Performance vs BRVM ──
   renderBenchmark(rows, hist);
-
-  // ── Matrice de corrélation ──
   renderCorrelationMatrix(pf);
 }
 
 // ═══════════════════════════════════════════════════════
-// GRAPHIQUES
+// GRAPHIQUES — CORRIGÉ (vérifie hist vide)
 // ═══════════════════════════════════════════════════════
 function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
-  if (typeof Chart === 'undefined') return;
+  if (typeof Chart === 'undefined') {
+    console.warn('Chart.js non chargé');
+    return;
+  }
+
+  // Vérifier que chartOpts existe
+  const opts = typeof chartOpts !== 'undefined' ? chartOpts : {};
 
   const pf = getPortfolio();
 
-  // ── 1. Évolution de la Valeur (Line) ──
+  // ── 1. Évolution de la Valeur ──
   const valueCanvas = document.getElementById('chartPortfolioValue');
   if (valueCanvas) {
     if (pfValueChartInst) { pfValueChartInst.destroy(); pfValueChartInst = null; }
+
+    if (!hist.dates.length || !hist.values.length) {
+      const ctx = valueCanvas.getContext('2d');
+      ctx.clearRect(0, 0, valueCanvas.width, valueCanvas.height);
+      ctx.font = '14px DM Sans';
+      ctx.fillStyle = 'rgba(245,240,232,0.3)';
+      ctx.textAlign = 'center';
+      ctx.fillText('Données historiques insuffisantes', valueCanvas.width / 2, valueCanvas.height / 2);
+      return;
+    }
 
     const labels = hist.dates.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
     const data = hist.values;
@@ -497,7 +504,7 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
         }]
       },
       options: {
-        ...chartOpts,
+        ...opts,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -517,7 +524,7 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     });
   }
 
-  // ── 2. Allocation Sectorielle (Doughnut) ──
+  // ── 2. Allocation Sectorielle ──
   const sectorCanvas = document.getElementById('chartSectorAlloc');
   if (sectorCanvas) {
     if (pfSectorChartInst) { pfSectorChartInst.destroy(); pfSectorChartInst = null; }
@@ -525,6 +532,16 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     const sectorLabels = Object.keys(sectors);
     const sectorData = Object.values(sectors);
     const colors = ['#B8964E', '#4ADE80', '#F87171', '#60A5FA', '#A78BFA', '#FBBF24', '#34D399', '#F472B6', '#818CF8', '#FB923C'];
+
+    if (!sectorLabels.length) {
+      const ctx = sectorCanvas.getContext('2d');
+      ctx.clearRect(0, 0, sectorCanvas.width, sectorCanvas.height);
+      ctx.font = '12px DM Sans';
+      ctx.fillStyle = 'rgba(245,240,232,0.3)';
+      ctx.textAlign = 'center';
+      ctx.fillText('Aucune donnée sectorielle', sectorCanvas.width / 2, sectorCanvas.height / 2);
+      return;
+    }
 
     pfSectorChartInst = new Chart(sectorCanvas, {
       type: 'doughnut',
@@ -554,7 +571,7 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     });
   }
 
-  // ── 3. Répartition Géographique (Doughnut) ──
+  // ── 3. Répartition Géographique ──
   const geoCanvas = document.getElementById('chartGeoAlloc');
   if (geoCanvas) {
     if (pfGeoChartInst) { pfGeoChartInst.destroy(); pfGeoChartInst = null; }
@@ -562,6 +579,16 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     const geoLabels = Object.keys(pays);
     const geoData = Object.values(pays);
     const geoColors = ['#B8964E', '#4ADE80', '#60A5FA', '#F87171', '#A78BFA', '#FBBF24'];
+
+    if (!geoLabels.length) {
+      const ctx = geoCanvas.getContext('2d');
+      ctx.clearRect(0, 0, geoCanvas.width, geoCanvas.height);
+      ctx.font = '12px DM Sans';
+      ctx.fillStyle = 'rgba(245,240,232,0.3)';
+      ctx.textAlign = 'center';
+      ctx.fillText('Aucune donnée géographique', geoCanvas.width / 2, geoCanvas.height / 2);
+      return;
+    }
 
     pfGeoChartInst = new Chart(geoCanvas, {
       type: 'doughnut',
@@ -591,10 +618,20 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     });
   }
 
-  // ── 4. P&L Cumulé (Bar) ──
+  // ── 4. P&L Cumulé ──
   const plCanvas = document.getElementById('chartPortfolioPL');
   if (plCanvas) {
     if (pfPLChartInst) { pfPLChartInst.destroy(); pfPLChartInst = null; }
+
+    if (!hist.dates.length || !hist.pls.length) {
+      const ctx = plCanvas.getContext('2d');
+      ctx.clearRect(0, 0, plCanvas.width, plCanvas.height);
+      ctx.font = '14px DM Sans';
+      ctx.fillStyle = 'rgba(245,240,232,0.3)';
+      ctx.textAlign = 'center';
+      ctx.fillText('Données historiques insuffisantes', plCanvas.width / 2, plCanvas.height / 2);
+      return;
+    }
 
     const plLabels = hist.dates.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
     const plData = hist.pls;
@@ -613,7 +650,7 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
         }]
       },
       options: {
-        ...chartOpts,
+        ...opts,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -735,6 +772,8 @@ function renderBenchmark(rows, hist) {
   }
 
   let brvmReturn = 0;
+  let brvmDataFound = false;
+
   if (Array.isArray(window.allIndices) && window.allIndices.length > 0) {
     const composite = window.allIndices.filter(i => 
       (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE')
@@ -747,6 +786,7 @@ function renderBenchmark(rows, hist) {
       const lastVal = +(last.valeur || last.cours || last.dernier || 0);
       if (firstVal > 0) {
         brvmReturn = (lastVal - firstVal) / firstVal * 100;
+        brvmDataFound = true;
       }
     }
   }
@@ -756,6 +796,16 @@ function renderBenchmark(rows, hist) {
     : 0;
 
   const outperformance = pfReturn - brvmReturn;
+
+  if (!brvmDataFound) {
+    el.innerHTML = `
+      <div style="padding:16px;text-align:center">
+        <p style="color:var(--dim);font-size:13px">Données BRVM Composite non disponibles</p>
+        <p style="color:var(--dim);font-size:12px">Impossible de calculer la comparaison pour le moment</p>
+      </div>
+    `;
+    return;
+  }
 
   el.innerHTML = `
     <div style="padding:16px">
@@ -895,11 +945,25 @@ window.setPortfolioPeriod = function(days, btn) {
 }
 
 // ═══════════════════════════════════════════════════════
-// INIT
+// INIT — CORRIGÉ
 // ═══════════════════════════════════════════════════════
 window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
   window._pfPeriod = window._pfPeriod || 99999;
+
+  // Peupler le select des tickers
+  populateTickerSelect();
+
+  // Si les données ne sont pas encore chargées, attendre
+  if (!Array.isArray(window.allCours) || window.allCours.length === 0) {
+    console.log('Données non disponibles, attente de dataLoaded...');
+    window.addEventListener('dataLoaded', function onDataLoaded() {
+      console.log('dataLoaded reçu, re-render portefeuille');
+      populateTickerSelect();
+      renderPortfolio();
+      window.removeEventListener('dataLoaded', onDataLoaded);
+    }, { once: true });
+  }
+
   renderPortfolio();
 }
-
