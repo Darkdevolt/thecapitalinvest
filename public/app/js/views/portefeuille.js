@@ -5,10 +5,10 @@
 // ═══════════════════════════════════════════════════════
 // VARIABLES GLOBALES DES GRAPHIQUES
 // ═══════════════════════════════════════════════════════
-let pfValueChartInst = null;
-let pfSectorChartInst = null;
-let pfGeoChartInst = null;
-let pfPLChartInst = null;
+var pfValueChartInst = null;
+var pfSectorChartInst = null;
+var pfGeoChartInst = null;
+var pfPLChartInst = null;
 
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
