@@ -1,10 +1,7 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Gestion de Portefeuille (v5)
-// Suivi réel : Actions, Obligations, OPCVM
-// CORRECTION : Récupération historique par ticker (comme fiche.js)
+// VIEW — Gestion de Portefeuille (VERSION DÉBOGAGE)
 // ═══════════════════════════════════════════════════════
 
-// Cache des historiques par ticker (évite les requêtes répétées)
 const _pfHistCache = {};
 
 function getPortfolio() {
@@ -14,17 +11,14 @@ function getPortfolio() {
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
 
 // ═══════════════════════════════════════════════════════
-// RÉCUPÉRATION COURS — INSPIRÉ DE fiche.js
+// RÉCUPÉRATION COURS
 // ═══════════════════════════════════════════════════════
 
 async function fetchTickerHistory(ticker) {
   if (!ticker) return [];
   const t = ticker.toUpperCase().trim();
-
-  // Utiliser le cache si disponible
   if (_pfHistCache[t]) return _pfHistCache[t];
 
-  // 1. Chercher dans allCoursHistorique (chargé au démarrage)
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const hist = window.allCoursHistorique.filter(c => c.ticker === t);
     if (hist.length > 0) {
@@ -33,7 +27,6 @@ async function fetchTickerHistory(ticker) {
     }
   }
 
-  // 2. Fetch individuel comme dans fiche.js
   try {
     const result = await sb('historique', { 
       ticker: `eq.${t}`, 
@@ -53,7 +46,6 @@ function getLatestPrice(ticker) {
   if (!ticker) return null;
   const t = ticker.toUpperCase().trim();
 
-  // 1. Chercher dans allCours (cours du jour)
   if (Array.isArray(window.allCours) && window.allCours.length > 0) {
     const cours = window.allCours.find(c => c.ticker === t);
     if (cours) {
@@ -62,7 +54,6 @@ function getLatestPrice(ticker) {
     }
   }
 
-  // 2. Chercher dans le cache historique
   const cache = _pfHistCache[t];
   if (cache && cache.length > 0) {
     const last = cache[cache.length - 1];
@@ -70,7 +61,6 @@ function getLatestPrice(ticker) {
     if (prix > 0) return prix;
   }
 
-  // 3. Chercher dans allCoursHistorique global
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const histForTicker = window.allCoursHistorique.filter(c => c.ticker === t);
     if (histForTicker.length > 0) {
@@ -87,65 +77,63 @@ function getLatestPrice(ticker) {
 function getTickerHistory(ticker) {
   if (!ticker) return [];
   const t = ticker.toUpperCase().trim();
-
-  // 1. Cache
-  if (_pfHistCache[t] && _pfHistCache[t].length > 0) {
-    return _pfHistCache[t];
-  }
-
-  // 2. allCoursHistorique global
+  if (_pfHistCache[t] && _pfHistCache[t].length > 0) return _pfHistCache[t];
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const hist = window.allCoursHistorique.filter(c => c.ticker === t);
-    if (hist.length > 0) {
-      _pfHistCache[t] = hist;
-      return hist;
-    }
+    if (hist.length > 0) { _pfHistCache[t] = hist; return hist; }
   }
-
   return [];
 }
 
+// ═══════════════════════════════════════════════════════
+// getPriceAtDate — AVEC LOGS DÉBOGAGE
+// ═══════════════════════════════════════════════════════
 function getPriceAtDate(ticker, dateStr) {
   const hist = getTickerHistory(ticker);
-  if (!hist.length) return null;
+
+  if (window._pfDebug) {
+    console.log(`[DEBUG getPriceAtDate] ${ticker} @ ${dateStr} — hist length: ${hist.length}`);
+  }
+
+  if (!hist.length) {
+    if (window._pfDebug) console.log(`[DEBUG] No history for ${ticker}`);
+    return null;
+  }
 
   // Recherche exacte
   const exact = hist.find(c => (c.date_seance || '').split('T')[0] === dateStr);
   if (exact) {
-    return +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
+    const prix = +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
+    if (window._pfDebug) console.log(`[DEBUG] Exact match for ${ticker} @ ${dateStr}: ${prix}`);
+    return prix > 0 ? prix : null;
   }
 
   // Recherche du dernier prix avant ou à cette date
   const before = hist
     .filter(c => (c.date_seance || '').split('T')[0] <= dateStr)
     .sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
+
   if (before.length) {
-    return +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || 0);
+    const prix = +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || 0);
+    if (window._pfDebug) console.log(`[DEBUG] Fallback before for ${ticker} @ ${dateStr}: ${prix} (from ${before[0].date_seance})`);
+    return prix > 0 ? prix : null;
   }
 
-  // Fallback : premier prix disponible
-  if (hist.length) {
-    return +(hist[0].cours_cloture || hist[0].cours_normal || hist[0].cours || 0);
-  }
-
+  if (window._pfDebug) console.log(`[DEBUG] No price found for ${ticker} @ ${dateStr}`);
   return null;
 }
 
 function get52WeekHigh(ticker) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
-  const vals = hist
-    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.haut || 0))
-    .filter(v => v > 0);
+  const vals = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.haut || 0)).filter(v => v > 0);
   return vals.length ? Math.max(...vals) : null;
 }
 
 function get52WeekLow(ticker) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
-  const vals = hist
-    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.bas || 0))
-    .filter(v => v > 0);
+  const vals = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.bas || 0)).filter(v => v > 0);
   return vals.length ? Math.min(...vals) : null;
 }
 
@@ -246,7 +234,7 @@ function getDividendYield(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HISTORIQUE DU PORTEFEUILLE — AVEC FETCH ASYNC
+// HISTORIQUE DU PORTEFEUILLE — CORRIGÉ AVEC LOGS
 // ═══════════════════════════════════════════════════════
 async function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
@@ -268,39 +256,58 @@ async function getPortfolioHistory(periodDays = 99999) {
     current.setDate(current.getDate() + 1);
   }
 
-  // Précharger les historiques pour tous les tickers
+  // Précharger les historiques
   const uniqueTickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
   await Promise.all(uniqueTickers.map(t => fetchTickerHistory(t)));
+
+  console.log('[DEBUG getPortfolioHistory] Tickers:', uniqueTickers);
+  console.log('[DEBUG] Dates count:', dates.length);
+  console.log('[DEBUG] First date:', dates[0]?.toISOString().split('T')[0]);
+  console.log('[DEBUG] Last date:', dates[dates.length-1]?.toISOString().split('T')[0]);
 
   const values = [];
   const pls = [];
 
+  // Capital investi TOTAL (constant)
+  const totalInvestedAll = pf.reduce((s, p) => s + p.qty * p.price, 0);
+  console.log('[DEBUG] Total invested:', totalInvestedAll);
+
   for (const date of dates) {
     let dayValue = 0;
-    let dayInvested = 0;
     const ds = date.toISOString().split('T')[0];
 
     for (const p of pf) {
       const buyDate = new Date(p.date || p.id || now);
       if (date >= buyDate) {
         let priceAtDate = getPriceAtDate(p.ticker, ds);
+
+        // CORRECTION : si pas de prix historique, utiliser le prix d'achat (pas le cours actuel)
+        // pour ne pas fausser le P&L avec le cours actuel sur les dates anciennes
         if (!priceAtDate || priceAtDate <= 0) {
-          priceAtDate = getLatestPrice(p.ticker) || p.price;
+          priceAtDate = p.price; // Prix d'achat comme fallback
         }
+
         dayValue += p.qty * priceAtDate;
-        dayInvested += p.qty * p.price;
       }
     }
 
     values.push(dayValue);
-    pls.push(dayValue - dayInvested);
+    pls.push(dayValue - totalInvestedAll);
   }
+
+  // LOGS DÉBOGAGE — premières et dernières valeurs
+  console.log('[DEBUG] First 5 values:', values.slice(0, 5));
+  console.log('[DEBUG] First 5 P&Ls:', pls.slice(0, 5));
+  console.log('[DEBUG] Last 5 values:', values.slice(-5));
+  console.log('[DEBUG] Last 5 P&Ls:', pls.slice(-5));
+  console.log('[DEBUG] P&L min:', Math.min(...pls));
+  console.log('[DEBUG] P&L max:', Math.max(...pls));
 
   return { dates, values, pls };
 }
 
 // ═══════════════════════════════════════════════════════
-// CALCUL DU CMP (Coût Moyen Pondéré)
+// CALCUL DU CMP
 // ═══════════════════════════════════════════════════════
 function calculateCMP(positions) {
   const byTicker = {};
@@ -327,13 +334,8 @@ function calculateCMP(positions) {
 function populateTickerSelect() {
   const select = document.getElementById('pfTicker');
   if (!select) return;
-
-  while (select.options.length > 1) {
-    select.remove(1);
-  }
-
+  while (select.options.length > 1) select.remove(1);
   if (!Array.isArray(window.allCours) || window.allCours.length === 0) return;
-
   const tickers = [...new Set(window.allCours.map(c => c.ticker).filter(Boolean))].sort();
   tickers.forEach(t => {
     const opt = document.createElement('option');
@@ -389,7 +391,6 @@ window.deleteSelectedPositions = function() {
     return;
   }
   if (!confirm(`Supprimer ${window.selectedPositions.size} position(s) ?`)) return;
-
   const pf = getPortfolio().filter(p => !window.selectedPositions.has(p.id));
   savePortfolio(pf);
   window.selectedPositions.clear();
@@ -414,7 +415,6 @@ window.addPosition = function() {
 
   const exists = (Array.isArray(window.allCours) && window.allCours.some(c => c.ticker === ticker)) ||
                  (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.some(c => c.ticker === ticker));
-
   if (!exists) {
     toast('Ticker non trouvé dans la base BRVM', 'warn');
     return;
@@ -445,10 +445,10 @@ window.removePosition = function(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RENDU PRINCIPAL — ASYNC (attend l'historique)
+// RENDU PRINCIPAL — ASYNC
 // ═══════════════════════════════════════════════════════
 window.renderPortfolio = async function() {
-  console.log('renderPortfolio appelé, période:', window._pfPeriod);
+  console.log('=== renderPortfolio appelé ===');
   const pf = getPortfolio();
 
   const pfTotal = document.getElementById('pfTotal');
@@ -467,15 +467,14 @@ window.renderPortfolio = async function() {
     return;
   }
 
-  // ── Précharger les historiques ──
+  // Précharger les historiques
   const uniqueTickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
   await Promise.all(uniqueTickers.map(t => fetchTickerHistory(t)));
-  console.log('Historiques chargés pour', uniqueTickers.length, 'tickers');
 
-  // ── Calculer CMP par ticker ──
+  // Calculer CMP
   const cmp = calculateCMP(pf);
 
-  // ── Calculs par position ──
+  // Calculs par position
   let totalValue = 0, totalInvested = 0;
   const rows = [];
   const sectors = {};
@@ -516,12 +515,12 @@ window.renderPortfolio = async function() {
     });
   });
 
+  // RENTABILITÉ vs RENDEMENT
   const totalPL = totalValue - totalInvested;
-  const totalReturn = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
+  const totalRentabilite = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
   const periodDays = window._pfPeriod || 99999;
   const hist = await getPortfolioHistory(periodDays);
-  console.log('Historique portefeuille:', hist.dates.length, 'jours');
 
   // Calcul des rendements journaliers
   const dailyReturns = [];
@@ -538,9 +537,10 @@ window.renderPortfolio = async function() {
   const maxDD = calcMaxDrawdown(hist.values);
   const beta = 1.0;
 
-  console.log('Stats calculées — Vol:', vol, 'Sharpe:', sharpe, 'DD:', maxDD, 'Returns:', dailyReturns.length);
+  console.log('[DEBUG renderPortfolio] totalValue:', totalValue, 'totalInvested:', totalInvested, 'totalPL:', totalPL);
+  console.log('[DEBUG] Rentabilite:', totalRentabilite, 'Vol:', vol, 'Sharpe:', sharpe, 'DD:', maxDD);
 
-  // ── Update KPIs ──
+  // Update KPIs
   if (pfTotal) pfTotal.textContent = fmtM(totalValue) + ' FCFA';
   if (pfTotalSub) {
     pfTotalSub.textContent = totalValue >= totalInvested ? '↑ Portefeuille en hausse' : '↓ Portefeuille en baisse';
@@ -552,19 +552,19 @@ window.renderPortfolio = async function() {
     pfPL.style.color = totalPL >= 0 ? 'var(--green)' : 'var(--red)';
   }
   if (pfPLSub) {
-    pfPLSub.textContent = totalReturn >= 0 ? `+${fmt(totalReturn, 2)}% depuis l'achat` : `${fmt(totalReturn, 2)}% depuis l'achat`;
-    pfPLSub.style.color = totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
+    pfPLSub.textContent = totalRentabilite >= 0 ? `+${fmt(totalRentabilite, 2)}% depuis l'achat` : `${fmt(totalRentabilite, 2)}% depuis l'achat`;
+    pfPLSub.style.color = totalRentabilite >= 0 ? 'var(--green)' : 'var(--red)';
   }
   if (pfReturn) {
-    pfReturn.textContent = fmt(totalReturn, 2) + '%';
-    pfReturn.style.color = totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
+    pfReturn.textContent = fmt(totalRentabilite, 2) + '%';
+    pfReturn.style.color = totalRentabilite >= 0 ? 'var(--green)' : 'var(--red)';
   }
   if (pfVol) pfVol.textContent = vol > 0 ? fmt(vol * 100, 2) + '%' : '—';
   if (pfSharpe) pfSharpe.textContent = sharpe !== 0 ? fmt(sharpe, 2) : '—';
   if (pfDD) pfDD.textContent = maxDD > 0 ? '-' + fmt(maxDD, 2) + '%' : '—';
   if (pfBeta) pfBeta.textContent = fmt(beta, 2);
 
-  // ── Tableau avec cases à cocher ──
+  // Tableau
   const tbody = document.getElementById('pfTable');
   if (tbody) {
     tbody.innerHTML = rows.map(p => {
@@ -572,7 +572,6 @@ window.renderPortfolio = async function() {
       const low52 = get52WeekLow(p.ticker);
       const isSelected = window.selectedPositions.has(p.id);
       const typeLabel = p.type === 'obligation' ? 'Obligation' : p.type === 'opcvm' ? 'OPCVM' : 'Action';
-      const typeColor = p.type === 'obligation' ? '#60A5FA' : p.type === 'opcvm' ? '#A78BFA' : '#4ADE80';
 
       return `<tr style="${isSelected ? 'background:rgba(184,150,78,0.08)' : ''}">
         <td style="padding:10px 8px;text-align:center"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelectPosition(${p.id})" style="cursor:pointer"></td>
@@ -591,7 +590,7 @@ window.renderPortfolio = async function() {
     }).join('');
   }
 
-  // ── Compteur + sélection ──
+  // Compteur
   const countEl = document.getElementById('pfPositionCount');
   if (countEl) {
     const selCount = window.selectedPositions.size;
@@ -600,7 +599,7 @@ window.renderPortfolio = async function() {
   updateSelectAllCheckbox();
   updateDeleteButton();
 
-  // ── Type allocation ──
+  // Type allocation
   const typeCard = document.getElementById('pfTypeAllocCard');
   const typeEl = document.getElementById('pfTypeAlloc');
   if (typeEl) {
@@ -618,10 +617,10 @@ window.renderPortfolio = async function() {
     }
   }
 
-  // ── GRAPHIQUES ──
+  // Graphiques
   renderPortfolioCharts(rows, totalValue, sectors, pays, hist);
   renderConcentration(rows, totalValue);
-  renderDividends(rows);
+  const dividendYield = renderDividends(rows, totalValue);
   renderBenchmark(rows, hist);
   renderCorrelationMatrix(pf);
 }
@@ -630,19 +629,13 @@ window.renderPortfolio = async function() {
 // GRAPHIQUES
 // ═══════════════════════════════════════════════════════
 function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
-  if (typeof Chart === 'undefined') {
-    console.warn('Chart.js non chargé');
-    return;
-  }
-
+  if (typeof Chart === 'undefined') return;
   const opts = typeof chartOpts !== 'undefined' ? chartOpts : {};
-  const pf = getPortfolio();
 
   // ── 1. Évolution de la Valeur ──
   const valueCanvas = document.getElementById('chartPortfolioValue');
   if (valueCanvas) {
     if (pfValueChartInst) { pfValueChartInst.destroy(); pfValueChartInst = null; }
-
     if (!hist.dates.length || !hist.values.length) {
       const ctx = valueCanvas.getContext('2d');
       ctx.clearRect(0, 0, valueCanvas.width, valueCanvas.height);
@@ -682,7 +675,14 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
             borderWidth: 1,
             titleColor: '#B8964E',
             bodyColor: '#F5F0E8',
-            callbacks: { label: ctx => ' ' + fmtM(ctx.parsed.y) + ' FCFA' }
+            callbacks: { 
+              label: ctx => ' ' + fmt(ctx.parsed.y, 0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA',
+              title: ctx => {
+                const idx = ctx[0].dataIndex;
+                const date = hist.dates[idx];
+                return date ? date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+              }
+            }
           }
         },
         scales: {
@@ -697,11 +697,9 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
   const sectorCanvas = document.getElementById('chartSectorAlloc');
   if (sectorCanvas) {
     if (pfSectorChartInst) { pfSectorChartInst.destroy(); pfSectorChartInst = null; }
-
     const sectorLabels = Object.keys(sectors);
     const sectorData = Object.values(sectors);
     const colors = ['#B8964E', '#4ADE80', '#F87171', '#60A5FA', '#A78BFA', '#FBBF24', '#34D399', '#F472B6', '#818CF8', '#FB923C'];
-
     if (!sectorLabels.length) {
       const ctx = sectorCanvas.getContext('2d');
       ctx.clearRect(0, 0, sectorCanvas.width, sectorCanvas.height);
@@ -711,32 +709,10 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
       ctx.fillText('Aucune donnée sectorielle', sectorCanvas.width / 2, sectorCanvas.height / 2);
       return;
     }
-
     pfSectorChartInst = new Chart(sectorCanvas, {
       type: 'doughnut',
-      data: {
-        labels: sectorLabels,
-        datasets: [{
-          data: sectorData,
-          backgroundColor: colors,
-          borderColor: '#1A1610',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1A1610',
-            borderColor: 'rgba(184,150,78,0.3)',
-            borderWidth: 1,
-            callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` }
-          }
-        },
-        cutout: '60%'
-      }
+      data: { labels: sectorLabels, datasets: [{ data: sectorData, backgroundColor: colors, borderColor: '#1A1610', borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { backgroundColor: '#1A1610', borderColor: 'rgba(184,150,78,0.3)', borderWidth: 1, callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` } } }, cutout: '60%' }
     });
   }
 
@@ -744,11 +720,9 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
   const geoCanvas = document.getElementById('chartGeoAlloc');
   if (geoCanvas) {
     if (pfGeoChartInst) { pfGeoChartInst.destroy(); pfGeoChartInst = null; }
-
     const geoLabels = Object.keys(pays);
     const geoData = Object.values(pays);
     const geoColors = ['#B8964E', '#4ADE80', '#60A5FA', '#F87171', '#A78BFA', '#FBBF24'];
-
     if (!geoLabels.length) {
       const ctx = geoCanvas.getContext('2d');
       ctx.clearRect(0, 0, geoCanvas.width, geoCanvas.height);
@@ -758,40 +732,17 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
       ctx.fillText('Aucune donnée géographique', geoCanvas.width / 2, geoCanvas.height / 2);
       return;
     }
-
     pfGeoChartInst = new Chart(geoCanvas, {
       type: 'doughnut',
-      data: {
-        labels: geoLabels,
-        datasets: [{
-          data: geoData,
-          backgroundColor: geoColors,
-          borderColor: '#1A1610',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1A1610',
-            borderColor: 'rgba(184,150,78,0.3)',
-            borderWidth: 1,
-            callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` }
-          }
-        },
-        cutout: '60%'
-      }
+      data: { labels: geoLabels, datasets: [{ data: geoData, backgroundColor: geoColors, borderColor: '#1A1610', borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { backgroundColor: '#1A1610', borderColor: 'rgba(184,150,78,0.3)', borderWidth: 1, callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` } } }, cutout: '60%' }
     });
   }
 
-  // ── 4. P&L Cumulé ──
+  // ── 4. P&L Cumulé — CORRIGÉ AVEC ÉCHELLE DYNAMIQUE ──
   const plCanvas = document.getElementById('chartPortfolioPL');
   if (plCanvas) {
     if (pfPLChartInst) { pfPLChartInst.destroy(); pfPLChartInst = null; }
-
     if (!hist.dates.length || !hist.pls.length) {
       const ctx = plCanvas.getContext('2d');
       ctx.clearRect(0, 0, plCanvas.width, plCanvas.height);
@@ -806,6 +757,19 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     const plData = hist.pls;
     const plColors = plData.map(v => v >= 0 ? 'rgba(74,222,128,0.7)' : 'rgba(248,113,113,0.7)');
 
+    // LOGS DÉBOGAGE
+    console.log('[DEBUG P&L Chart] plData length:', plData.length);
+    console.log('[DEBUG] plData first 5:', plData.slice(0, 5));
+    console.log('[DEBUG] plData last 5:', plData.slice(-5));
+    console.log('[DEBUG] plData min:', Math.min(...plData));
+    console.log('[DEBUG] plData max:', Math.max(...plData));
+
+    // Calculer min/max pour l'échelle Y
+    const plMin = Math.min(...plData);
+    const plMax = Math.max(...plData);
+    const yMin = plMin < 0 ? plMin * 1.1 : 0;
+    const yMax = plMax * 1.1;
+
     pfPLChartInst = new Chart(plCanvas, {
       type: 'bar',
       data: {
@@ -815,7 +779,9 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
           data: plData,
           backgroundColor: plColors,
           borderRadius: 2,
-          borderSkipped: false
+          borderSkipped: false,
+          barPercentage: 0.9,
+          categoryPercentage: 0.9
         }]
       },
       options: {
@@ -826,12 +792,25 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
             backgroundColor: '#1A1610',
             borderColor: 'rgba(184,150,78,0.3)',
             borderWidth: 1,
-            callbacks: { label: ctx => ' ' + (ctx.parsed.y >= 0 ? '+' : '') + fmtM(ctx.parsed.y) + ' FCFA' }
+            callbacks: { 
+              label: ctx => ' ' + (ctx.parsed.y >= 0 ? '+' : '') + fmt(ctx.parsed.y, 0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' FCFA',
+              title: ctx => {
+                const idx = ctx[0].dataIndex;
+                const date = hist.dates[idx];
+                return date ? date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+              }
+            }
           }
         },
         scales: {
           x: { grid: { display: false }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, maxTicksLimit: 6 } },
-          y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, callback: v => fmtM(v) } }
+          y: { 
+            position: 'right',
+            min: yMin,
+            max: yMax,
+            grid: { color: 'rgba(184,150,78,0.06)' }, 
+            ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, callback: v => fmtM(v) } 
+          }
         }
       }
     });
@@ -844,16 +823,13 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
 function renderConcentration(rows, totalValue) {
   const el = document.getElementById('concentrationStats');
   if (!el) return;
-
   if (!rows.length) {
     el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour analyser la concentration</div>';
     return;
   }
-
   const top3 = [...rows].sort((a, b) => b.value - a.value).slice(0, 3);
-  const top3Pct = top3.reduce((s, r) => s + (r.value / totalValue * 100), 0);
-
-  const hhi = rows.reduce((s, r) => s + Math.pow(r.value / totalValue * 100, 2), 0);
+  const top3Pct = totalValue > 0 ? top3.reduce((s, r) => s + (r.value / totalValue * 100), 0) : 0;
+  const hhi = totalValue > 0 ? rows.reduce((s, r) => s + Math.pow(r.value / totalValue * 100, 2), 0) : 0;
   let hhiLabel = 'Faible';
   if (hhi > 2500) hhiLabel = 'Élevée';
   else if (hhi > 1500) hhiLabel = 'Modérée';
@@ -874,7 +850,7 @@ function renderConcentration(rows, totalValue) {
       <div style="font-size:11px;color:var(--dim);margin-top:8px">
         ${top3.map((r, i) => `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
           <span>${i+1}. ${r.ticker}</span>
-          <span style="color:var(--cream)">${fmt(r.value/totalValue*100, 1)}%</span>
+          <span style="color:var(--cream)">${totalValue > 0 ? fmt(r.value/totalValue*100, 1) : 0}%</span>
         </div>`).join('')}
       </div>
     </div>
@@ -884,35 +860,27 @@ function renderConcentration(rows, totalValue) {
 // ═══════════════════════════════════════════════════════
 // DIVIDENDES ESTIMÉS
 // ═══════════════════════════════════════════════════════
-function renderDividends(rows) {
+function renderDividends(rows, totalPortfolioValue) {
   const el = document.getElementById('dividendStats');
-  if (!el) return;
-
+  if (!el) return 0;
   if (!rows.length) {
     el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour estimer les dividendes</div>';
-    return;
+    return 0;
   }
-
   let totalDividend = 0;
   const divDetails = [];
-
   rows.forEach(r => {
     if (r.type === 'obligation') return;
     const yield_ = getDividendYield(r.ticker);
     const divEstime = r.value * (yield_ / 100);
     totalDividend += divEstime;
-    if (yield_ > 0) {
-      divDetails.push({ ticker: r.ticker, yield: yield_, value: r.value, div: divEstime });
-    }
+    if (yield_ > 0) divDetails.push({ ticker: r.ticker, yield: yield_, value: r.value, div: divEstime });
   });
-
-  const totalValue = rows.reduce((s, r) => s + r.value, 0);
-  const portfolioYield = totalValue > 0 ? (totalDividend / totalValue * 100) : 0;
-
+  const portfolioYield = totalPortfolioValue > 0 ? (totalDividend / totalPortfolioValue * 100) : 0;
   el.innerHTML = `
     <div style="padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span style="font-size:12px;color:var(--dim)">Rendement estimé</span>
+        <span style="font-size:12px;color:var(--dim)">Rendement estimé (dividende)</span>
         <span style="font-size:18px;font-weight:600;color:var(--gold)">${fmt(portfolioYield, 2)}%</span>
       </div>
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
@@ -927,6 +895,7 @@ function renderDividends(rows) {
       </div>
     </div>
   `;
+  return portfolioYield;
 }
 
 // ═══════════════════════════════════════════════════════
@@ -935,19 +904,17 @@ function renderDividends(rows) {
 function renderBenchmark(rows, hist) {
   const el = document.getElementById('benchmarkStats');
   if (!el) return;
-
   if (!rows.length) {
     el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour comparer avec le benchmark</div>';
     return;
   }
-
   let brvmReturn = 0;
   let brvmDataFound = false;
-
   if (Array.isArray(window.allIndices) && window.allIndices.length > 0) {
-    const composite = window.allIndices.filter(i => 
-      (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE')
-    );
+    const composite = window.allIndices.filter(i => {
+      const name = (i.nom || i.ticker || i.indice || '').toUpperCase();
+      return name.includes('COMPOSITE') || name.includes('BRVMC') || name.includes('BRVM COMPOSITE');
+    });
     if (composite.length >= 2) {
       const sorted = composite.sort((a, b) => new Date(a.date_seance || 0) - new Date(b.date_seance || 0));
       const first = sorted[0];
@@ -960,13 +927,10 @@ function renderBenchmark(rows, hist) {
       }
     }
   }
-
   const pfReturn = hist.values.length >= 2 && hist.values[0] > 0
     ? (hist.values[hist.values.length - 1] - hist.values[0]) / hist.values[0] * 100
     : 0;
-
   const outperformance = pfReturn - brvmReturn;
-
   if (!brvmDataFound) {
     el.innerHTML = `
       <div style="padding:16px;text-align:center">
@@ -976,7 +940,6 @@ function renderBenchmark(rows, hist) {
     `;
     return;
   }
-
   el.innerHTML = `
     <div style="padding:16px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
@@ -1005,15 +968,12 @@ function renderBenchmark(rows, hist) {
 function renderCorrelationMatrix(pf) {
   const el = document.getElementById('correlationMatrix');
   if (!el) return;
-
   if (pf.length < 2) {
     el.innerHTML = 'Ajoutez au moins 2 positions pour voir la matrice de corrélation';
     return;
   }
-
   const tickers = pf.map(p => p.ticker.toUpperCase().trim());
   const returns = {};
-
   tickers.forEach(t => {
     const hist = getTickerHistory(t);
     const prices = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
@@ -1022,24 +982,19 @@ function renderCorrelationMatrix(pf) {
       returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
     }
   });
-
   const minLen = Math.min(...Object.values(returns).map(r => r.length));
   if (minLen < 5) {
     el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px">Données historiques insuffisantes pour calculer la corrélation</div>';
     return;
   }
-
   tickers.forEach(t => { returns[t] = returns[t].slice(-minLen); });
-
   let html = '<div style="display:grid;gap:2px;padding:8px;overflow:auto">';
-
   html += '<div style="display:contents">';
   html += '<div style="width:50px"></div>';
   tickers.forEach(t => {
     html += `<div style="width:50px;text-align:center;font-size:10px;color:var(--gold);font-family:var(--mono);padding:4px 2px">${t}</div>`;
   });
   html += '</div>';
-
   tickers.forEach(t1 => {
     html += '<div style="display:contents">';
     html += `<div style="width:50px;text-align:right;font-size:10px;color:var(--gold);font-family:var(--mono);padding:4px 2px">${t1}</div>`;
@@ -1050,7 +1005,6 @@ function renderCorrelationMatrix(pf) {
     });
     html += '</div>';
   });
-
   html += '</div>';
   html += '<div style="display:flex;gap:12px;justify-content:center;margin-top:8px;font-size:10px;color:var(--dim)">';
   html += '<span><span style="display:inline-block;width:10px;height:10px;background:rgba(74,222,128,0.6);border-radius:2px;margin-right:4px"></span>Négative</span>';
@@ -1058,7 +1012,6 @@ function renderCorrelationMatrix(pf) {
   html += '<span><span style="display:inline-block;width:10px;height:10px;background:rgba(251,191,36,0.5);border-radius:2px;margin-right:4px"></span>Modérée</span>';
   html += '<span><span style="display:inline-block;width:10px;height:10px;background:rgba(248,113,113,0.7);border-radius:2px;margin-right:4px"></span>Élevée</span>';
   html += '</div>';
-
   el.innerHTML = html;
 }
 
@@ -1074,7 +1027,6 @@ function resetEmptyState() {
   const pfSharpe = document.getElementById('pfSharpe');
   const pfDD = document.getElementById('pfDrawdown');
   const pfBeta = document.getElementById('pfBeta');
-
   if (pfTotal) pfTotal.textContent = '—';
   if (pfInvested) pfInvested.textContent = '—';
   if (pfPL) pfPL.textContent = '—';
@@ -1083,26 +1035,20 @@ function resetEmptyState() {
   if (pfSharpe) pfSharpe.textContent = '—';
   if (pfDD) pfDD.textContent = '—';
   if (pfBeta) pfBeta.textContent = '—';
-
   const tbody = document.getElementById('pfTable');
   if (tbody) tbody.innerHTML = '<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>';
-
   const countEl = document.getElementById('pfPositionCount');
   if (countEl) countEl.textContent = '0 position';
-
   if (pfValueChartInst) { pfValueChartInst.destroy(); pfValueChartInst = null; }
   if (pfSectorChartInst) { pfSectorChartInst.destroy(); pfSectorChartInst = null; }
   if (pfGeoChartInst) { pfGeoChartInst.destroy(); pfGeoChartInst = null; }
   if (pfPLChartInst) { pfPLChartInst.destroy(); pfPLChartInst = null; }
-
   ['concentrationStats', 'dividendStats', 'benchmarkStats'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour analyser</div>';
   });
-
   const corrEl = document.getElementById('correlationMatrix');
   if (corrEl) corrEl.innerHTML = 'Ajoutez au moins 2 positions pour voir la matrice de corrélation';
-
   const typeEl = document.getElementById('pfTypeAlloc');
   if (typeEl) typeEl.innerHTML = '';
   const typeCard = document.getElementById('pfTypeAllocCard');
@@ -1126,22 +1072,20 @@ window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
   window._pfPeriod = window._pfPeriod || 99999;
   window.selectedPositions = new Set();
-
   populateTickerSelect();
-
-  // Render initial (avec données disponibles)
   renderPortfolio();
-
-  // Si les données ne sont pas encore chargées, attendre et re-render
   if (!Array.isArray(window.allCours) || window.allCours.length === 0) {
     console.log('Données non complètes, attente de dataLoaded...');
-
     const onDataLoaded = function() {
       console.log('dataLoaded reçu, re-render portefeuille');
       populateTickerSelect();
       renderPortfolio();
     };
-
     window.addEventListener('dataLoaded', onDataLoaded, { once: true });
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// MODE DÉBOGAGE — Activez avec : window._pfDebug = true
+// ═══════════════════════════════════════════════════════
+window._pfDebug = false;
