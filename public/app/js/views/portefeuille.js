@@ -1,8 +1,11 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Gestion de Portefeuille (v4)
+// VIEW — Gestion de Portefeuille (v5)
 // Suivi réel : Actions, Obligations, OPCVM
-// CORRECTION : Récupération données + fallback + timing
+// CORRECTION : Récupération historique par ticker (comme fiche.js)
 // ═══════════════════════════════════════════════════════
+
+// Cache des historiques par ticker (évite les requêtes répétées)
+const _pfHistCache = {};
 
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
@@ -11,8 +14,40 @@ function getPortfolio() {
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
 
 // ═══════════════════════════════════════════════════════
-// RÉCUPÉRATION COURS — AVEC FALLBACK INTELLIGENT
+// RÉCUPÉRATION COURS — INSPIRÉ DE fiche.js
 // ═══════════════════════════════════════════════════════
+
+async function fetchTickerHistory(ticker) {
+  if (!ticker) return [];
+  const t = ticker.toUpperCase().trim();
+
+  // Utiliser le cache si disponible
+  if (_pfHistCache[t]) return _pfHistCache[t];
+
+  // 1. Chercher dans allCoursHistorique (chargé au démarrage)
+  if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
+    const hist = window.allCoursHistorique.filter(c => c.ticker === t);
+    if (hist.length > 0) {
+      _pfHistCache[t] = hist;
+      return hist;
+    }
+  }
+
+  // 2. Fetch individuel comme dans fiche.js
+  try {
+    const result = await sb('historique', { 
+      ticker: `eq.${t}`, 
+      order: 'date_seance.desc',
+      limit: 5000
+    });
+    const hist = Array.isArray(result) ? result.reverse() : [];
+    _pfHistCache[t] = hist;
+    return hist;
+  } catch(e) {
+    console.warn('Erreur fetch historique pour', t, ':', e.message);
+    return [];
+  }
+}
 
 function getLatestPrice(ticker) {
   if (!ticker) return null;
@@ -22,30 +57,26 @@ function getLatestPrice(ticker) {
   if (Array.isArray(window.allCours) && window.allCours.length > 0) {
     const cours = window.allCours.find(c => c.ticker === t);
     if (cours) {
-      const prix = +(cours.cours_cloture || cours.cours_normal || cours.cours || cours.dernier_cours || cours.derniere_cotation || 0);
+      const prix = +(cours.cours_cloture || cours.cours_normal || cours.cours || cours.dernier_cours || 0);
       if (prix > 0) return prix;
     }
   }
 
-  // 2. Chercher dans allCoursHistorique (dernier historique disponible)
+  // 2. Chercher dans le cache historique
+  const cache = _pfHistCache[t];
+  if (cache && cache.length > 0) {
+    const last = cache[cache.length - 1];
+    const prix = +(last.cours_cloture || last.cours_normal || last.cours || 0);
+    if (prix > 0) return prix;
+  }
+
+  // 3. Chercher dans allCoursHistorique global
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const histForTicker = window.allCoursHistorique.filter(c => c.ticker === t);
     if (histForTicker.length > 0) {
-      // Trier par date décroissante et prendre le plus récent
-      const sorted = histForTicker.sort((a, b) => new Date(b.date_seance || b.date || 0) - new Date(a.date_seance || a.date || 0));
+      const sorted = histForTicker.sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
       const last = sorted[0];
-      const prix = +(last.cours_cloture || last.cours_normal || last.cours || last.dernier_cours || last.cloture || 0);
-      if (prix > 0) return prix;
-    }
-  }
-
-  // 3. Chercher dans ficheHistorique (si on a déjà visité la fiche)
-  if (Array.isArray(window.ficheHistorique) && window.ficheHistorique.length > 0) {
-    const histForTicker = window.ficheHistorique.filter(c => c.ticker === t);
-    if (histForTicker.length > 0) {
-      const sorted = histForTicker.sort((a, b) => new Date(b.date_seance || b.date || 0) - new Date(a.date_seance || a.date || 0));
-      const last = sorted[0];
-      const prix = +(last.cours_cloture || last.cours_normal || last.cours || last.cloture || 0);
+      const prix = +(last.cours_cloture || last.cours_normal || last.cours || 0);
       if (prix > 0) return prix;
     }
   }
@@ -56,28 +87,22 @@ function getLatestPrice(ticker) {
 function getTickerHistory(ticker) {
   if (!ticker) return [];
   const t = ticker.toUpperCase().trim();
-  const results = [];
 
-  // 1. allCoursHistorique
+  // 1. Cache
+  if (_pfHistCache[t] && _pfHistCache[t].length > 0) {
+    return _pfHistCache[t];
+  }
+
+  // 2. allCoursHistorique global
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
-    results.push(...window.allCoursHistorique.filter(c => c.ticker === t));
+    const hist = window.allCoursHistorique.filter(c => c.ticker === t);
+    if (hist.length > 0) {
+      _pfHistCache[t] = hist;
+      return hist;
+    }
   }
 
-  // 2. ficheHistorique
-  if (Array.isArray(window.ficheHistorique) && window.ficheHistorique.length > 0) {
-    results.push(...window.ficheHistorique.filter(c => c.ticker === t));
-  }
-
-  // Dédupliquer par date
-  const seen = new Set();
-  return results
-    .filter(c => {
-      const key = (c.date_seance || c.date || '') + '_' + t;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .sort((a, b) => new Date(a.date_seance || a.date || 0) - new Date(b.date_seance || b.date || 0));
+  return [];
 }
 
 function getPriceAtDate(ticker, dateStr) {
@@ -85,22 +110,22 @@ function getPriceAtDate(ticker, dateStr) {
   if (!hist.length) return null;
 
   // Recherche exacte
-  const exact = hist.find(c => (c.date_seance || c.date || '').split('T')[0] === dateStr);
+  const exact = hist.find(c => (c.date_seance || '').split('T')[0] === dateStr);
   if (exact) {
-    return +(exact.cours_cloture || exact.cours_normal || exact.cours || exact.cloture || 0);
+    return +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
   }
 
   // Recherche du dernier prix avant ou à cette date
   const before = hist
-    .filter(c => (c.date_seance || c.date || '').split('T')[0] <= dateStr)
-    .sort((a, b) => new Date(b.date_seance || b.date || 0) - new Date(a.date_seance || a.date || 0));
+    .filter(c => (c.date_seance || '').split('T')[0] <= dateStr)
+    .sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
   if (before.length) {
-    return +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || before[0].cloture || 0);
+    return +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || 0);
   }
 
-  // Si aucune donnée avant, prendre le premier prix disponible (fallback)
+  // Fallback : premier prix disponible
   if (hist.length) {
-    return +(hist[0].cours_cloture || hist[0].cours_normal || hist[0].cours || hist[0].cloture || 0);
+    return +(hist[0].cours_cloture || hist[0].cours_normal || hist[0].cours || 0);
   }
 
   return null;
@@ -110,7 +135,7 @@ function get52WeekHigh(ticker) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
   const vals = hist
-    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.cloture || c.haut || 0))
+    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.haut || 0))
     .filter(v => v > 0);
   return vals.length ? Math.max(...vals) : null;
 }
@@ -119,7 +144,7 @@ function get52WeekLow(ticker) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
   const vals = hist
-    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.cloture || c.bas || 0))
+    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.bas || 0))
     .filter(v => v > 0);
   return vals.length ? Math.min(...vals) : null;
 }
@@ -221,9 +246,9 @@ function getDividendYield(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HISTORIQUE DU PORTEFEUILLE — CORRIGÉ AVEC FALLBACK
+// HISTORIQUE DU PORTEFEUILLE — AVEC FETCH ASYNC
 // ═══════════════════════════════════════════════════════
-function getPortfolioHistory(periodDays = 99999) {
+async function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
   if (!pf.length) return { dates: [], values: [], pls: [] };
 
@@ -243,6 +268,10 @@ function getPortfolioHistory(periodDays = 99999) {
     current.setDate(current.getDate() + 1);
   }
 
+  // Précharger les historiques pour tous les tickers
+  const uniqueTickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
+  await Promise.all(uniqueTickers.map(t => fetchTickerHistory(t)));
+
   const values = [];
   const pls = [];
 
@@ -254,10 +283,8 @@ function getPortfolioHistory(periodDays = 99999) {
     for (const p of pf) {
       const buyDate = new Date(p.date || p.id || now);
       if (date >= buyDate) {
-        // Essayer de récupérer le prix historique, sinon utiliser le prix d'achat comme fallback
         let priceAtDate = getPriceAtDate(p.ticker, ds);
         if (!priceAtDate || priceAtDate <= 0) {
-          // Fallback : utiliser le dernier prix connu ou le prix d'achat
           priceAtDate = getLatestPrice(p.ticker) || p.price;
         }
         dayValue += p.qty * priceAtDate;
@@ -385,7 +412,6 @@ window.addPosition = function() {
     return; 
   }
 
-  // Vérifier que le ticker existe dans la base
   const exists = (Array.isArray(window.allCours) && window.allCours.some(c => c.ticker === ticker)) ||
                  (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.some(c => c.ticker === ticker));
 
@@ -419,10 +445,10 @@ window.removePosition = function(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RENDU PRINCIPAL — CORRIGÉ
+// RENDU PRINCIPAL — ASYNC (attend l'historique)
 // ═══════════════════════════════════════════════════════
-window.renderPortfolio = function() {
-  console.log('renderPortfolio appelé, période:', window._pfPeriod, 'données dispo:', !!window.allCoursHistorique?.length);
+window.renderPortfolio = async function() {
+  console.log('renderPortfolio appelé, période:', window._pfPeriod);
   const pf = getPortfolio();
 
   const pfTotal = document.getElementById('pfTotal');
@@ -440,6 +466,11 @@ window.renderPortfolio = function() {
     resetEmptyState();
     return;
   }
+
+  // ── Précharger les historiques ──
+  const uniqueTickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
+  await Promise.all(uniqueTickers.map(t => fetchTickerHistory(t)));
+  console.log('Historiques chargés pour', uniqueTickers.length, 'tickers');
 
   // ── Calculer CMP par ticker ──
   const cmp = calculateCMP(pf);
@@ -489,7 +520,8 @@ window.renderPortfolio = function() {
   const totalReturn = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
   const periodDays = window._pfPeriod || 99999;
-  const hist = getPortfolioHistory(periodDays);
+  const hist = await getPortfolioHistory(periodDays);
+  console.log('Historique portefeuille:', hist.dates.length, 'jours');
 
   // Calcul des rendements journaliers
   const dailyReturns = [];
@@ -505,6 +537,8 @@ window.renderPortfolio = function() {
   const sharpe = calcSharpe(dailyReturns);
   const maxDD = calcMaxDrawdown(hist.values);
   const beta = 1.0;
+
+  console.log('Stats calculées — Vol:', vol, 'Sharpe:', sharpe, 'DD:', maxDD, 'Returns:', dailyReturns.length);
 
   // ── Update KPIs ──
   if (pfTotal) pfTotal.textContent = fmtM(totalValue) + ' FCFA';
@@ -566,7 +600,7 @@ window.renderPortfolio = function() {
   updateSelectAllCheckbox();
   updateDeleteButton();
 
-  // ── Type allocation (mini KPI) ──
+  // ── Type allocation ──
   const typeCard = document.getElementById('pfTypeAllocCard');
   const typeEl = document.getElementById('pfTypeAlloc');
   if (typeEl) {
@@ -863,7 +897,7 @@ function renderDividends(rows) {
   const divDetails = [];
 
   rows.forEach(r => {
-    if (r.type === 'obligation') return; // Pas de dividende sur obligations
+    if (r.type === 'obligation') return;
     const yield_ = getDividendYield(r.ticker);
     const divEstime = r.value * (yield_ / 100);
     totalDividend += divEstime;
@@ -982,7 +1016,7 @@ function renderCorrelationMatrix(pf) {
 
   tickers.forEach(t => {
     const hist = getTickerHistory(t);
-    const prices = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.cloture || 0)).filter(v => v > 0);
+    const prices = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
     returns[t] = [];
     for (let i = 1; i < prices.length; i++) {
       returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
@@ -1086,7 +1120,7 @@ window.setPortfolioPeriod = function(days, btn) {
 }
 
 // ═══════════════════════════════════════════════════════
-// INIT — CORRIGÉ (attend dataLoaded + re-render)
+// INIT
 // ═══════════════════════════════════════════════════════
 window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
@@ -1099,24 +1133,15 @@ window.initPortefeuille = function() {
   renderPortfolio();
 
   // Si les données ne sont pas encore chargées, attendre et re-render
-  if (!Array.isArray(window.allCours) || window.allCours.length === 0 ||
-      !Array.isArray(window.allCoursHistorique) || window.allCoursHistorique.length === 0) {
+  if (!Array.isArray(window.allCours) || window.allCours.length === 0) {
     console.log('Données non complètes, attente de dataLoaded...');
 
     const onDataLoaded = function() {
-      console.log('dataLoaded reçu, re-render portefeuille avec données historiques');
+      console.log('dataLoaded reçu, re-render portefeuille');
       populateTickerSelect();
       renderPortfolio();
     };
 
     window.addEventListener('dataLoaded', onDataLoaded, { once: true });
-
-    // Fallback : si dataLoaded est déjà passé, forcer un re-render après 2s
-    setTimeout(() => {
-      if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
-        console.log('Fallback : données historiques disponibles, re-render');
-        renderPortfolio();
-      }
-    }, 2000);
   }
 }
