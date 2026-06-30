@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Gestion de Portefeuille (v3)
+// VIEW — Gestion de Portefeuille (v4)
 // Suivi réel : Actions, Obligations, OPCVM
+// CORRECTION : Récupération données + fallback + timing
 // ═══════════════════════════════════════════════════════
 
 function getPortfolio() {
@@ -10,66 +11,116 @@ function getPortfolio() {
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
 
 // ═══════════════════════════════════════════════════════
-// RÉCUPÉRATION COURS & HISTORIQUE
+// RÉCUPÉRATION COURS — AVEC FALLBACK INTELLIGENT
 // ═══════════════════════════════════════════════════════
+
 function getLatestPrice(ticker) {
   if (!ticker) return null;
   const t = ticker.toUpperCase().trim();
 
+  // 1. Chercher dans allCours (cours du jour)
   if (Array.isArray(window.allCours) && window.allCours.length > 0) {
     const cours = window.allCours.find(c => c.ticker === t);
     if (cours) {
-      const prix = +(cours.cours_cloture || cours.cours_normal || cours.cours || cours.dernier_cours || 0);
+      const prix = +(cours.cours_cloture || cours.cours_normal || cours.cours || cours.dernier_cours || cours.derniere_cotation || 0);
       if (prix > 0) return prix;
     }
   }
 
+  // 2. Chercher dans allCoursHistorique (dernier historique disponible)
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const histForTicker = window.allCoursHistorique.filter(c => c.ticker === t);
     if (histForTicker.length > 0) {
-      const last = histForTicker[histForTicker.length - 1];
-      const prix = +(last.cours_cloture || last.cours_normal || last.cours || 0);
+      // Trier par date décroissante et prendre le plus récent
+      const sorted = histForTicker.sort((a, b) => new Date(b.date_seance || b.date || 0) - new Date(a.date_seance || a.date || 0));
+      const last = sorted[0];
+      const prix = +(last.cours_cloture || last.cours_normal || last.cours || last.dernier_cours || last.cloture || 0);
       if (prix > 0) return prix;
     }
   }
+
+  // 3. Chercher dans ficheHistorique (si on a déjà visité la fiche)
+  if (Array.isArray(window.ficheHistorique) && window.ficheHistorique.length > 0) {
+    const histForTicker = window.ficheHistorique.filter(c => c.ticker === t);
+    if (histForTicker.length > 0) {
+      const sorted = histForTicker.sort((a, b) => new Date(b.date_seance || b.date || 0) - new Date(a.date_seance || a.date || 0));
+      const last = sorted[0];
+      const prix = +(last.cours_cloture || last.cours_normal || last.cours || last.cloture || 0);
+      if (prix > 0) return prix;
+    }
+  }
+
   return null;
 }
 
 function getTickerHistory(ticker) {
-  if (!ticker || !Array.isArray(window.allCoursHistorique)) return [];
+  if (!ticker) return [];
   const t = ticker.toUpperCase().trim();
-  return window.allCoursHistorique.filter(c => c.ticker === t);
+  const results = [];
+
+  // 1. allCoursHistorique
+  if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
+    results.push(...window.allCoursHistorique.filter(c => c.ticker === t));
+  }
+
+  // 2. ficheHistorique
+  if (Array.isArray(window.ficheHistorique) && window.ficheHistorique.length > 0) {
+    results.push(...window.ficheHistorique.filter(c => c.ticker === t));
+  }
+
+  // Dédupliquer par date
+  const seen = new Set();
+  return results
+    .filter(c => {
+      const key = (c.date_seance || c.date || '') + '_' + t;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => new Date(a.date_seance || a.date || 0) - new Date(b.date_seance || b.date || 0));
 }
 
 function getPriceAtDate(ticker, dateStr) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
 
-  const exact = hist.find(c => c.date_seance === dateStr);
+  // Recherche exacte
+  const exact = hist.find(c => (c.date_seance || c.date || '').split('T')[0] === dateStr);
   if (exact) {
-    return +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
+    return +(exact.cours_cloture || exact.cours_normal || exact.cours || exact.cloture || 0);
   }
 
+  // Recherche du dernier prix avant ou à cette date
   const before = hist
-    .filter(c => c.date_seance <= dateStr)
-    .sort((a, b) => new Date(b.date_seance) - new Date(a.date_seance));
+    .filter(c => (c.date_seance || c.date || '').split('T')[0] <= dateStr)
+    .sort((a, b) => new Date(b.date_seance || b.date || 0) - new Date(a.date_seance || a.date || 0));
   if (before.length) {
-    return +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || 0);
+    return +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || before[0].cloture || 0);
   }
+
+  // Si aucune donnée avant, prendre le premier prix disponible (fallback)
+  if (hist.length) {
+    return +(hist[0].cours_cloture || hist[0].cours_normal || hist[0].cours || hist[0].cloture || 0);
+  }
+
   return null;
 }
 
 function get52WeekHigh(ticker) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
-  const vals = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
+  const vals = hist
+    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.cloture || c.haut || 0))
+    .filter(v => v > 0);
   return vals.length ? Math.max(...vals) : null;
 }
 
 function get52WeekLow(ticker) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
-  const vals = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
+  const vals = hist
+    .map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.cloture || c.bas || 0))
+    .filter(v => v > 0);
   return vals.length ? Math.min(...vals) : null;
 }
 
@@ -170,7 +221,7 @@ function getDividendYield(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HISTORIQUE DU PORTEFEUILLE
+// HISTORIQUE DU PORTEFEUILLE — CORRIGÉ AVEC FALLBACK
 // ═══════════════════════════════════════════════════════
 function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
@@ -180,9 +231,10 @@ function getPortfolioHistory(periodDays = 99999) {
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - periodDays);
 
-  const oldestBuy = new Date(Math.min(...pf.map(p => new Date(p.date || now))));
+  const oldestBuy = new Date(Math.min(...pf.map(p => new Date(p.date || p.id || now))));
   const effectiveStart = periodDays === 99999 ? oldestBuy : new Date(Math.max(startDate, oldestBuy));
 
+  // Générer les dates de trading (lun-ven)
   const dates = [];
   let current = new Date(effectiveStart);
   while (current <= now) {
@@ -200,9 +252,14 @@ function getPortfolioHistory(periodDays = 99999) {
     const ds = date.toISOString().split('T')[0];
 
     for (const p of pf) {
-      const buyDate = new Date(p.date || p.id);
+      const buyDate = new Date(p.date || p.id || now);
       if (date >= buyDate) {
-        const priceAtDate = getPriceAtDate(p.ticker, ds) || p.price;
+        // Essayer de récupérer le prix historique, sinon utiliser le prix d'achat comme fallback
+        let priceAtDate = getPriceAtDate(p.ticker, ds);
+        if (!priceAtDate || priceAtDate <= 0) {
+          // Fallback : utiliser le dernier prix connu ou le prix d'achat
+          priceAtDate = getLatestPrice(p.ticker) || p.price;
+        }
         dayValue += p.qty * priceAtDate;
         dayInvested += p.qty * p.price;
       }
@@ -271,6 +328,7 @@ window.toggleSelectPosition = function(id) {
     window.selectedPositions.add(id);
   }
   updateSelectAllCheckbox();
+  updateDeleteButton();
 };
 
 window.toggleSelectAll = function(checked) {
@@ -289,6 +347,13 @@ function updateSelectAllCheckbox() {
   const pf = getPortfolio();
   cb.checked = pf.length > 0 && window.selectedPositions.size === pf.length;
   cb.indeterminate = window.selectedPositions.size > 0 && window.selectedPositions.size < pf.length;
+}
+
+function updateDeleteButton() {
+  const btn = document.getElementById('btnDeleteSelected');
+  if (btn) {
+    btn.style.display = window.selectedPositions.size > 0 ? 'block' : 'none';
+  }
 }
 
 window.deleteSelectedPositions = function() {
@@ -320,7 +385,10 @@ window.addPosition = function() {
     return; 
   }
 
-  const exists = Array.isArray(window.allCours) && window.allCours.some(c => c.ticker === ticker);
+  // Vérifier que le ticker existe dans la base
+  const exists = (Array.isArray(window.allCours) && window.allCours.some(c => c.ticker === ticker)) ||
+                 (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.some(c => c.ticker === ticker));
+
   if (!exists) {
     toast('Ticker non trouvé dans la base BRVM', 'warn');
     return;
@@ -351,10 +419,10 @@ window.removePosition = function(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RENDU PRINCIPAL
+// RENDU PRINCIPAL — CORRIGÉ
 // ═══════════════════════════════════════════════════════
 window.renderPortfolio = function() {
-  console.log('renderPortfolio appelé, période:', window._pfPeriod);
+  console.log('renderPortfolio appelé, période:', window._pfPeriod, 'données dispo:', !!window.allCoursHistorique?.length);
   const pf = getPortfolio();
 
   const pfTotal = document.getElementById('pfTotal');
@@ -423,6 +491,7 @@ window.renderPortfolio = function() {
   const periodDays = window._pfPeriod || 99999;
   const hist = getPortfolioHistory(periodDays);
 
+  // Calcul des rendements journaliers
   const dailyReturns = [];
   if (hist.values.length >= 2) {
     for (let i = 1; i < hist.values.length; i++) {
@@ -475,7 +544,7 @@ window.renderPortfolio = function() {
         <td style="padding:10px 8px;text-align:center"><input type="checkbox" ${isSelected ? 'checked' : ''} onchange="toggleSelectPosition(${p.id})" style="cursor:pointer"></td>
         <td style="padding:10px 12px;"><span style="font-family:var(--mono);color:var(--gold);font-weight:600">${p.ticker}</span><br><small style="color:var(--dim);font-size:10px">${typeLabel}</small></td>
         <td style="padding:10px 12px;text-align:right">${fmt(p.qty)}</td>
-        <td style="padding:10px 12px;text-align:right">${fmt(p.cmp, 2)}</td>
+        <td style="padding:10px 12px;text-align:right;font-family:var(--mono);color:var(--gold)">${fmt(p.cmp, 2)}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.priceFound ? 'inherit' : 'var(--dim)'}">${fmt(p.currentPrice, 2)}${!p.priceFound ? ' <small style="color:var(--dim)">(est.)</small>' : ''}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.pl>=0?'var(--green)':'var(--red)'};font-weight:600">${p.pl >= 0 ? '+' : ''}${fmtM(p.pl)}</td>
         <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'};font-weight:600">${fmt(p.plPct, 2)}%</td>
@@ -495,17 +564,24 @@ window.renderPortfolio = function() {
     countEl.innerHTML = `${pf.length} position${pf.length > 1 ? 's' : ''}${selCount > 0 ? ` — <span style="color:var(--gold)">${selCount} sélectionnée(s)</span>` : ''}`;
   }
   updateSelectAllCheckbox();
+  updateDeleteButton();
 
   // ── Type allocation (mini KPI) ──
+  const typeCard = document.getElementById('pfTypeAllocCard');
   const typeEl = document.getElementById('pfTypeAlloc');
   if (typeEl) {
     const total = typeAlloc.action + typeAlloc.obligation + typeAlloc.opcvm;
-    typeEl.innerHTML = `
-      <div style="display:flex;gap:12px;justify-content:center;font-size:11px">
-        <span style="color:#4ADE80">● Action ${total > 0 ? fmt(typeAlloc.action/total*100, 1) : 0}%</span>
-        <span style="color:#60A5FA">● Obligation ${total > 0 ? fmt(typeAlloc.obligation/total*100, 1) : 0}%</span>
-        <span style="color:#A78BFA">● OPCVM ${total > 0 ? fmt(typeAlloc.opcvm/total*100, 1) : 0}%</span>
-      </div>`;
+    if (total > 0) {
+      typeEl.innerHTML = `
+        <div style="display:flex;gap:12px;justify-content:center;font-size:11px">
+          <span style="color:#4ADE80">● Action ${total > 0 ? fmt(typeAlloc.action/total*100, 1) : 0}%</span>
+          <span style="color:#60A5FA">● Obligation ${total > 0 ? fmt(typeAlloc.obligation/total*100, 1) : 0}%</span>
+          <span style="color:#A78BFA">● OPCVM ${total > 0 ? fmt(typeAlloc.opcvm/total*100, 1) : 0}%</span>
+        </div>`;
+      if (typeCard) typeCard.style.display = 'block';
+    } else {
+      if (typeCard) typeCard.style.display = 'none';
+    }
   }
 
   // ── GRAPHIQUES ──
@@ -906,7 +982,7 @@ function renderCorrelationMatrix(pf) {
 
   tickers.forEach(t => {
     const hist = getTickerHistory(t);
-    const prices = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
+    const prices = hist.map(c => +(c.cours_cloture || c.cours_normal || c.cours || c.cloture || 0)).filter(v => v > 0);
     returns[t] = [];
     for (let i = 1; i < prices.length; i++) {
       returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
@@ -995,6 +1071,8 @@ function resetEmptyState() {
 
   const typeEl = document.getElementById('pfTypeAlloc');
   if (typeEl) typeEl.innerHTML = '';
+  const typeCard = document.getElementById('pfTypeAllocCard');
+  if (typeCard) typeCard.style.display = 'none';
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1008,7 +1086,7 @@ window.setPortfolioPeriod = function(days, btn) {
 }
 
 // ═══════════════════════════════════════════════════════
-// INIT
+// INIT — CORRIGÉ (attend dataLoaded + re-render)
 // ═══════════════════════════════════════════════════════
 window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
@@ -1017,15 +1095,28 @@ window.initPortefeuille = function() {
 
   populateTickerSelect();
 
-  if (!Array.isArray(window.allCours) || window.allCours.length === 0) {
-    console.log('Données non disponibles, attente de dataLoaded...');
-    window.addEventListener('dataLoaded', function onDataLoaded() {
-      console.log('dataLoaded reçu, re-render portefeuille');
+  // Render initial (avec données disponibles)
+  renderPortfolio();
+
+  // Si les données ne sont pas encore chargées, attendre et re-render
+  if (!Array.isArray(window.allCours) || window.allCours.length === 0 ||
+      !Array.isArray(window.allCoursHistorique) || window.allCoursHistorique.length === 0) {
+    console.log('Données non complètes, attente de dataLoaded...');
+
+    const onDataLoaded = function() {
+      console.log('dataLoaded reçu, re-render portefeuille avec données historiques');
       populateTickerSelect();
       renderPortfolio();
-      window.removeEventListener('dataLoaded', onDataLoaded);
-    }, { once: true });
-  }
+    };
 
-  renderPortfolio();
+    window.addEventListener('dataLoaded', onDataLoaded, { once: true });
+
+    // Fallback : si dataLoaded est déjà passé, forcer un re-render après 2s
+    setTimeout(() => {
+      if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
+        console.log('Fallback : données historiques disponibles, re-render');
+        renderPortfolio();
+      }
+    }, 2000);
+  }
 }
