@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital — Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=zusA04-CRAsgbFx4NEKcNGlGx_NCtKDcH8SBj0ZvvO1IACPkXwL56nz2O-4EihECRjbTAzoMcs4hgcPtYbVXfLjyx2bkrU2V7MdrLohpv3Wzbm-ihp_1CR4dWJ3XWTJG1_PBCBPYA5hq-LZ9ABy8bS1C65prOIjSE9Sl499iWRIzRkgV9QEXOnooBHhd-TUjT0i1Ns_eIbgqpALVUAcKWK3XwRYG36nCTINp_o4AbLdjtaJb0li_j8_tNHRNLlpLBEWIJo4UyXmGvO0gGPXGyIhsYZGks5SxROQGyJudoO4o5Q6f0MzWfSiFQlfHcm0uH0JtBp_D9rx0Z2Vls_eS7syVNmxXhWQpwEsbzDgCGMRdzfloEwd5NSn2sT28D-Kk9-eyYu3b8JVLTqoAPjTPXkMYZhe0LnscNe3j-p3n4sUHhHG7hlHJbE9KeZrcbiJNEsLtcM_TOEtYCF2-_mAxdPwzZE3EhKeoLMNYjEBonzqDHRXZnjStmqA60-c1AJ8vk6LpwQvRecufjLl4BZv77SPwHHAVEIWsIx_J_FOhIPgG-DlrOI_9bmerYYmNIYvwPWC9CS0KbQ_ilhKu-XBsAj-rbg0yUeD8z-SV_pWPEp0k1zNu8K_crWBPTTVGgPjKL9m1hOHq9WA7Yl840R88wg" charset="UTF-8"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <link rel="stylesheet" href="app/css/variables.css">
 <link rel="stylesheet" href="app/css/base.css">
@@ -640,8 +640,8 @@
 <!-- ═══ PORTEFEUILLE ═══ -->
 <div class="view" id="view-portefeuille">
   <div class="page-header">
-    <h1>Portefeuille <span style="color:var(--gold)">Simulé</span></h1>
-    <p>Suivez vos positions, analysez votre performance et optimisez votre allocation</p>
+    <h1>Gestion de <span style="color:var(--gold)">Portefeuille</span></h1>
+    <p>Suivi réel de vos positions, analyse de performance et optimisation d'allocation — Actions, Obligations & OPCVM</p>
   </div>
 
   <!-- ═══════════════════════════════════════
@@ -658,7 +658,7 @@
       <div class="portf-kpi-value" id="pfInvested">—</div>
     </div>
     <div class="portf-kpi">
-      <div class="portf-kpi-label">P&L</div>
+      <div class="portf-kpi-label">P&L Net</div>
       <div class="portf-kpi-value" id="pfPL">—</div>
       <div class="portf-kpi-sub" id="pfPLSub"></div>
     </div>
@@ -682,6 +682,14 @@
       <div class="portf-kpi-label">Beta (vs BRVM)</div>
       <div class="portf-kpi-value" id="pfBeta">—</div>
     </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       RÉPARTITION PAR TYPE D'ACTIF
+  ═══════════════════════════════════════ -->
+  <div class="card mb20" id="pfTypeAllocCard" style="display:none">
+    <div class="card-header"><div class="card-title">📊 Répartition par Type d'Actif</div></div>
+    <div class="card-body" id="pfTypeAlloc"></div>
   </div>
 
   <!-- ═══════════════════════════════════════
@@ -747,6 +755,11 @@
     <div class="card-body">
       <div class="portf-form">
         <select id="pfTicker"><option value="">Ticker...</option></select>
+        <select id="pfType" style="flex:0 0 140px">
+          <option value="action">Action</option>
+          <option value="obligation">Obligation</option>
+          <option value="opcvm">OPCVM</option>
+        </select>
         <input type="number" id="pfQty" placeholder="Quantité" min="1">
         <input type="number" id="pfPrice" placeholder="Prix d'achat (FCFA)">
         <input type="date" id="pfDate" placeholder="Date">
@@ -756,25 +769,28 @@
   </div>
 
   <!-- ═══════════════════════════════════════
-       TABLEAU DES POSITIONS DÉTAILLÉ
+       TABLEAU DES POSITIONS — AVEC SÉLECTION
   ═══════════════════════════════════════ -->
   <div class="card mb20">
-    <div class="card-header">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
       <div class="card-title">📋 Positions Détaillées</div>
-      <div style="font-size:12px;color:var(--dim)" id="pfPositionCount">—</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:12px;color:var(--dim)" id="pfPositionCount">—</div>
+        <button onclick="deleteSelectedPositions()" id="btnDeleteSelected" style="display:none;padding:4px 12px;border-radius:6px;border:1px solid var(--red);background:rgba(248,113,113,0.1);color:var(--red);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(248,113,113,0.2)'" onmouseout="this.style.background='rgba(248,113,113,0.1)'">🗑 Supprimer sélection</button>
+      </div>
     </div>
     <div class="table-wrap">
       <table>
         <thead>
           <tr>
-            <th>Ticker</th>
+            <th style="width:40px;text-align:center"><input type="checkbox" id="selectAllPositions" onclick="toggleSelectAll(this.checked)" style="cursor:pointer"></th>
+            <th>Ticker / Type</th>
             <th class="right">Qté</th>
-            <th class="right">Prix Achat</th>
+            <th class="right">CMP</th>
             <th class="right">Cours Actuel</th>
-            <th class="right">Variation %</th>
+            <th class="right">Plus/Moins-Value</th>
+            <th class="right">Var. %</th>
             <th class="right">Valeur</th>
-            <th class="right">P&L</th>
-            <th class="right">P&L %</th>
             <th class="right">Allocation</th>
             <th class="right">52s Haut</th>
             <th class="right">52s Bas</th>
