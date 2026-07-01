@@ -3,255 +3,196 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Capital — Dashboard BRVM</title>
+<title>The Capital — Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-:root {
-  --bg: #0A0804;
-  --surface: #16130D;
-  --card: #1A1610;
-  --card2: #1E1B13;
-  --border: rgba(184,150,78,0.15);
-  --border2: rgba(184,150,78,0.08);
-  --gold: #B8964E;
-  --gold-light: #D4AF6A;
-  --gold-dim: rgba(184,150,78,0.4);
-  --cream: #F5F0E8;
-  --muted: rgba(245,240,232,0.6);
-  --dim: rgba(245,240,232,0.3);
-  --green: #4ADE80;
-  --green-bg: rgba(74,222,128,0.08);
-  --red: #F87171;
-  --red-bg: rgba(248,113,113,0.08);
-  --blue: #60A5FA;
-  --serif: 'Playfair Display', serif;
-  --sans: 'DM Sans', sans-serif;
-  --mono: 'DM Mono', monospace;
-  --sidebar-w: 240px;
-  --header-h: 64px;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); font-family: var(--sans); color: var(--cream); min-height: 100vh; font-weight: 300; line-height: 1.6; overflow-x: hidden; }
-body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.5; }
+<script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=zusA04-CRAsgbFx4NEKcNGlGx_NCtKDcH8SBj0ZvvO1IACPkXwL56nz2O-4EihECRjbTAzoMcs4hgcPtYbVXfLjyx2bkrU2V7MdrLohpv3Wzbm-ihp_1CR4dWJ3XWTJG1_PBCBPYA5hq-LZ9ABy8bS1C65prOIjSE9Sl499iWRIzRkgV9QEXOnooBHhd-TUjT0i1Ns_eIbgqpALVUAcKWK3XwRYG36nCTINp_o4AbLdjtaJb0li_j8_tNHRNLlpLBEWIJo4UyXmGvO0gGPXGyIhsYZGks5SxROQGyJudoO4o5Q6f0MzWfSiFQlfHcm0uH0JtBp_D9rx0Z2Vls_eS7syVNmxXhWQpwEsbzDgCGMRdzfloEwd5NSn2sT28D-Kk9-eyYu3b8JVLTqoAPjTPXkMYZhe0LnscNe3j-p3n4sUHhHG7hlHJbE9KeZrcbiJNEsLtcM_TOEtYCF2-_mAxdPwzZE3EhKeoLMNYjEBonzqDHRXZnjStmqA60-c1AJ8vk6LpwQvRecufjLl4BZv77SPwHHAVEIWsIx_J_FOhIPgG-DlrOI_9bmerYYmNIYvwPWC9CS0KbQ_ilhKu-XBsAj-rbg0yUeD8z-SV_pWPEp0k1zNu8K_crWBPTTVGgPjKL9m1hOHq9WA7Yl840R88wg" charset="UTF-8"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<link rel="stylesheet" href="app/css/variables.css">
+<link rel="stylesheet" href="app/css/base.css">
+<link rel="stylesheet" href="app/css/components.css">
+<link rel="stylesheet" href="app/css/views.css">
+<link rel="stylesheet" href="app/css/technique.css">
 
-/* SIDEBAR */
-.sidebar { position: fixed; left: 0; top: 0; bottom: 0; width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; z-index: 100; overflow-y: auto; }
-.sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid var(--border2); }
-.logo-title { font-family: var(--serif); font-size: 20px; font-weight: 700; letter-spacing: 3px; color: var(--cream); }
-.logo-title span { color: var(--gold); }
-.logo-sub { color: var(--dim); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 4px; font-weight: 500; }
-.sidebar-section { padding: 16px 16px 6px; font-size: 9px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 8px; margin: 1px 8px; cursor: pointer; transition: all 0.18s; color: var(--muted); font-size: 13.5px; font-weight: 400; border: 1px solid transparent; text-decoration: none; }
-.nav-item:hover { background: rgba(184,150,78,0.05); color: var(--cream); border-color: var(--border2); }
-.nav-item.active { background: rgba(184,150,78,0.08); color: var(--gold); border-color: rgba(184,150,78,0.2); }
-.nav-item .icon { width: 18px; text-align: center; font-size: 15px; flex-shrink: 0; }
-.sidebar-bottom { margin-top: auto; padding: 16px 12px; border-top: 1px solid var(--border2); }
-.user-info { display: flex; align-items: center; gap: 10px; padding: 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--border2); }
-.user-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, var(--gold), var(--gold-light)); display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--bg); font-weight: 600; flex-shrink: 0; }
-.user-name { font-size: 12.5px; font-weight: 500; color: var(--cream); line-height: 1.2; }
-.user-role { font-size: 10px; color: var(--dim); font-weight: 400; }
-
-/* HEADER */
-.header { position: fixed; top: 0; left: var(--sidebar-w); right: 0; height: var(--header-h); background: rgba(10,8,4,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 32px; gap: 16px; z-index: 90; }
-.header-title { font-family: var(--serif); font-size: 17px; font-weight: 400; color: var(--cream); flex: 1; }
-.header-badge { display: flex; align-items: center; gap: 6px; background: var(--green-bg); border: 1px solid rgba(74,222,128,0.2); border-radius: 20px; padding: 5px 12px; font-size: 11px; font-weight: 500; color: var(--green); letter-spacing: 0.04em; }
-.live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
-@keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
-.header-time { font-family: var(--mono); font-size: 12px; color: var(--dim); }
-
-/* MAIN */
-.main { margin-left: var(--sidebar-w); margin-top: var(--header-h); min-height: calc(100vh - var(--header-h)); position: relative; z-index: 1; }
-.view { display: none; padding: 32px; animation: fadeIn 0.35s ease; }
-.view.active { display: block; }
-@keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
-
-/* PAGE HEADER */
-.page-header { margin-bottom: 28px; }
-.page-header h1 { font-family: var(--serif); font-size: 26px; font-weight: 400; color: var(--cream); margin-bottom: 4px; }
-.page-header p { font-size: 13px; color: var(--muted); }
-
-/* CARD */
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-.card-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border2); }
-.card-title { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); }
-.card-body { padding: 20px; }
-.mb20 { margin-bottom: 20px; }
-
-/* GRIDS */
-.grid-3 { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-bottom: 20px; }
-.grid-7030 { display: grid; grid-template-columns: 1fr 300px; gap: 20px; margin-bottom: 20px; }
-.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 20px; }
-
-/* STAT CARDS */
-.stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; position: relative; overflow: hidden; }
-.stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg, var(--gold), transparent); }
-.stat-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); margin-bottom: 10px; }
-.stat-value { font-family: var(--mono); font-size: 22px; font-weight: 500; color: var(--cream); line-height: 1; margin-bottom: 6px; }
-.stat-change { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px; }
-.stat-change.up { color: var(--green); }
-.stat-change.down { color: var(--red); }
-.stat-change.neutral { color: var(--dim); }
-
-/* TABLE */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-thead th { padding: 10px 14px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); border-bottom: 1px solid var(--border2); white-space: nowrap; }
-thead th.right { text-align: right; }
-tbody tr { border-bottom: 1px solid rgba(184,150,78,0.04); cursor: pointer; transition: background 0.15s; }
-tbody tr:hover { background: rgba(184,150,78,0.03); }
-tbody tr:last-child { border-bottom: none; }
-tbody td { padding: 11px 14px; color: var(--cream); font-weight: 300; }
-tbody td.right { text-align: right; font-family: var(--mono); font-size: 12px; }
-tbody td.mono { font-family: var(--mono); font-size: 12px; }
-
-/* PILLS */
-.pill { display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 500; font-family: var(--mono); }
-.pill.up { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
-.pill.down { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
-.pill.neutral { background: rgba(245,240,232,0.05); color: var(--dim); border: 1px solid var(--border2); }
-.sector-tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 500; letter-spacing: 0.04em; background: rgba(184,150,78,0.08); color: var(--gold); border: 1px solid rgba(184,150,78,0.15); }
-
-/* CHART */
-.chart-container { position: relative; height: 200px; }
-.chart-container.tall { height: 280px; }
-
-/* SEARCH */
-.search-bar { display: flex; align-items: center; gap: 10px; padding-bottom: 20px; flex-wrap: wrap; }
-.search-input { flex: 1; min-width: 200px; padding: 10px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; font-family: var(--sans); font-size: 14px; color: var(--cream); outline: none; transition: border-color 0.2s; }
-.search-input:focus { border-color: var(--gold); }
-.search-input::placeholder { color: var(--dim); }
-.filter-btn { padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; letter-spacing: 0.05em; cursor: pointer; transition: all 0.18s; white-space: nowrap; }
-.filter-btn:hover, .filter-btn.active { border-color: var(--gold); color: var(--gold); background: rgba(184,150,78,0.05); }
-
-/* FICHE */
-.fiche-hero { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 28px; margin-bottom: 20px; position: relative; overflow: hidden; }
-.fiche-hero::after { content:''; position:absolute; top:0; right:0; width:200px; height:200px; background:radial-gradient(circle, rgba(184,150,78,0.06) 0%, transparent 70%); pointer-events:none; }
-.fiche-ticker-label { font-family: var(--mono); font-size: 11px; font-weight: 500; color: var(--gold); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 4px; }
-.fiche-company { font-family: var(--serif); font-size: 24px; font-weight: 500; color: var(--cream); margin-bottom: 12px; }
-.fiche-price-row { display: flex; align-items: baseline; gap: 12px; margin: 12px 0 6px; }
-.fiche-price { font-family: var(--mono); font-size: 34px; font-weight: 500; color: var(--cream); }
-.fiche-meta { font-size: 12px; color: var(--dim); margin-top: 6px; }
-.ratios-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: var(--border2); border: 1px solid var(--border2); border-radius: 10px; overflow: hidden; margin-top: 20px; }
-.ratio-item { background: var(--card); padding: 14px 16px; }
-.ratio-label { font-size: 10px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--dim); margin-bottom: 6px; }
-.ratio-value { font-family: var(--mono); font-size: 16px; font-weight: 500; color: var(--gold-light); }
-
-/* BOC */
-.boc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px,1fr)); gap: 16px; }
-.boc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; transition: all 0.2s; }
-.boc-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.3); }
-.boc-header { padding: 16px 18px 12px; border-bottom: 1px solid var(--border2); display: flex; align-items: start; justify-content: space-between; gap: 10px; }
-.boc-title { font-size: 13.5px; font-weight: 500; color: var(--cream); line-height: 1.3; }
-.boc-emetteur { font-size: 11px; color: var(--dim); margin-top: 3px; }
-.boc-type { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 9px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; flex-shrink: 0; margin-top: 2px; }
-.boc-type.obligation { background: rgba(96,165,250,0.1); color: var(--blue); border: 1px solid rgba(96,165,250,0.2); }
-.boc-type.action { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
-.boc-type.opcvm { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
-.boc-body { padding: 12px 18px 14px; }
-.boc-row { display: flex; justify-content: space-between; align-items: center; padding: 5px 0; border-bottom: 1px solid rgba(184,150,78,0.04); }
-.boc-row:last-child { border-bottom: none; }
-.boc-key { font-size: 11px; color: var(--dim); }
-.boc-val { font-family: var(--mono); font-size: 12px; color: var(--cream); font-weight: 500; }
-.boc-footer { padding: 9px 18px; background: rgba(0,0,0,0.2); font-size: 11px; color: var(--dim); }
-
-/* ANALYSE */
-.analyse-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 20px; margin-bottom: 12px; }
-.analyse-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; }
-.analyse-ticker { font-family: var(--mono); font-size: 11px; color: var(--gold); letter-spacing: 0.08em; margin-bottom: 3px; }
-.analyse-title { font-size: 15px; font-weight: 500; color: var(--cream); }
-.rec { display: inline-flex; align-items: center; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; }
-.rec.buy { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
-.rec.sell { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
-.rec.hold { background: rgba(184,150,78,0.1); color: var(--gold); border: 1px solid rgba(184,150,78,0.2); }
-.analyse-text { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
-.analyse-meta { display: flex; gap: 16px; font-size: 11px; color: var(--dim); flex-wrap: wrap; }
-
-/* FIN */
-.fin-row { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-bottom: 1px solid rgba(184,150,78,0.04); }
-.fin-row:last-child { border-bottom: none; }
-.fin-label { font-size: 13px; color: var(--muted); }
-.fin-value { font-family: var(--mono); font-size: 13px; color: var(--cream); font-weight: 500; }
-.fin-section-title { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--gold); padding: 10px 0 6px; border-bottom: 1px solid var(--border2); }
-.year-tab { padding: 4px 12px; border-radius: 20px; border: 1px solid var(--border); background: none; color: var(--muted); font-family: var(--mono); font-size: 11px; cursor: pointer; transition: all 0.15s; }
-.year-tab.active { background: rgba(184,150,78,0.1); border-color: var(--gold); color: var(--gold); }
-
-/* BACK */
-.back-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; border: 1px solid var(--border); border-radius: 8px; background: none; color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 500; cursor: pointer; letter-spacing: 0.06em; text-transform: uppercase; transition: all 0.18s; margin-bottom: 20px; }
-.back-btn:hover { border-color: var(--gold-dim); color: var(--gold); }
-
-/* EMPTY */
-.empty-state { text-align: center; padding: 60px 20px; color: var(--dim); }
-.empty-icon { font-size: 36px; margin-bottom: 14px; opacity: 0.5; }
-.empty-title { font-family: var(--serif); font-size: 18px; color: var(--muted); margin-bottom: 6px; }
-.empty-text { font-size: 13px; }
-
-/* RESPONSIVE */
-@media (max-width:1024px) {
-  .ratios-grid { grid-template-columns: repeat(2,1fr); }
-  .grid-7030 { grid-template-columns: 1fr; }
-}
-@media (max-width:768px) {
-  :root { --sidebar-w: 0px; }
-  .sidebar { transform: translateX(-240px); }
-  .grid-3 { grid-template-columns: 1fr; }
-  .view { padding: 20px 16px; }
-}
-</style>
+<base target="_blank">
+<base target="_blank">
+<base target="_blank">
 </head>
-<body>
+<body class="init-hidden">
+
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+<div class="toast-container" id="toastContainer"></div>
 
 <!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sidebar-logo">
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo" onclick="nav('overview')">
     <div class="logo-title">THE <span>·</span> CAPITAL</div>
     <div class="logo-sub">Intelligence Financière Africaine</div>
   </div>
-  
+
   <div class="sidebar-section">Marché</div>
   <div class="nav-item active" onclick="nav('overview')"><span class="icon">◈</span> Vue d'ensemble</div>
   <div class="nav-item" onclick="nav('titres')"><span class="icon">▦</span> Titres BRVM</div>
   <div class="nav-item" onclick="nav('boc')"><span class="icon">◉</span> BOC / Emprunts</div>
-  
+
   <div class="sidebar-section">Analyse</div>
-  <div class="nav-item" onclick="nav('analyses')"><span class="icon">◎</span> Analyses Fondamentales</div>
-  <div class="nav-item" onclick="window.location.href='analyse.html'"><span class="icon">📈</span> Analyse Technique</div>
-  <div class="nav-item" onclick="window.location.href='screener.html'"><span class="icon">⊟</span> Screener</div>
-  
+  <div class="nav-item" onclick="nav('analyses')"><span class="icon">◎</span> Recommandations</div>
+  <div class="nav-item" onclick="nav('analyse-technique')"><span class="icon">📈</span> Analyse Technique</div>
+  <div class="nav-item" onclick="nav('analyse-fondamentale')"><span class="icon">⊛</span> Analyse Fondamentale</div>
+  <div class="nav-item" onclick="nav('screener')"><span class="icon">⊟</span> Screener</div>
+
   <div class="sidebar-section">Gestion</div>
-  <div class="nav-item" onclick="window.location.href='portefeuille.html'"><span class="icon">◧</span> Portefeuille</div>
-  <div class="nav-item" onclick="window.location.href='alertes.html'"><span class="icon">△</span> Alertes</div>
-  
+  <div class="nav-item" onclick="nav('portefeuille')"><span class="icon">◧</span> Portefeuille</div>
+  <div class="nav-item" onclick="nav('alertes')"><span class="icon">△</span> Alertes</div>
+
   <div class="sidebar-section">Données</div>
   <div class="nav-item" onclick="nav('financials')"><span class="icon">≡</span> États Financiers</div>
+  <div class="nav-item" onclick="nav('publications')"><span class="icon">📅</span> Calendrier</div>
   
+  <div class="sidebar-section">Apprendre</div>
+  <div class="nav-item" onclick="nav('formation')"><span class="icon">📚</span> Formation</div>
+
   <div class="sidebar-bottom">
-    <div class="user-info">
-      <div class="user-avatar">TC</div>
-      <div>
-        <div class="user-name">The Capital</div>
-        <div class="user-role">Mode Test · BRVM</div>
+    <div class="user-info" id="userInfo">
+      <div class="user-avatar" id="sidebarAvatar">TC</div>
+      <div style="flex:1;min-width:0;">
+        <div class="user-name" id="sidebarName">Chargement...</div>
+        <div class="user-role" id="sidebarRole">BRVM</div>
       </div>
     </div>
+    <div id="adminLink" style="display:none;margin-top:8px;">
+      <a href="admin.html" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:6px;background:rgba(184,150,78,0.08);border:1px solid rgba(184,150,78,0.2);color:var(--gold);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;text-decoration:none;font-weight:500;">
+        <span>⚙</span> Administration
+      </a>
+    </div>
+    <button onclick="doLogout()" style="width:100%;margin-top:8px;padding:8px;background:none;border:1px solid var(--border2);border-radius:6px;color:var(--muted);font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all .2s;" onmouseover="this.style.color='#F87171';this.style.borderColor='#F87171'" onmouseout="this.style.color='';this.style.borderColor=''">
+      ⎋ Déconnexion
+    </button>
   </div>
 </aside>
 
-<!-- HEADER -->
+<!-- HEADER NAV HORIZONTALE -->
 <header class="header">
-  <div class="header-title" id="headerTitle">Vue d'ensemble — BRVM</div>
-  <div class="header-badge"><div class="live-dot"></div>Marché ouvert</div>
-  <div class="header-time" id="headerTime"></div>
+  <nav class="topnav">
+    <div class="topnav-logo" onclick="nav('overview')">THE <span>·</span> CAPITAL</div>
+
+    <!-- Tableau de bord direct -->
+    <div class="nav-dropdown">
+      <div class="nav-dropdown-btn" id="nav-overview" onclick="nav('overview')">
+        <span>◈</span> Tableau de bord
+      </div>
+    </div>
+
+    <div class="topnav-divider"></div>
+
+    <!-- Marché -->
+    <div class="nav-dropdown" id="dd-marche">
+      <div class="nav-dropdown-btn" id="nav-marche-btn" onclick="toggleDropdown('dd-marche')">
+        <span>▦</span> Marché <span class="caret">▼</span>
+      </div>
+      <div class="nav-dropdown-menu" id="menu-dd-marche">
+        <div class="nav-dropdown-label">Marché</div>
+        <div class="nav-dropdown-item" id="nav-titres" onclick="nav('titres');closeDropdowns()">
+          <span class="icon">▦</span>
+          <div><div>Titres BRVM</div><div class="item-desc">Tous les titres cotés</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-boc" onclick="nav('boc');closeDropdowns()">
+          <span class="icon">◉</span>
+          <div><div>BOC</div><div class="item-desc">Bulletin Officiel de la Cote</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-screener" onclick="nav('screener');closeDropdowns()">
+          <span class="icon">⊟</span>
+          <div><div>Screener</div><div class="item-desc">Filtrer les titres</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topnav-divider"></div>
+
+    <!-- Analyse -->
+    <div class="nav-dropdown" id="dd-analyse">
+      <div class="nav-dropdown-btn" id="nav-analyse-btn" onclick="toggleDropdown('dd-analyse')">
+        <span>◎</span> Analyse <span class="caret">▼</span>
+      </div>
+      <div class="nav-dropdown-menu" id="menu-dd-analyse">
+        <div class="nav-dropdown-label">Analyse</div>
+        <div class="nav-dropdown-item" id="nav-analyses" onclick="nav('analyses');closeDropdowns()">
+          <span class="icon">◎</span>
+          <div><div>Recommandations</div><div class="item-desc">Avis d'analystes</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-analyse-technique" onclick="nav('analyse-technique');closeDropdowns()">
+          <span class="icon">📈</span>
+          <div><div>Analyse Technique</div><div class="item-desc">Graphiques & indicateurs</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-analyse-fondamentale" onclick="nav('analyse-fondamentale');closeDropdowns()">
+          <span class="icon">⊛</span>
+          <div><div>Analyse Fondamentale</div><div class="item-desc">DCF, TCAM, ratios</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="topnav-divider"></div>
+
+    <!-- Gestion & Données -->
+    <div class="nav-dropdown" id="dd-gestion">
+      <div class="nav-dropdown-btn" id="nav-gestion-btn" onclick="toggleDropdown('dd-gestion')">
+        <span>◧</span> Gestion <span class="caret">▼</span>
+      </div>
+      <div class="nav-dropdown-menu" id="menu-dd-gestion">
+        <div class="nav-dropdown-label">Gestion</div>
+        <div class="nav-dropdown-item" id="nav-portefeuille" onclick="nav('portefeuille');closeDropdowns()">
+          <span class="icon">◧</span>
+          <div><div>Portefeuille</div><div class="item-desc">Positions & P&L</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-alertes" onclick="nav('alertes');closeDropdowns()">
+          <span class="icon">△</span>
+          <div><div>Alertes</div><div class="item-desc">Seuils de prix</div></div>
+        </div>
+        <div class="nav-dropdown-separator"></div>
+        <div class="nav-dropdown-label">Données</div>
+        <div class="nav-dropdown-item" id="nav-financials" onclick="nav('financials');closeDropdowns()">
+          <span class="icon">≡</span>
+          <div><div>États Financiers</div><div class="item-desc">Comptes annuels</div></div>
+        </div>
+        <div class="nav-dropdown-item" id="nav-publications" onclick="nav('publications');closeDropdowns()">
+          <span class="icon">📅</span>
+          <div><div>Calendrier</div><div class="item-desc">Publications attendues</div></div>
+        </div>
+        <div class="nav-dropdown-separator"></div>
+        <div class="nav-dropdown-label">Apprendre</div>
+        <div class="nav-dropdown-item" id="nav-formation" onclick="nav('formation');closeDropdowns()">
+          <span class="icon">📚</span>
+          <div><div>Formation</div><div class="item-desc">Lexique & guides</div></div>
+        </div>
+      </div>
+    </div>
+
+  </nav>
+
+  <div class="topnav-right">
+    <div class="global-search" id="globalSearch">
+      <input type="text" id="globalSearchInput" placeholder="Ticker..." autocomplete="off">
+      <div class="global-search-results" id="globalSearchResults"></div>
+    </div>
+    <div class="header-badge"><div class="live-dot"></div>Live</div>
+    <div class="header-time" id="headerTime"></div>
+    <div class="topnav-user" id="topnavUser">
+      <div class="topnav-avatar" id="headerAvatar">TC</div>
+      <span class="topnav-username" id="headerName">—</span>
+    </div>
+    <button class="topnav-logout" onclick="doLogout()">⎋</button>
+  </div>
 </header>
 
+<!-- BREADCRUMB -->
+<div class="breadcrumb" id="breadcrumb"></div>
 <main class="main">
-
 <!-- ═══ OVERVIEW ═══ -->
 <div class="view active" id="view-overview">
   <div class="page-header">
     <h1>Tableau de Bord <span style="color:var(--gold)">BRVM</span></h1>
     <p>Bourse Régionale des Valeurs Mobilières — Données en temps réel</p>
   </div>
-  <div class="grid-3">
+  <div class="grid-3" id="overviewStats">
     <div class="stat-card"><div class="stat-label">BRVM Composite</div><div class="stat-value" id="idx-composite">—</div><div class="stat-change" id="idx-composite-chg">—</div></div>
     <div class="stat-card"><div class="stat-label">BRVM 30</div><div class="stat-value" id="idx-30">—</div><div class="stat-change" id="idx-30-chg">—</div></div>
     <div class="stat-card"><div class="stat-label">BRVM Prestige</div><div class="stat-value" id="idx-prestige">—</div><div class="stat-change" id="idx-prestige-chg">—</div></div>
@@ -270,8 +211,8 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
     <div class="card-header"><div class="card-title">Cours du jour</div><div style="font-size:12px;color:var(--dim)" id="coursCount"></div></div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Titre</th><th class="right">Cours (FCFA)</th><th class="right">Variation</th><th class="right">Volume</th><th class="right">Capitalisation</th><th>Secteur</th></tr></thead>
-        <tbody id="coursTable"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Chargement...</td></tr></tbody>
+        <thead><tr><th onclick="sortTable('coursTable',0)">Titre ↕</th><th class="right" onclick="sortTable('coursTable',1)">Cours ↕</th><th class="right" onclick="sortTable('coursTable',2)">Variation ↕</th><th class="right" onclick="sortTable('coursTable',3)">Volume ↕</th><th class="right" onclick="sortTable('coursTable',4)">Capitalisation ↕</th><th onclick="sortTable('coursTable',5)">Secteur ↕</th></tr></thead>
+        <tbody id="coursTable"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></td></tr></tbody>
       </table>
     </div>
   </div>
@@ -294,8 +235,8 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
   <div class="card">
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">+ haut 52s</th><th class="right">+ bas 52s</th><th class="right">Volume</th><th>Secteur</th></tr></thead>
-        <tbody id="titresTable"></tbody>
+        <thead><tr><th onclick="sortTable('titresTable',0)">Ticker ↕</th><th onclick="sortTable('titresTable',1)">Société ↕</th><th class="right" onclick="sortTable('titresTable',2)">Cours ↕</th><th class="right" onclick="sortTable('titresTable',3)">Variation ↕</th><th class="right" onclick="sortTable('titresTable',4)">+ haut 52s ↕</th><th class="right" onclick="sortTable('titresTable',5)">+ bas 52s ↕</th><th class="right" onclick="sortTable('titresTable',6)">Volume ↕</th><th onclick="sortTable('titresTable',7)">Secteur ↕</th></tr></thead>
+        <tbody id="titresTable"><tr><td colspan="8" style="text-align:center;padding:24px;color:var(--dim)"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></td></tr></tbody>
       </table>
     </div>
   </div>
@@ -333,6 +274,7 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
           <button class="year-tab" onclick="setChartPeriod(90,this)">3M</button>
           <button class="year-tab" onclick="setChartPeriod(180,this)">6M</button>
           <button class="year-tab" onclick="setChartPeriod(252,this)">1A</button>
+          <button class="year-tab" onclick="setChartPeriod(99999,this)">Tout</button>
         </div>
       </div>
       <div class="card-body"><div class="chart-container tall"><canvas id="chartFiche"></canvas></div></div>
@@ -365,23 +307,71 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 <div class="view" id="view-boc">
   <div class="page-header">
     <h1>BOC — <span style="color:var(--gold)">Bulletin Officiel de la Cote</span></h1>
-    <p>Avis d'émissions, obligations d'état et emprunts publics</p>
+    <p>Documents officiels BRVM par séance de bourse — téléchargez les PDF</p>
   </div>
-  <div class="search-bar">
-    <input class="search-input" id="searchBoc" placeholder="🔍  Rechercher un émetteur, type de titre..." oninput="filterBoc()">
-    <button class="filter-btn active" onclick="setBocFilter('all',this)">Tous</button>
-    <button class="filter-btn" onclick="setBocFilter('obligation',this)">Obligations</button>
-    <button class="filter-btn" onclick="setBocFilter('action',this)">Actions</button>
-    <button class="filter-btn" onclick="setBocFilter('opcvm',this)">OPCVM</button>
+  
+  <div class="grid-3" style="margin-bottom:20px">
+    <div class="stat-card">
+      <div class="stat-label">Séances disponibles</div>
+      <div class="stat-value" id="bocCount">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Dernière séance</div>
+      <div class="stat-value" id="bocLastDate">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Année en cours</div>
+      <div class="stat-value" id="bocCurrentYear">2026</div>
+    </div>
   </div>
-  <div class="boc-grid" id="bocGrid"></div>
+
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="search-bar" style="padding-bottom:0">
+        <input class="search-input" id="searchBoc" placeholder="🔍  Rechercher une date (ex: 2026-05-07)..." oninput="filterBoc()" style="flex:1">
+        <select class="search-input" id="bocYearFilter" onchange="filterBoc()" style="flex:0 0 140px">
+          <option value="">Toutes les années</option>
+          <option value="2026" selected>2026</option>
+          <option value="2025">2025</option>
+          <option value="2024">2024</option>
+          <option value="2023">2023</option>
+        </select>
+        <button class="filter-btn active" onclick="setBocFilter('all',this)">Tous</button>
+        <button class="filter-btn" onclick="setBocFilter('week',this)">Cette semaine</button>
+        <button class="filter-btn" onclick="setBocFilter('month',this)">Ce mois</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Séances de bourse</div>
+      <div style="font-size:12px;color:var(--dim)" id="bocResultCount"></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('bocTable',0)">Date ↕</th>
+            <th onclick="sortTable('bocTable',1)">Jour ↕</th>
+            <th class="right" onclick="sortTable('bocTable',2)">Séance N° ↕</th>
+            <th onclick="sortTable('bocTable',3)">Statut ↕</th>
+            <th class="right">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="bocTable">
+          <tr><td colspan="5" style="text-align:center;padding:24px;color:var(--dim)"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- ═══ ANALYSES ═══ -->
 <div class="view" id="view-analyses">
   <div class="page-header">
-    <h1>Analyses <span style="color:var(--gold)">Fondamentales</span></h1>
-    <p>Recommandations et études de valorisation sur les titres BRVM</p>
+    <h1><span style="color:var(--gold)">Recommandations</span></h1>
+    <p>Avis d'analystes, objectifs de cours et recommandations</p>
   </div>
   <div class="search-bar">
     <input class="search-input" id="searchAnalyses" placeholder="🔍  Rechercher une analyse, un ticker..." oninput="filterAnalyses()">
@@ -390,583 +380,923 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
     <button class="filter-btn" onclick="setAnalyseFilter('hold',this)">Conserver</button>
     <button class="filter-btn" onclick="setAnalyseFilter('sell',this)">Vendre</button>
   </div>
-  <div id="analysesList"></div>
+  <div id="analysesList"><div class="empty-state"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></div></div>
+</div>
+
+<!-- ═══ ANALYSE DETAIL ═══ -->
+<div class="view" id="view-analyse-detail">
+  <button class="back-btn" onclick="nav('analyses')">← Retour aux analyses</button>
+  <div id="analyseDetailContent"></div>
+</div>
+
+<!-- ═══ ANALYSE TECHNIQUE PRO ═══ -->
+<div class="view" id="view-analyse-technique">
+  <div class="at-wrap" id="atWrap">
+
+    <!-- TOOLBAR PRINCIPALE -->
+    <div class="at-toolbar">
+      <div class="at-tb-group">
+        <select class="at-select" id="atTicker" onchange="atLoadTicker()">
+          <option value="">Ticker...</option>
+        </select>
+      </div>
+      <div class="at-tb-group">
+        <span class="at-tb-label">Type</span>
+        <button class="at-btn" id="atBtnLine" onclick="atSetType('line',this)">Ligne</button>
+        <button class="at-btn on" id="atBtnCandle" onclick="atSetType('candle',this)">Chandelier</button>
+        <button class="at-btn" id="atBtnHA" onclick="atSetType('ha',this)">Heikin-Ashi</button>
+        <button class="at-btn" id="atBtnBar" onclick="atSetType('bar',this)">Barres</button>
+      </div>
+      <div class="at-tb-group">
+        <span class="at-tb-label">Période</span>
+        <button class="at-btn" onclick="atSetPeriod(5,this)">5J</button>
+        <button class="at-btn" onclick="atSetPeriod(20,this)">1M</button>
+        <button class="at-btn on" onclick="atSetPeriod(60,this)">3M</button>
+        <button class="at-btn" onclick="atSetPeriod(120,this)">6M</button>
+        <button class="at-btn" onclick="atSetPeriod(252,this)">1A</button>
+        <button class="at-btn" onclick="atSetPeriod(504,this)">2A</button>
+        <button class="at-btn" onclick="atSetPeriod(99999,this)">Max</button>
+      </div>
+      <div class="at-tb-group">
+        <span class="at-tb-label">Intervalle</span>
+        <button class="at-btn on" onclick="atSetInterval('daily',this)">Daily</button>
+        <button class="at-btn" onclick="atSetInterval('weekly',this)">Hebdo</button>
+        <button class="at-btn" onclick="atSetInterval('monthly',this)">Mensuel</button>
+      </div>
+      <div class="at-tb-group">
+        <button class="at-btn" onclick="atOpenIndModal()">＋ Indicateur</button>
+        <button class="at-btn" onclick="atCompare()">⇌ Comparer</button>
+        <button class="at-btn" onclick="atExportPNG()">📥 PNG</button>
+        <button class="at-btn" onclick="atExportReport()">📄 Rapport</button>
+        <button class="at-btn" id="atBtnFocus" onclick="atToggleFocus()">⛶ Focus</button>
+      </div>
+    </div>
+
+    <!-- DRAW TOOLBAR -->
+    <div class="at-drawtb">
+      <span class="at-tb-label">Dessin</span>
+      <button class="at-btn" id="dBtnCursor" onclick="atSetDraw('cursor')" title="Curseur">↖ Curseur</button>
+      <div class="at-sep"></div>
+      <button class="at-btn" id="dBtnHLine" onclick="atSetDraw('hline')" title="S/R Horizontale">— S/R</button>
+      <button class="at-btn" id="dBtnTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱ Tendance</button>
+      <button class="at-btn" id="dBtnChannel" onclick="atSetDraw('channel')" title="Canal">⫴ Canal</button>
+      <button class="at-btn" id="dBtnRect" onclick="atSetDraw('rect')" title="Rectangle">▭ Zone</button>
+      <div class="at-sep"></div>
+      <button class="at-btn" id="dBtnFib" onclick="atSetDraw('fib')" title="Fibonacci">🌀 Fibonacci</button>
+      <button class="at-btn" id="dBtnPitch" onclick="atSetDraw('pitch')" title="Pitchfork">⑂ Pitchfork</button>
+      <div class="at-sep"></div>
+      <button class="at-btn" id="dBtnText" onclick="atSetDraw('text')" title="Annotation">T Texte</button>
+      <div class="at-sep"></div>
+      <button class="at-btn danger" onclick="atClearDrawings()">🗑 Effacer tout</button>
+      <span class="draw-status" id="atDrawStatus"></span>
+    </div>
+
+    <div class="at-body">
+
+      <!-- OUTILS GAUCHE -->
+      <div class="at-left">
+        <div class="at-tool on" id="atToolCursor" onclick="atSetDraw('cursor')" title="Curseur">↖</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" id="atToolHline" onclick="atSetDraw('hline')" title="Horizontale">—</div>
+        <div class="at-tool" id="atToolTrend" onclick="atSetDraw('trend')" title="Tendance">╱</div>
+        <div class="at-tool" id="atToolChannel" onclick="atSetDraw('channel')" title="Canal">⫴</div>
+        <div class="at-tool" id="atToolRect" onclick="atSetDraw('rect')" title="Zone">▭</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" id="atToolFib" onclick="atSetDraw('fib')" title="Fibonacci">🌀</div>
+        <div class="at-tool" id="atToolPitch" onclick="atSetDraw('pitch')" title="Pitchfork">⑂</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" id="atToolText" onclick="atSetDraw('text')" title="Texte">T</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" style="color:var(--red)" onclick="atClearDrawings()" title="Effacer">🗑</div>
+      </div>
+
+      <!-- CENTRE -->
+      <div class="at-center" id="atCenter">
+
+        <!-- OHLCV BAR -->
+        <div class="at-ohlc" id="atOHLC">
+          <span style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600" id="atOhlcTicker">—</span>
+          <div class="ohlc-item"><span class="ohlc-lbl">O</span><span class="ohlc-v" id="atO">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">H</span><span class="ohlc-v up" id="atH">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">L</span><span class="ohlc-v down" id="atL">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">C</span><span class="ohlc-v" id="atC">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Vol</span><span class="ohlc-v" style="color:var(--dim)" id="atV">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Var</span><span class="ohlc-v" id="atVar">—</span></div>
+          <div class="ohlc-item" style="margin-left:auto"><span class="ohlc-lbl">Dernière MAJ</span><span class="ohlc-v" style="color:var(--dim);font-size:10px" id="atLastUpdate">—</span></div>
+        </div>
+
+        <!-- CHART PRINCIPAL -->
+        <div class="at-chart-main" id="atMainChart">
+          <canvas id="cvMain"></canvas>
+          <canvas id="cvOverlay" style="z-index:3"></canvas>
+          <div class="at-legend" id="atLegend"></div>
+          <div class="at-axis-y" id="atAxisY"></div>
+          <div class="at-axis-x" id="atAxisX"></div>
+          <div class="at-price-tag" id="atPriceTag" style="display:none"></div>
+          <div class="at-crosshair-tooltip" id="atTooltip"></div>
+        </div>
+
+        <!-- PANNEAUX SUB -->
+        <div class="at-sub" id="subVol" style="height:70px">
+          <canvas id="cvVol"></canvas>
+          <div class="at-sub-label" id="lblVol">Volume</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subVol')"></div>
+        </div>
+        <div class="at-sub" id="subRSI" style="height:70px;display:none">
+          <canvas id="cvRSI"></canvas>
+          <div class="at-sub-label" id="lblRSI">RSI (14)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subRSI')"></div>
+        </div>
+        <div class="at-sub" id="subMACD" style="height:70px;display:none">
+          <canvas id="cvMACD"></canvas>
+          <div class="at-sub-label" id="lblMACD">MACD (12,26,9)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subMACD')"></div>
+        </div>
+        <div class="at-sub" id="subStoch" style="height:70px;display:none">
+          <canvas id="cvStoch"></canvas>
+          <div class="at-sub-label" id="lblStoch">Stochastique (14,3)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subStoch')"></div>
+        </div>
+        <div class="at-sub" id="subADX" style="height:70px;display:none">
+          <canvas id="cvADX"></canvas>
+          <div class="at-sub-label" id="lblADX">ADX (14)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subADX')"></div>
+        </div>
+        <div class="at-sub" id="subCCI" style="height:70px;display:none">
+          <canvas id="cvCCI"></canvas>
+          <div class="at-sub-label" id="lblCCI">CCI (20)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subCCI')"></div>
+        </div>
+        <div class="at-sub" id="subOBV" style="height:70px;display:none">
+          <canvas id="cvOBV"></canvas>
+          <div class="at-sub-label" id="lblOBV">OBV</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subOBV')"></div>
+        </div>
+
+        <!-- BOTTOM BAR -->
+        <div class="at-bottom">
+          <span class="at-bb-item">BRVM Composite <span style="color:var(--green)" id="atIdxComp">—</span></span>
+          <span class="at-bb-item">BRVM 30 <span style="color:var(--green)" id="atIdx30">—</span></span>
+          <span class="at-bb-item" style="margin-left:auto" id="atBBTime">—</span>
+        </div>
+
+      </div>
+
+      <!-- PANNEAU DROIT -->
+      <div class="at-right" id="atRight">
+
+        <div style="border-bottom:1px solid var(--border2)">
+          <div class="at-rp-title">Signaux</div>
+          <div class="at-sig-row"><span class="at-sig-label">Global</span><span class="sig-badge sig-n" id="sigGlob">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Tendance</span><span class="sig-badge sig-n" id="sigTrend">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Momentum</span><span class="sig-badge sig-n" id="sigMom">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Volatilité</span><span class="sig-badge sig-n" id="sigVol">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Volume</span><span class="sig-badge sig-n" id="sigVolTrend">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">RSI (14)</span><span class="sig-badge sig-n" id="sigRSI">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">MACD</span><span class="sig-badge sig-n" id="sigMACD">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Stoch</span><span class="sig-badge sig-n" id="sigStoch">—</span></div>
+        </div>
+
+        <div style="border-bottom:1px solid var(--border2);flex-shrink:0">
+          <div class="at-rp-title">Indicateurs actifs</div>
+          <div id="atActiveInds"></div>
+          <div class="at-add-ind" onclick="atOpenIndModal()">＋ Ajouter un indicateur</div>
+        </div>
+
+        <div style="flex:1;overflow-y:auto">
+          <div class="at-rp-title">Watchlist</div>
+          <div id="atWatchlist"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL INDICATEURS -->
+  <div class="at-ind-modal" id="atIndModal">
+    <div class="at-ind-modal-bg" onclick="atCloseIndModal()"></div>
+    <div class="at-ind-modal-box">
+      <div class="at-ind-modal-head">
+        <div class="at-ind-modal-title">Ajouter un indicateur</div>
+        <button class="at-btn danger" onclick="atCloseIndModal()">✕ Fermer</button>
+      </div>
+        <div class="at-ind-modal-body" id="atIndModalBody"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ANALYSE FONDAMENTALE ═══ -->
+<div class="view" id="view-analyse-fondamentale">
+  <div class="page-header">
+    <h1>Analyse <span style="color:var(--gold)">Fondamentale</span></h1>
+    <p>Forecast, DCF, TCAM & régression — paramétrez vos hypothèses</p>
+  </div>
+  <div class="search-bar">
+    <select class="search-input" id="fundTickerSelect" onchange="loadFundAnalysis()" style="flex:0 0 220px">
+      <option value="">Choisir un ticker...</option>
+    </select>
+    <button class="filter-btn active" onclick="setFundMethod('tcam',this)">TCAM</button>
+    <button class="filter-btn" onclick="setFundMethod('regression',this)">Régression</button>
+  </div>
+  <div id="fundContent">
+    <div class="empty-state">
+      <div class="empty-icon">⊛</div>
+      <div class="empty-title">Sélectionnez un titre</div>
+      <div class="empty-text">Choisissez un ticker pour lancer l'analyse fondamentale approfondie.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREENER ═══ -->
+<div class="view" id="view-screener">
+  <div class="page-header">
+    <h1>Screener <span style="color:var(--gold)">BRVM</span></h1>
+    <p>Filtrer les titres selon vos critères de valorisation et de performance</p>
+  </div>
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="screener-filters">
+        <div><label>Secteur</label><select id="scrSector" onchange="runScreener()"><option value="">Tous</option><option value="Banque">Banque</option><option value="Agro">Agro</option><option value="Industrie">Industrie</option><option value="Telecom">Telecom</option></select></div>
+        <div><label>Cours min</label><input type="number" id="scrMinPrice" placeholder="0" oninput="runScreener()"></div>
+        <div><label>Cours max</label><input type="number" id="scrMaxPrice" placeholder="∞" oninput="runScreener()"></div>
+        <div><label>Variation min %</label><input type="number" id="scrMinVar" placeholder="-100" oninput="runScreener()"></div>
+        <div><label>Variation max %</label><input type="number" id="scrMaxVar" placeholder="100" oninput="runScreener()"></div>
+        <div><label>Volume min</label><input type="number" id="scrMinVol" placeholder="0" oninput="runScreener()"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Résultats</div><div style="font-size:12px;color:var(--dim)" id="scrCount"></div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th><th>Secteur</th></tr></thead>
+        <tbody id="screenerTable"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Ajustez les filtres pour voir les résultats</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ PORTEFEUILLE ═══ -->
+<div class="view" id="view-portefeuille">
+  <div class="page-header">
+    <h1>Gestion de <span style="color:var(--gold)">Portefeuille</span></h1>
+    <p>Suivi réel de vos positions, analyse de performance et optimisation d'allocation — Actions, Obligations & OPCVM</p>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       KPIs PRINCIPAUX
+  ═══════════════════════════════════════ -->
+  <div class="portf-kpi-grid">
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">Valeur Totale</div>
+      <div class="portf-kpi-value" id="pfTotal">—</div>
+      <div class="portf-kpi-sub" id="pfTotalSub"></div>
+    </div>
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">Investi</div>
+      <div class="portf-kpi-value" id="pfInvested">—</div>
+    </div>
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">P&L Net</div>
+      <div class="portf-kpi-value" id="pfPL">—</div>
+      <div class="portf-kpi-sub" id="pfPLSub"></div>
+    </div>
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">Rendement</div>
+      <div class="portf-kpi-value" id="pfReturn">—</div>
+    </div>
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">Volatilité (ann.)</div>
+      <div class="portf-kpi-value" id="pfVolatility">—</div>
+    </div>
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">Ratio de Sharpe</div>
+      <div class="portf-kpi-value" id="pfSharpe">—</div>
+    </div>
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">Max Drawdown</div>
+      <div class="portf-kpi-value" id="pfDrawdown">—</div>
+    </div>
+    <div class="portf-kpi">
+      <div class="portf-kpi-label">Beta (vs BRVM)</div>
+      <div class="portf-kpi-value" id="pfBeta">—</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       RÉPARTITION PAR TYPE D'ACTIF
+  ═══════════════════════════════════════ -->
+  <div class="card mb20" id="pfTypeAllocCard" style="display:none">
+    <div class="card-header"><div class="card-title">📊 Répartition par Type d'Actif</div></div>
+    <div class="card-body" id="pfTypeAlloc"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       GRAPHIQUES : ÉVOLUTION + ALLOCATION
+  ═══════════════════════════════════════ -->
+  <div class="grid-7030 mb20">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">📈 Évolution de la Valeur</div>
+        <div class="chart-tabs">
+          <button class="year-tab active" onclick="setPortfolioPeriod(30,this)">1M</button>
+          <button class="year-tab" onclick="setPortfolioPeriod(90,this)">3M</button>
+          <button class="year-tab" onclick="setPortfolioPeriod(180,this)">6M</button>
+          <button class="year-tab" onclick="setPortfolioPeriod(252,this)">1A</button>
+          <button class="year-tab" onclick="setPortfolioPeriod(99999,this)">Tout</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container" style="height:300px"><canvas id="chartPortfolioValue"></canvas></div>
+      </div>
+    </div>
+    <div>
+      <div class="card mb20">
+        <div class="card-header"><div class="card-title">🥧 Allocation Sectorielle</div></div>
+        <div class="card-body">
+          <div class="chart-container" style="height:200px"><canvas id="chartSectorAlloc"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">🌍 Répartition Géographique</div></div>
+        <div class="card-body">
+          <div class="chart-container" style="height:200px"><canvas id="chartGeoAlloc"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       GRAPHIQUES : P&L + CORRÉLATION
+  ═══════════════════════════════════════ -->
+  <div class="grid-7030 mb20">
+    <div class="card">
+      <div class="card-header"><div class="card-title">📊 P&L Cumulé</div></div>
+      <div class="card-body">
+        <div class="chart-container" style="height:250px"><canvas id="chartPortfolioPL"></canvas></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🔗 Matrice de Corrélation</div></div>
+      <div class="card-body">
+        <div id="correlationMatrix" style="min-height:200px;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:13px">
+          Ajoutez au moins 2 positions pour voir la matrice de corrélation
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       AJOUTER UNE POSITION
+  ═══════════════════════════════════════ -->
+  <div class="card mb20">
+    <div class="card-header"><div class="card-title">➕ Ajouter une Position</div></div>
+    <div class="card-body">
+      <div class="portf-form">
+        <select id="pfTicker"><option value="">Ticker...</option></select>
+        <select id="pfType" style="flex:0 0 140px">
+          <option value="action">Action</option>
+          <option value="obligation">Obligation</option>
+          <option value="opcvm">OPCVM</option>
+        </select>
+        <input type="number" id="pfQty" placeholder="Quantité" min="1">
+        <input type="number" id="pfPrice" placeholder="Prix d'achat (FCFA)">
+        <input type="date" id="pfDate" placeholder="Date">
+        <button onclick="addPosition()">Ajouter</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       TABLEAU DES POSITIONS — AVEC SÉLECTION
+  ═══════════════════════════════════════ -->
+  <div class="card mb20">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
+      <div class="card-title">📋 Positions Détaillées</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="font-size:12px;color:var(--dim)" id="pfPositionCount">—</div>
+        <button onclick="deleteSelectedPositions()" id="btnDeleteSelected" style="display:none;padding:4px 12px;border-radius:6px;border:1px solid var(--red);background:rgba(248,113,113,0.1);color:var(--red);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(248,113,113,0.2)'" onmouseout="this.style.background='rgba(248,113,113,0.1)'">🗑 Supprimer sélection</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;text-align:center"><input type="checkbox" id="selectAllPositions" onclick="toggleSelectAll(this.checked)" style="cursor:pointer"></th>
+            <th>Ticker / Type</th>
+            <th class="right">Qté</th>
+            <th class="right">CMP</th>
+            <th class="right">Cours Actuel</th>
+            <th class="right">Plus/Moins-Value</th>
+            <th class="right">Var. %</th>
+            <th class="right">Valeur</th>
+            <th class="right">Allocation</th>
+            <th class="right">52s Haut</th>
+            <th class="right">52s Bas</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="pfTable"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════
+       STATISTIQUES AVANCÉES
+  ═══════════════════════════════════════ -->
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-header"><div class="card-title">⚖️ Concentration du Portefeuille</div></div>
+      <div class="card-body" id="concentrationStats">
+        <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour analyser la concentration</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">💰 Dividendes Estimés</div></div>
+      <div class="card-body" id="dividendStats">
+        <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour estimer les dividendes</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">🎯 Performance vs BRVM</div></div>
+      <div class="card-body" id="benchmarkStats">
+        <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour comparer avec le benchmark</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ALERTES ═══ -->
+<div class="view" id="view-alertes">
+  <div class="page-header">
+    <h1>Alertes <span style="color:var(--gold)">de Prix</span></h1>
+    <p>Recevez une notification quand un titre atteint votre seuil</p>
+  </div>
+  <div class="card mb20">
+    <div class="card-header"><div class="card-title">Nouvelle alerte</div></div>
+    <div class="card-body">
+      <div class="portf-form">
+        <select id="alertTicker"><option value="">Ticker...</option></select>
+        <select id="alertCondition">
+          <option value="above">Cours supérieur à</option>
+          <option value="below">Cours inférieur à</option>
+        </select>
+        <input type="number" id="alertPrice" placeholder="Seuil (FCFA)">
+        <button onclick="addAlert()">Créer l'alerte</button>
+      </div>
+    </div>
+  </div>
+  <div id="alertsList"></div>
 </div>
 
 <!-- ═══ FINANCIALS ═══ -->
 <div class="view" id="view-financials">
   <div class="page-header">
     <h1>États <span style="color:var(--gold)">Financiers</span></h1>
-    <p>Comptes annuels, bilans et données fondamentales des sociétés cotées</p>
+    <p>Comptes annuels, semestriels, trimestriels et données fondamentales</p>
   </div>
   <div class="search-bar" style="padding-bottom:16px">
-    <input class="search-input" id="searchFin" placeholder="🔍  Chercher une société (ex: SGBCI, ONAB)..." oninput="filterFin()">
+    <input class="search-input" id="searchFin" placeholder="🔍  Chercher une société..." oninput="filterFin()">
   </div>
-  <div id="finGrid"></div>
+  <div id="finGrid"><div class="empty-state"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></div></div>
 </div>
 
+<!-- ═══ FINANCIALS DETAIL ═══ -->
+<div class="view" id="view-financials-detail">
+  <button class="back-btn" onclick="nav('financials')">← Retour</button>
+  <div id="finDetailContent"></div>
+</div>
+
+<!-- ═══ PUBLICATIONS ═══ -->
+<div class="view" id="view-publications">
+  <div class="page-header">
+    <h1>Calendrier de <span style="color:var(--gold)">Publication</span></h1>
+    <p>États financiers publiés vs en attente — détection automatique via le résultat net</p>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="searchPubs" placeholder="🔍  Filtrer par ticker, société..." oninput="filterPublications()">
+    <button class="filter-btn active" onclick="setPubFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setPubFilter('annuel',this)">Annuel</button>
+    <button class="filter-btn" onclick="setPubFilter('s1',this)">Semestriel</button>
+    <button class="filter-btn" onclick="setPubFilter('t1',this)">T1</button>
+    <button class="filter-btn" onclick="setPubFilter('t2',this)">T2</button>
+    <button class="filter-btn" onclick="setPubFilter('t3',this)">T3</button>
+  </div>
+  <div id="publicationsGrid"><div class="empty-state"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></div></div>
+</div>
+
+<!-- ═══ FORMATION ═══ -->
+<div class="view" id="view-formation">
+  <div class="page-header">
+    <h1>Centre de <span style="color:var(--gold)">Formation</span></h1>
+    <p>Lexique boursier, guides d'analyse & ressources pédagogiques BRVM</p>
+  </div>
+
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="tech-toolbar">
+        <button class="filter-btn active" onclick="showFormationTab('lexique',this)">📖 Lexique</button>
+        <button class="filter-btn" onclick="showFormationTab('analyse-tech',this)">📈 Analyse Technique</button>
+        <button class="filter-btn" onclick="showFormationTab('analyse-fond',this)">📊 Analyse Fondamentale</button>
+        <button class="filter-btn" onclick="showFormationTab('strategies',this)">🎯 Stratégies</button>
+        <button class="filter-btn" onclick="showFormationTab('brvm',this)">🏛️ Guide BRVM</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LEXIQUE -->
+  <div id="tab-lexique" class="formation-tab active">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Termes Essentiels</div></div>
+        <div class="card-body" style="max-height:500px;overflow-y:auto">
+          <div class="lexique-list">
+            <div class="lexique-item">
+              <div class="lexique-term">Action</div>
+              <div class="lexique-def">Titre de propriété représentant une fraction du capital d'une société. Donne droit au dividende et au vote en assemblée générale.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">BRVM</div>
+              <div class="lexique-def">Bourse Régionale des Valeurs Mobilières. Marché boursier commun à 8 pays de l'UEMOA : Bénin, Burkina Faso, Côte d'Ivoire, Guinée-Bissau, Mali, Niger, Sénégal, Togo.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Cours / Cotation</div>
+              <div class="lexique-def">Prix auquel un titre s'échange sur le marché. Exprimé en FCFA (XOF) à la BRVM.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Volume</div>
+              <div class="lexique-def">Nombre de titres échangés durant une séance. Indique la liquidité et l'intérêt des investisseurs.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Capitalisation Boursière</div>
+              <div class="lexique-def">Valeur totale d'une entreprise sur le marché = Cours × Nombre d'actions en circulation.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">P/E Ratio (PER)</div>
+              <div class="lexique-def">Price to Earnings Ratio. Rapport cours/BPA. Un PER élevé suggère une valorisation chère, un PER faible une valorisation attractive.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Dividende</div>
+              <div class="lexique-def">Part des bénéfices distribuée aux actionnaires. Le rendement = Dividende / Cours × 100.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">BOC</div>
+              <div class="lexique-def">Bulletin Officiel de la Cote. Document quotidien de la BRVM récapitulant toutes les opérations de la séance.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Indicateurs Techniques</div></div>
+        <div class="card-body" style="max-height:500px;overflow-y:auto">
+          <div class="lexique-list">
+            <div class="lexique-item">
+              <div class="lexique-term">SMA — Moyenne Mobile Simple</div>
+              <div class="lexique-def">Moyenne arithmétique des cours sur N périodes. La SMA 20 et 50 sont les plus utilisées pour identifier la tendance.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">EMA — Moyenne Mobile Exponentielle</div>
+              <div class="lexique-def">Moyenne mobile pondérée donnant plus d'importance aux cours récents. Plus réactive que la SMA.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">RSI — Relative Strength Index</div>
+              <div class="lexique-def">Indicateur de momentum de 0 à 100. >70 = surachat (vente), <30 = survente (achat).</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">MACD</div>
+              <div class="lexique-def">Moving Average Convergence Divergence. Croisement de deux EMA. Signal d'achat quand la ligne MACD croise à la hausse sa ligne de signal.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Bollinger Bands</div>
+              <div class="lexique-def">Bandes de volatilité (SMA ± 2 écarts-types). Le prix touche la bande haute = surachat, bande basse = survente.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Ichimoku Kinko Hyo</div>
+              <div class="lexique-def">Indicateur japonais complet analysant tendance, momentum, supports/résistances en un seul graphique.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">VWAP</div>
+              <div class="lexique-def">Volume Weighted Average Price. Prix moyen pondéré par le volume. Référence clé pour les traders institutionnels.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Stochastique</div>
+              <div class="lexique-def">Compare le cours de clôture à la fourchette de prix sur N périodes. %K et %D entre 0 et 100.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSE TECHNIQUE -->
+  <div id="tab-analyse-tech" class="formation-tab">
+    <div class="grid-7030">
+      <div>
+        <div class="card mb20">
+          <div class="card-header"><div class="card-title">Les Bases de l'Analyse Technique</div></div>
+          <div class="card-body">
+            <div class="formation-content">
+              <h3>1. La Tendance est votre amie</h3>
+              <p>Identifiez la tendance principale avant tout trade. Une tendance haussière se caractérise par des sommets et des creux ascendants. Une tendance baissière par des sommets et creux descendants.</p>
+              
+              <h3>2. Supports & Résistances</h3>
+              <p><strong>Support</strong> : niveau où les acheteurs interviennent (plancher). <strong>Résistance</strong> : niveau où les vendeurs reprennent le dessus (plafond). Une rupture de support = signal de vente. Une cassure de résistance = signal d'achat.</p>
+              
+              <h3>3. Les Figures Chartistes</h3>
+              <div class="figure-grid">
+                <div class="figure-card">
+                  <div class="figure-name">Triangle Ascendant</div>
+                  <div class="figure-signal signal-buy">Signal: Achat</div>
+                  <p>Consolidation avec résistance horizontale et support ascendant. Cassure haussière attendue.</p>
+                </div>
+                <div class="figure-card">
+                  <div class="figure-name">Tête & Épaules</div>
+                  <div class="figure-signal signal-sell">Signal: Vente</div>
+                  <p>Figure de retournement baissier. Trois sommets avec le central plus haut. Objectif = hauteur de la tête projetée sous le neckline.</p>
+                </div>
+                <div class="figure-card">
+                  <div class="figure-name">Double Fond</div>
+                  <div class="figure-signal signal-buy">Signal: Achat</div>
+                  <p>Deux creux au même niveau. Confirmation par rupture de la ligne de cou. Figure de retournement haussier.</p>
+                </div>
+                <div class="figure-card">
+                  <div class="figure-name">Drapeau</div>
+                  <div class="figure-signal signal-buy">Signal: Continuation</div>
+                  <p>Pause dans une tendance forte. Rectangle incliné contre la tendance. Reprise dans le sens initial après cassure.</p>
+                </div>
+              </div>
+              
+              <h3>4. Gestion des Risques</h3>
+              <p>Ne risquez jamais plus de 2% de votre capital par trade. Placez toujours un stop-loss sous le support le plus proche. Le ratio gain/perte minimum recommandé est de 2:1.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="card mb20">
+          <div class="card-header"><div class="card-title">Checklist Trade</div></div>
+          <div class="card-body">
+            <div class="checklist">
+              <label class="checklist-item"><input type="checkbox"><span>Tendance identifiée (H4/Daily)</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Support/Résistance marqués</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Signal confirmé par 2+ indicateurs</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Volume en hausse sur le signal</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Stop-loss défini</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Objectif de profit clair</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>Ratio R:R ≥ 2:1</span></label>
+              <label class="checklist-item"><input type="checkbox"><span>News économiques vérifiées</span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSE FONDAMENTALE -->
+  <div id="tab-analyse-fond" class="formation-tab">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Ratios Fondamentaux Clés</div></div>
+        <div class="card-body">
+          <div class="lexique-list">
+            <div class="lexique-item">
+              <div class="lexique-term">ROE — Return on Equity</div>
+              <div class="lexique-def">Résultat Net / Fonds Propres. Mesure la rentabilité des capitaux investis par les actionnaires. >15% = excellent.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">ROA — Return on Assets</div>
+              <div class="lexique-def">Résultat Net / Total Actif. Efficacité de l'utilisation des actifs. >5% est satisfaisant.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Marge Nette</div>
+              <div class="lexique-def">Résultat Net / Chiffre d'Affaires. Part des ventes transformée en profit. Varie fortement selon le secteur.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">Dette / Fonds Propres</div>
+              <div class="lexique-def">Endettement financier relatif. <0.5 = conservateur, >1.5 = risqué.</div>
+            </div>
+            <div class="lexique-item">
+              <div class="lexique-term">BPA — Bénéfice par Action</div>
+              <div class="lexique-def">Résultat Net / Nombre d'actions. Permet de calculer le PER et de suivre la croissance.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Méthode DCF Simplifiée</div></div>
+        <div class="card-body">
+          <div class="formation-content">
+            <h3>Étapes du Discounted Cash Flow</h3>
+            <ol style="margin-left:20px;color:var(--muted);line-height:2">
+              <li>Projeter les Free Cash Flows sur 5 ans</li>
+              <li>Déterminer le WACC (coût du capital)</li>
+              <li>Actualiser les FCF futurs</li>
+              <li>Calculer la Valeur Terminale</li>
+              <li>Sommer = Valeur d'Entreprise</li>
+              <li>Déduire la dette nette = Valeur des capitaux propres</li>
+              <li>Diviser par le nombre d'actions = Valeur intrinsèque par action</li>
+            </ol>
+            <div style="margin-top:16px;padding:12px;background:rgba(184,150,78,0.05);border-radius:8px;border:1px solid var(--border)">
+              <div style="font-size:11px;color:var(--gold);margin-bottom:4px">💡 Formule clé</div>
+              <div style="font-family:var(--mono);font-size:12px;color:var(--cream)">
+                Valeur = Σ(FCFₜ / (1+WACC)ᵗ) + VT/(1+WACC)ⁿ
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRATÉGIES -->
+  <div id="tab-strategies" class="formation-tab">
+    <div class="boc-grid">
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">🎯 Swing Trading</div></div>
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Positions de quelques jours à quelques semaines. Capture les mouvements intermédiaires entre les swings du marché.</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: Daily/H4</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: EMA 20/50, RSI, Volume</div>
+            <div><span style="color:var(--green)">✓</span> Objectif: 5-15% par trade</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">📈 Trend Following</div></div>
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Suivre la tendance dominante sans essayer de prédire les retournements. "La tendance est votre amie jusqu'à ce qu'elle se termine."</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: Weekly/Daily</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: SMA 50/200, ADX, MACD</div>
+            <div><span style="color:var(--green)">✓</span> Objectif: Capturer 60-80% du mouvement</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">⚡ Scalping BRVM</div></div>
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Trades intraday rapides. La BRVM étant moins liquide, cette stratégie est réservée aux titres à fort volume (SGBC, ETIT, etc.).</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: M15/H1</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: VWAP, Bollinger, Volume Profile</div>
+            <div><span style="color:var(--red)">⚠</span> Risque élevé — réservé aux experts</div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">🏦 Dividend Growth</div></div>
+        <div class="card-body">
+          <p style="color:var(--muted);margin-bottom:12px">Investir dans les entreprises à dividende croissant. Stratégie patrimoniale adaptée à la BRVM avec ses sociétés cotées à fort rendement.</p>
+          <div style="font-size:12px;color:var(--dim)">
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Sélection: DPA croissant 5 ans, PER < 15</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Secteurs: Banques, Distribution, Agro</div>
+            <div><span style="color:var(--green)">✓</span> Objectif: Rendement + croissance du capital</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GUIDE BRVM -->
+  <div id="tab-brvm" class="formation-tab">
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Fonctionnement de la BRVM</div></div>
+        <div class="card-body">
+          <div class="formation-content">
+            <h3>Les Marchés BRVM</h3>
+            <p><strong>Marché Primaire:</strong> Émissions d'actions et obligations (IPO, augmentations de capital). Nécessite un DSN (Distributeur de Services Numériques).</p>
+            <p><strong>Marché Secondaire:</strong> Cotation continue des titres. Sessions de 9h30 à 15h30 GMT, du lundi au vendredi.</p>
+            
+            <h3>Les Indices</h3>
+            <ul style="margin-left:20px;color:var(--muted);line-height:2">
+              <li><strong>BRVM Composite:</strong> Tous les titres cotés</li>
+              <li><strong>BRVM 30:</strong> Les 30 valeurs les plus liquides</li>
+              <li><strong>BRVM Prestige:</strong> Sélection de qualité</li>
+              <li><strong>BRVM 10:</strong> Top 10 par capitalisation</li>
+            </ul>
+            
+            <h3>Fiscalité</h3>
+            <p>Impôt sur les revenus de capitaux mobiliers (IRCM): 15% sur les dividendes. Exonération possible après 3 ans de détention pour les résidents UEMOA.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Comment Investir</div></div>
+        <div class="card-body">
+          <div class="formation-content">
+            <h3>Étapes pour Débuter</h3>
+            <ol style="margin-left:20px;color:var(--muted);line-height:2.2">
+              <li>Choisir un Intermédiaire Financier (SGB, NSIA, CORIS, etc.)</li>
+              <li>Ouvrir un compte-titres et un compte espèces</li>
+              <li>Déposer vos fonds en FCFA</li>
+              <li>Passer vos ordres via le SGO (Système de Gestion d'Ordres)</li>
+              <li>Suivre votre portefeuille via The Capital 😉</li>
+            </ol>
+            
+            <div style="margin-top:20px;padding:16px;background:rgba(74,222,128,0.05);border-radius:10px;border:1px solid rgba(74,222,128,0.2)">
+              <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px">💡 Conseil Pro</div>
+              <p style="font-size:13px;color:var(--muted);margin:0">Commencez par un portefeuille fictif (comme celui de The Capital) pour tester vos stratégies sans risquer de capital réel.</p>
+            </div>
+            
+            <h3 style="margin-top:20px">Types d'Ordres</h3>
+            <div class="lexique-list">
+              <div class="lexique-item">
+                <div class="lexique-term">Ordre au Marché</div>
+                <div class="lexique-def">Exécution immédiate au meilleur prix disponible. Risque de slippage en cas de faible liquidité.</div>
+              </div>
+              <div class="lexique-item">
+                <div class="lexique-term">Ordre Limité</div>
+                <div class="lexique-def">Achat/Vente à un prix défini ou mieux. Garantit le prix mais pas l'exécution.</div>
+              </div>
+              <div class="lexique-item">
+                <div class="lexique-term">Ordre à la Clôture</div>
+                <div class="lexique-def">Exécution au cours de clôture de la séance. Utile pour les stratégies de fin de journée.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+</div>  <!-- view-formation -->
 </main>
 
-<script>
-// ═══════════════════════════════════════
-// SUPABASE CONFIG
-// ═══════════════════════════════════════
-const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
-const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
-async function sb(table, params = {}) {
-  const url = new URL(`${SB_URL}/rest/v1/${table}`);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-  const r = await fetch(url, {
-    headers: { 'Authorization': `Bearer ${SB_KEY}`, 'apikey': SB_KEY, 'Accept': 'application/json' }
-  });
-  if (!r.ok) throw new Error(r.status);
-  return r.json();
-}
+<!-- ═══════════════════════════════════════
+     CORE (d'abord — définit fmt, toast, etc.)
+     ═══════════════════════════════════════ -->
+<script src="app/js/utils.js"></script>
+<script src="app/js/state.js"></script>
+<script src="app/js/api.js"></script>
+<script src="app/js/ui.js"></script>
+<script src="app/js/search.js"></script>
 
-// ═══════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════
-let allCours = [], allBoc = [], allAnalyses = [], allFinancials = [], allEntreprises = [];
-let ficheHistorique = [], ficheChartPeriod = 30;
-let ficheChartInst = null, compositeChartInst = null;
-let prevView = 'titres';
-let _titreFilter = 'all', _bocFilter = 'all', _analyseFilter = 'all';
+<!-- ═══════════════════════════════════════
+     VIEWS (ensuite — utilise fmt, toast, etc.)
+     ═══════════════════════════════════════ -->
+<script src="app/js/views/overview.js"></script>
+<script src="app/js/views/titres.js"></script>
+<script src="app/js/views/fiche.js"></script>
+<script src="app/js/views/boc.js"></script>
+<script src="app/js/views/analyses.js"></script>
+<script src="app/js/views/screener.js"></script>
+<script src="app/js/views/portefeuille.js"></script>
+<script src="app/js/views/alertes.js"></script>
+<script src="app/js/views/financials.js"></script>
+<script src="app/js/views/publications.js"></script>
+<script src="app/js/views/formation.js"></script>
+<script src="app/js/views/analyse-fondamentale.js"></script>
 
-// ═══════════════════════════════════════
-// CLOCK & NAV
-// ═══════════════════════════════════════
-setInterval(() => {
-  document.getElementById('headerTime').textContent =
-    new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' GMT';
-}, 1000);
+<!-- ═══════════════════════════════════════
+     ROUTER (en dernier — appelle les fonctions des views)
+     ═══════════════════════════════════════ -->
+<script src="app/js/router.js"></script>
 
-const TITLES = { overview:'Vue d\'ensemble — BRVM', titres:'Titres BRVM', boc:'BOC — Bulletin Officiel', analyses:'Analyses Fondamentales', financials:'États Financiers', fiche:'Fiche Titre' };
+<!-- ═══════════════════════════════════════
+     COMPONENTS
+     ═══════════════════════════════════════ -->
+<script src="app/js/components/header.js"></script>
+<script src="app/js/components/sidebar.js"></script>
+<script src="app/js/components/cards.js"></script>
 
-function nav(id) {
-  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-  const v = document.getElementById('view-' + id);
-  if (v) v.classList.add('active');
-  const navEl = document.querySelector(`.nav-item[onclick="nav('${id}')"]`);
-  if (navEl) navEl.classList.add('active');
-  document.getElementById('headerTitle').textContent = TITLES[id] || id;
-}
+<!-- ═══════════════════════════════════════
+     ANALYSE TECHNIQUE — INDICATORS
+     ═══════════════════════════════════════ -->
+<script src="app/js/views/technique/ind/base.js"></script>
+<script src="app/js/views/technique/ind/sma.js"></script>
+<script src="app/js/views/technique/ind/ema.js"></script>
+<script src="app/js/views/technique/ind/bb.js"></script>
+<script src="app/js/views/technique/ind/rsi.js"></script>
+<script src="app/js/views/technique/ind/macd.js"></script>
+<script src="app/js/views/technique/ind/stoch.js"></script>
+<script src="app/js/views/technique/ind/adx.js"></script>
+<script src="app/js/views/technique/ind/cci.js"></script>
+<script src="app/js/views/technique/ind/vwap.js"></script>
+<script src="app/js/views/technique/ind/obv.js"></script>
+<script src="app/js/views/technique/ind/ha.js"></script>
 
-// ═══════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════
-const fmt = (n, d = 0) => (n == null || isNaN(+n)) ? '—' : (+n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
-const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
-const fmtM = n => {
-  if (n == null || isNaN(+n)) return '—';
-  const v = +n;
-  if (Math.abs(v) >= 1e9) return (v/1e9).toFixed(1) + ' Mrd';
-  if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(0) + ' M';
-  return fmt(v);
-};
+<!-- ═══════════════════════════════════════
+     ANALYSE TECHNIQUE — ENGINE
+     ═══════════════════════════════════════ -->
+<script src="app/js/views/technique/engine.js"></script>
+<script src="app/js/views/technique/draw.js"></script>
+<script src="app/js/views/technique/crosshair.js"></script>
+<script src="app/js/views/technique/zoom.js"></script>
+<script src="app/js/views/technique/types.js"></script>
+<script src="app/js/views/technique/indicators.js"></script>
+<script src="app/js/views/technique/signals.js"></script>
+<script src="app/js/views/technique/watchlist.js"></script>
+<script src="app/js/views/technique/compare.js"></script>
+<script src="app/js/views/technique/export.js"></script>
+<script src="app/js/views/technique/focus.js"></script>
+<script src="app/js/views/technique/index.js"></script>
 
-function changePill(v) {
-  const n = parseFloat(v);
-  if (isNaN(n)) return '<span class="pill neutral">—</span>';
-  if (n > 0) return `<span class="pill up">▲ ${n.toFixed(2)}%</span>`;
-  if (n < 0) return `<span class="pill down">▼ ${Math.abs(n).toFixed(2)}%</span>`;
-  return '<span class="pill neutral">= 0.00%</span>';
-}
+<!-- ═══════════════════════════════════════
+     ENTRY POINT
+     ═══════════════════════════════════════ -->
+<script src="app/js/main.js"></script>
 
-const SECTORS = { SGBC:'Banque', BICC:'Banque', ETIT:'Telecom', NTLC:'Telecom', SAFC:'Finance', PALM:'Agro', SIVC:'Agro', SOLB:'Distribution', BOAB:'Banque', BOAN:'Banque', ONAB:'Agro', CABC:'Agro', TTLS:'Industrie', SHEC:'Industrie' };
-function getSector(t) {
-  if (!t) return 'Divers';
-  for (const [k,v] of Object.entries(SECTORS)) if (t.startsWith(k)) return v;
-  return 'Divers';
-}
-
-// ═══════════════════════════════════════
-// CHART DEFAULTS
-// ═══════════════════════════════════════
-const chartOpts = {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: { display: false },
-    tooltip: {
-      backgroundColor: '#1A1610', borderColor: 'rgba(184,150,78,0.3)', borderWidth: 1,
-      titleColor: '#B8964E', bodyColor: '#F5F0E8', padding: 12,
-      callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y, 2) }
-    }
-  },
-  scales: {
-    x: { grid: { color: 'rgba(184,150,78,0.04)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10, family: 'DM Mono' }, maxTicksLimit: 8 } },
-    y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10, family: 'DM Mono' }, callback: v => fmt(v) } }
-  }
-};
-
-function mkDataset(vals, color = '#B8964E') {
-  return {
-    data: vals, borderColor: color, borderWidth: 2,
-    pointRadius: 0, pointHoverRadius: 4, pointHoverBackgroundColor: color,
-    fill: true, tension: 0.3,
-    backgroundColor: ctx => {
-      const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
-      g.addColorStop(0, color + '22'); g.addColorStop(1, color + '00');
-      return g;
-    }
-  };
-}
-
-// ═══════════════════════════════════════
-// LOAD
-// ═══════════════════════════════════════
-async function loadAll() {
-  const results = await Promise.allSettled([
-    sb('cours', { order: 'date_seance.desc', limit: 300 }),
-    sb('boc', { order: 'date_seance.desc', limit: 100 }),
-    sb('analyses', { order: 'date_analyse.desc', limit: 60 }),
-    sb('financials', { order: 'annee.desc', limit: 300 }),
-    sb('entreprises', { limit: 300 }),
-    sb('indices', { order: 'date_seance.desc', limit: 60 }),
-  ]);
-
-  if (results[0].status === 'fulfilled') allCours = results[0].value || [];
-  if (results[1].status === 'fulfilled') allBoc = results[1].value || [];
-  if (results[2].status === 'fulfilled') allAnalyses = results[2].value || [];
-  if (results[3].status === 'fulfilled') allFinancials = results[3].value || [];
-  if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
-
-  // If no real data → inject demo
-  if (!allCours.length) injectDemo();
-
-  renderOverview(results[5].status === 'fulfilled' ? results[5].value || [] : []);
-  renderTitres();
-  renderBoc();
-  renderAnalyses();
-  renderFinancials();
-}
-
-function injectDemo() {
-  allCours = [
-    { ticker:'SGBCI', cours:14500, variation:1.23, volume:42000, capitalisation:504000000000, date_seance:'2024-10-15' },
-    { ticker:'ETIT', cours:19, variation:-0.52, volume:180000, capitalisation:96000000000, date_seance:'2024-10-15' },
-    { ticker:'PALMCI', cours:6500, variation:2.11, volume:8400, capitalisation:45000000000, date_seance:'2024-10-15' },
-    { ticker:'BICCICI', cours:9800, variation:-1.01, volume:12000, capitalisation:128000000000, date_seance:'2024-10-15' },
-    { ticker:'ONAB', cours:3200, variation:0.00, volume:3500, capitalisation:38000000000, date_seance:'2024-10-15' },
-    { ticker:'SIVCOCI', cours:700, variation:3.20, volume:95000, capitalisation:21000000000, date_seance:'2024-10-15' },
-    { ticker:'NTLC', cours:1250, variation:-2.34, volume:22000, capitalisation:40000000000, date_seance:'2024-10-15' },
-    { ticker:'CABC', cours:2100, variation:0.48, volume:6700, capitalisation:18000000000, date_seance:'2024-10-15' },
-    { ticker:'BOAB', cours:4650, variation:0.65, volume:9800, capitalisation:185000000000, date_seance:'2024-10-15' },
-    { ticker:'TTLS', cours:1800, variation:-0.83, volume:4100, capitalisation:14000000000, date_seance:'2024-10-15' },
-  ];
-  allBoc = [
-    { titre:'TPCI 6,50% 2023-2033', type:'obligation', emetteur:'République de Côte d\'Ivoire', montant:150000000000, taux:6.50, date_echeance:'2033-12-31', date_seance:'2024-10-15', valeur_nominale:10000 },
-    { titre:'TPSN 6,25% 2023-2030', type:'obligation', emetteur:'République du Sénégal', montant:100000000000, taux:6.25, date_echeance:'2030-06-30', date_seance:'2024-10-14', valeur_nominale:10000 },
-    { titre:'PALMCI OPV 2024', type:'action', emetteur:'PALMCI', montant:5000000000, prix_offre:6500, date_seance:'2024-10-10', valeur_nominale:1000 },
-    { titre:'FCPE Atlantique Actions', type:'opcvm', emetteur:'Atlantique Gestion', montant:2000000000, valeur_liquidative:12500, date_seance:'2024-10-15' },
-    { titre:'TPBF 6,75% 2022-2029', type:'obligation', emetteur:'République du Burkina Faso', montant:75000000000, taux:6.75, date_echeance:'2029-03-15', date_seance:'2024-10-12', valeur_nominale:10000 },
-    { titre:'TPML 6,40% 2023-2031', type:'obligation', emetteur:'République du Mali', montant:60000000000, taux:6.40, date_echeance:'2031-09-30', date_seance:'2024-10-11', valeur_nominale:10000 },
-  ];
-  allAnalyses = [
-    { ticker:'SGBCI', titre:'SGBCI : Croissance solide malgré la conjoncture', recommandation:'Achat', resume:'La SGBCI affiche une progression notable de son résultat net sur l\'exercice 2023, portée par une augmentation du PNB et une maîtrise des charges d\'exploitation. Nous relevons notre objectif de cours à 16 000 FCFA.', cours_cible:16000, date_analyse:'2024-09-15', analyste:'Research BRVM' },
-    { ticker:'ETIT', titre:'ECOBANK Transnational : Dividende en hausse', recommandation:'Conserver', resume:'ETIT continue de dégager une rentabilité satisfaisante à l\'échelle panafricaine. La diversification géographique constitue un avantage compétitif mais les risques pays pèsent sur la valorisation actuelle.', cours_cible:20, date_analyse:'2024-10-01', analyste:'Capital Research' },
-    { ticker:'PALMCI', titre:'PALMCI : Bonne tenue des cours du palmier', recommandation:'Achat', resume:'Les cours mondiaux de l\'huile de palme restent orientés à la hausse. PALMCI bénéficie d\'une production en augmentation et de marges en amélioration. Le dividende 2023 devrait se consolider.', cours_cible:7200, date_analyse:'2024-08-20', analyste:'West Africa Finance' },
-    { ticker:'NTLC', titre:'NTEL : Pression concurrentielle sur le mobile', recommandation:'Vendre', resume:'L\'intensification de la concurrence dans le secteur télécom ivoirien pèse sur les marges de NTEL. Les investissements en infrastructure 4G/5G alourdissent la structure des coûts à court terme.', cours_cible:1000, date_analyse:'2024-09-30', analyste:'Research BRVM' },
-  ];
-  allFinancials = [
-    { ticker:'SGBCI', annee:2023, chiffre_affaires:185000000000, resultat_net:32000000000, fonds_propres:280000000000, total_actif:2100000000000, bpa:9200, dpa:6000, nombre_actions:34620000 },
-    { ticker:'SGBCI', annee:2022, chiffre_affaires:172000000000, resultat_net:28000000000, fonds_propres:260000000000, total_actif:1980000000000, bpa:8050, dpa:5500, nombre_actions:34620000 },
-    { ticker:'ETIT', annee:2023, chiffre_affaires:320000000000, resultat_net:18000000000, fonds_propres:150000000000, total_actif:3200000000000, bpa:1.2, dpa:0.8, nombre_actions:5060000000 },
-    { ticker:'PALMCI', annee:2023, chiffre_affaires:95000000000, resultat_net:12000000000, fonds_propres:80000000000, total_actif:180000000000, bpa:1800, dpa:1200, nombre_actions:6938000 },
-    { ticker:'PALMCI', annee:2022, chiffre_affaires:87000000000, resultat_net:9500000000, fonds_propres:70000000000, total_actif:165000000000, bpa:1370, dpa:900, nombre_actions:6938000 },
-  ];
-  allEntreprises = [
-    { ticker:'SGBCI', nom:'Société Générale de Banques en Côte d\'Ivoire', secteur:'Banque', pays:'Côte d\'Ivoire', description:'La SGBCI est l\'une des premières banques de Côte d\'Ivoire. Filiale du Groupe Société Générale, elle propose une gamme complète de services bancaires aux particuliers, aux professionnels et aux entreprises.', nombre_actions:34620000 },
-    { ticker:'ETIT', nom:'Ecobank Transnational Incorporated', secteur:'Banque', pays:'Togo', description:'ETI est le holding du groupe Ecobank, premier réseau bancaire panafricain opérant dans 35 pays africains. La banque offre des services bancaires de détail, commerciaux et d\'investissement à travers l\'Afrique.', nombre_actions:5060000000 },
-    { ticker:'PALMCI', nom:'Société de Palmeraies de la Côte d\'Ivoire', secteur:'Agro-Alimentaire', pays:'Côte d\'Ivoire', description:'PALMCI est le premier producteur d\'huile de palme en Côte d\'Ivoire. La société exploite plusieurs palmeraies sur le territoire national et transforme les fruits en huile de palme brute destinée à l\'exportation et à l\'industrie locale.', nombre_actions:6938000 },
-  ];
-}
-
-// ═══════════════════════════════════════
-// OVERVIEW
-// ═══════════════════════════════════════
-function renderOverview(indices) {
-  const setIdx = (id, val, chgId, chg) => {
-    const el = document.getElementById(id); const ce = document.getElementById(chgId);
-    if (el) el.textContent = fmt(val, 2);
-    if (ce) {
-      const n = parseFloat(chg); const cls = n > 0 ? 'up' : n < 0 ? 'down' : 'neutral';
-      ce.className = `stat-change ${cls}`;
-      ce.innerHTML = (n > 0 ? '▲' : n < 0 ? '▼' : '=') + ' ' + Math.abs(n).toFixed(2) + ' pts';
-    }
-  };
-
-  let chartLabels, chartVals;
-  if (indices.length > 1) {
-    const [l, p] = [indices[0], indices[1]];
-    if (l.brvm_composite) setIdx('idx-composite', l.brvm_composite, 'idx-composite-chg', l.brvm_composite - (p.brvm_composite||0));
-    if (l.brvm_30) setIdx('idx-30', l.brvm_30, 'idx-30-chg', l.brvm_30 - (p.brvm_30||0));
-    if (l.brvm_prestige) setIdx('idx-prestige', l.brvm_prestige, 'idx-prestige-chg', l.brvm_prestige - (p.brvm_prestige||0));
-    document.getElementById('lastSession').textContent = 'Séance ' + fmtDate(l.date_seance);
-    const rev = indices.slice(0,30).reverse();
-    chartLabels = rev.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
-    chartVals = rev.map(d => d.brvm_composite);
-  } else {
-    ['idx-composite','idx-30','idx-prestige'].forEach((id, i) => {
-      const vals = [220.34, 185.67, 310.92];
-      const chgs = [1.23, -0.45, 2.10];
-      document.getElementById(id).textContent = fmt(vals[i], 2);
-      const ce = document.getElementById(id + '-chg');
-      ce.className = `stat-change ${chgs[i] > 0 ? 'up' : 'down'}`;
-      ce.innerHTML = (chgs[i] > 0 ? '▲' : '▼') + ' ' + Math.abs(chgs[i]).toFixed(2) + ' pts';
-    });
-    document.getElementById('lastSession').textContent = 'Séance ' + fmtDate(new Date().toISOString());
-    chartLabels = Array.from({length:30}, (_,i) => { const d=new Date(); d.setDate(d.getDate()-(29-i)); return d.toLocaleDateString('fr-FR', {day:'2-digit',month:'short'}); });
-    const base = 220;
-    chartVals = chartLabels.map((_,i) => base + Math.sin(i*0.4)*8 + i*0.3 + (Math.random()-0.45)*2);
-  }
-
-  if (compositeChartInst) compositeChartInst.destroy();
-  compositeChartInst = new Chart(document.getElementById('chartComposite'), {
-    type: 'line',
-    data: { labels: chartLabels, datasets: [mkDataset(chartVals)] },
-    options: chartOpts
-  });
-
-  renderCoursTable();
-  renderTopMovers();
-}
-
-function renderCoursTable() {
-  const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const rows = Object.values(byTicker).sort((a,b) => (a.ticker||'').localeCompare(b.ticker||''));
-  document.getElementById('coursCount').textContent = rows.length + ' titres';
-  document.getElementById('coursTable').innerHTML = rows.map(c =>
-    `<tr onclick="openFiche('${c.ticker}','overview')">
-      <td><strong style="font-family:var(--mono);font-size:12px;color:var(--gold)">${c.ticker}</strong></td>
-      <td class="right">${fmt(c.cours)}</td>
-      <td class="right">${changePill(c.variation)}</td>
-      <td class="right">${fmt(c.volume)}</td>
-      <td class="right">${c.capitalisation ? fmtM(c.capitalisation) : '—'}</td>
-      <td><span class="sector-tag">${getSector(c.ticker)}</span></td>
-    </tr>`).join('') || '<tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Aucune donnée</td></tr>';
-}
-
-function renderTopMovers() {
-  const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const sorted = Object.values(byTicker).filter(c => c.variation != null)
-    .sort((a,b) => Math.abs(b.variation) - Math.abs(a.variation)).slice(0,8);
-  document.getElementById('topMovers').innerHTML = sorted.map(c => {
-    const v = parseFloat(c.variation);
-    const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
-    return `<div onclick="openFiche('${c.ticker}','overview')" style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid rgba(184,150,78,0.04);cursor:pointer" onmouseenter="this.style.background='rgba(184,150,78,0.03)'" onmouseleave="this.style.background=''">
-      <div>
-        <div style="font-family:var(--mono);font-size:12px;font-weight:500;color:var(--cream)">${c.ticker}</div>
-        <div style="font-size:11px;color:var(--dim)">${fmt(c.cours)} FCFA</div>
-      </div>
-      <span class="stat-change ${cls}" style="font-family:var(--mono);font-size:12px">${v>0?'▲':v<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════
-// TITRES
-// ═══════════════════════════════════════
-function renderTitres() {
-  const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  window._titresRows = Object.values(byTicker);
-  filterTitres();
-}
-
-function setTitreFilter(f, btn) {
-  _titreFilter = f;
-  document.querySelectorAll('#view-titres .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  filterTitres();
-}
-
-function filterTitres() {
-  const q = (document.getElementById('searchTitres')?.value || '').toLowerCase();
-  let rows = window._titresRows || [];
-  if (_titreFilter !== 'all') rows = rows.filter(r => getSector(r.ticker).toLowerCase().includes(_titreFilter));
-  if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q) || (r.nom||r.ticker||'').toLowerCase().includes(q));
-  const ent = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
-  document.getElementById('titresTable').innerHTML = rows.sort((a,b) => (a.ticker||'').localeCompare(b.ticker||'')).map(c =>
-    `<tr onclick="openFiche('${c.ticker}','titres')">
-      <td><span style="font-family:var(--mono);font-size:13px;font-weight:500;color:var(--gold)">${c.ticker}</span></td>
-      <td style="color:var(--cream)">${ent[c.ticker]?.nom || c.ticker}</td>
-      <td class="right">${fmt(c.cours)}</td>
-      <td class="right">${changePill(c.variation)}</td>
-      <td class="right" style="color:var(--dim)">${c.plus_haut_52 ? fmt(c.plus_haut_52) : '—'}</td>
-      <td class="right" style="color:var(--dim)">${c.plus_bas_52 ? fmt(c.plus_bas_52) : '—'}</td>
-      <td class="right">${fmt(c.volume)}</td>
-      <td><span class="sector-tag">${getSector(c.ticker)}</span></td>
-    </tr>`).join('') || '<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--dim)">Aucun titre trouvé</td></tr>';
-}
-
-// ═══════════════════════════════════════
-// FICHE
-// ═══════════════════════════════════════
-async function openFiche(ticker, from) {
-  prevView = from;
-  document.getElementById('ficheBackBtn').onclick = () => nav(from);
-  nav('fiche');
-
-  const cours = allCours.find(c => c.ticker === ticker) || {};
-  const ent = allEntreprises.find(e => e.ticker === ticker) || {};
-  const fins = allFinancials.filter(f => f.ticker === ticker).sort((a,b) => b.annee - a.annee);
-  const ans = allAnalyses.filter(a => a.ticker === ticker);
-
-  // Hero
-  document.getElementById('ficheTickerLabel').textContent = ticker;
-  document.getElementById('ficheCompany').textContent = ent.nom || ticker;
-  document.getElementById('ficheSector').textContent = ent.secteur || getSector(ticker);
-  document.getElementById('fichePays').textContent = ent.pays || '';
-  document.getElementById('fichePrice').textContent = fmt(cours.cours);
-  document.getElementById('ficheMeta').textContent = `Dernière séance : ${fmtDate(cours.date_seance)} · Volume : ${fmt(cours.volume)}`;
-
-  const v = parseFloat(cours.variation);
-  const cl = !isNaN(v) ? (v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--dim)') : 'var(--dim)';
-  document.getElementById('ficheChange').innerHTML = !isNaN(v)
-    ? `<span style="color:${cl}">${v>0?'▲':v<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>` : '';
-
-  // Ratios
-  const f0 = fins[0];
-  const cp = parseFloat(cours.cours);
-  document.getElementById('r-per').textContent = (f0?.bpa && cp) ? (cp/f0.bpa).toFixed(1) + 'x' : '—';
-  document.getElementById('r-rdt').textContent = (f0?.dpa && cp) ? ((f0.dpa/cp)*100).toFixed(2) + '%' : '—';
-  document.getElementById('r-pan').textContent = (f0?.fonds_propres && f0?.nombre_actions && cp)
-    ? (cp/(f0.fonds_propres/f0.nombre_actions)).toFixed(2) + 'x' : '—';
-  document.getElementById('r-cap').textContent = (f0?.nombre_actions && cp) ? fmtM(cp*f0.nombre_actions) : '—';
-
-  // Description
-  document.getElementById('ficheDesc').textContent = ent.description || 'Aucune description disponible.';
-
-  // Info
-  const infoRows = [['Pays', ent.pays], ['Secteur', ent.secteur || getSector(ticker)], ['Bourse', 'BRVM'], ['Devise', 'FCFA (XOF)'], ['Nb. Actions', ent.nombre_actions ? fmt(ent.nombre_actions) : null]].filter(r => r[1]);
-  document.getElementById('ficheInfo').innerHTML = infoRows.map(([k,v]) =>
-    `<div class="fin-row"><span class="fin-label">${k}</span><span class="fin-value">${v}</span></div>`).join('');
-
-  // Analyses
-  document.getElementById('ficheAnalyseList').innerHTML = ans.length
-    ? ans.slice(0,3).map(renderAnalyseCard).join('')
-    : '<div style="color:var(--dim);font-size:13px">Aucune analyse disponible pour ce titre.</div>';
-
-  // Financials
-  renderFicheFin(fins, cours);
-
-  // Chart
-  ficheChartPeriod = 30;
-  document.querySelectorAll('#view-fiche .year-tab').forEach((b,i) => b.classList.toggle('active', i===0));
-  try {
-    ficheHistorique = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
-  } catch {
-    ficheHistorique = Array.from({length:252}, (_,i) => ({
-      date_seance: new Date(Date.now() - (251-i)*86400000).toISOString().split('T')[0],
-      cloture: (cours.cours||5000) * (1 + Math.sin(i*0.08)*0.06 + (Math.random()-0.5)*0.02)
-    }));
-  }
-  renderFicheChart();
-}
-
-function renderFicheFin(fins, cours) {
-  const tabs = document.getElementById('fichYearTabs');
-  const body = document.getElementById('ficheFinBody');
-  if (!fins.length) { tabs.innerHTML = ''; body.innerHTML = '<div style="color:var(--dim);font-size:13px">Données financières non disponibles.</div>'; return; }
-  tabs.innerHTML = fins.map((f,i) => `<button class="year-tab ${i===0?'active':''}" onclick="showFinYear(${i},this)">${f.annee}</button>`).join('');
-  window._ficheFins = fins; window._ficheCours = cours;
-  showFinYear(0, null);
-}
-
-function showFinYear(idx, btn) {
-  if (btn) {
-    document.querySelectorAll('#fichYearTabs .year-tab').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-  }
-  const f = (window._ficheFins||[])[idx]; if (!f) return;
-  const cp = parseFloat((window._ficheCours||{}).cours);
-  document.getElementById('r-per').textContent = (f.bpa && cp) ? (cp/f.bpa).toFixed(1)+'x' : '—';
-  document.getElementById('r-rdt').textContent = (f.dpa && cp) ? ((f.dpa/cp)*100).toFixed(2)+'%' : '—';
-  document.getElementById('r-pan').textContent = (f.fonds_propres && f.nombre_actions && cp) ? (cp/(f.fonds_propres/f.nombre_actions)).toFixed(2)+'x' : '—';
-  document.getElementById('r-cap').textContent = (f.nombre_actions && cp) ? fmtM(cp*f.nombre_actions) : '—';
-
-  const sections = [
-    ['RÉSULTATS', [["Chiffre d'affaires", fmtM(f.chiffre_affaires)], ["RBE", fmtM(f.rbe)], ["Résultat Net", fmtM(f.resultat_net)], ["BPA", f.bpa ? fmt(f.bpa)+' FCFA' : '—'], ["DPA", f.dpa ? fmt(f.dpa)+' FCFA' : '—']]],
-    ['BILAN', [["Total Actif", fmtM(f.total_actif)], ["Fonds Propres", fmtM(f.fonds_propres)], ["Dettes Financières", fmtM(f.dettes_financieres)]]],
-    ['FLUX', [["Cash-flow Opér.", fmtM(f.cash_flow_operationnel)], ["CAPEX", fmtM(f.capex)]]],
-  ];
-
-  document.getElementById('ficheFinBody').innerHTML = sections.map(([title, rows]) => {
-    const validRows = rows.filter(([,v]) => v !== '—');
-    if (!validRows.length) return '';
-    return `<div style="margin-bottom:16px">
-      <div class="fin-section-title">${title}</div>
-      ${validRows.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}
-    </div>`;
-  }).join('') || '<div style="color:var(--dim);font-size:13px">Données comptables non renseignées.</div>';
-}
-
-function renderFicheChart() {
-  const data = ficheHistorique.slice(-ficheChartPeriod);
-  const labels = data.map(d => new Date(d.date_seance).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }));
-  const vals = data.map(d => d.cloture || d.cours || 0);
-  if (ficheChartInst) ficheChartInst.destroy();
-  ficheChartInst = new Chart(document.getElementById('chartFiche'), {
-    type: 'line', data: { labels, datasets: [mkDataset(vals)] }, options: chartOpts
-  });
-}
-
-function setChartPeriod(n, btn) {
-  ficheChartPeriod = n;
-  document.querySelectorAll('#view-fiche .year-tab').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  renderFicheChart();
-}
-
-// ═══════════════════════════════════════
-// BOC
-// ═══════════════════════════════════════
-function renderBoc() { window._bocRows = allBoc; filterBoc(); }
-
-function setBocFilter(f, btn) {
-  _bocFilter = f;
-  document.querySelectorAll('#view-boc .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active'); filterBoc();
-}
-
-function filterBoc() {
-  const q = (document.getElementById('searchBoc')?.value || '').toLowerCase();
-  let rows = window._bocRows || [];
-  if (_bocFilter !== 'all') rows = rows.filter(r => (r.type||'').toLowerCase().includes(_bocFilter));
-  if (q) rows = rows.filter(r => (r.titre||'').toLowerCase().includes(q) || (r.emetteur||'').toLowerCase().includes(q));
-  const grid = document.getElementById('bocGrid');
-  if (!rows.length) { grid.innerHTML = '<div class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">Aucun résultat</div></div>'; return; }
-  grid.innerHTML = rows.map(boc => {
-    const type = (boc.type||'obligation').toLowerCase();
-    const typeLabel = { obligation:'Obligation', action:'Action', opcvm:'OPCVM' }[type] || type;
-    const details = [
-      boc.taux && ['Taux', boc.taux.toFixed(2) + '%'],
-      boc.montant && ['Montant émis', fmtM(boc.montant) + ' FCFA'],
-      boc.valeur_nominale && ['Val. Nominale', fmt(boc.valeur_nominale) + ' FCFA'],
-      boc.prix_offre && ['Prix d\'offre', fmt(boc.prix_offre) + ' FCFA'],
-      boc.valeur_liquidative && ['Val. Liquidative', fmt(boc.valeur_liquidative) + ' FCFA'],
-      boc.date_echeance && ['Échéance', fmtDate(boc.date_echeance)],
-    ].filter(Boolean);
-    return `<div class="boc-card">
-      <div class="boc-header">
-        <div><div class="boc-title">${boc.titre||'—'}</div><div class="boc-emetteur">${boc.emetteur||'—'}</div></div>
-        <span class="boc-type ${type}">${typeLabel}</span>
-      </div>
-      <div class="boc-body">${details.map(([k,v]) => `<div class="boc-row"><span class="boc-key">${k}</span><span class="boc-val">${v}</span></div>`).join('')}</div>
-      <div class="boc-footer">📅 ${fmtDate(boc.date_seance)}</div>
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════
-// ANALYSES
-// ═══════════════════════════════════════
-function renderAnalyseCard(a) {
-  const rec = (a.recommandation||'').toLowerCase();
-  const rc = rec.includes('achat')||rec.includes('buy') ? 'buy' : rec.includes('vend')||rec.includes('sell') ? 'sell' : 'hold';
-  const rl = { buy:'Achat', sell:'Vendre', hold:'Conserver' }[rc];
-  const text = (a.resume || a.contenu || '');
-  return `<div class="analyse-card">
-    <div class="analyse-header">
-      <div><div class="analyse-ticker">${a.ticker||'—'}</div><div class="analyse-title">${a.titre||'Analyse fondamentale'}</div></div>
-      <span class="rec ${rc}">${rl}</span>
-    </div>
-    ${text ? `<div class="analyse-text">${text.slice(0,240)}${text.length>240?'…':''}</div>` : ''}
-    <div class="analyse-meta">
-      ${a.date_analyse ? `<span>📅 ${fmtDate(a.date_analyse)}</span>` : ''}
-      ${a.analyste ? `<span>✍ ${a.analyste}</span>` : ''}
-      ${a.cours_cible ? `<span>🎯 Cible : ${fmt(a.cours_cible)} FCFA</span>` : ''}
-    </div>
-  </div>`;
-}
-
-function renderAnalyses() { window._analyseRows = allAnalyses; filterAnalyses(); }
-
-function setAnalyseFilter(f, btn) {
-  _analyseFilter = f;
-  document.querySelectorAll('#view-analyses .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active'); filterAnalyses();
-}
-
-function filterAnalyses() {
-  const q = (document.getElementById('searchAnalyses')?.value || '').toLowerCase();
-  let rows = window._analyseRows || [];
-  if (_analyseFilter !== 'all') {
-    rows = rows.filter(r => {
-      const rec = (r.recommandation||'').toLowerCase();
-      if (_analyseFilter==='buy') return rec.includes('achat')||rec.includes('buy');
-      if (_analyseFilter==='sell') return rec.includes('vend')||rec.includes('sell');
-      if (_analyseFilter==='hold') return rec.includes('conserv')||rec.includes('hold')||rec.includes('neutr');
-      return true;
-    });
-  }
-  if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q) || (r.titre||'').toLowerCase().includes(q) || (r.resume||'').toLowerCase().includes(q));
-  document.getElementById('analysesList').innerHTML = rows.length
-    ? rows.map(renderAnalyseCard).join('')
-    : '<div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Aucune analyse</div></div>';
-}
-
-// ═══════════════════════════════════════
-// FINANCIALS
-// ═══════════════════════════════════════
-function renderFinancials() {
-  const byTicker = {};
-  allFinancials.forEach(f => { if (!byTicker[f.ticker]) byTicker[f.ticker] = []; byTicker[f.ticker].push(f); });
-  window._finByTicker = byTicker;
-  window._finTickers = Object.keys(byTicker).sort();
-  filterFin();
-}
-
-function filterFin() {
-  const q = (document.getElementById('searchFin')?.value || '').toLowerCase();
-  const tickers = (window._finTickers || []).filter(t => !q || t.toLowerCase().includes(q));
-  const byTicker = window._finByTicker || {};
-  const container = document.getElementById('finGrid');
-  if (!tickers.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">Aucun résultat</div></div>'; return; }
-  container.innerHTML = tickers.map(ticker => {
-    const fins = (byTicker[ticker]||[]).sort((a,b) => b.annee - a.annee);
-    const latest = fins[0]; const prev = fins[1];
-    if (!latest) return '';
-    const growthRN = (latest.resultat_net && prev?.resultat_net)
-      ? ((latest.resultat_net - prev.resultat_net) / Math.abs(prev.resultat_net) * 100).toFixed(1) : null;
-    const rows = [
-      ["Chiffre d'affaires", fins.map(f => fmtM(f.chiffre_affaires))],
-      ["Résultat Net", fins.map(f => fmtM(f.resultat_net))],
-      ["Fonds Propres", fins.map(f => fmtM(f.fonds_propres))],
-      ["Total Actif", fins.map(f => fmtM(f.total_actif))],
-      ["BPA (FCFA)", fins.map(f => f.bpa ? fmt(f.bpa) : '—')],
-      ["DPA (FCFA)", fins.map(f => f.dpa ? fmt(f.dpa) : '—')],
-    ].filter(([,vals]) => vals.some(v => v !== '—'));
-    return `<div class="card" style="margin-bottom:16px">
-      <div class="card-header" style="cursor:pointer" onclick="openFiche('${ticker}','financials')">
-        <div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--gold);margin-bottom:2px">${ticker}</div>
-          <div class="card-title">Exercices ${fins.map(f=>f.annee).join(' · ')}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          ${growthRN !== null ? `<span class="pill ${parseFloat(growthRN)>=0?'up':'down'}">${parseFloat(growthRN)>=0?'▲':'▼'} ${Math.abs(growthRN)}% RN</span>` : ''}
-          <span style="font-size:11px;color:var(--gold)">Fiche →</span>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Indicateur</th>${fins.map(f => `<th class="right">${f.annee}</th>`).join('')}</tr></thead>
-          <tbody>${rows.map(([label,vals]) => `<tr><td style="color:var(--muted)">${label}</td>${vals.map(v=>`<td class="right">${v}</td>`).join('')}</tr>`).join('')}</tbody>
-        </table>
-      </div>
-    </div>`;
-  }).join('');
-}
-
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
-loadAll();
-</script>
 </body>
 </html>
