@@ -105,73 +105,30 @@ function calculateCMP(positions) {
 function getSector(ticker) {
   if (!ticker) return 'Divers';
   const t = ticker.toUpperCase().trim();
+
+  // 1. Priorité: données Supabase (entreprises)
   const ent = window.entMap && window.entMap[t];
   if (ent && ent.secteur) return ent.secteur;
 
-  const sectorMap = {
-    'SNTS': 'Télécommunications',
-    'SONATEL': 'Télécommunications',
-    'ORANGE': 'Télécommunications',
-    'NSBC': 'Banque',
-    'SGBCI': 'Banque',
-    'ECOBANK': 'Banque',
-    'BOA': 'Banque',
-    'BIIC': 'Banque',
-    'CBIBF': 'Industrie',
-    'CIMTOGO': 'Ciment',
-    'CIMCO': 'Ciment',
-    'SAFCA': 'Agroalimentaire',
-    'PALM': 'Agroalimentaire',
-    'SAPH': 'Agroalimentaire',
-    'SICOR': 'Caoutchouc',
-    'TOTAL': 'Pétrole',
-    'VIVO': 'Distribution',
-    'SOCO': 'Pétrole',
-    'ONTBF': 'Finance',
-    'BRVM': 'Indice'
-  };
-
-  for (const [prefix, sector] of Object.entries(sectorMap)) {
-    if (t.startsWith(prefix)) return sector;
-  }
-
+  // 2. Fallback: variable globale SECTORS si définie ailleurs
   if (typeof SECTORS !== 'undefined') {
     for (const [k, v] of Object.entries(SECTORS)) {
       if (t.startsWith(k)) return v;
     }
   }
+
   return 'Divers';
 }
 
 function getPays(ticker) {
   if (!ticker) return 'Inconnu';
   const t = ticker.toUpperCase().trim();
+
+  // 1. Priorité: données Supabase (entreprises)
   const ent = window.entMap && window.entMap[t];
   if (ent && ent.pays) return ent.pays;
 
-  const paysMap = {
-    'SNTS': 'Sénégal',
-    'SONATEL': 'Sénégal',
-    'NSBC': "Côte d'Ivoire",
-    'SGBCI': "Côte d'Ivoire",
-    'ECOBANK': 'Togo',
-    'BOA': 'Burkina Faso',
-    'BIIC': "Côte d'Ivoire",
-    'CBIBF': 'Burkina Faso',
-    'CIMTOGO': 'Togo',
-    'CIMCO': 'Cameroun',
-    'SAFCA': 'Cameroun',
-    'PALM': 'Côte d'Ivoire',
-    'SAPH': 'Côte d'Ivoire',
-    'SICOR': 'Côte d'Ivoire',
-    'TOTAL': 'Côte d'Ivoire',
-    'VIVO': 'Côte d'Ivoire',
-    'SOCO': 'Côte d'Ivoire',
-    'ONTBF': 'Burkina Faso'
-  };
-
-  if (paysMap[t]) return paysMap[t];
-
+  // 2. Fallback: déduire du suffixe du ticker (standard BRVM)
   if (t.endsWith('SN')) return 'Sénégal';
   if (t.endsWith('CI')) return "Côte d'Ivoire";
   if (t.endsWith('BF')) return 'Burkina Faso';
