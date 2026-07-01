@@ -2,6 +2,13 @@
 // PORTEFEUILLE — UTILITAIRES
 // ═══════════════════════════════════════════════════════
 
+// Variables globales pour les graphiques (déclarées ici pour être accessibles partout)
+let pfValueChartInst = null;
+let pfSectorChartInst = null;
+let pfGeoChartInst = null;
+let pfPLChartInst = null;
+
+
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
   catch { return []; }
@@ -173,7 +180,7 @@ function getPays(ticker) {
   if (t.endsWith('ML')) return 'Mali';
   if (t.endsWith('NE')) return 'Niger';
   if (t.endsWith('GW')) return 'Guinée-Bissau';
-  
+  if (t.endsWith('CM')) return 'Cameroun';
 
   return 'Inconnu';
 }
