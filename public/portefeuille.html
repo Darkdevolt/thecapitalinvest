@@ -10,7 +10,7 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="init-hidden">
-  <!-- Header -->
+  <!-- Header & Sidebar (inchangés) -->
   <header class="header">
     <div class="header-brand">THE <span>·</span> CAPITAL</div>
     <nav class="header-nav">
@@ -25,7 +25,6 @@
     </div>
   </header>
 
-  <!-- Sidebar -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">THE <span>·</span> CAPITAL</div>
     <div class="sidebar-user">
@@ -43,11 +42,10 @@
     </nav>
   </aside>
 
-  <!-- Main Content -->
   <main class="main">
     <div id="breadcrumb" class="breadcrumb">Gestion de Portefeuille</div>
 
-    <!-- Section: KPIs -->
+    <!-- KPIs -->
     <section class="kpi-grid" id="pfKPIs">
       <div class="kpi-card">
         <div class="kpi-label">VALEUR TOTALE</div>
@@ -59,12 +57,16 @@
         <div class="kpi-value" id="pfInvested">—</div>
       </div>
       <div class="kpi-card">
+        <div class="kpi-label">LIQUIDE</div>
+        <div class="kpi-value" id="pfCash">—</div>
+      </div>
+      <div class="kpi-card">
         <div class="kpi-label">P&L NET</div>
         <div class="kpi-value" id="pfPL">—</div>
         <div class="kpi-sub" id="pfPLSub"></div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">RENDEMENT</div>
+        <div class="kpi-label">RENTABILITÉ</div>
         <div class="kpi-value" id="pfReturn">—</div>
       </div>
       <div class="kpi-card">
@@ -79,13 +81,9 @@
         <div class="kpi-label">MAX DRAWDOWN</div>
         <div class="kpi-value" id="pfDrawdown">—</div>
       </div>
-      <div class="kpi-card">
-        <div class="kpi-label">BETA (VS BRVM)</div>
-        <div class="kpi-value" id="pfBeta">—</div>
-      </div>
     </section>
 
-    <!-- Section: Graphiques -->
+    <!-- Graphiques -->
     <section class="charts-row">
       <div class="chart-card chart-large">
         <div class="chart-header">
@@ -98,40 +96,39 @@
             <button class="year-tab" onclick="setPortfolioPeriod(99999, this)">Tout</button>
           </div>
         </div>
-        <div class="chart-body">
-          <canvas id="chartPortfolioValue"></canvas>
-        </div>
+        <div class="chart-body"><canvas id="chartPortfolioValue"></canvas></div>
       </div>
       <div class="chart-card chart-small">
-        <div class="chart-header">
-          <span class="chart-title">📊 ALLOCATION SECTORIELLE</span>
-        </div>
-        <div class="chart-body">
-          <canvas id="chartSectorAlloc"></canvas>
-        </div>
+        <div class="chart-header"><span class="chart-title">📊 ALLOCATION SECTORIELLE</span></div>
+        <div class="chart-body"><canvas id="chartSectorAlloc"></canvas></div>
       </div>
     </section>
 
     <section class="charts-row">
       <div class="chart-card chart-large">
-        <div class="chart-header">
-          <span class="chart-title">📉 P&L CUMULÉ</span>
-        </div>
-        <div class="chart-body">
-          <canvas id="chartPortfolioPL"></canvas>
-        </div>
+        <div class="chart-header"><span class="chart-title">📉 P&L CUMULÉ</span></div>
+        <div class="chart-body"><canvas id="chartPortfolioPL"></canvas></div>
       </div>
       <div class="chart-card chart-small">
-        <div class="chart-header">
-          <span class="chart-title">🌍 RÉPARTITION GÉOGRAPHIQUE</span>
-        </div>
-        <div class="chart-body">
-          <canvas id="chartGeoAlloc"></canvas>
-        </div>
+        <div class="chart-header"><span class="chart-title">🌍 RÉPARTITION GÉOGRAPHIQUE</span></div>
+        <div class="chart-body"><canvas id="chartGeoAlloc"></canvas></div>
       </div>
     </section>
 
-    <!-- Section: Ajouter une position -->
+    <!-- Cash (Dépôts/Retraits) -->
+    <section class="form-card">
+      <div class="form-header">💰 LIQUIDITÉS (DÉPÔTS / RETRAITS)</div>
+      <div class="form-row">
+        <select id="cashType" class="form-select">
+          <option value="deposit">Dépôt</option>
+          <option value="withdraw">Retrait</option>
+        </select>
+        <input type="number" id="cashAmount" class="form-input" placeholder="Montant (FCFA)" min="0">
+        <button class="btn-gold" onclick="addCash()">Valider</button>
+      </div>
+    </section>
+
+    <!-- Ajouter une position -->
     <section class="form-card">
       <div class="form-header">+ AJOUTER UNE POSITION</div>
       <div class="form-row">
@@ -150,7 +147,31 @@
       </div>
     </section>
 
-    <!-- Section: Positions détaillées -->
+    <!-- Enregistrer un dividende -->
+    <section class="form-card">
+      <div class="form-header">💵 ENREGISTRER UN DIVIDENDE</div>
+      <div class="form-row">
+        <input type="text" id="divTicker" class="form-input" placeholder="Ticker">
+        <input type="number" id="divAmount" class="form-input" placeholder="Montant (FCFA)" min="0">
+        <input type="date" id="divDate" class="form-input">
+        <button class="btn-gold" onclick="addDividend()">Enregistrer</button>
+      </div>
+      <div id="dividendList" style="margin-top:12px"></div>
+    </section>
+
+    <!-- Calculateur de position -->
+    <section class="form-card">
+      <div class="form-header">🧮 CALCULATEUR DE POSITION</div>
+      <div class="form-row">
+        <input type="text" id="calcTicker" class="form-input" placeholder="Ticker">
+        <input type="number" id="calcQty" class="form-input" placeholder="Quantité" min="1">
+        <input type="number" id="calcTarget" class="form-input" placeholder="Cours cible (optionnel)" min="0">
+        <button class="btn-gold" onclick="calculatePosition()">Calculer</button>
+      </div>
+      <div id="calcResult" style="margin-top:12px"></div>
+    </section>
+
+    <!-- Positions détaillées -->
     <section class="table-card">
       <div class="table-header">
         <span>📋 POSITIONS DÉTAILLÉES</span>
@@ -160,12 +181,12 @@
         <table class="data-table">
           <thead>
             <tr>
-              <th>TICKER / TYPE</th>
+              <th>TICKER / PAYS</th>
               <th style="text-align:right">QTÉ</th>
               <th style="text-align:right">CMP</th>
               <th style="text-align:right">COURS ACTUEL</th>
               <th style="text-align:right">PLUS/MOINS-VALUE</th>
-              <th style="text-align:right">VAR. %</th>
+              <th style="text-align:right">RENT. %</th>
               <th style="text-align:right">VALEUR</th>
               <th style="text-align:right">ALLOCATION</th>
               <th style="text-align:right">52S HAUT</th>
@@ -174,55 +195,42 @@
             </tr>
           </thead>
           <tbody id="pfTable">
-            <tr>
-              <td colspan="11" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td>
-            </tr>
+            <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
-    <!-- Section: Analyses complémentaires -->
+    <!-- Analyses -->
     <section class="analysis-row">
       <div class="analysis-card">
         <div class="analysis-header">⚖️ CONCENTRATION DU PORTEFEUILLE</div>
-        <div id="concentrationStats">
-          <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour analyser la concentration</div>
-        </div>
+        <div id="concentrationStats"><div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions</div></div>
       </div>
       <div class="analysis-card">
         <div class="analysis-header">💰 DIVIDENDES ESTIMÉS</div>
-        <div id="dividendStats">
-          <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour estimer les dividendes</div>
-        </div>
+        <div id="dividendStats"><div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions</div></div>
       </div>
       <div class="analysis-card">
         <div class="analysis-header">🎯 PERFORMANCE VS BRVM</div>
-        <div id="benchmarkStats">
-          <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour comparer avec le benchmark</div>
-        </div>
+        <div id="benchmarkStats"><div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions</div></div>
       </div>
     </section>
 
-    <!-- Section: Matrice de corrélation -->
     <section class="analysis-row">
       <div class="analysis-card" style="flex:1">
         <div class="analysis-header">🔗 MATRICE DE CORRÉLATION</div>
-        <div id="correlationMatrix">Ajoutez au moins 2 positions pour voir la matrice de corrélation</div>
+        <div id="correlationMatrix">Ajoutez au moins 2 positions</div>
       </div>
     </section>
   </main>
 
-  <!-- Scripts -->
   <script src="js/api.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/views/portefeuille.js"></script>
   <script>
-    // Initialisation au chargement
     document.addEventListener('DOMContentLoaded', function() {
-      if (typeof initPortefeuille === 'function') {
-        initPortefeuille();
-      }
+      if (typeof initPortefeuille === 'function') initPortefeuille();
     });
   </script>
 </body>
