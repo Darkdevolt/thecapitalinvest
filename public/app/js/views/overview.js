@@ -46,3 +46,40 @@ function renderIndexCards(latest, indiceNames) {
   const lastSessionEl = document.getElementById('lastSession');
   if (lastSessionEl) lastSessionEl.textContent = lastDate ? 'Séance ' + fmtDate(lastDate) : '—';
 }
+// ─── COMPOSITE CHART ───
+let _compositePeriod = 30;
+
+function renderCompositeChart() {
+  // CORRECTION : prend le premier indice disponible au lieu de 'BRVM C' hardcodé
+  const latest = getLatestIndices();
+  const indiceNames = Object.keys(latest).sort((a, b) => a.localeCompare(b));
+  const chartTarget = indiceNames[0] || 'BRVM C'; // fallback uniquement si vide
+  
+  const history = getIndiceHistory(chartTarget, _compositePeriod);
+
+  const labels = history.map(d =>
+    d?.date_seance ? new Date(d.date_seance).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '?'
+  );
+  const values = history.map(d => d?.valeur ?? 0);
+
+  if (compositeChartInst) {
+    compositeChartInst.destroy();
+    compositeChartInst = null;
+  }
+
+  const canvas = document.getElementById('chartComposite');
+  if (canvas && labels.length > 1 && values.some(v => v > 0)) {
+    compositeChartInst = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{ ...mkDataset(values), tension: 0.3, pointRadius: 0, pointHoverRadius: 6 }]
+      },
+      options: {
+        ...chartOpts,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: { ...chartOpts.plugins, legend: { display: false } }
+      }
+    });
+  }
+}
