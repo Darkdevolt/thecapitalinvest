@@ -158,7 +158,7 @@ async function loadAll() {
     window.allCoursHistorique = allCoursHistorique;
     window.entMap = entMap;
 
-    // CORRECTION : Dispatch dataLoaded AVANT les renders
+    // Dispatch dataLoaded AVANT les renders
     window.dispatchEvent(new Event('dataLoaded'));
 
     renderOverview();
@@ -172,13 +172,16 @@ async function loadAll() {
     initGlobalSearch();
     runScreener();
 
-    // CORRECTION : Appeler initPortefeuille après que les données soient chargées
     if (typeof initPortefeuille === 'function') {
       initPortefeuille();
     }
 
     try { if (typeof renderAlerts === "function") renderAlerts(); } catch(e) { console.warn("renderAlerts error:", e); }
-    parseHash();
+
+    // CORRECTION : parseHash est maintenant dans router.js, appelé ici
+    if (typeof parseHash === 'function') {
+      parseHash();
+    }
   } catch(e) {
     toast('Erreur globale de chargement: ' + e.message, 'error');
   }
@@ -205,4 +208,6 @@ function populateTickerSelects() {
 // ═══════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════
-window.addEventListener('hashchange', parseHash);
+window.addEventListener('hashchange', function() {
+  if (typeof parseHash === 'function') parseHash();
+});
