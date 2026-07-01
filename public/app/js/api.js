@@ -81,7 +81,8 @@ async function sb(table, params = {}) {
     const hdName = document.getElementById('headerName');
     if (hdAvatar) hdAvatar.textContent = avatar;
     if (hdName) hdName.textContent = name;
-    window._userPlan = 'pro';
+    // Plan utilisateur depuis Supabase (fallback 'free' si non défini)
+window._userPlan = user.plan || user.role || 'free';
     
     if (window._userPlan === 'pro') {
       const adminLink = document.getElementById('adminLink');
