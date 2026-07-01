@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/views.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<base target="_blank">
 </head>
 <body class="init-hidden">
   <!-- Header & Sidebar (inchangés) -->
@@ -227,7 +228,12 @@
 
   <script src="js/api.js"></script>
   <script src="js/utils.js"></script>
-  <script src="js/views/portefeuille.js"></script>
+  <script src="js/views/portefeuille/portefeuille-utils.js"></script>
+  <script src="js/views/portefeuille/portefeuille-prices.js"></script>
+  <script src="js/views/portefeuille/portefeuille-history.js"></script>
+  <script src="js/views/portefeuille/portefeuille-crud.js"></script>
+  <script src="js/views/portefeuille/portefeuille-charts.js"></script>
+  <script src="js/views/portefeuille/portefeuille-main.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
       if (typeof initPortefeuille === 'function') initPortefeuille();
