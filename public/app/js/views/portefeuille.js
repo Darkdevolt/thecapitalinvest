@@ -320,7 +320,7 @@ function getDividendYield(ticker) {
 // ═══════════════════════════════════════════════════════
 function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
-  if (!pf.length) return { dates: [], values: [], pls: [] };
+  if (!pf.length) return { dates: [], values: [], pls: [], totalValues: [] };
 
   const now = new Date();
   const startDate = new Date(now);
@@ -346,6 +346,7 @@ function getPortfolioHistory(periodDays = 99999) {
     return _pfPortfolioCache[cacheKey];
   }
 
+  const cash = getCash();
   const values = [];
   const pls = [];
   const totalValues = [];
