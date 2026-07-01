@@ -84,7 +84,7 @@ async function sb(table, params = {}) {
     // Plan utilisateur depuis Supabase (fallback 'free' si non défini)
 window._userPlan = user.plan || user.role || 'free';
     
-    if (window._userPlan === 'pro') {
+    if (window._userPlan === 'pro' || window._userPlan === 'admin') {
       const adminLink = document.getElementById('adminLink');
       if (adminLink) adminLink.style.display = 'block';
     }
