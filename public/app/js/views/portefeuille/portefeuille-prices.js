@@ -1,8 +1,12 @@
 // ═══════════════════════════════════════════════════════
 // PORTEFEUILLE — PRIX & HISTORIQUES (CORRIGÉ)
 // ═══════════════════════════════════════════════════════
+// NOTE : _pfHistCache est déjà déclaré dans le fichier original
+//        ou doit être partagé. On le met en window pour éviter le doublon.
 
-const _pfHistCache = {};
+if (typeof window._pfHistCache === 'undefined') {
+  window._pfHistCache = {};
+}
 
 function getLatestPrice(ticker) {
   if (!ticker) return null;
@@ -19,7 +23,7 @@ function getLatestPrice(ticker) {
     }
   }
 
-  const cache = _pfHistCache[t];
+  const cache = window._pfHistCache[t];
   if (cache && cache.length > 0) {
     const last = cache[cache.length - 1];
     const prix = last.cours_cloture || last.cours_normal || last.cours;
@@ -43,14 +47,14 @@ function getTickerHistory(ticker) {
   if (!ticker) return [];
   const t = ticker.toUpperCase().trim();
 
-  if (_pfHistCache[t] && _pfHistCache[t].length > 0) return _pfHistCache[t];
+  if (window._pfHistCache[t] && window._pfHistCache[t].length > 0) return window._pfHistCache[t];
 
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const hist = window.allCoursHistorique
       .filter(c => (c.ticker || '').toUpperCase().trim() === t)
       .sort((a, b) => new Date(a.date_seance || 0) - new Date(b.date_seance || 0));
     if (hist.length > 0) {
-      _pfHistCache[t] = hist;
+      window._pfHistCache[t] = hist;
       return hist;
     }
   }
