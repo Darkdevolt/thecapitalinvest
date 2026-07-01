@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Portefeuille Simulé (VERSION OPTIMISÉE & CORRIGÉE)
+// VIEW — Portefeuille Simulé (VERSION CORRIGÉE CMP)
 // ═══════════════════════════════════════════════════════
 
 const _pfHistCache = {};
@@ -11,6 +11,27 @@ function getPortfolio() {
   catch { return []; }
 }
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
+
+// ═══════════════════════════════════════════════════════
+// CALCUL DU CMP (COÛT MOYEN PONDÉRÉ)
+// ═══════════════════════════════════════════════════════
+function calculateCMP(positions) {
+  const byTicker = {};
+  positions.forEach(p => {
+    const t = p.ticker.toUpperCase().trim();
+    if (!byTicker[t]) {
+      byTicker[t] = { totalQty: 0, totalCost: 0 };
+    }
+    byTicker[t].totalQty += p.qty;
+    byTicker[t].totalCost += p.qty * p.price;
+  });
+
+  const cmp = {};
+  for (const [ticker, data] of Object.entries(byTicker)) {
+    cmp[ticker] = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
+  }
+  return cmp;
+}
 
 // ═══════════════════════════════════════════════════════
 // RÉCUPÉRATION DU COURS ACTUEL — OPTIMISÉE
@@ -107,10 +128,8 @@ function getPriceAtDate(ticker, dateStr) {
   
   if (!map || map.size === 0) return null;
   
-  // Recherche exacte O(1)
   if (map.has(dateStr)) return map.get(dateStr);
   
-  // Recherche dichotomique du dernier prix avant cette date
   const dates = Array.from(map.keys()).sort();
   let lo = 0, hi = dates.length;
   while (lo < hi) {
@@ -268,7 +287,6 @@ function getPortfolioHistory(periodDays = 99999) {
   const oldestBuy = new Date(Math.min(...pf.map(p => new Date(p.date || now))));
   const effectiveStart = periodDays === 99999 ? oldestBuy : new Date(Math.max(startDate, oldestBuy));
 
-  // Générer les dates de trading
   const dates = [];
   let current = new Date(effectiveStart);
   while (current <= now) {
@@ -277,11 +295,9 @@ function getPortfolioHistory(periodDays = 99999) {
     current.setDate(current.getDate() + 1);
   }
 
-  // Précharger et indexer les historiques
   const uniqueTickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
   uniqueTickers.forEach(t => getTickerHistory(t));
 
-  // CACHE : clé basée sur le contenu du portefeuille
   const cacheKey = JSON.stringify({
     tickers: uniqueTickers.sort().join(','),
     period: periodDays,
@@ -385,7 +401,7 @@ window.removePosition = function(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RENDU PRINCIPAL — AVEC VERROU ANTI-EMPILEMENT
+// RENDU PRINCIPAL — CORRIGÉ AVEC CMP
 // ═══════════════════════════════════════════════════════
 window.renderPortfolio = function() {
   if (_pfRenderPending) {
@@ -415,6 +431,9 @@ window.renderPortfolio = function() {
       return;
     }
 
+    // ← CORRECTION : Calculer le CMP AVANT la boucle
+    const cmpMap = calculateCMP(pf);
+
     // ── Calculs par position ──
     let totalValue = 0, totalInvested = 0;
     const rows = [];
@@ -424,8 +443,9 @@ window.renderPortfolio = function() {
 
     pf.forEach(p => {
       const currentPrice = getLatestPrice(p.ticker) || p.price;
+      const cmp = cmpMap[p.ticker.toUpperCase().trim()] || p.price; // ← CMP calculé
       const value = p.qty * currentPrice;
-      const invested = p.qty * p.price;
+      const invested = p.qty * cmp; // ← Investi = QTÉ × CMP (pas prix individuel)
       const pl = value - invested;
       const plPct = invested > 0 ? (pl / invested) * 100 : 0;
 
@@ -438,7 +458,17 @@ window.renderPortfolio = function() {
       const py = getPays(p.ticker);
       pays[py] = (pays[py] || 0) + value;
 
-      rows.push({ ...p, currentPrice, value, invested, pl, plPct, sector: s, pays: py });
+      rows.push({ 
+        ...p, 
+        currentPrice, 
+        cmp, // ← AJOUT du CMP dans l'objet row
+        value, 
+        invested, 
+        pl, 
+        plPct, 
+        sector: s, 
+        pays: py 
+      });
     });
 
     const totalPL = totalValue - totalInvested;
@@ -447,7 +477,6 @@ window.renderPortfolio = function() {
     // ── Historique pour stats avancées ──
     const hist = getPortfolioHistory(window._pfPeriod || 99999);
 
-    // Calcul des rendements journaliers
     if (hist.values.length >= 2) {
       for (let i = 1; i < hist.values.length; i++) {
         if (hist.values[i - 1] > 0) {
@@ -525,7 +554,7 @@ window.renderPortfolio = function() {
               <span style="font-family:var(--mono);color:var(--gold);font-weight:600">${p.ticker}</span>
             </td>
             <td style="padding:10px 12px;text-align:right">${fmt(p.qty)}</td>
-            <td style="padding:10px 12px;text-align:right;font-family:var(--mono)">${fmt(p.price, 2)}</td>
+            <td style="padding:10px 12px;text-align:right;font-family:var(--mono);color:var(--gold)">${fmt(p.cmp, 2)}</td>
             <td style="padding:10px 12px;text-align:right;color:${priceFound ? 'inherit' : 'var(--dim)'}">${fmt(p.currentPrice, 2)}${!priceFound ? ' <small>(est.)</small>' : ''}</td>
             <td style="padding:10px 12px;text-align:right;color:${p.pl>=0?'var(--green)':'var(--red)'};font-weight:600">${p.pl >= 0 ? '+' : ''}${fmtM(p.pl)}</td>
             <td style="padding:10px 12px;text-align:right;color:${p.plPct>=0?'var(--green)':'var(--red)'}">${fmt(p.plPct, 2)}%</td>
