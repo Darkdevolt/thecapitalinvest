@@ -204,19 +204,37 @@ window.renderPortfolio = function() {
 }
 
 function resetEmptyState() {
+  // KPIs vides
   ['pfTotal','pfInvested','pfPL','pfReturn','pfVolatility','pfSharpe','pfDrawdown','pfBeta'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.textContent = '—';
   });
-  const tbody = document.getElementById('pfTable');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>';
-  const countEl = document.getElementById('pfPositionCount');
-  if (countEl) countEl.textContent = '0 position';
 
+  // Tableau: message + données marché
+  const tbody = document.getElementById('pfTable');
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="11" style="text-align:center;padding:32px;color:var(--dim)">
+          <div style="font-size:16px;margin-bottom:12px">📋 Votre portefeuille est vide</div>
+          <div style="font-size:13px;margin-bottom:20px">Ajoutez une position ci-dessus pour suivre vos investissements BRVM</div>
+          <button onclick="document.getElementById('pfTicker').focus()" style="padding:10px 24px;background:var(--gold);border:none;border-radius:8px;color:var(--bg);font-weight:600;cursor:pointer">+ Ajouter une position</button>
+        </td>
+      </tr>
+    `;
+  }
+
+  const countEl = document.getElementById('pfPositionCount');
+  if (countEl) countEl.textContent = '0 position | Ajoutez des titres BRVM';
+
+  // Détruire les anciens graphiques
   [pfValueChartInst, pfSectorChartInst, pfGeoChartInst, pfPLChartInst].forEach(chart => {
     if (chart) { chart.destroy(); }
   });
   pfValueChartInst = pfSectorChartInst = pfGeoChartInst = pfPLChartInst = null;
+
+  // Afficher le marché global (Option C)
+  renderMarketOverview();
 }
 
 window.setPortfolioPeriod = function(days, btn) {
@@ -227,10 +245,219 @@ window.setPortfolioPeriod = function(days, btn) {
   _pfPeriodTimeout = setTimeout(() => renderPortfolio(), 150);
 }
 
+function renderMarketOverview() {
+  // Afficher les indices BRVM dans les KPIs quand le portefeuille est vide
+  if (Array.isArray(window.allIndices) && window.allIndices.length > 0) {
+    const composite = window.allIndices.find(i => (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE'));
+    const brvm30 = window.allIndices.find(i => (i.nom || i.ticker || '').toUpperCase().includes('30'));
+
+    const pfTotal = document.getElementById('pfTotal');
+    if (pfTotal && composite) {
+      const val = composite.valeur || composite.cours || composite.dernier || 0;
+      pfTotal.innerHTML = `<span style="font-size:14px">BRVM Composite</span><br><span style="font-size:20px;color:var(--gold)">${fmt(val, 2)}</span>`;
+    }
+
+    const pfInvested = document.getElementById('pfInvested');
+    if (pfInvested && brvm30) {
+      const val = brvm30.valeur || brvm30.cours || brvm30.dernier || 0;
+      pfInvested.innerHTML = `<span style="font-size:14px">BRVM 30</span><br><span style="font-size:20px;color:var(--gold)">${fmt(val, 2)}</span>`;
+    }
+  }
+
+  // Afficher le top 5 des plus fortes hausses du jour
+  const divEl = document.getElementById('dividendList');
+  if (divEl && Array.isArray(window.allCours) && window.allCours.length > 0) {
+    const topGainers = [...window.allCours]
+      .filter(c => c.variation !== null && c.variation !== undefined)
+      .sort((a, b) => (b.variation || 0) - (a.variation || 0))
+      .slice(0, 5);
+
+    divEl.innerHTML = `
+      <div style="padding:16px">
+        <div style="font-size:14px;font-weight:600;color:var(--gold);margin-bottom:12px">🔥 TOP 5 HAUSSES DU JOUR</div>
+        ${topGainers.length ? topGainers.map(c => {
+          const v = c.variation || 0;
+          return `<div style="display:flex;justify-content:space-between;font-size:12px;padding:6px 0;border-bottom:1px solid var(--border2)">
+            <span style="color:var(--cream)">${c.ticker}</span>
+            <span style="color:var(--green)">+${fmt(v, 2)}%</span>
+          </div>`;
+        }).join('') : '<div style="font-size:12px;color:var(--dim)">Données du jour non disponibles</div>'}
+      </div>
+    `;
+  }
+
+  // Graphique évolution: afficher BRVM Composite si dispo
+  const valueCanvas = document.getElementById('chartPortfolioValue');
+  if (valueCanvas && Array.isArray(window.allIndices) && window.allIndices.length > 0) {
+    const compositeHist = window.allIndices
+      .filter(i => (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE'))
+      .sort((a, b) => new Date(a.date_seance || 0) - new Date(b.date_seance || 0));
+
+    if (compositeHist.length >= 2) {
+      const labels = compositeHist.map(d => new Date(d.date_seance || 0).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
+      const data = compositeHist.map(d => d.valeur || d.cours || d.dernier || 0);
+
+      if (pfValueChartInst) pfValueChartInst.destroy();
+      pfValueChartInst = new Chart(valueCanvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'BRVM Composite',
+            data: data,
+            borderColor: '#B8964E',
+            backgroundColor: 'rgba(184,150,78,0.1)',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          ...chartOpts,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1A1610',
+              borderColor: 'rgba(184,150,78,0.3)',
+              borderWidth: 1,
+              callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y, 2) + ' pts' }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, maxTicksLimit: 6 } },
+            y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 } } }
+          }
+        }
+      });
+    }
+  }
+
+  // Allocation sectorielle: afficher la répartition du marché BRVM
+  const sectorCanvas = document.getElementById('chartSectorAlloc');
+  if (sectorCanvas && Array.isArray(window.allCours) && window.allCours.length > 0) {
+    const sectors = {};
+    window.allCours.forEach(c => {
+      const s = getSector(c.ticker);
+      const cap = (c.cours_cloture || c.cours || 0) * (c.volume || 0);
+      sectors[s] = (sectors[s] || 0) + cap;
+    });
+
+    const sectorLabels = Object.keys(sectors);
+    const sectorData = Object.values(sectors);
+    const colors = ['#B8964E', '#4ADE80', '#F87171', '#60A5FA', '#A78BFA', '#FBBF24', '#34D399', '#F472B6', '#818CF8', '#FB923C'];
+
+    if (sectorLabels.length && pfSectorChartInst) pfSectorChartInst.destroy();
+    if (sectorLabels.length) {
+      pfSectorChartInst = new Chart(sectorCanvas, {
+        type: 'doughnut',
+        data: { labels: sectorLabels, datasets: [{ data: sectorData, backgroundColor: colors, borderColor: '#1A1610', borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / sectorData.reduce((a,b)=>a+b,0) * 100, 1)}%` } } }, cutout: '60%' }
+      });
+    }
+  }
+
+  // Répartition géographique
+  const geoCanvas = document.getElementById('chartGeoAlloc');
+  if (geoCanvas && Array.isArray(window.allCours) && window.allCours.length > 0) {
+    const pays = {};
+    window.allCours.forEach(c => {
+      const p = getPays(c.ticker);
+      const cap = (c.cours_cloture || c.cours || 0) * (c.volume || 0);
+      pays[p] = (pays[p] || 0) + cap;
+    });
+
+    const geoLabels = Object.keys(pays);
+    const geoData = Object.values(pays);
+    const geoColors = ['#B8964E', '#4ADE80', '#60A5FA', '#F87171', '#A78BFA', '#FBBF24'];
+
+    if (geoLabels.length && pfGeoChartInst) pfGeoChartInst.destroy();
+    if (geoLabels.length) {
+      pfGeoChartInst = new Chart(geoCanvas, {
+        type: 'doughnut',
+        data: { labels: geoLabels, datasets: [{ data: geoData, backgroundColor: geoColors, borderColor: '#1A1610', borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / geoData.reduce((a,b)=>a+b,0) * 100, 1)}%` } } }, cutout: '60%' }
+      });
+    }
+  }
+
+  // P&L Cumulé: message informatif
+  const plCanvas = document.getElementById('chartPortfolioPL');
+  if (plCanvas) {
+    const ctx = plCanvas.getContext('2d');
+    ctx.clearRect(0, 0, plCanvas.width, plCanvas.height);
+    ctx.font = '14px DM Sans';
+    ctx.fillStyle = 'rgba(245,240,232,0.3)';
+    ctx.textAlign = 'center';
+    ctx.fillText('Ajoutez des positions pour voir votre P&L', plCanvas.width / 2, plCanvas.height / 2);
+  }
+
+  // Concentration: message
+  const concEl = document.getElementById('concentrationStats');
+  if (concEl) {
+    concEl.innerHTML = `
+      <div style="padding:16px;text-align:center">
+        <div style="font-size:14px;color:var(--dim);margin-bottom:8px">⚖️ Concentration</div>
+        <div style="font-size:12px;color:var(--dim)">Ajoutez des positions pour analyser la concentration de votre portefeuille</div>
+      </div>
+    `;
+  }
+
+  // Dividendes estimés: message
+  const divEstEl = document.getElementById('dividendStats');
+  if (divEstEl) {
+    divEstEl.innerHTML = `
+      <div style="padding:16px;text-align:center">
+        <div style="font-size:14px;color:var(--dim);margin-bottom:8px">💰 Dividendes</div>
+        <div style="font-size:12px;color:var(--dim)">Ajoutez des positions pour estimer vos dividendes annuels</div>
+      </div>
+    `;
+  }
+
+  // Performance vs BRVM: afficher quand même le BRVM
+  const benchEl = document.getElementById('benchmarkStats');
+  if (benchEl && Array.isArray(window.allIndices) && window.allIndices.length > 0) {
+    const composite = window.allIndices.filter(i => (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE'));
+    if (composite.length >= 2) {
+      const sorted = composite.sort((a, b) => new Date(a.date_seance || 0) - new Date(b.date_seance || 0));
+      const first = sorted[0], last = sorted[sorted.length - 1];
+      const firstVal = +(first.valeur || first.cours || first.dernier || 0);
+      const lastVal = +(last.valeur || last.cours || last.dernier || 0);
+      const brvmReturn = firstVal > 0 ? (lastVal - firstVal) / firstVal * 100 : 0;
+
+      benchEl.innerHTML = `
+        <div style="padding:16px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+            <span style="font-size:12px;color:var(--dim)">BRVM Composite (période)</span>
+            <span style="font-size:14px;font-weight:600;color:${brvmReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${brvmReturn >= 0 ? '+' : ''}${fmt(brvmReturn, 2)}%</span>
+          </div>
+          <div style="font-size:11px;color:var(--dim)">Ajoutez des positions pour comparer votre performance</div>
+        </div>
+      `;
+    }
+  }
+
+  // Corrélation: message
+  const corrEl = document.getElementById('correlationMatrix');
+  if (corrEl) {
+    corrEl.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Ajoutez au moins 2 positions pour voir la matrice de corrélation</div>';
+  }
+}
+
 window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
   window._pfPeriod = window._pfPeriod || 99999;
-  populateTickerSelect();
-  window.addEventListener('dataLoaded', () => { populateTickerSelect(); renderPortfolio(); }, { once: true });
-  renderPortfolio();
+
+  // Vérifier si les données sont déjà chargées
+  if (window.allCours && window.allCours.length > 0) {
+    populateTickerSelect();
+    renderPortfolio();
+  }
+
+  // Sinon, attendre l'événement dataLoaded
+  window.addEventListener('dataLoaded', () => { 
+    populateTickerSelect(); 
+    renderPortfolio(); 
+  }, { once: true });
 }
