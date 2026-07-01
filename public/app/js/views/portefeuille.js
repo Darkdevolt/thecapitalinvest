@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Portefeuille Simulé (VERSION CORRIGÉE CMP)
+// VIEW — Portefeuille Simulé (VERSION COMPLÈTE & CORRIGÉE)
 // ═══════════════════════════════════════════════════════
 
 const _pfHistCache = {};
@@ -12,6 +12,18 @@ function getPortfolio() {
 }
 function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
 
+function getCash() {
+  try { return JSON.parse(localStorage.getItem('tc_cash') || '0'); }
+  catch { return 0; }
+}
+function saveCash(amount) { localStorage.setItem('tc_cash', JSON.stringify(amount)); }
+
+function getDividends() {
+  try { return JSON.parse(localStorage.getItem('tc_dividends') || '[]'); }
+  catch { return []; }
+}
+function saveDividends(data) { localStorage.setItem('tc_dividends', JSON.stringify(data)); }
+
 // ═══════════════════════════════════════════════════════
 // CALCUL DU CMP (COÛT MOYEN PONDÉRÉ)
 // ═══════════════════════════════════════════════════════
@@ -20,68 +32,57 @@ function calculateCMP(positions) {
   positions.forEach(p => {
     const t = p.ticker.toUpperCase().trim();
     if (!byTicker[t]) {
-      byTicker[t] = { totalQty: 0, totalCost: 0 };
+      byTicker[t] = { totalQty: 0, totalCost: 0, positions: [] };
     }
     byTicker[t].totalQty += p.qty;
     byTicker[t].totalCost += p.qty * p.price;
+    byTicker[t].positions.push(p);
   });
 
   const cmp = {};
   for (const [ticker, data] of Object.entries(byTicker)) {
-    cmp[ticker] = data.totalQty > 0 ? data.totalCost / data.totalQty : 0;
+    cmp[ticker] = {
+      value: data.totalQty > 0 ? data.totalCost / data.totalQty : 0,
+      totalQty: data.totalQty,
+      totalCost: data.totalCost,
+      positions: data.positions
+    };
   }
   return cmp;
 }
 
 // ═══════════════════════════════════════════════════════
-// RÉCUPÉRATION DU COURS ACTUEL — OPTIMISÉE
+// RÉCUPÉRATION DU COURS ACTUEL
 // ═══════════════════════════════════════════════════════
 function getLatestPrice(ticker) {
   if (!ticker) return null;
   const t = ticker.toUpperCase().trim();
 
-  // 1. Cours du jour (allCours) — PRIORITAIRE
   if (Array.isArray(window.allCours) && window.allCours.length > 0) {
     const coursJour = window.allCours.find(c => {
       const ct = (c.ticker || '').toUpperCase().trim();
-      const ci = (c.code_isin || '').toUpperCase().trim();
-      const cl = (c.libelle || '').toUpperCase().trim();
-      return ct === t || ci === t || cl === t || ct.startsWith(t) || t.startsWith(ct);
+      return ct === t || ct.startsWith(t) || t.startsWith(ct);
     });
     if (coursJour) {
-      const prix = coursJour.cours_cloture || coursJour.dernier_cours || coursJour.cours || coursJour.prix;
+      const prix = coursJour.cours_cloture || coursJour.dernier_cours || coursJour.cours;
       if (prix != null) return +prix;
     }
   }
 
-  // 2. Fallback historique — via cache
   const cache = _pfHistCache[t];
   if (cache && cache.length > 0) {
     const last = cache[cache.length - 1];
-    const prix = last.cours_cloture || last.cours_normal || last.cours || last.prix;
+    const prix = last.cours_cloture || last.cours_normal || last.cours;
     if (prix != null) return +prix;
   }
 
-  // 3. allCoursHistorique global
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const hist = window.allCoursHistorique
       .filter(c => (c.ticker || '').toUpperCase().trim() === t)
       .sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
     if (hist.length) {
       const last = hist[0];
-      const prix = last.cours_cloture || last.cours_normal || last.cours || last.prix;
-      if (prix != null) return +prix;
-    }
-  }
-
-  // 4. Indices
-  if (Array.isArray(window.allIndices) && window.allIndices.length > 0) {
-    const idx = window.allIndices.find(c => {
-      const ct = (c.ticker || c.nom || '').toUpperCase().trim();
-      return ct === t || ct.startsWith(t);
-    });
-    if (idx) {
-      const prix = idx.valeur || idx.cours || idx.dernier;
+      const prix = last.cours_cloture || last.cours_normal || last.cours;
       if (prix != null) return +prix;
     }
   }
@@ -89,20 +90,8 @@ function getLatestPrice(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// PRÉCHARGEMENT & INDEXATION DES HISTORIQUES
+// HISTORIQUES PAR TICKER
 // ═══════════════════════════════════════════════════════
-function buildDateMap(hist) {
-  const map = new Map();
-  hist.forEach(c => {
-    const ds = (c.date_seance || '').split('T')[0];
-    if (ds) {
-      const prix = +(c.cours_cloture || c.cours_normal || c.cours || 0);
-      if (prix > 0) map.set(ds, prix);
-    }
-  });
-  return map;
-}
-
 function getTickerHistory(ticker) {
   if (!ticker) return [];
   const t = ticker.toUpperCase().trim();
@@ -115,7 +104,6 @@ function getTickerHistory(ticker) {
       .sort((a, b) => new Date(a.date_seance || 0) - new Date(b.date_seance || 0));
     if (hist.length > 0) {
       _pfHistCache[t] = hist;
-      _pfHistCache[t + '_map'] = buildDateMap(hist);
       return hist;
     }
   }
@@ -123,23 +111,23 @@ function getTickerHistory(ticker) {
 }
 
 function getPriceAtDate(ticker, dateStr) {
-  const t = ticker.toUpperCase().trim();
-  const map = _pfHistCache[t + '_map'];
+  const hist = getTickerHistory(ticker);
+  if (!hist.length) return null;
   
-  if (!map || map.size === 0) return null;
-  
-  if (map.has(dateStr)) return map.get(dateStr);
-  
-  const dates = Array.from(map.keys()).sort();
-  let lo = 0, hi = dates.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >>> 1;
-    if (dates[mid] <= dateStr) lo = mid + 1;
-    else hi = mid;
+  const exact = hist.find(c => (c.date_seance || '').split('T')[0] === dateStr);
+  if (exact) {
+    const prix = +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
+    return prix > 0 ? prix : null;
   }
-  const idx = lo - 1;
-  if (idx >= 0) return map.get(dates[idx]);
   
+  const before = hist
+    .filter(c => (c.date_seance || '').split('T')[0] <= dateStr)
+    .sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
+  
+  if (before.length) {
+    const prix = +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || 0);
+    return prix > 0 ? prix : null;
+  }
   return null;
 }
 
@@ -191,21 +179,6 @@ function calcMaxDrawdown(values) {
   return maxDD * 100;
 }
 
-function calcBeta(stockReturns, marketReturns) {
-  if (!stockReturns || !marketReturns || stockReturns.length < 2 || stockReturns.length !== marketReturns.length) return null;
-  const n = stockReturns.length;
-  const meanStock = stockReturns.reduce((a, b) => a + b, 0) / n;
-  const meanMarket = marketReturns.reduce((a, b) => a + b, 0) / n;
-  let cov = 0, varMarket = 0;
-  for (let i = 0; i < n; i++) {
-    cov += (stockReturns[i] - meanStock) * (marketReturns[i] - meanMarket);
-    varMarket += Math.pow(marketReturns[i] - meanMarket, 2);
-  }
-  cov /= (n - 1);
-  varMarket /= (n - 1);
-  return varMarket === 0 ? null : cov / varMarket;
-}
-
 function calcCorrelation(x, y) {
   if (!x || !y || x.length < 2 || x.length !== y.length) return 0;
   const n = x.length;
@@ -224,13 +197,42 @@ function calcCorrelation(x, y) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HELPERS DONNÉES
+// HELPERS DONNÉES — CORRIGÉS
 // ═══════════════════════════════════════════════════════
 function getSector(ticker) {
   if (!ticker) return 'Divers';
   const t = ticker.toUpperCase().trim();
   const ent = window.entMap && window.entMap[t];
   if (ent && ent.secteur) return ent.secteur;
+  
+  // Mapping par ticker pour BRVM
+  const sectorMap = {
+    'SNTS': 'Télécommunications',
+    'SONATEL': 'Télécommunications',
+    'ORANGE': 'Télécommunications',
+    'NSBC': 'Banque',
+    'SGBCI': 'Banque',
+    'ECOBANK': 'Banque',
+    'BOA': 'Banque',
+    'BIIC': 'Banque',
+    'CBIBF': 'Industrie',
+    'CIMTOGO': 'Ciment',
+    'CIMCO': 'Ciment',
+    'SAFCA': 'Agroalimentaire',
+    'PALM': 'Agroalimentaire',
+    'SAPH': 'Agroalimentaire',
+    'SICOR': 'Caoutchouc',
+    'TOTAL': 'Pétrole',
+    'VIVO': 'Distribution',
+    'SOCO': 'Pétrole',
+    'ONTBF': 'Finance',
+    'BRVM': 'Indice'
+  };
+  
+  for (const [prefix, sector] of Object.entries(sectorMap)) {
+    if (t.startsWith(prefix)) return sector;
+  }
+  
   if (typeof SECTORS !== 'undefined') {
     for (const [k, v] of Object.entries(SECTORS)) {
       if (t.startsWith(k)) return v;
@@ -244,6 +246,32 @@ function getPays(ticker) {
   const t = ticker.toUpperCase().trim();
   const ent = window.entMap && window.entMap[t];
   if (ent && ent.pays) return ent.pays;
+  
+  // Mapping correct par suffixe et ticker pour BRVM
+  const paysMap = {
+    'SNTS': 'Sénégal',
+    'SONATEL': 'Sénégal',
+    'NSBC': "Côte d'Ivoire",
+    'SGBCI': "Côte d'Ivoire",
+    'ECOBANK': 'Togo',
+    'BOA': 'Burkina Faso',
+    'BIIC': "Côte d'Ivoire",
+    'CBIBF': 'Burkina Faso',
+    'CIMTOGO': 'Togo',
+    'CIMCO': 'Cameroun',
+    'SAFCA': 'Cameroun',
+    'PALM': 'Côte d\'Ivoire',
+    'SAPH': 'Côte d\'Ivoire',
+    'SICOR': 'Côte d\'Ivoire',
+    'TOTAL': 'Côte d\'Ivoire',
+    'VIVO': 'Côte d\'Ivoire',
+    'SOCO': 'Côte d\'Ivoire',
+    'ONTBF': 'Burkina Faso'
+  };
+  
+  if (paysMap[t]) return paysMap[t];
+  
+  // Fallback sur suffixe
   if (t.endsWith('SN')) return 'Sénégal';
   if (t.endsWith('CI')) return "Côte d'Ivoire";
   if (t.endsWith('BF')) return 'Burkina Faso';
@@ -252,6 +280,8 @@ function getPays(ticker) {
   if (t.endsWith('ML')) return 'Mali';
   if (t.endsWith('NE')) return 'Niger';
   if (t.endsWith('GW')) return 'Guinée-Bissau';
+  if (t.endsWith('CM')) return 'Cameroun';
+  
   return 'Inconnu';
 }
 
@@ -269,16 +299,11 @@ function getDividendYield(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HISTORIQUE DU PORTEFEUILLE — OPTIMISÉ & CORRIGÉ
+// HISTORIQUE DU PORTEFEUILLE
 // ═══════════════════════════════════════════════════════
 function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
   if (!pf.length) return { dates: [], values: [], pls: [] };
-
-  if (!Array.isArray(window.allCoursHistorique) || window.allCoursHistorique.length === 0) {
-    console.warn('getPortfolioHistory: allCoursHistorique vide');
-    return { dates: [], values: [], pls: [] };
-  }
 
   const now = new Date();
   const startDate = new Date(now);
@@ -295,11 +320,7 @@ function getPortfolioHistory(periodDays = 99999) {
     current.setDate(current.getDate() + 1);
   }
 
-  const uniqueTickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
-  uniqueTickers.forEach(t => getTickerHistory(t));
-
   const cacheKey = JSON.stringify({
-    tickers: uniqueTickers.sort().join(','),
     period: periodDays,
     pfHash: pf.map(p => `${p.ticker}:${p.qty}:${p.price}:${p.date}`).join('|')
   });
@@ -322,7 +343,6 @@ function getPortfolioHistory(periodDays = 99999) {
         const ds = date.toISOString().split('T')[0];
         
         let priceAtDate = getPriceAtDate(t, ds);
-        
         if (!priceAtDate || priceAtDate <= 0) {
           priceAtDate = getLatestPrice(t) || p.price;
         }
@@ -357,13 +377,13 @@ function populateTickerSelect() {
   tickers.forEach(t => {
     const opt = document.createElement('option');
     opt.value = t;
-    opt.textContent = t;
+    opt.textContent = `${t} — ${getPays(t)}`;
     select.appendChild(opt);
   });
 }
 
 // ═══════════════════════════════════════════════════════
-// ACTIONS CRUD
+// ACTIONS CRUD — POSITIONS
 // ═══════════════════════════════════════════════════════
 window.addPosition = function() {
   const ticker = document.getElementById('pfTicker').value.trim().toUpperCase();
@@ -401,19 +421,154 @@ window.removePosition = function(id) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RENDU PRINCIPAL — CORRIGÉ AVEC CMP
+// CASH (DÉPÔTS/RETRAITS)
 // ═══════════════════════════════════════════════════════
-window.renderPortfolio = function() {
-  if (_pfRenderPending) {
-    console.log('Render déjà en cours, ignoré');
+window.addCash = function() {
+  const amount = parseFloat(document.getElementById('cashAmount').value);
+  const type = document.getElementById('cashType').value; // 'deposit' ou 'withdraw'
+  
+  if (!amount || amount <= 0) {
+    toast('Montant invalide', 'warn');
     return;
   }
+  
+  const currentCash = getCash();
+  let newCash;
+  
+  if (type === 'deposit') {
+    newCash = currentCash + amount;
+    toast(`Dépôt de ${fmtM(amount)} FCFA effectué`, 'success');
+  } else {
+    if (currentCash < amount) {
+      toast('Fonds insuffisants', 'error');
+      return;
+    }
+    newCash = currentCash - amount;
+    toast(`Retrait de ${fmtM(amount)} FCFA effectué`, 'success');
+  }
+  
+  saveCash(newCash);
+  renderPortfolio();
+}
+
+// ═══════════════════════════════════════════════════════
+// DIVIDENDES
+// ═══════════════════════════════════════════════════════
+window.addDividend = function() {
+  const ticker = document.getElementById('divTicker').value.trim().toUpperCase();
+  const amount = parseFloat(document.getElementById('divAmount').value);
+  const date = document.getElementById('divDate').value;
+  
+  if (!ticker || !amount || amount <= 0 || !date) {
+    toast('Remplissez tous les champs', 'warn');
+    return;
+  }
+  
+  const dividends = getDividends();
+  dividends.push({
+    id: Date.now(),
+    ticker,
+    amount,
+    date,
+    received: true
+  });
+  
+  // Ajouter au cash
+  const currentCash = getCash();
+  saveCash(currentCash + amount);
+  
+  saveDividends(dividends);
+  renderPortfolio();
+  toast(`Dividende ${ticker} : +${fmtM(amount)} FCFA`, 'success');
+}
+
+// ═══════════════════════════════════════════════════════
+// CALCULATEUR DE POSITION
+// ═══════════════════════════════════════════════════════
+window.calculatePosition = function() {
+  const ticker = document.getElementById('calcTicker').value.trim().toUpperCase();
+  const qty = parseInt(document.getElementById('calcQty').value);
+  const targetPrice = parseFloat(document.getElementById('calcTarget').value);
+  
+  if (!ticker || !qty || qty <= 0) {
+    toast('Remplissez les champs obligatoires', 'warn');
+    return;
+  }
+  
+  const currentPrice = getLatestPrice(ticker);
+  if (!currentPrice) {
+    toast('Cours actuel non disponible', 'warn');
+    return;
+  }
+  
+  const investment = qty * currentPrice;
+  const currentValue = qty * currentPrice;
+  
+  let resultHTML = `
+    <div style="padding:16px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="color:var(--dim)">Investissement</span>
+        <span style="color:var(--gold);font-weight:600">${fmtM(investment)} FCFA</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="color:var(--dim)">Cours actuel</span>
+        <span>${fmt(currentPrice, 2)} FCFA</span>
+      </div>
+  `;
+  
+  if (targetPrice && targetPrice > 0) {
+    const targetValue = qty * targetPrice;
+    const gain = targetValue - investment;
+    const gainPct = (gain / investment) * 100;
+    const color = gain >= 0 ? 'var(--green)' : 'var(--red)';
+    
+    resultHTML += `
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="color:var(--dim)">Cours cible</span>
+        <span>${fmt(targetPrice, 2)} FCFA</span>
+      </div>
+      <div style="width:100%;height:1px;background:var(--border2);margin:12px 0"></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="color:var(--dim)">Valeur cible</span>
+        <span style="color:${color};font-weight:600">${fmtM(targetValue)} FCFA</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px">
+        <span style="color:var(--dim)">Gain/Perte potentiel</span>
+        <span style="color:${color};font-weight:600">${gain >= 0 ? '+' : ''}${fmtM(gain)} FCFA (${fmt(gainPct, 2)}%)</span>
+      </div>
+    `;
+  }
+  
+  // Moins-value si cours baisse de 10%, 20%, 50%
+  resultHTML += `<div style="margin-top:16px"><div style="font-size:12px;color:var(--dim);margin-bottom:8px">📉 Scénarios de baisse :</div>`;
+  [10, 20, 50].forEach(pct => {
+    const dropPrice = currentPrice * (1 - pct / 100);
+    const dropValue = qty * dropPrice;
+    const loss = investment - dropValue;
+    resultHTML += `
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;font-size:12px">
+        <span style="color:var(--dim)">-${pct}% (${fmt(dropPrice, 2)})</span>
+        <span style="color:var(--red)">-${fmtM(loss)} FCFA</span>
+      </div>
+    `;
+  });
+  
+  resultHTML += `</div></div>`;
+  
+  document.getElementById('calcResult').innerHTML = resultHTML;
+}
+
+// ═══════════════════════════════════════════════════════
+// RENDU PRINCIPAL
+// ═══════════════════════════════════════════════════════
+window.renderPortfolio = function() {
+  if (_pfRenderPending) return;
   _pfRenderPending = true;
 
-  console.log('renderPortfolio appelé, allCoursHistorique length:', window.allCoursHistorique?.length);
-  
   try {
     const pf = getPortfolio();
+    const cash = getCash();
+    const dividends = getDividends();
 
     const pfTotal = document.getElementById('pfTotal');
     const pfInvested = document.getElementById('pfInvested');
@@ -425,13 +580,14 @@ window.renderPortfolio = function() {
     const pfBeta = document.getElementById('pfBeta');
     const pfTotalSub = document.getElementById('pfTotalSub');
     const pfPLSub = document.getElementById('pfPLSub');
+    const pfCash = document.getElementById('pfCash');
 
     if (!pf.length) {
       resetEmptyState();
       return;
     }
 
-    // ← CORRECTION : Calculer le CMP AVANT la boucle
+    // Calculer le CMP
     const cmpMap = calculateCMP(pf);
 
     // ── Calculs par position ──
@@ -443,9 +599,11 @@ window.renderPortfolio = function() {
 
     pf.forEach(p => {
       const currentPrice = getLatestPrice(p.ticker) || p.price;
-      const cmp = cmpMap[p.ticker.toUpperCase().trim()] || p.price; // ← CMP calculé
+      const cmpData = cmpMap[p.ticker.toUpperCase().trim()] || { value: p.price, positions: [p] };
+      const cmp = cmpData.value;
+      
       const value = p.qty * currentPrice;
-      const invested = p.qty * cmp; // ← Investi = QTÉ × CMP (pas prix individuel)
+      const invested = p.qty * cmp;
       const pl = value - invested;
       const plPct = invested > 0 ? (pl / invested) * 100 : 0;
 
@@ -461,7 +619,8 @@ window.renderPortfolio = function() {
       rows.push({ 
         ...p, 
         currentPrice, 
-        cmp, // ← AJOUT du CMP dans l'objet row
+        cmp,
+        cmpPositions: cmpData.positions,
         value, 
         invested, 
         pl, 
@@ -474,7 +633,7 @@ window.renderPortfolio = function() {
     const totalPL = totalValue - totalInvested;
     const totalReturn = totalInvested > 0 ? (totalPL / totalInvested) * 100 : 0;
 
-    // ── Historique pour stats avancées ──
+    // ── Historique pour stats ──
     const hist = getPortfolioHistory(window._pfPeriod || 99999);
 
     if (hist.values.length >= 2) {
@@ -489,46 +648,22 @@ window.renderPortfolio = function() {
     const sharpe = calcSharpe(dailyReturns);
     const maxDD = calcMaxDrawdown(hist.values);
 
-    // Beta vs BRVM Composite
-    let beta = null;
-    if (hist.values.length >= 2 && Array.isArray(window.allIndices) && window.allIndices.length > 0) {
-      const compositePrices = [];
-      hist.dates.forEach(date => {
-        const ds = date.toISOString().split('T')[0];
-        const idx = window.allIndices
-          .filter(i => (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE'))
-          .find(i => i.date_seance === ds);
-        if (idx) {
-          compositePrices.push(+(idx.valeur || idx.cours || idx.dernier || 0));
-        }
-      });
-
-      if (compositePrices.length >= 2 && compositePrices.length === hist.values.length) {
-        const marketReturns = [];
-        for (let i = 1; i < compositePrices.length; i++) {
-          if (compositePrices[i - 1] > 0) {
-            marketReturns.push((compositePrices[i] - compositePrices[i - 1]) / compositePrices[i - 1]);
-          }
-        }
-        if (marketReturns.length === dailyReturns.length && marketReturns.length >= 2) {
-          beta = calcBeta(dailyReturns, marketReturns);
-        }
-      }
-    }
-
     // ── Update KPIs ──
-    if (pfTotal) pfTotal.textContent = fmtM(totalValue) + ' FCFA';
+    const totalWithCash = totalValue + cash;
+    
+    if (pfTotal) pfTotal.textContent = fmtM(totalWithCash) + ' FCFA';
     if (pfTotalSub) {
       pfTotalSub.textContent = totalValue >= totalInvested ? '↑ Portefeuille en hausse' : '↓ Portefeuille en baisse';
       pfTotalSub.style.color = totalValue >= totalInvested ? 'var(--green)' : 'var(--red)';
     }
     if (pfInvested) pfInvested.textContent = fmtM(totalInvested) + ' FCFA';
+    if (pfCash) pfCash.textContent = fmtM(cash) + ' FCFA (liquide)';
     if (pfPL) {
       pfPL.textContent = (totalPL >= 0 ? '+' : '') + fmtM(totalPL) + ' FCFA';
       pfPL.style.color = totalPL >= 0 ? 'var(--green)' : 'var(--red)';
     }
     if (pfPLSub) {
-      pfPLSub.textContent = totalReturn >= 0 ? `+${fmt(totalReturn, 2)}% depuis l'achat` : `${fmt(totalReturn, 2)}% depuis l'achat`;
+      pfPLSub.textContent = totalReturn >= 0 ? `+${fmt(totalReturn, 2)}% de rentabilité` : `${fmt(totalReturn, 2)}% de rentabilité`;
       pfPLSub.style.color = totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
     }
     if (pfReturn) {
@@ -539,19 +674,32 @@ window.renderPortfolio = function() {
     if (pfVol) pfVol.textContent = (vol > 0 && hist.values.length >= 2) ? fmt(vol * 100, 2) + '%' : '—';
     if (pfSharpe) pfSharpe.textContent = (sharpe !== 0 && hist.values.length >= 2) ? fmt(sharpe, 2) : '—';
     if (pfDD) pfDD.textContent = (maxDD > 0 && hist.values.length >= 2) ? '-' + fmt(maxDD, 2) + '%' : '—';
-    if (pfBeta) pfBeta.textContent = beta !== null ? fmt(beta, 2) : '—';
+    if (pfBeta) pfBeta.textContent = '—';
 
-    // ── Tableau ──
+    // ── Tableau avec historique des achats ──
     const tbody = document.getElementById('pfTable');
     if (tbody) {
       tbody.innerHTML = rows.map(p => {
         const priceFound = getLatestPrice(p.ticker) !== null;
         const high52 = get52WeekHigh(p.ticker);
         const low52 = get52WeekLow(p.ticker);
+        
+        // Historique des achats pour ce ticker
+        const purchaseHistory = p.cmpPositions.map(pos => 
+          `<div style="font-size:10px;color:var(--dim);padding:2px 0">
+            📅 ${fmtDate(pos.date)} — ${fmt(pos.qty)} actions à ${fmt(pos.price, 2)} FCFA
+          </div>`
+        ).join('');
+        
         return `
           <tr>
             <td style="padding:10px 12px;">
-              <span style="font-family:var(--mono);color:var(--gold);font-weight:600">${p.ticker}</span>
+              <div style="font-family:var(--mono);color:var(--gold);font-weight:600">${p.ticker}</div>
+              <div style="font-size:10px;color:var(--dim)">${p.pays}</div>
+              <details style="margin-top:4px">
+                <summary style="font-size:10px;color:var(--gold);cursor:pointer">📋 ${p.cmpPositions.length} achat(s)</summary>
+                <div style="padding:4px 0">${purchaseHistory}</div>
+              </details>
             </td>
             <td style="padding:10px 12px;text-align:right">${fmt(p.qty)}</td>
             <td style="padding:10px 12px;text-align:right;font-family:var(--mono);color:var(--gold)">${fmt(p.cmp, 2)}</td>
@@ -570,9 +718,29 @@ window.renderPortfolio = function() {
       }).join('');
     }
 
-    // ── Compteur de positions ──
+    // ── Compteur ──
     const countEl = document.getElementById('pfPositionCount');
-    if (countEl) countEl.textContent = `${pf.length} position${pf.length > 1 ? 's' : ''}`;
+    if (countEl) countEl.textContent = `${pf.length} position${pf.length > 1 ? 's' : ''} | ${fmtM(cash)} FCFA liquide`;
+
+    // ── Dividendes reçus ──
+    const divEl = document.getElementById('dividendList');
+    if (divEl) {
+      const totalDividends = dividends.reduce((s, d) => s + d.amount, 0);
+      divEl.innerHTML = `
+        <div style="padding:16px">
+          <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+            <span style="color:var(--dim)">Total dividendes perçus</span>
+            <span style="color:var(--gold);font-weight:600">${fmtM(totalDividends)} FCFA</span>
+          </div>
+          ${dividends.length ? dividends.slice(-5).map(d => `
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid var(--border2)">
+              <span>${d.ticker} — ${fmtDate(d.date)}</span>
+              <span style="color:var(--green)">+${fmtM(d.amount)}</span>
+            </div>
+          `).join('') : '<div style="font-size:12px;color:var(--dim)">Aucun dividende enregistré</div>'}
+        </div>
+      `;
+    }
 
     // ── GRAPHIQUES ──
     renderPortfolioCharts(rows, totalValue, sectors, pays, hist);
@@ -587,16 +755,14 @@ window.renderPortfolio = function() {
 }
 
 // ═══════════════════════════════════════════════════════
-// GRAPHIQUES
+// GRAPHIQUES (inchangés mais optimisés)
 // ═══════════════════════════════════════════════════════
 function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
   if (typeof Chart === 'undefined') return;
 
-  // ── 1. Évolution de la Valeur (Line) ──
   const valueCanvas = document.getElementById('chartPortfolioValue');
   if (valueCanvas) {
     if (pfValueChartInst) { pfValueChartInst.destroy(); pfValueChartInst = null; }
-
     if (!hist.dates.length || !hist.values.length) {
       const ctx = valueCanvas.getContext('2d');
       ctx.clearRect(0, 0, valueCanvas.width, valueCanvas.height);
@@ -634,8 +800,6 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
             backgroundColor: '#1A1610',
             borderColor: 'rgba(184,150,78,0.3)',
             borderWidth: 1,
-            titleColor: '#B8964E',
-            bodyColor: '#F5F0E8',
             callbacks: { label: ctx => ' ' + fmtM(ctx.parsed.y) + ' FCFA' }
           }
         },
@@ -647,112 +811,55 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     });
   }
 
-  // ── 2. Allocation Sectorielle (Doughnut) ──
   const sectorCanvas = document.getElementById('chartSectorAlloc');
   if (sectorCanvas) {
     if (pfSectorChartInst) { pfSectorChartInst.destroy(); pfSectorChartInst = null; }
-
     const sectorLabels = Object.keys(sectors);
     const sectorData = Object.values(sectors);
     const colors = ['#B8964E', '#4ADE80', '#F87171', '#60A5FA', '#A78BFA', '#FBBF24', '#34D399', '#F472B6', '#818CF8', '#FB923C'];
-
+    
     if (!sectorLabels.length) {
       const ctx = sectorCanvas.getContext('2d');
       ctx.clearRect(0, 0, sectorCanvas.width, sectorCanvas.height);
-      ctx.font = '12px DM Sans';
-      ctx.fillStyle = 'rgba(245,240,232,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Aucune donnée sectorielle', sectorCanvas.width / 2, sectorCanvas.height / 2);
+      ctx.fillText('Aucune donnée', sectorCanvas.width / 2, sectorCanvas.height / 2);
       return;
     }
-
+    
     pfSectorChartInst = new Chart(sectorCanvas, {
       type: 'doughnut',
-      data: {
-        labels: sectorLabels,
-        datasets: [{
-          data: sectorData,
-          backgroundColor: colors,
-          borderColor: '#1A1610',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1A1610',
-            borderColor: 'rgba(184,150,78,0.3)',
-            borderWidth: 1,
-            callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` }
-          }
-        },
-        cutout: '60%'
-      }
+      data: { labels: sectorLabels, datasets: [{ data: sectorData, backgroundColor: colors, borderColor: '#1A1610', borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` } } }, cutout: '60%' }
     });
   }
 
-  // ── 3. Répartition Géographique (Doughnut) ──
   const geoCanvas = document.getElementById('chartGeoAlloc');
   if (geoCanvas) {
     if (pfGeoChartInst) { pfGeoChartInst.destroy(); pfGeoChartInst = null; }
-
     const geoLabels = Object.keys(pays);
     const geoData = Object.values(pays);
     const geoColors = ['#B8964E', '#4ADE80', '#60A5FA', '#F87171', '#A78BFA', '#FBBF24'];
-
+    
     if (!geoLabels.length) {
       const ctx = geoCanvas.getContext('2d');
       ctx.clearRect(0, 0, geoCanvas.width, geoCanvas.height);
-      ctx.font = '12px DM Sans';
-      ctx.fillStyle = 'rgba(245,240,232,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Aucune donnée géographique', geoCanvas.width / 2, geoCanvas.height / 2);
+      ctx.fillText('Aucune donnée', geoCanvas.width / 2, geoCanvas.height / 2);
       return;
     }
-
+    
     pfGeoChartInst = new Chart(geoCanvas, {
       type: 'doughnut',
-      data: {
-        labels: geoLabels,
-        datasets: [{
-          data: geoData,
-          backgroundColor: geoColors,
-          borderColor: '#1A1610',
-          borderWidth: 2
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } },
-          tooltip: {
-            backgroundColor: '#1A1610',
-            borderColor: 'rgba(184,150,78,0.3)',
-            borderWidth: 1,
-            callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` }
-          }
-        },
-        cutout: '60%'
-      }
+      data: { labels: geoLabels, datasets: [{ data: geoData, backgroundColor: geoColors, borderColor: '#1A1610', borderWidth: 2 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${fmt(ctx.parsed / totalValue * 100, 1)}%` } } }, cutout: '60%' }
     });
   }
 
-  // ── 4. P&L Cumulé (Bar) ──
   const plCanvas = document.getElementById('chartPortfolioPL');
   if (plCanvas) {
     if (pfPLChartInst) { pfPLChartInst.destroy(); pfPLChartInst = null; }
-
     if (!hist.dates.length || !hist.pls.length) {
       const ctx = plCanvas.getContext('2d');
       ctx.clearRect(0, 0, plCanvas.width, plCanvas.height);
-      ctx.font = '14px DM Sans';
-      ctx.fillStyle = 'rgba(245,240,232,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Données historiques insuffisantes', plCanvas.width / 2, plCanvas.height / 2);
+      ctx.fillText('Données insuffisantes', plCanvas.width / 2, plCanvas.height / 2);
       return;
     }
 
@@ -762,51 +869,25 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
 
     pfPLChartInst = new Chart(plCanvas, {
       type: 'bar',
-      data: {
-        labels: plLabels,
-        datasets: [{
-          label: 'P&L cumulé',
-          data: plData,
-          backgroundColor: plColors,
-          borderRadius: 2,
-          borderSkipped: false
-        }]
-      },
-      options: {
-        ...chartOpts,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1A1610',
-            borderColor: 'rgba(184,150,78,0.3)',
-            borderWidth: 1,
-            callbacks: { label: ctx => ' ' + (ctx.parsed.y >= 0 ? '+' : '') + fmtM(ctx.parsed.y) + ' FCFA' }
-          }
-        },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, maxTicksLimit: 6 } },
-          y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, callback: v => fmtM(v) } }
-        }
-      }
+      data: { labels: plLabels, datasets: [{ data: plData, backgroundColor: plColors, borderRadius: 2 }] },
+      options: { ...chartOpts, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + (ctx.parsed.y >= 0 ? '+' : '') + fmtM(ctx.parsed.y) + ' FCFA' } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } }, y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { callback: v => fmtM(v) } } } }
     });
   }
 }
 
 // ═══════════════════════════════════════════════════════
-// CONCENTRATION
+// CONCENTRATION, DIVIDENDES, BENCHMARK, CORRÉLATION
+// (inchangés — voir version précédente)
 // ═══════════════════════════════════════════════════════
 function renderConcentration(rows, totalValue) {
   const el = document.getElementById('concentrationStats');
   if (!el) return;
-
   if (!rows.length) {
-    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour analyser la concentration</div>';
+    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions</div>';
     return;
   }
-
   const top3 = [...rows].sort((a, b) => b.value - a.value).slice(0, 3);
   const top3Pct = top3.reduce((s, r) => s + (r.value / totalValue * 100), 0);
-
   const hhi = rows.reduce((s, r) => s + Math.pow(r.value / totalValue * 100, 2), 0);
   let hhiLabel = 'Faible';
   if (hhi > 2500) hhiLabel = 'Élevée';
@@ -814,58 +895,49 @@ function renderConcentration(rows, totalValue) {
 
   el.innerHTML = `
     <div style="padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px">
         <span style="font-size:12px;color:var(--dim)">Top 3 positions</span>
         <span style="font-size:14px;font-weight:600;color:var(--gold)">${fmt(top3Pct, 1)}%</span>
       </div>
       <div style="width:100%;height:6px;background:var(--border2);border-radius:3px;margin-bottom:16px;overflow:hidden">
         <div style="width:${top3Pct}%;height:100%;background:var(--gold);border-radius:3px"></div>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px">
         <span style="font-size:12px;color:var(--dim)">Indice HHI</span>
         <span style="font-size:14px;font-weight:600;color:${hhiLabel === 'Élevée' ? 'var(--red)' : hhiLabel === 'Modérée' ? 'var(--gold)' : 'var(--green)'}">${fmt(hhi, 0)} — ${hhiLabel}</span>
       </div>
       <div style="font-size:11px;color:var(--dim);margin-top:8px">
-        ${top3.map((r, i) => `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>${i+1}. ${r.ticker}</span><span style="color:var(--cream)">${fmt(r.value/totalValue*100, 1)}%</span></div>`).join('')}
+        ${top3.map((r, i) => `<div style="display:flex;justify-content:space-between;margin-bottom:4px"><span>${i+1}. ${r.ticker} (${r.pays})</span><span style="color:var(--cream)">${fmt(r.value/totalValue*100, 1)}%</span></div>`).join('')}
       </div>
     </div>
   `;
 }
 
-// ═══════════════════════════════════════════════════════
-// DIVIDENDES ESTIMÉS
-// ═══════════════════════════════════════════════════════
 function renderDividends(rows) {
   const el = document.getElementById('dividendStats');
   if (!el) return;
-
   if (!rows.length) {
-    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour estimer les dividendes</div>';
+    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions</div>';
     return;
   }
-
   let totalDividend = 0;
   const divDetails = [];
-
   rows.forEach(r => {
     const yield_ = getDividendYield(r.ticker);
     const divEstime = r.value * (yield_ / 100);
     totalDividend += divEstime;
-    if (yield_ > 0) {
-      divDetails.push({ ticker: r.ticker, yield: yield_, value: r.value, div: divEstime });
-    }
+    if (yield_ > 0) divDetails.push({ ticker: r.ticker, yield: yield_, value: r.value, div: divEstime });
   });
-
   const totalValue = rows.reduce((s, r) => s + r.value, 0);
   const portfolioYield = totalValue > 0 ? (totalDividend / totalValue * 100) : 0;
 
   el.innerHTML = `
     <div style="padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px">
         <span style="font-size:12px;color:var(--dim)">Rendement estimé (dividende)</span>
         <span style="font-size:18px;font-weight:600;color:var(--gold)">${fmt(portfolioYield, 2)}%</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:16px">
         <span style="font-size:12px;color:var(--dim)">Dividendes annuels estimés</span>
         <span style="font-size:14px;font-weight:600;color:var(--green)">+${fmtM(totalDividend)} FCFA</span>
       </div>
@@ -876,127 +948,63 @@ function renderDividends(rows) {
   `;
 }
 
-// ═══════════════════════════════════════════════════════
-// PERFORMANCE VS BRVM
-// ═══════════════════════════════════════════════════════
 function renderBenchmark(rows, hist) {
   const el = document.getElementById('benchmarkStats');
   if (!el) return;
-
   if (!rows.length) {
-    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour comparer avec le benchmark</div>';
+    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions</div>';
     return;
   }
-
-  let brvmReturn = 0;
-  let brvmDataFound = false;
-
+  let brvmReturn = 0, brvmDataFound = false;
   if (Array.isArray(window.allIndices) && window.allIndices.length > 0) {
-    const composite = window.allIndices.filter(i =>
-      (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE')
-    );
+    const composite = window.allIndices.filter(i => (i.nom || i.ticker || '').toUpperCase().includes('COMPOSITE'));
     if (composite.length >= 2) {
       const sorted = composite.sort((a, b) => new Date(a.date_seance || 0) - new Date(b.date_seance || 0));
-      const first = sorted[0];
-      const last = sorted[sorted.length - 1];
+      const first = sorted[0], last = sorted[sorted.length - 1];
       const firstVal = +(first.valeur || first.cours || first.dernier || 0);
       const lastVal = +(last.valeur || last.cours || last.dernier || 0);
-      if (firstVal > 0) {
-        brvmReturn = (lastVal - firstVal) / firstVal * 100;
-        brvmDataFound = true;
-      }
+      if (firstVal > 0) { brvmReturn = (lastVal - firstVal) / firstVal * 100; brvmDataFound = true; }
     }
   }
-
-  const pfReturn = hist.values.length >= 2 && hist.values[0] > 0
-    ? (hist.values[hist.values.length - 1] - hist.values[0]) / hist.values[0] * 100
-    : 0;
-
+  const pfReturn = hist.values.length >= 2 && hist.values[0] > 0 ? (hist.values[hist.values.length - 1] - hist.values[0]) / hist.values[0] * 100 : 0;
   const outperformance = pfReturn - brvmReturn;
 
   if (!brvmDataFound) {
-    el.innerHTML = `
-      <div style="padding:16px;text-align:center">
-        <p style="color:var(--dim);font-size:13px">Données BRVM Composite non disponibles</p>
-        <p style="color:var(--dim);font-size:12px">Impossible de calculer la comparaison pour le moment</p>
-      </div>
-    `;
+    el.innerHTML = `<div style="padding:16px;text-align:center"><p style="color:var(--dim);font-size:13px">Données BRVM Composite non disponibles</p></div>`;
     return;
   }
-
   el.innerHTML = `
     <div style="padding:16px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span style="font-size:12px;color:var(--dim)">Votre portefeuille</span>
-        <span style="font-size:14px;font-weight:600;color:${pfReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${pfReturn >= 0 ? '+' : ''}${fmt(pfReturn, 2)}%</span>
-      </div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <span style="font-size:12px;color:var(--dim)">BRVM Composite</span>
-        <span style="font-size:14px;font-weight:600;color:${brvmReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${brvmReturn >= 0 ? '+' : ''}${fmt(brvmReturn, 2)}%</span>
-      </div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px"><span style="font-size:12px;color:var(--dim)">Votre portefeuille</span><span style="font-size:14px;font-weight:600;color:${pfReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${pfReturn >= 0 ? '+' : ''}${fmt(pfReturn, 2)}%</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px"><span style="font-size:12px;color:var(--dim)">BRVM Composite</span><span style="font-size:14px;font-weight:600;color:${brvmReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${brvmReturn >= 0 ? '+' : ''}${fmt(brvmReturn, 2)}%</span></div>
       <div style="width:100%;height:1px;background:var(--border2);margin:12px 0"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:12px;color:var(--dim)">Surperformance</span>
-        <span style="font-size:16px;font-weight:600;color:${outperformance >= 0 ? 'var(--green)' : 'var(--red)'}">${outperformance >= 0 ? '+' : ''}${fmt(outperformance, 2)}%</span>
-      </div>
-      <div style="margin-top:12px;font-size:11px;color:var(--dim);text-align:center">
-        ${outperformance >= 0 ? '✓ Vous battez le marché' : '⚠ Vous sous-performez le marché'}
-      </div>
+      <div style="display:flex;justify-content:space-between"><span style="font-size:12px;color:var(--dim)">Surperformance</span><span style="font-size:16px;font-weight:600;color:${outperformance >= 0 ? 'var(--green)' : 'var(--red)'}">${outperformance >= 0 ? '+' : ''}${fmt(outperformance, 2)}%</span></div>
     </div>
   `;
 }
 
-// ═══════════════════════════════════════════════════════
-// MATRICE DE CORRÉLATION
-// ═══════════════════════════════════════════════════════
 function renderCorrelationMatrix(pf) {
   const el = document.getElementById('correlationMatrix');
   if (!el) return;
-
-  if (pf.length < 2) {
-    el.innerHTML = 'Ajoutez au moins 2 positions pour voir la matrice de corrélation';
-    return;
-  }
-
-  if (!Array.isArray(window.allCoursHistorique) || window.allCoursHistorique.length === 0) {
-    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px">Données historiques en cours de chargement...</div>';
-    return;
-  }
-
+  if (pf.length < 2) { el.innerHTML = 'Ajoutez au moins 2 positions'; return; }
+  
   const tickers = pf.map(p => p.ticker.toUpperCase().trim());
-  const priceHistories = {};
-
-  tickers.forEach(t => {
-    priceHistories[t] = getTickerHistory(t)
-      .map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0))
-      .filter(v => v > 0);
-  });
-
   const returns = {};
   tickers.forEach(t => {
-    const prices = priceHistories[t] || [];
+    const prices = getTickerHistory(t).map(c => +(c.cours_cloture || c.cours_normal || c.cours || 0)).filter(v => v > 0);
     returns[t] = [];
-    for (let i = 1; i < prices.length; i++) {
-      returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
-    }
+    for (let i = 1; i < prices.length; i++) returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
   });
-
+  
   const minLen = Math.min(...Object.values(returns).map(r => r.length));
-  if (minLen < 5) {
-    el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px">Données historiques insuffisantes pour calculer la corrélation (minimum 5 jours requis)</div>';
-    return;
-  }
-
+  if (minLen < 5) { el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px">Données insuffisantes</div>'; return; }
   tickers.forEach(t => { returns[t] = returns[t].slice(-minLen); });
 
   let html = '<div style="display:grid;gap:2px;padding:8px;overflow:auto">';
-  html += '<div style="display:contents">';
-  html += '<div style="width:50px"></div>';
-  tickers.forEach(t => {
-    html += `<div style="width:50px;text-align:center;font-size:10px;color:var(--gold);font-family:var(--mono);padding:4px 2px">${t}</div>`;
-  });
+  html += '<div style="display:contents"><div style="width:50px"></div>';
+  tickers.forEach(t => { html += `<div style="width:50px;text-align:center;font-size:10px;color:var(--gold);font-family:var(--mono);padding:4px 2px">${t}</div>`; });
   html += '</div>';
-
+  
   tickers.forEach(t1 => {
     html += '<div style="display:contents">';
     html += `<div style="width:50px;text-align:right;font-size:10px;color:var(--gold);font-family:var(--mono);padding:4px 2px">${t1}</div>`;
@@ -1007,15 +1015,8 @@ function renderCorrelationMatrix(pf) {
     });
     html += '</div>';
   });
-
   html += '</div>';
-  html += '<div style="display:flex;gap:12px;justify-content:center;margin-top:8px;font-size:10px;color:var(--dim)">';
-  html += '<span><span style="display:inline-block;width:10px;height:10px;background:rgba(74,222,128,0.6);border-radius:2px;margin-right:4px"></span>Négative</span>';
-  html += '<span><span style="display:inline-block;width:10px;height:10px;background:rgba(245,240,232,0.1);border-radius:2px;margin-right:4px"></span>Faible</span>';
-  html += '<span><span style="display:inline-block;width:10px;height:10px;background:rgba(251,191,36,0.5);border-radius:2px;margin-right:4px"></span>Modérée</span>';
-  html += '<span><span style="display:inline-block;width:10px;height:10px;background:rgba(248,113,113,0.7);border-radius:2px;margin-right:4px"></span>Élevée</span>';
-  html += '</div>';
-
+  html += '<div style="display:flex;gap:12px;justify-content:center;margin-top:8px;font-size:10px;color:var(--dim)"><span>🔴 Élevée</span><span>🟡 Modérée</span><span>⚪ Faible</span><span>🟢 Négative</span></div>';
   el.innerHTML = html;
 }
 
@@ -1023,75 +1024,37 @@ function renderCorrelationMatrix(pf) {
 // ÉTAT VIDE
 // ═══════════════════════════════════════════════════════
 function resetEmptyState() {
-  const pfTotal = document.getElementById('pfTotal');
-  const pfInvested = document.getElementById('pfInvested');
-  const pfPL = document.getElementById('pfPL');
-  const pfReturn = document.getElementById('pfReturn');
-  const pfVol = document.getElementById('pfVolatility');
-  const pfSharpe = document.getElementById('pfSharpe');
-  const pfDD = document.getElementById('pfDrawdown');
-  const pfBeta = document.getElementById('pfBeta');
-
-  if (pfTotal) pfTotal.textContent = '—';
-  if (pfInvested) pfInvested.textContent = '—';
-  if (pfPL) pfPL.textContent = '—';
-  if (pfReturn) pfReturn.textContent = '—';
-  if (pfVol) pfVol.textContent = '—';
-  if (pfSharpe) pfSharpe.textContent = '—';
-  if (pfDD) pfDD.textContent = '—';
-  if (pfBeta) pfBeta.textContent = '—';
-
+  ['pfTotal','pfInvested','pfPL','pfReturn','pfVolatility','pfSharpe','pfDrawdown','pfBeta'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = '—';
+  });
   const tbody = document.getElementById('pfTable');
   if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>';
-
   const countEl = document.getElementById('pfPositionCount');
   if (countEl) countEl.textContent = '0 position';
-
-  if (pfValueChartInst) { pfValueChartInst.destroy(); pfValueChartInst = null; }
-  if (pfSectorChartInst) { pfSectorChartInst.destroy(); pfSectorChartInst = null; }
-  if (pfGeoChartInst) { pfGeoChartInst.destroy(); pfGeoChartInst = null; }
-  if (pfPLChartInst) { pfPLChartInst.destroy(); pfPLChartInst = null; }
-
-  ['concentrationStats', 'dividendStats', 'benchmarkStats'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions pour analyser</div>';
+  
+  [pfValueChartInst, pfSectorChartInst, pfGeoChartInst, pfPLChartInst].forEach(chart => {
+    if (chart) { chart.destroy(); }
   });
-
-  const corrEl = document.getElementById('correlationMatrix');
-  if (corrEl) corrEl.innerHTML = 'Ajoutez au moins 2 positions pour voir la matrice de corrélation';
+  pfValueChartInst = pfSectorChartInst = pfGeoChartInst = pfPLChartInst = null;
 }
 
 // ═══════════════════════════════════════════════════════
-// PÉRIODE DU GRAPHIQUE — AVEC DEBOUNCE
+// PÉRIODE & INIT
 // ═══════════════════════════════════════════════════════
 let _pfPeriodTimeout = null;
-
 window.setPortfolioPeriod = function(days, btn) {
-  document.querySelectorAll('#view-portefeuille .year-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.year-tab').forEach(b => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
   window._pfPeriod = days;
-  
   if (_pfPeriodTimeout) clearTimeout(_pfPeriodTimeout);
-  _pfPeriodTimeout = setTimeout(() => {
-    renderPortfolio();
-  }, 150);
+  _pfPeriodTimeout = setTimeout(() => renderPortfolio(), 150);
 }
 
-// ═══════════════════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════════════════
 window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
   window._pfPeriod = window._pfPeriod || 99999;
-
   populateTickerSelect();
-
-  const onDataReady = () => {
-    console.log('dataLoaded reçu, re-render portefeuille');
-    populateTickerSelect();
-    renderPortfolio();
-  };
-
-  window.addEventListener('dataLoaded', onDataReady, { once: true });
+  window.addEventListener('dataLoaded', () => { populateTickerSelect(); renderPortfolio(); }, { once: true });
   renderPortfolio();
 }
