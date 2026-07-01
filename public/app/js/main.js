@@ -156,6 +156,7 @@ async function loadAll() {
     window.allEntreprises = allEntreprises;
     window.allIndices = allIndices;
     window.allCoursHistorique = allCoursHistorique;
+    window.entMap = entMap;
 
     // CORRECTION : Dispatch dataLoaded AVANT les renders
     window.dispatchEvent(new Event('dataLoaded'));
@@ -185,7 +186,9 @@ async function loadAll() {
 
 function populateTickerSelects() {
   const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  if (Array.isArray(allCours)) {
+    allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  }
   const tickers = Object.keys(byTicker).sort();
   const opts = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
 
