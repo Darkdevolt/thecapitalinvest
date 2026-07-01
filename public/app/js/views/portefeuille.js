@@ -277,11 +277,11 @@ function getPortfolioHistory(periodDays = 99999) {
     current.setDate(current.getDate() + 1);
   }
 
-  // ← OPTIMISATION : précharger et indexer les historiques
+  // Précharger et indexer les historiques
   const uniqueTickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
   uniqueTickers.forEach(t => getTickerHistory(t));
 
-  // ← CACHE : clé basée sur le contenu du portefeuille
+  // CACHE : clé basée sur le contenu du portefeuille
   const cacheKey = JSON.stringify({
     tickers: uniqueTickers.sort().join(','),
     period: periodDays,
@@ -327,6 +327,23 @@ function getPortfolioHistory(periodDays = 99999) {
 
 function invalidatePortfolioCache() {
   Object.keys(_pfPortfolioCache).forEach(k => delete _pfPortfolioCache[k]);
+}
+
+// ═══════════════════════════════════════════════════════
+// PEUPLER LE SELECT DES TICKERS
+// ═══════════════════════════════════════════════════════
+function populateTickerSelect() {
+  const select = document.getElementById('pfTicker');
+  if (!select) return;
+  while (select.options.length > 1) select.remove(1);
+  if (!Array.isArray(window.allCours) || window.allCours.length === 0) return;
+  const tickers = [...new Set(window.allCours.map(c => c.ticker).filter(Boolean))].sort();
+  tickers.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    select.appendChild(opt);
+  });
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1038,8 +1055,11 @@ window.initPortefeuille = function() {
   console.log('initPortefeuille appelé');
   window._pfPeriod = window._pfPeriod || 99999;
 
+  populateTickerSelect();
+
   const onDataReady = () => {
     console.log('dataLoaded reçu, re-render portefeuille');
+    populateTickerSelect();
     renderPortfolio();
   };
 
