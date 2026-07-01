@@ -1,5 +1,13 @@
 // ═══════════════════════════════════════════════════════
-// VIEW — Portefeuille Simulé (VERSION COMPLÈTE & CORRIGÉE)
+// VIEW — Portefeuille Simulé (VERSION CORRIGÉE — 2026-07-01)
+// ═══════════════════════════════════════════════════════
+// Corrections apportées :
+// 1. parseDateSafe() — gestion robuste DD/MM/YYYY et timezone
+// 2. getPriceAtDate() — recherche binaire au lieu de comparaison string
+// 3. getLatestPrice() — matching exact uniquement (suppression du startsWith)
+// 4. getPortfolioHistory() — cash inclus dans totalValues, pas de fallback sur prix actuel
+// 5. renderPortfolioCharts() — graphique valeur totale (cash + actions)
+// 6. KPIs — cohérence entre valeur affichée et graphique
 // ═══════════════════════════════════════════════════════
 
 const _pfHistCache = {};
@@ -23,6 +31,33 @@ function getDividends() {
   catch { return []; }
 }
 function saveDividends(data) { localStorage.setItem('tc_dividends', JSON.stringify(data)); }
+
+// ═══════════════════════════════════════════════════════
+// HELPERS DATES ROBUSTES (NOUVEAU)
+// ═══════════════════════════════════════════════════════
+function parseDateSafe(dateVal) {
+  if (!dateVal) return null;
+  // Si c'est déjà un objet Date valide
+  const d0 = new Date(dateVal);
+  if (!isNaN(d0.getTime())) return d0;
+  // Si string, essayer DD/MM/YYYY
+  if (typeof dateVal === 'string') {
+    const m = dateVal.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);
+    if (m) {
+      const d = new Date(+m[3], +m[2] - 1, +m[1]);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  return null;
+}
+
+function dateToStr(d) {
+  if (!d || isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 
 // ═══════════════════════════════════════════════════════
 // CALCUL DU CMP (COÛT MOYEN PONDÉRÉ)
@@ -52,7 +87,7 @@ function calculateCMP(positions) {
 }
 
 // ═══════════════════════════════════════════════════════
-// RÉCUPÉRATION DU COURS ACTUEL
+// RÉCUPÉRATION DU COURS ACTUEL (MATCHING EXACT)
 // ═══════════════════════════════════════════════════════
 function getLatestPrice(ticker) {
   if (!ticker) return null;
@@ -61,7 +96,7 @@ function getLatestPrice(ticker) {
   if (Array.isArray(window.allCours) && window.allCours.length > 0) {
     const coursJour = window.allCours.find(c => {
       const ct = (c.ticker || '').toUpperCase().trim();
-      return ct === t || ct.startsWith(t) || t.startsWith(ct);
+      return ct === t;
     });
     if (coursJour) {
       const prix = coursJour.cours_cloture || coursJour.dernier_cours || coursJour.cours;
@@ -79,7 +114,12 @@ function getLatestPrice(ticker) {
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const hist = window.allCoursHistorique
       .filter(c => (c.ticker || '').toUpperCase().trim() === t)
-      .sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
+      .sort((a, b) => {
+        const da = parseDateSafe(a.date_seance);
+        const db = parseDateSafe(b.date_seance);
+        if (!da || !db) return 0;
+        return db.getTime() - da.getTime();
+      });
     if (hist.length) {
       const last = hist[0];
       const prix = last.cours_cloture || last.cours_normal || last.cours;
@@ -90,18 +130,25 @@ function getLatestPrice(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HISTORIQUES PAR TICKER
+// HISTORIQUES PAR TICKER (NORMALISÉ)
 // ═══════════════════════════════════════════════════════
 function getTickerHistory(ticker) {
   if (!ticker) return [];
   const t = ticker.toUpperCase().trim();
-  
+
   if (_pfHistCache[t] && _pfHistCache[t].length > 0) return _pfHistCache[t];
-  
+
   if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 0) {
     const hist = window.allCoursHistorique
       .filter(c => (c.ticker || '').toUpperCase().trim() === t)
-      .sort((a, b) => new Date(a.date_seance || 0) - new Date(b.date_seance || 0));
+      .map(c => {
+        // Normaliser la date pour éviter les problèmes de format
+        const d = parseDateSafe(c.date_seance);
+        return { ...c, _parsedDate: d, _dateStr: d ? dateToStr(d) : '' };
+      })
+      .filter(c => c._parsedDate && !isNaN(c._parsedDate.getTime()))
+      .sort((a, b) => a._parsedDate.getTime() - b._parsedDate.getTime());
+
     if (hist.length > 0) {
       _pfHistCache[t] = hist;
       return hist;
@@ -110,24 +157,38 @@ function getTickerHistory(ticker) {
   return [];
 }
 
+// ═══════════════════════════════════════════════════════
+// RÉCUPÉRATION DU PRIX À UNE DATE (RECHERCHE BINAIRE)
+// ═══════════════════════════════════════════════════════
 function getPriceAtDate(ticker, dateStr) {
   const hist = getTickerHistory(ticker);
   if (!hist.length) return null;
-  
-  const exact = hist.find(c => (c.date_seance || '').split('T')[0] === dateStr);
-  if (exact) {
-    const prix = +(exact.cours_cloture || exact.cours_normal || exact.cours || 0);
+
+  // Recherche binaire sur l'historique trié par date croissante
+  let left = 0, right = hist.length - 1;
+  let lastBefore = null;
+
+  while (left <= right) {
+    const mid = Math.floor((left + right) / 2);
+    const c = hist[mid];
+    const ds = c._dateStr;
+
+    if (ds === dateStr) {
+      const prix = +(c.cours_cloture || c.cours_normal || c.cours || 0);
+      return prix > 0 ? prix : null;
+    } else if (ds < dateStr) {
+      lastBefore = c;
+      left = mid + 1;
+    } else {
+      right = mid - 1;
+    }
+  }
+
+  if (lastBefore) {
+    const prix = +(lastBefore.cours_cloture || lastBefore.cours_normal || lastBefore.cours || 0);
     return prix > 0 ? prix : null;
   }
-  
-  const before = hist
-    .filter(c => (c.date_seance || '').split('T')[0] <= dateStr)
-    .sort((a, b) => new Date(b.date_seance || 0) - new Date(a.date_seance || 0));
-  
-  if (before.length) {
-    const prix = +(before[0].cours_cloture || before[0].cours_normal || before[0].cours || 0);
-    return prix > 0 ? prix : null;
-  }
+
   return null;
 }
 
@@ -204,8 +265,7 @@ function getSector(ticker) {
   const t = ticker.toUpperCase().trim();
   const ent = window.entMap && window.entMap[t];
   if (ent && ent.secteur) return ent.secteur;
-  
-  // Mapping par ticker pour BRVM
+
   const sectorMap = {
     'SNTS': 'Télécommunications',
     'SONATEL': 'Télécommunications',
@@ -228,11 +288,11 @@ function getSector(ticker) {
     'ONTBF': 'Finance',
     'BRVM': 'Indice'
   };
-  
+
   for (const [prefix, sector] of Object.entries(sectorMap)) {
     if (t.startsWith(prefix)) return sector;
   }
-  
+
   if (typeof SECTORS !== 'undefined') {
     for (const [k, v] of Object.entries(SECTORS)) {
       if (t.startsWith(k)) return v;
@@ -246,8 +306,7 @@ function getPays(ticker) {
   const t = ticker.toUpperCase().trim();
   const ent = window.entMap && window.entMap[t];
   if (ent && ent.pays) return ent.pays;
-  
-  // Mapping correct par suffixe et ticker pour BRVM
+
   const paysMap = {
     'SNTS': 'Sénégal',
     'SONATEL': 'Sénégal',
@@ -260,18 +319,17 @@ function getPays(ticker) {
     'CIMTOGO': 'Togo',
     'CIMCO': 'Cameroun',
     'SAFCA': 'Cameroun',
-    'PALM': 'Côte d\'Ivoire',
-    'SAPH': 'Côte d\'Ivoire',
-    'SICOR': 'Côte d\'Ivoire',
-    'TOTAL': 'Côte d\'Ivoire',
-    'VIVO': 'Côte d\'Ivoire',
-    'SOCO': 'Côte d\'Ivoire',
+    'PALM': 'Côte d'Ivoire',
+    'SAPH': 'Côte d'Ivoire',
+    'SICOR': 'Côte d'Ivoire',
+    'TOTAL': 'Côte d'Ivoire',
+    'VIVO': 'Côte d'Ivoire',
+    'SOCO': 'Côte d'Ivoire',
     'ONTBF': 'Burkina Faso'
   };
-  
+
   if (paysMap[t]) return paysMap[t];
-  
-  // Fallback sur suffixe
+
   if (t.endsWith('SN')) return 'Sénégal';
   if (t.endsWith('CI')) return "Côte d'Ivoire";
   if (t.endsWith('BF')) return 'Burkina Faso';
@@ -281,7 +339,7 @@ function getPays(ticker) {
   if (t.endsWith('NE')) return 'Niger';
   if (t.endsWith('GW')) return 'Guinée-Bissau';
   if (t.endsWith('CM')) return 'Cameroun';
-  
+
   return 'Inconnu';
 }
 
@@ -299,19 +357,29 @@ function getDividendYield(ticker) {
 }
 
 // ═══════════════════════════════════════════════════════
-// HISTORIQUE DU PORTEFEUILLE
+// HISTORIQUE DU PORTEFEUILLE (CASH INCLUS, DATES ROBUSTES)
 // ═══════════════════════════════════════════════════════
 function getPortfolioHistory(periodDays = 99999) {
   const pf = getPortfolio();
-  if (!pf.length) return { dates: [], values: [], pls: [] };
+  if (!pf.length) return { dates: [], values: [], pls: [], totalValues: [] };
 
   const now = new Date();
   const startDate = new Date(now);
   startDate.setDate(startDate.getDate() - periodDays);
 
-  const oldestBuy = new Date(Math.min(...pf.map(p => new Date(p.date || now))));
-  const effectiveStart = periodDays === 99999 ? oldestBuy : new Date(Math.max(startDate, oldestBuy));
+  // Dates d'achat robustes (strings YYYY-MM-DD pour éviter les timezone bugs)
+  const buyDates = pf.map(p => {
+    const d = p.date ? parseDateSafe(p.date) : new Date(p.id || now);
+    return { str: d && !isNaN(d.getTime()) ? dateToStr(d) : dateToStr(now), obj: d || now };
+  });
+  const oldestBuyStr = buyDates.map(b => b.str).sort()[0];
+  const oldestBuy = parseDateSafe(oldestBuyStr) || now;
 
+  const effectiveStart = periodDays === 99999 
+    ? oldestBuy 
+    : new Date(Math.max(startDate.getTime(), oldestBuy.getTime()));
+
+  // Générer les dates de marché (lun-ven)
   const dates = [];
   let current = new Date(effectiveStart);
   while (current <= now) {
@@ -322,29 +390,56 @@ function getPortfolioHistory(periodDays = 99999) {
 
   const cacheKey = JSON.stringify({
     period: periodDays,
-    pfHash: pf.map(p => `${p.ticker}:${p.qty}:${p.price}:${p.date}`).join('|')
+    pfHash: pf.map((p, i) => `${p.ticker}:${p.qty}:${p.price}:${buyDates[i].str}`).join('|')
   });
 
   if (_pfPortfolioCache[cacheKey]) {
     return _pfPortfolioCache[cacheKey];
   }
 
+  const cash = getCash();
   const values = [];
   const pls = [];
+  const totalValues = [];
+
+  // Pré-calculer les prix par ticker pour éviter les recherches répétées
+  const tickerPrices = {};
+  const tickers = [...new Set(pf.map(p => p.ticker.toUpperCase().trim()))];
+  tickers.forEach(t => {
+    const hist = getTickerHistory(t);
+    tickerPrices[t] = {};
+    hist.forEach(c => {
+      if (c._dateStr) {
+        const prix = +(c.cours_cloture || c.cours_normal || c.cours || 0);
+        if (prix > 0) tickerPrices[t][c._dateStr] = prix;
+      }
+    });
+  });
 
   dates.forEach(date => {
     let dayValue = 0;
     let dayInvested = 0;
+    const ds = dateToStr(date);
 
-    pf.forEach(p => {
-      const buyDate = new Date(p.date || p.id);
-      if (date >= buyDate) {
+    pf.forEach((p, idx) => {
+      const buyStr = buyDates[idx].str;
+      // Inclure les positions achetées à cette date ou avant
+      if (ds >= buyStr) {
         const t = p.ticker.toUpperCase().trim();
-        const ds = date.toISOString().split('T')[0];
-        
-        let priceAtDate = getPriceAtDate(t, ds);
+        let priceAtDate = tickerPrices[t][ds];
+
+        // Si pas de prix exact, chercher le dernier prix connu AVANT cette date
         if (!priceAtDate || priceAtDate <= 0) {
-          priceAtDate = getLatestPrice(t) || p.price;
+          const hist = getTickerHistory(t);
+          let lastKnown = null;
+          for (let i = hist.length - 1; i >= 0; i--) {
+            if (hist[i]._dateStr && hist[i]._dateStr <= ds) {
+              const prix = +(hist[i].cours_cloture || hist[i].cours_normal || hist[i].cours || 0);
+              if (prix > 0) { lastKnown = prix; break; }
+            }
+          }
+          // Dernier recours : prix d'achat (JAMAIS le prix actuel pour l'historique)
+          priceAtDate = lastKnown || p.price;
         }
 
         dayValue += p.qty * priceAtDate;
@@ -354,9 +449,10 @@ function getPortfolioHistory(periodDays = 99999) {
 
     values.push(dayValue);
     pls.push(dayValue - dayInvested);
+    totalValues.push(dayValue + cash);
   });
 
-  const result = { dates, values, pls };
+  const result = { dates, values, pls, totalValues };
   _pfPortfolioCache[cacheKey] = result;
   return result;
 }
@@ -390,12 +486,12 @@ window.addPosition = function() {
   const qty = parseInt(document.getElementById('pfQty').value);
   const price = parseFloat(document.getElementById('pfPrice').value);
   const date = document.getElementById('pfDate').value;
-  
+
   if (!ticker || !qty || !price || qty <= 0 || price <= 0) {
     toast('Remplissez tous les champs correctement', 'warn');
     return;
   }
-  
+
   const pf = getPortfolio();
   pf.push({
     id: Date.now(),
@@ -425,16 +521,16 @@ window.removePosition = function(id) {
 // ═══════════════════════════════════════════════════════
 window.addCash = function() {
   const amount = parseFloat(document.getElementById('cashAmount').value);
-  const type = document.getElementById('cashType').value; // 'deposit' ou 'withdraw'
-  
+  const type = document.getElementById('cashType').value;
+
   if (!amount || amount <= 0) {
     toast('Montant invalide', 'warn');
     return;
   }
-  
+
   const currentCash = getCash();
   let newCash;
-  
+
   if (type === 'deposit') {
     newCash = currentCash + amount;
     toast(`Dépôt de ${fmtM(amount)} FCFA effectué`, 'success');
@@ -446,7 +542,7 @@ window.addCash = function() {
     newCash = currentCash - amount;
     toast(`Retrait de ${fmtM(amount)} FCFA effectué`, 'success');
   }
-  
+
   saveCash(newCash);
   renderPortfolio();
 }
@@ -458,12 +554,12 @@ window.addDividend = function() {
   const ticker = document.getElementById('divTicker').value.trim().toUpperCase();
   const amount = parseFloat(document.getElementById('divAmount').value);
   const date = document.getElementById('divDate').value;
-  
+
   if (!ticker || !amount || amount <= 0 || !date) {
     toast('Remplissez tous les champs', 'warn');
     return;
   }
-  
+
   const dividends = getDividends();
   dividends.push({
     id: Date.now(),
@@ -472,11 +568,10 @@ window.addDividend = function() {
     date,
     received: true
   });
-  
-  // Ajouter au cash
+
   const currentCash = getCash();
   saveCash(currentCash + amount);
-  
+
   saveDividends(dividends);
   renderPortfolio();
   toast(`Dividende ${ticker} : +${fmtM(amount)} FCFA`, 'success');
@@ -489,21 +584,21 @@ window.calculatePosition = function() {
   const ticker = document.getElementById('calcTicker').value.trim().toUpperCase();
   const qty = parseInt(document.getElementById('calcQty').value);
   const targetPrice = parseFloat(document.getElementById('calcTarget').value);
-  
+
   if (!ticker || !qty || qty <= 0) {
     toast('Remplissez les champs obligatoires', 'warn');
     return;
   }
-  
+
   const currentPrice = getLatestPrice(ticker);
   if (!currentPrice) {
     toast('Cours actuel non disponible', 'warn');
     return;
   }
-  
+
   const investment = qty * currentPrice;
   const currentValue = qty * currentPrice;
-  
+
   let resultHTML = `
     <div style="padding:16px">
       <div style="display:flex;justify-content:space-between;margin-bottom:8px">
@@ -515,13 +610,13 @@ window.calculatePosition = function() {
         <span>${fmt(currentPrice, 2)} FCFA</span>
       </div>
   `;
-  
+
   if (targetPrice && targetPrice > 0) {
     const targetValue = qty * targetPrice;
     const gain = targetValue - investment;
     const gainPct = (gain / investment) * 100;
     const color = gain >= 0 ? 'var(--green)' : 'var(--red)';
-    
+
     resultHTML += `
       <div style="display:flex;justify-content:space-between;margin-bottom:8px">
         <span style="color:var(--dim)">Cours cible</span>
@@ -538,8 +633,7 @@ window.calculatePosition = function() {
       </div>
     `;
   }
-  
-  // Moins-value si cours baisse de 10%, 20%, 50%
+
   resultHTML += `<div style="margin-top:16px"><div style="font-size:12px;color:var(--dim);margin-bottom:8px">📉 Scénarios de baisse :</div>`;
   [10, 20, 50].forEach(pct => {
     const dropPrice = currentPrice * (1 - pct / 100);
@@ -552,9 +646,9 @@ window.calculatePosition = function() {
       </div>
     `;
   });
-  
+
   resultHTML += `</div></div>`;
-  
+
   document.getElementById('calcResult').innerHTML = resultHTML;
 }
 
@@ -587,7 +681,6 @@ window.renderPortfolio = function() {
       return;
     }
 
-    // Calculer le CMP
     const cmpMap = calculateCMP(pf);
 
     // ── Calculs par position ──
@@ -601,7 +694,7 @@ window.renderPortfolio = function() {
       const currentPrice = getLatestPrice(p.ticker) || p.price;
       const cmpData = cmpMap[p.ticker.toUpperCase().trim()] || { value: p.price, positions: [p] };
       const cmp = cmpData.value;
-      
+
       const value = p.qty * currentPrice;
       const invested = p.qty * cmp;
       const pl = value - invested;
@@ -636,21 +729,21 @@ window.renderPortfolio = function() {
     // ── Historique pour stats ──
     const hist = getPortfolioHistory(window._pfPeriod || 99999);
 
-    if (hist.values.length >= 2) {
-      for (let i = 1; i < hist.values.length; i++) {
-        if (hist.values[i - 1] > 0) {
-          dailyReturns.push((hist.values[i] - hist.values[i - 1]) / hist.values[i - 1]);
+    if (hist.totalValues.length >= 2) {
+      for (let i = 1; i < hist.totalValues.length; i++) {
+        if (hist.totalValues[i - 1] > 0) {
+          dailyReturns.push((hist.totalValues[i] - hist.totalValues[i - 1]) / hist.totalValues[i - 1]);
         }
       }
     }
 
     const vol = calcVolatility(dailyReturns);
     const sharpe = calcSharpe(dailyReturns);
-    const maxDD = calcMaxDrawdown(hist.values);
+    const maxDD = calcMaxDrawdown(hist.totalValues);
 
     // ── Update KPIs ──
     const totalWithCash = totalValue + cash;
-    
+
     if (pfTotal) pfTotal.textContent = fmtM(totalWithCash) + ' FCFA';
     if (pfTotalSub) {
       pfTotalSub.textContent = totalValue >= totalInvested ? '↑ Portefeuille en hausse' : '↓ Portefeuille en baisse';
@@ -671,9 +764,9 @@ window.renderPortfolio = function() {
       pfReturn.style.color = totalReturn >= 0 ? 'var(--green)' : 'var(--red)';
     }
 
-    if (pfVol) pfVol.textContent = (vol > 0 && hist.values.length >= 2) ? fmt(vol * 100, 2) + '%' : '—';
-    if (pfSharpe) pfSharpe.textContent = (sharpe !== 0 && hist.values.length >= 2) ? fmt(sharpe, 2) : '—';
-    if (pfDD) pfDD.textContent = (maxDD > 0 && hist.values.length >= 2) ? '-' + fmt(maxDD, 2) + '%' : '—';
+    if (pfVol) pfVol.textContent = (vol > 0 && hist.totalValues.length >= 2) ? fmt(vol * 100, 2) + '%' : '—';
+    if (pfSharpe) pfSharpe.textContent = (sharpe !== 0 && hist.totalValues.length >= 2) ? fmt(sharpe, 2) : '—';
+    if (pfDD) pfDD.textContent = (maxDD > 0 && hist.totalValues.length >= 2) ? '-' + fmt(maxDD, 2) + '%' : '—';
     if (pfBeta) pfBeta.textContent = '—';
 
     // ── Tableau avec historique des achats ──
@@ -683,14 +776,13 @@ window.renderPortfolio = function() {
         const priceFound = getLatestPrice(p.ticker) !== null;
         const high52 = get52WeekHigh(p.ticker);
         const low52 = get52WeekLow(p.ticker);
-        
-        // Historique des achats pour ce ticker
+
         const purchaseHistory = p.cmpPositions.map(pos => 
           `<div style="font-size:10px;color:var(--dim);padding:2px 0">
             📅 ${fmtDate(pos.date)} — ${fmt(pos.qty)} actions à ${fmt(pos.price, 2)} FCFA
           </div>`
         ).join('');
-        
+
         return `
           <tr>
             <td style="padding:10px 12px;">
@@ -755,7 +847,7 @@ window.renderPortfolio = function() {
 }
 
 // ═══════════════════════════════════════════════════════
-// GRAPHIQUES (inchangés mais optimisés)
+// GRAPHIQUES (CASH INCLUS DANS LE GRAPHIQUE PRINCIPAL)
 // ═══════════════════════════════════════════════════════
 function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
   if (typeof Chart === 'undefined') return;
@@ -763,7 +855,7 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
   const valueCanvas = document.getElementById('chartPortfolioValue');
   if (valueCanvas) {
     if (pfValueChartInst) { pfValueChartInst.destroy(); pfValueChartInst = null; }
-    if (!hist.dates.length || !hist.values.length) {
+    if (!hist.dates.length || !hist.totalValues.length) {
       const ctx = valueCanvas.getContext('2d');
       ctx.clearRect(0, 0, valueCanvas.width, valueCanvas.height);
       ctx.font = '14px DM Sans';
@@ -774,7 +866,7 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     }
 
     const labels = hist.dates.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
-    const data = hist.values;
+    const data = hist.totalValues; // ← CASH INCLUS
 
     pfValueChartInst = new Chart(valueCanvas, {
       type: 'line',
@@ -817,14 +909,14 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     const sectorLabels = Object.keys(sectors);
     const sectorData = Object.values(sectors);
     const colors = ['#B8964E', '#4ADE80', '#F87171', '#60A5FA', '#A78BFA', '#FBBF24', '#34D399', '#F472B6', '#818CF8', '#FB923C'];
-    
+
     if (!sectorLabels.length) {
       const ctx = sectorCanvas.getContext('2d');
       ctx.clearRect(0, 0, sectorCanvas.width, sectorCanvas.height);
       ctx.fillText('Aucune donnée', sectorCanvas.width / 2, sectorCanvas.height / 2);
       return;
     }
-    
+
     pfSectorChartInst = new Chart(sectorCanvas, {
       type: 'doughnut',
       data: { labels: sectorLabels, datasets: [{ data: sectorData, backgroundColor: colors, borderColor: '#1A1610', borderWidth: 2 }] },
@@ -838,14 +930,14 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     const geoLabels = Object.keys(pays);
     const geoData = Object.values(pays);
     const geoColors = ['#B8964E', '#4ADE80', '#60A5FA', '#F87171', '#A78BFA', '#FBBF24'];
-    
+
     if (!geoLabels.length) {
       const ctx = geoCanvas.getContext('2d');
       ctx.clearRect(0, 0, geoCanvas.width, geoCanvas.height);
       ctx.fillText('Aucune donnée', geoCanvas.width / 2, geoCanvas.height / 2);
       return;
     }
-    
+
     pfGeoChartInst = new Chart(geoCanvas, {
       type: 'doughnut',
       data: { labels: geoLabels, datasets: [{ data: geoData, backgroundColor: geoColors, borderColor: '#1A1610', borderWidth: 2 }] },
@@ -877,7 +969,6 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
 
 // ═══════════════════════════════════════════════════════
 // CONCENTRATION, DIVIDENDES, BENCHMARK, CORRÉLATION
-// (inchangés — voir version précédente)
 // ═══════════════════════════════════════════════════════
 function renderConcentration(rows, totalValue) {
   const el = document.getElementById('concentrationStats');
@@ -966,7 +1057,7 @@ function renderBenchmark(rows, hist) {
       if (firstVal > 0) { brvmReturn = (lastVal - firstVal) / firstVal * 100; brvmDataFound = true; }
     }
   }
-  const pfReturn = hist.values.length >= 2 && hist.values[0] > 0 ? (hist.values[hist.values.length - 1] - hist.values[0]) / hist.values[0] * 100 : 0;
+  const pfReturn = hist.totalValues.length >= 2 && hist.totalValues[0] > 0 ? (hist.totalValues[hist.totalValues.length - 1] - hist.totalValues[0]) / hist.totalValues[0] * 100 : 0;
   const outperformance = pfReturn - brvmReturn;
 
   if (!brvmDataFound) {
@@ -987,7 +1078,7 @@ function renderCorrelationMatrix(pf) {
   const el = document.getElementById('correlationMatrix');
   if (!el) return;
   if (pf.length < 2) { el.innerHTML = 'Ajoutez au moins 2 positions'; return; }
-  
+
   const tickers = pf.map(p => p.ticker.toUpperCase().trim());
   const returns = {};
   tickers.forEach(t => {
@@ -995,7 +1086,7 @@ function renderCorrelationMatrix(pf) {
     returns[t] = [];
     for (let i = 1; i < prices.length; i++) returns[t].push((prices[i] - prices[i - 1]) / prices[i - 1]);
   });
-  
+
   const minLen = Math.min(...Object.values(returns).map(r => r.length));
   if (minLen < 5) { el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px">Données insuffisantes</div>'; return; }
   tickers.forEach(t => { returns[t] = returns[t].slice(-minLen); });
@@ -1004,7 +1095,7 @@ function renderCorrelationMatrix(pf) {
   html += '<div style="display:contents"><div style="width:50px"></div>';
   tickers.forEach(t => { html += `<div style="width:50px;text-align:center;font-size:10px;color:var(--gold);font-family:var(--mono);padding:4px 2px">${t}</div>`; });
   html += '</div>';
-  
+
   tickers.forEach(t1 => {
     html += '<div style="display:contents">';
     html += `<div style="width:50px;text-align:right;font-size:10px;color:var(--gold);font-family:var(--mono);padding:4px 2px">${t1}</div>`;
@@ -1032,7 +1123,7 @@ function resetEmptyState() {
   if (tbody) tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>';
   const countEl = document.getElementById('pfPositionCount');
   if (countEl) countEl.textContent = '0 position';
-  
+
   [pfValueChartInst, pfSectorChartInst, pfGeoChartInst, pfPLChartInst].forEach(chart => {
     if (chart) { chart.destroy(); }
   });
