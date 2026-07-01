@@ -1,17 +1,45 @@
 // ═══════════════════════════════════════
-// UTILS
+// UTILS (CORRIGÉ — toast robuste)
 // ═══════════════════════════════════════
 
 // ═══════════════════════════════════════
 // TOAST SYSTEM
 // ═══════════════════════════════════════
 function toast(msg, type='info') {
-  const container = document.getElementById('toastContainer');
+  let container = document.getElementById('toastContainer');
+
+  // CORRECTION : créer le container s'il n'existe pas
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.style.cssText = 'position:fixed;top:20px;right:20px;z-index:99999;display:flex;flex-direction:column;gap:8px;max-width:360px;';
+    document.body.appendChild(container);
+  }
+
   const el = document.createElement('div');
   el.className = `toast ${type}`;
   el.textContent = msg;
+
+  // Styles inline si les classes CSS ne sont pas définies
+  el.style.cssText = `
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: var(--sans, 'DM Sans', sans-serif);
+    color: #F5F0E8;
+    background: ${type === 'error' ? 'rgba(248,113,113,0.15)' : type === 'warn' ? 'rgba(251,191,36,0.15)' : 'rgba(74,222,128,0.15)'};
+    border: 1px solid ${type === 'error' ? 'rgba(248,113,113,0.3)' : type === 'warn' ? 'rgba(251,191,36,0.3)' : 'rgba(74,222,128,0.3)'};
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    cursor: pointer;
+  `;
+
   container.appendChild(el);
-  setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(() => el.remove(), 300); }, 4000);
+  setTimeout(() => { 
+    el.style.opacity = '0'; 
+    el.style.transform = 'translateX(20px)'; 
+    setTimeout(() => el.remove(), 300); 
+  }, 4000);
 }
 
 // ═══════════════════════════════════════
