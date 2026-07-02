@@ -318,3 +318,231 @@
   color: var(--muted, #a0a0a0);
   flex-shrink: 0;
 }
+
+/* ─── FEEDS & MOVERS ─── */
+.feed-placeholder {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--dim, #8a8a8a);
+  font-size: 13px;
+}
+
+.feed-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.06);
+}
+
+.feed-item:last-child { border-bottom: none; }
+
+.feed-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.feed-badge.achat { background: rgba(74,222,128,0.15); color: #4ADE80; }
+.feed-badge.conserver { background: rgba(96,165,250,0.15); color: #60A5FA; }
+.feed-badge.vendre { background: rgba(248,113,113,0.15); color: #F87171; }
+
+.feed-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cream, #F5F0E8);
+  margin-bottom: 4px;
+}
+
+.feed-meta {
+  font-size: 11px;
+  color: var(--dim, #8a8a8a);
+}
+
+.mover-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.06);
+  font-size: 13px;
+}
+
+.mover-row:last-child { border-bottom: none; }
+
+.mover-ticker {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-weight: 600;
+  color: var(--cream, #F5F0E8);
+  width: 60px;
+}
+
+.mover-price {
+  color: var(--muted, #a0a0a0);
+  font-size: 12px;
+}
+
+.mover-var {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.mover-row.up .mover-var { color: var(--green, #4ADE80); }
+.mover-row.down .mover-var { color: var(--red, #F87171); }
+.mover-row.neutral .mover-var { color: var(--dim, #8a8a8a); }
+
+/* ─── PUBLICATIONS ─── */
+.pub-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.06);
+}
+
+.pub-item:last-child { border-bottom: none; }
+
+.pub-date {
+  text-align: center;
+  min-width: 40px;
+}
+
+.pub-day {
+  font-family: var(--serif, 'Playfair Display', serif);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--gold, #B8964E);
+  line-height: 1;
+}
+
+.pub-month {
+  font-size: 10px;
+  color: var(--dim, #8a8a8a);
+  text-transform: uppercase;
+}
+
+.pub-info { flex: 1; }
+
+.pub-ticker {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--cream, #F5F0E8);
+}
+
+.pub-title {
+  font-size: 12px;
+  color: var(--muted, #a0a0a0);
+}
+
+/* ─── ALERTES ─── */
+.alert-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.06);
+  font-size: 12px;
+}
+
+.alert-row:last-child { border-bottom: none; }
+
+.alert-row.triggered .alert-ticker { color: var(--gold, #B8964E); }
+
+.alert-ticker {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-weight: 600;
+  color: var(--cream, #F5F0E8);
+  width: 60px;
+}
+
+.alert-cond { color: var(--muted, #a0a0a0); }
+
+.alert-current {
+  font-family: var(--mono, 'DM Mono', monospace);
+  color: var(--dim, #8a8a8a);
+}
+
+/* ─── WATCHLIST ─── */
+.watch-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(184,150,78,0.06);
+  font-size: 12px;
+}
+
+.watch-row:last-child { border-bottom: none; }
+
+.watch-ticker {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-weight: 600;
+  color: var(--cream, #F5F0E8);
+  width: 50px;
+}
+
+.watch-name {
+  flex: 1;
+  color: var(--muted, #a0a0a0);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 8px;
+}
+
+.watch-price {
+  font-family: var(--mono, 'DM Mono', monospace);
+  color: var(--cream, #F5F0E8);
+  width: 60px;
+  text-align: right;
+}
+
+.watch-var {
+  font-family: var(--mono, 'DM Mono', monospace);
+  width: 60px;
+  text-align: right;
+  font-size: 11px;
+}
+
+.watch-row.up .watch-var { color: var(--green, #4ADE80); }
+.watch-row.down .watch-var { color: var(--red, #F87171); }
+.watch-row.neutral .watch-var { color: var(--dim, #8a8a8a); }
+
+/* ─── HEATMAP ─── */
+.heatmap-placeholder {
+  text-align: center;
+  padding: 32px;
+  color: var(--dim, #8a8a8a);
+  font-size: 13px;
+}
+
+.heatmap-cell {
+  background: var(--surface, #1A1610);
+  border: 1px solid rgba(184,150,78,0.1);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+}
+
+.hm-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--cream, #F5F0E8);
+  margin-bottom: 4px;
+}
+
+.hm-val {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.hm-count {
+  font-size: 11px;
+  color: var(--dim, #8a8a8a);
+}
