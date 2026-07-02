@@ -73,12 +73,17 @@ function updateMarketStatus() {
 }
 
 function renderIndexCards(latest, indiceNames) {
-  const sortedNames = indiceNames.sort(function(a, b) { return a.localeCompare(b); });
-  
+  // CORRECTION : mapping intelligent par nom d'indice (pas par ordre alphabétique)
+  const findIndice = function(patterns) {
+    return indiceNames.find(function(n) {
+      return patterns.some(function(p) { return n.toUpperCase().includes(p); });
+    }) || null;
+  };
+
   const mapCard = {
-    composite: sortedNames[0] || null,
-    brvm30: sortedNames[1] || null,
-    prestige: sortedNames[2] || null
+    composite: findIndice(['COMPOSITE', 'BRVM C', 'BRVMC']),
+    brvm30: findIndice(['30', 'BRVM30']),
+    prestige: findIndice(['PRESTIGE'])
   };
 
   const setIdx = function(id, val, chgId, chg) {
@@ -156,7 +161,7 @@ function renderCompositeChart() {
   const latest = getLatestIndices();
   const indiceNames = Object.keys(latest).sort(function(a, b) { return a.localeCompare(b); });
   const chartTarget = indiceNames[0] || 'BRVM C';
-  
+
   const history = getIndiceHistory(chartTarget, _compositePeriod);
 
   const labels = history.map(function(d) {
@@ -248,15 +253,16 @@ function renderSessionAnalytics() {
     '</div>';
   }).join('');
 
+  // CORRECTION : <div> au lieu de <span> pour top-bar-container (flex:1 ne fonctionne pas sur inline)
   var volumesHtml = topVolumes.map(function(r, i) {
     var pct = topVolumes[0].volume > 0 ? (r.volume / topVolumes[0].volume * 100).toFixed(0) : 0;
     var bg = i === 0 ? 'var(--gold)' : i === 1 ? 'rgba(184,150,78,0.6)' : 'rgba(184,150,78,0.3)';
     return '<div class="top-item">' +
       '<span class="top-rank">' + (i + 1) + '</span>' +
       '<span class="top-ticker">' + r.ticker + '</span>' +
-      '<span class="top-bar-container">' +
-        '<span class="top-bar" style="width:' + pct + '%;background:' + bg + ';"></span>' +
-      '</span>' +
+      '<div class="top-bar-container">' +
+        '<div class="top-bar" style="width:' + pct + '%;background:' + bg + ';"></div>' +
+      '</div>' +
       '<span class="top-val">' + fmt(r.volume) + '</span>' +
     '</div>';
   }).join('');
@@ -267,9 +273,9 @@ function renderSessionAnalytics() {
     return '<div class="top-item">' +
       '<span class="top-rank">' + (i + 1) + '</span>' +
       '<span class="top-ticker">' + r.ticker + '</span>' +
-      '<span class="top-bar-container">' +
-        '<span class="top-bar" style="width:' + pct + '%;background:' + bg + ';"></span>' +
-      '</span>' +
+      '<div class="top-bar-container">' +
+        '<div class="top-bar" style="width:' + pct + '%;background:' + bg + ';"></div>' +
+      '</div>' +
       '<span class="top-val">' + fmtM(r.valeur) + '</span>' +
     '</div>';
   }).join('');
