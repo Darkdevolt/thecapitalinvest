@@ -604,37 +604,48 @@
 
 .tm-tabs {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(184,150,78,0.1);
+  border-bottom: 1px solid rgba(184,150,78,0.08);
 }
 
 .tm-tab {
-  padding: 6px 14px;
+  padding: 6px 12px;
   border-radius: 6px;
-  border: 1px solid rgba(184,150,78,0.15);
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--dim, #8a8a8a);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+  color: var(--dim, #6a6a6a);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: var(--sans, 'DM Sans', sans-serif);
+  position: relative;
 }
 
 .tm-tab:hover {
-  background: rgba(184,150,78,0.08);
-  color: var(--cream, #F5F0E8);
-  border-color: rgba(184,150,78,0.3);
+  color: var(--muted, #a0a0a0);
 }
 
 .tm-tab.active {
-  background: rgba(184,150,78,0.15);
   color: var(--gold, #B8964E);
-  border-color: rgba(184,150,78,0.4);
+  border-color: rgba(184,150,78,0.25);
+  background: rgba(184,150,78,0.06);
+}
+
+.tm-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--gold, #B8964E);
+  border-radius: 1px;
 }
 
 /* ═══════════════════════════════════════════════════════
