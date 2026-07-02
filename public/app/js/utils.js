@@ -155,3 +155,69 @@ function mkDataset(vals, color = '#B8964E', label = '') {
 function mkLineDataset(vals, color, label, width = 1.5) {
   return { label, data: vals, borderColor: color, borderWidth: width, pointRadius: 0, pointHoverRadius: 3, fill: false, tension: 0.3 };
 }
+// ═══════════════════════════════════════════════════════
+// UNIFIED DESIGN SYSTEM HELPERS
+// ═══════════════════════════════════════════════════════
+
+function sectorBadge(sector) {
+  if (!sector) return '<span class="sector-badge divers">Divers</span>';
+  
+  const normalized = sector.toLowerCase()
+    .replace(/[\s_]+/g, '-')
+    .replace(/[éèê]/g, 'e')
+    .replace(/[àâ]/g, 'a')
+    .replace(/[ô]/g, 'o')
+    .replace(/[û]/g, 'u')
+    .replace(/[ç]/g, 'c');
+  
+  const classMap = {
+    'services-financiers': 'services-financiers',
+    'banque': 'services-financiers',
+    'finance': 'services-financiers',
+    'consommation-discretionnaire': 'consommation-discretionnaire',
+    'consommation': 'consommation-discretionnaire',
+    'consommation-base': 'consommation-base',
+    'industriels': 'industriels',
+    'industrie': 'industriels',
+    'telecommunications': 'telecommunications',
+    'telecom': 'telecommunications',
+    'services-publics': 'services-publics',
+    'energie': 'energie',
+    'agro': 'agro',
+    'industrie-agricole': 'agro',
+    'distribution': 'distribution',
+    'divers': 'divers',
+    'autre': 'divers'
+  };
+  
+  const cls = classMap[normalized] || 'divers';
+  return `<span class="sector-badge ${cls}">${sector}</span>`;
+}
+
+function tickerRow(c, opts = {}) {
+  const { showCompany = false, show52Week = false, showCapital = false } = opts;
+  const ent = (typeof entMap !== 'undefined' && entMap[c.ticker]) || {};
+  
+  let html = `
+    <td><strong class="ticker-cell">${c.ticker}</strong></td>
+    ${showCompany ? `<td class="company-cell">${ent.nom || c.ticker}</td>` : ''}
+    <td class="price-cell">${fmt(c.cours)}</td>
+    <td class="var-cell">${changePill(c.variation)}</td>
+    <td class="vol-cell">${fmt(c.volume)}</td>
+  `;
+  
+  if (showCapital) html += `<td class="cap-cell">${c.capitalisation ? fmtM(c.capitalisation) : '—'}</td>`;
+  if (show52Week) {
+    html += `
+      <td class="high52-cell">${c.plus_haut_52 ? fmt(c.plus_haut_52) : '—'}</td>
+      <td class="low52-cell">${c.plus_bas_52 ? fmt(c.plus_bas_52) : '—'}</td>
+    `;
+  }
+  html += `<td class="sector-cell">${sectorBadge(getSector(c.ticker))}</td>`;
+  
+  return `<tr>${html}</tr>`;
+}
+
+function emptyState(msg) {
+  return `<tr><td colspan="99" class="tc-empty">${msg}</td></tr>`;
+}
