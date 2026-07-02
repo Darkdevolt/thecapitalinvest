@@ -596,3 +596,144 @@
   font-size: 11px;
   color: var(--dim, #8a8a8a);
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   ONGLETS TOP MOVERS — INTERACTIFS
+   ═══════════════════════════════════════════════════════ */
+
+.tm-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(184,150,78,0.1);
+}
+
+.tm-tab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(184,150,78,0.15);
+  background: transparent;
+  color: var(--dim, #8a8a8a);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--sans, 'DM Sans', sans-serif);
+}
+
+.tm-tab:hover {
+  background: rgba(184,150,78,0.08);
+  color: var(--cream, #F5F0E8);
+  border-color: rgba(184,150,78,0.3);
+}
+
+.tm-tab.active {
+  background: rgba(184,150,78,0.15);
+  color: var(--gold, #B8964E);
+  border-color: rgba(184,150,78,0.4);
+}
+
+/* ═══════════════════════════════════════════════════════
+   EFFETS HOVER — ÉLÉMENTS CLIQUABLES
+   ═══════════════════════════════════════════════════════ */
+
+.mover-row:hover {
+  background: rgba(184,150,78,0.06);
+  border-radius: 6px;
+  margin: 0 -4px;
+  padding: 10px 4px;
+}
+
+.mover-row:hover .mover-ticker {
+  color: var(--gold, #B8964E);
+}
+
+.perf-bar-row:hover {
+  background: rgba(184,150,78,0.06);
+  border-radius: 6px;
+  margin: 0 -4px;
+  padding: 10px 4px;
+}
+
+.perf-bar-row:hover .perf-ticker {
+  color: var(--gold, #B8964E);
+}
+
+.top-item:hover {
+  background: rgba(184,150,78,0.06);
+  border-radius: 6px;
+  margin: 0 -4px;
+  padding: 10px 4px;
+}
+
+.top-item:hover .top-ticker {
+  color: var(--gold, #B8964E);
+}
+
+.feed-item:hover {
+  background: rgba(184,150,78,0.04);
+  border-radius: 6px;
+  margin: 0 -8px;
+  padding: 12px 8px;
+}
+
+.pub-item:hover {
+  background: rgba(184,150,78,0.04);
+  border-radius: 6px;
+  margin: 0 -8px;
+  padding: 10px 8px;
+}
+
+.alert-row:hover {
+  background: rgba(184,150,78,0.04);
+  border-radius: 6px;
+}
+
+.alert-row:hover .alert-ticker {
+  color: var(--gold, #B8964E);
+}
+
+.watch-row:hover {
+  background: rgba(184,150,78,0.04);
+  border-radius: 6px;
+  margin: 0 -8px;
+  padding: 10px 8px;
+}
+
+.watch-row:hover .watch-ticker {
+  color: var(--gold, #B8964E);
+}
+
+.tendance-item:hover {
+  background: rgba(184,150,78,0.08);
+  border-color: rgba(184,150,78,0.2);
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+.heatmap-cell:hover {
+  background: rgba(184,150,78,0.08);
+  border-color: rgba(184,150,78,0.25);
+  transform: translateY(-2px);
+  transition: all 0.2s ease;
+}
+
+/* ═══════════════════════════════════════════════════════
+   TABLEAU COURS DU JOUR — LIGNES CLIQUABLES
+   ═══════════════════════════════════════════════════════ */
+
+.tc-table tbody tr {
+  cursor: pointer;
+}
+
+.tc-table tbody tr:hover {
+  background: rgba(184,150,78,0.06);
+}
+
+.tc-table tbody tr:hover .ticker-cell {
+  color: var(--gold, #B8964E);
+}
