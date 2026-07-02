@@ -1,0 +1,161 @@
+/* ═══════════════════════════════════════════════════════
+   UNIFIED DESIGN SYSTEM — Sector Badges & Tables
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── SECTOR BADGES ─── */
+.sector-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  border: 1px solid transparent;
+  font-family: var(--sans, 'DM Sans', sans-serif);
+}
+
+.sector-badge.services-financiers,
+.sector-badge.banque,
+.sector-badge.finance {
+  background: rgba(184,150,78,0.12);
+  color: #C9A84C;
+  border-color: rgba(184,150,78,0.25);
+}
+
+.sector-badge.consommation-discretionnaire {
+  background: rgba(236,112,99,0.12);
+  color: #E74C3C;
+  border-color: rgba(236,112,99,0.25);
+}
+
+.sector-badge.consommation-base {
+  background: rgba(130,224,170,0.12);
+  color: #27AE60;
+  border-color: rgba(130,224,170,0.25);
+}
+
+.sector-badge.industriels,
+.sector-badge.industrie {
+  background: rgba(93,173,226,0.12);
+  color: #3498DB;
+  border-color: rgba(93,173,226,0.25);
+}
+
+.sector-badge.telecommunications,
+.sector-badge.telecom {
+  background: rgba(187,143,206,0.12);
+  color: #9B59B6;
+  border-color: rgba(187,143,206,0.25);
+}
+
+.sector-badge.services-publics {
+  background: rgba(72,201,176,0.12);
+  color: #1ABC9C;
+  border-color: rgba(72,201,176,0.25);
+}
+
+.sector-badge.energie {
+  background: rgba(240,178,122,0.12);
+  color: #E67E22;
+  border-color: rgba(240,178,122,0.25);
+}
+
+.sector-badge.agro,
+.sector-badge.industrie-agricole {
+  background: rgba(82,190,128,0.12);
+  color: #229954;
+  border-color: rgba(82,190,128,0.25);
+}
+
+.sector-badge.distribution {
+  background: rgba(241,148,138,0.12);
+  color: #EC7063;
+  border-color: rgba(241,148,138,0.25);
+}
+
+.sector-badge.divers,
+.sector-badge.autre,
+.sector-badge.unknown {
+  background: rgba(150,150,150,0.08);
+  color: #888;
+  border-color: rgba(150,150,150,0.15);
+}
+
+/* ─── UNIFIED TABLE ─── */
+.tc-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+}
+
+.tc-table thead th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim, #8a8a8a);
+  border-bottom: 1px solid rgba(184,150,78,0.15);
+  white-space: nowrap;
+}
+
+.tc-table tbody tr {
+  transition: background 0.15s ease;
+  border-bottom: 1px solid rgba(184,150,78,0.06);
+}
+
+.tc-table tbody tr:hover {
+  background: rgba(184,150,78,0.04);
+}
+
+.tc-table tbody td {
+  padding: 14px 16px;
+  vertical-align: middle;
+  color: var(--text, #F5F0E8);
+}
+
+.tc-table .ticker-cell {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--cream, #B8964E);
+  letter-spacing: 0.02em;
+}
+
+.tc-table .company-cell {
+  font-size: 12px;
+  color: var(--muted, #a0a0a0);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tc-table .price-cell,
+.tc-table .vol-cell,
+.tc-table .cap-cell,
+.tc-table .high52-cell,
+.tc-table .low52-cell {
+  font-family: var(--mono, 'DM Mono', monospace);
+  text-align: right;
+}
+
+.tc-table .price-cell { font-size: 13px; font-weight: 500; }
+.tc-table .vol-cell,
+.tc-table .cap-cell,
+.tc-table .high52-cell,
+.tc-table .low52-cell { font-size: 12px; color: var(--muted, #a0a0a0); }
+
+.tc-table .var-cell { text-align: right; font-size: 12px; font-weight: 500; }
+.tc-table .sector-cell { text-align: right; }
+
+.tc-empty {
+  text-align: center;
+  padding: 48px 24px;
+  color: var(--dim, #8a8a8a);
+  font-size: 13px;
+}
