@@ -5,21 +5,22 @@
 // ═══════════════════════════════════════
 // SUPABASE HELPER
 // ═══════════════════════════════════════
-async function sb(table, params = {}) {
+async function sb(table, params) {
+  params = params || {};
   const url = new URL(`${SB_URL}/rest/v1/${table}`);
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null) url.searchParams.set(k, v);
   });
-  
+
   const r = await fetch(url.toString(), {
-    headers: { 
-      'Authorization': `Bearer ${SB_KEY}`, 
-      'apikey': SB_KEY, 
+    headers: {
+      'Authorization': `Bearer ${SB_KEY}`,
+      'apikey': SB_KEY,
       'Accept': 'application/json',
       'Content-Type': 'application/json'
     }
   });
-  
+
   if (!r.ok) {
     const text = await r.text().catch(() => '');
     throw new Error(`${table}: ${r.status} ${r.statusText} ${text}`);
@@ -32,7 +33,7 @@ async function sb(table, params = {}) {
 // ═══════════════════════════════════════
 (async function initApp() {
   const raw = localStorage.getItem(SK);
-  
+
   if (!raw) {
     showLoginScreen();
     return;
@@ -64,9 +65,9 @@ async function sb(table, params = {}) {
     if (!res.ok) throw new Error('session invalide');
 
     const user = await res.json();
-    
+
     document.body.classList.remove('init-hidden');
-    
+
     const avatar = (user.email || 'U')[0].toUpperCase();
     const name = user.email || 'Utilisateur';
 
@@ -81,9 +82,9 @@ async function sb(table, params = {}) {
     const hdName = document.getElementById('headerName');
     if (hdAvatar) hdAvatar.textContent = avatar;
     if (hdName) hdName.textContent = name;
-    // Plan utilisateur depuis Supabase (fallback 'free' si non défini)
-window._userPlan = user.plan || user.role || 'free';
-    
+
+    window._userPlan = user.plan || user.role || 'free';
+
     if (window._userPlan === 'pro' || window._userPlan === 'admin') {
       const adminLink = document.getElementById('adminLink');
       if (adminLink) adminLink.style.display = 'block';
@@ -99,12 +100,8 @@ window._userPlan = user.plan || user.role || 'free';
 })();
 
 function showLoginScreen() {
-  const sidebar = document.getElementById('sidebar');
-  const header = document.querySelector('.header');
-  const breadcrumb = document.getElementById('breadcrumb');
-  
   document.body.classList.remove('init-hidden');
-  
+
   let loginScreen = document.getElementById('loginScreen');
   if (!loginScreen) {
     loginScreen = document.createElement('div');
@@ -132,39 +129,41 @@ function doLogout() {
   window.location.reload();
 }
 
-
-
-
 // ═══════════════════════════════════════════════════════
-// LOAD ALL DATA — Ajout allCoursHistorique
+// LOAD ALL DATA — CORRECTION : Promise.allSettled
 // ═══════════════════════════════════════════════════════
 async function loadAll() {
   try {
-    // Données existantes
-    const [cours, boc, analyses, financials, entreprises, indices] = await Promise.all([
+    const results = await Promise.allSettled([
       sb('cours_latest'),
       sb('boc'),
       sb('analyses'),
       sb('financials'),
       sb('entreprises'),
-      sb('indices')
+      sb('indices'),
+      sb('historique', { order: 'date_seance.asc' })
     ]);
 
-    allCours = cours || [];
-    allBoc = boc || [];
-    allAnalyses = analyses || [];
-    allFinancials = financials || [];
-    allEntreprises = entreprises || [];
-    allIndices = indices || [];
+    if (results[0].status === 'fulfilled') allCours = results[0].value || [];
+    else { allCours = []; console.warn('cours_latest échoué:', results[0].reason); }
 
-    // AJOUT : données historiques
-    try {
-      const historique = await sb('historique', { order: 'date_seance.asc' });
-      allCoursHistorique = historique || [];
-    } catch (e) {
-      console.warn('historique non chargé:', e.message);
-      allCoursHistorique = [];
-    }
+    if (results[1].status === 'fulfilled') allBoc = results[1].value || [];
+    else { allBoc = []; console.warn('boc échoué:', results[1].reason); }
+
+    if (results[2].status === 'fulfilled') allAnalyses = results[2].value || [];
+    else { allAnalyses = []; console.warn('analyses échoué:', results[2].reason); }
+
+    if (results[3].status === 'fulfilled') allFinancials = results[3].value || [];
+    else { allFinancials = []; console.warn('financials échoué:', results[3].reason); }
+
+    if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
+    else { allEntreprises = []; console.warn('entreprises échoué:', results[4].reason); }
+
+    if (results[5].status === 'fulfilled') allIndices = results[5].value || [];
+    else { allIndices = []; console.warn('indices échoué:', results[5].reason); }
+
+    if (results[6].status === 'fulfilled') allCoursHistorique = results[6].value || [];
+    else { allCoursHistorique = []; console.warn('historique échoué:', results[6].reason); }
 
     // Exposer globalement
     window.allCours = allCours;
@@ -178,8 +177,9 @@ async function loadAll() {
     // Build entMap
     entMap = {};
     allEntreprises.forEach(e => { if (e.ticker) entMap[e.ticker] = e; });
+    window.entMap = entMap;
 
-    // Dispatch event pour notifier que les données sont prêtes
+    // Dispatch event
     window.dispatchEvent(new Event('dataLoaded'));
 
     // Render initial view
