@@ -253,7 +253,6 @@ function renderSessionAnalytics() {
     '</div>';
   }).join('');
 
-  // CORRECTION : <div> au lieu de <span> pour top-bar-container (flex:1 ne fonctionne pas sur inline)
   var volumesHtml = topVolumes.map(function(r, i) {
     var pct = topVolumes[0].volume > 0 ? (r.volume / topVolumes[0].volume * 100).toFixed(0) : 0;
     var bg = i === 0 ? 'var(--gold)' : i === 1 ? 'rgba(184,150,78,0.6)' : 'rgba(184,150,78,0.3)';
@@ -389,6 +388,10 @@ function setMoversTab(tab, btn) {
   renderTopMovers();
 }
 
+// ═══════════════════════════════════════════════════════
+// TOP MOVERS — AVEC BARRES DE PROGRESSION
+// ═══════════════════════════════════════════════════════
+
 function renderTopMovers() {
   const container = document.getElementById('topMovers');
   if (!container) return;
@@ -419,17 +422,35 @@ function renderTopMovers() {
     return;
   }
 
+  // Calculer le max pour normaliser les barres
+  const maxVal = _moversTab === 'volume'
+    ? Math.max.apply(null, sorted.map(function(c) { return c.volume || 0; }))
+    : Math.max.apply(null, sorted.map(function(c) { return Math.abs(parseFloat(c.variation) || 0); }));
+
   container.innerHTML = sorted.map(function(c) {
     const v = parseFloat(c.variation) || 0;
     const vol = _moversTab === 'volume';
     const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
+
+    // Pourcentage de la barre (normalisé par rapport au max)
+    const barPct = vol
+      ? ((c.volume || 0) / maxVal * 100).toFixed(1)
+      : (Math.abs(v) / maxVal * 100).toFixed(1);
+
     const rightVal = vol ? fmt(c.volume) : (Math.abs(v).toFixed(2) + '%');
-    const rightIcon = vol ? '' : (v > 0 ? '▲' : v < 0 ? '▼' : '=');
+    const sign = v > 0 ? '+' : '';
 
     return '<div class="mover-row ' + cls + '">' +
-      '<div class="mover-ticker">' + c.ticker + '</div>' +
-      '<div class="mover-price">' + fmt(c.cours) + ' FCFA</div>' +
-      '<div class="mover-var">' + rightIcon + ' ' + rightVal + '</div>' +
+      '<div class="mover-info">' +
+        '<div class="mover-ticker">' + c.ticker + '</div>' +
+        '<div class="mover-price">' + fmt(c.cours) + ' FCFA</div>' +
+      '</div>' +
+      '<div class="mover-bar-wrap">' +
+        '<div class="mover-bar-bg">' +
+          '<div class="mover-bar-fill ' + cls + '" style="width:' + barPct + '%"></div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mover-var">' + sign + rightVal + '</div>' +
     '</div>';
   }).join('');
 }
