@@ -61,22 +61,16 @@ function changePill(v) {
 // ═══════════════════════════════════════
 // SECTEUR — 100% SUPABASE (CORRIGÉ)
 // ═══════════════════════════════════════
-// SUPPRESSION de la liste SECTORS hardcodée.
-// Lit dans l'ordre : entMap → allCours → fallback "Divers"
-// ═══════════════════════════════════════
-
 function getSector(ticker) {
   if (!ticker) return 'Divers';
   const t = ticker.toUpperCase().trim();
 
-  // 1. PRIORITÉ : table entreprises (entMap)
   if (typeof entMap !== 'undefined' && entMap[t]) {
     const e = entMap[t];
     if (e.secteur && e.secteur.trim() !== '') return e.secteur;
     if (e.sector && e.sector.trim() !== '') return e.sector;
   }
 
-  // 2. SECONDAIRE : table cours_latest (allCours)
   if (typeof allCours !== 'undefined' && Array.isArray(allCours)) {
     const c = allCours.find(c => (c.ticker || '').toUpperCase().trim() === t);
     if (c) {
@@ -85,28 +79,22 @@ function getSector(ticker) {
     }
   }
 
-  // 3. FALLBACK : si aucune donnée Supabase
   return 'Divers';
 }
 
 // ═══════════════════════════════════════
 // PAYS — 100% SUPABASE (AJOUTÉ)
 // ═══════════════════════════════════════
-// Fonction manquante dans utils.js — ajoutée pour toutes les vues
-// ═══════════════════════════════════════
-
 function getPays(ticker) {
   if (!ticker) return 'Inconnu';
   const t = ticker.toUpperCase().trim();
 
-  // 1. PRIORITÉ : table entreprises (entMap)
   if (typeof entMap !== 'undefined' && entMap[t]) {
     const e = entMap[t];
     if (e.pays && e.pays.trim() !== '') return e.pays;
     if (e.country && e.country.trim() !== '') return e.country;
   }
 
-  // 2. SECONDAIRE : table cours_latest (allCours)
   if (typeof allCours !== 'undefined' && Array.isArray(allCours)) {
     const c = allCours.find(c => (c.ticker || '').toUpperCase().trim() === t);
     if (c) {
@@ -115,7 +103,6 @@ function getPays(ticker) {
     }
   }
 
-  // 3. FALLBACK
   return 'Inconnu';
 }
 
@@ -155,8 +142,9 @@ function mkDataset(vals, color = '#B8964E', label = '') {
 function mkLineDataset(vals, color, label, width = 1.5) {
   return { label, data: vals, borderColor: color, borderWidth: width, pointRadius: 0, pointHoverRadius: 3, fill: false, tension: 0.3 };
 }
+
 // ═══════════════════════════════════════════════════════
-// UNIFIED DESIGN SYSTEM HELPERS
+// UNIFIED DESIGN SYSTEM HELPERS — CORRIGÉ
 // ═══════════════════════════════════════════════════════
 
 function sectorBadge(sector) {
@@ -191,33 +179,32 @@ function sectorBadge(sector) {
   };
   
   const cls = classMap[normalized] || 'divers';
-  return `<span class="sector-badge ${cls}">${sector}</span>`;
+  return '<span class="sector-badge ' + cls + '">' + sector + '</span>';
 }
 
-function tickerRow(c, opts = {}) {
-  const { showCompany = false, show52Week = false, showCapital = false } = opts;
-  const ent = (typeof entMap !== 'undefined' && entMap[c.ticker]) || {};
+function tickerRow(c, opts) {
+  opts = opts || {};
+  var showCompany = opts.showCompany || false;
+  var show52Week = opts.show52Week || false;
+  var showCapital = opts.showCapital || false;
+  var ent = (typeof entMap !== 'undefined' && entMap[c.ticker]) || {};
   
-  let html = `
-    <td><strong class="ticker-cell">${c.ticker}</strong></td>
-    ${showCompany ? `<td class="company-cell">${ent.nom || c.ticker}</td>` : ''}
-    <td class="price-cell">${fmt(c.cours)}</td>
-    <td class="var-cell">${changePill(c.variation)}</td>
-    <td class="vol-cell">${fmt(c.volume)}</td>
-  `;
+  var html = '<td><strong class="ticker-cell">' + c.ticker + '</strong></td>';
+  if (showCompany) html += '<td class="company-cell">' + (ent.nom || c.ticker) + '</td>';
+  html += '<td class="price-cell">' + fmt(c.cours) + '</td>';
+  html += '<td class="var-cell">' + changePill(c.variation) + '</td>';
+  html += '<td class="vol-cell">' + fmt(c.volume) + '</td>';
   
-  if (showCapital) html += `<td class="cap-cell">${c.capitalisation ? fmtM(c.capitalisation) : '—'}</td>`;
+  if (showCapital) html += '<td class="cap-cell">' + (c.capitalisation ? fmtM(c.capitalisation) : '—') + '</td>';
   if (show52Week) {
-    html += `
-      <td class="high52-cell">${c.plus_haut_52 ? fmt(c.plus_haut_52) : '—'}</td>
-      <td class="low52-cell">${c.plus_bas_52 ? fmt(c.plus_bas_52) : '—'}</td>
-    `;
+    html += '<td class="high52-cell">' + (c.plus_haut_52 ? fmt(c.plus_haut_52) : '—') + '</td>';
+    html += '<td class="low52-cell">' + (c.plus_bas_52 ? fmt(c.plus_bas_52) : '—') + '</td>';
   }
-  html += `<td class="sector-cell">${sectorBadge(getSector(c.ticker))}</td>`;
+  html += '<td class="sector-cell">' + sectorBadge(getSector(c.ticker)) + '</td>';
   
-  return `<tr>${html}</tr>`;
+  return '<tr>' + html + '</tr>';
 }
 
 function emptyState(msg) {
-  return `<tr><td colspan="99" class="tc-empty">${msg}</td></tr>`;
+  return '<tr><td colspan="99" class="tc-empty">' + msg + '</td></tr>';
 }
