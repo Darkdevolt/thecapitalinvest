@@ -73,7 +73,6 @@ function updateMarketStatus() {
 }
 
 function renderIndexCards(latest, indiceNames) {
-  // CORRECTION : mapping intelligent par nom d'indice (pas par ordre alphabétique)
   const findIndice = function(patterns) {
     return indiceNames.find(function(n) {
       return patterns.some(function(p) { return n.toUpperCase().includes(p); });
@@ -199,7 +198,7 @@ function setCompositePeriod(days, btn) {
 }
 
 // ═══════════════════════════════════════════════════════
-// SESSION ANALYTICS — Vue d'ensemble de la séance
+// SESSION ANALYTICS
 // ═══════════════════════════════════════════════════════
 
 function renderSessionAnalytics() {
@@ -234,7 +233,7 @@ function renderSessionAnalytics() {
   }).sort(function(a, b) { return b.valeur - a.valeur; }).slice(0, 5);
 
   var performersHtml = topPerformers.map(function(r) {
-    return '<div class="perf-bar-row">' +
+    return '<div class="perf-bar-row" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
       '<span class="perf-ticker">' + r.ticker + '</span>' +
       '<div class="perf-bar-container">' +
         '<div class="perf-bar positive" style="width:' + Math.min(Math.abs(parseFloat(r.variation)) * 3, 100) + '%"></div>' +
@@ -244,7 +243,7 @@ function renderSessionAnalytics() {
   }).join('');
 
   var losersHtml = topLosers.map(function(r) {
-    return '<div class="perf-bar-row">' +
+    return '<div class="perf-bar-row" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
       '<span class="perf-ticker">' + r.ticker + '</span>' +
       '<div class="perf-bar-container">' +
         '<div class="perf-bar negative" style="width:' + Math.min(Math.abs(parseFloat(r.variation)) * 3, 100) + '%"></div>' +
@@ -256,7 +255,7 @@ function renderSessionAnalytics() {
   var volumesHtml = topVolumes.map(function(r, i) {
     var pct = topVolumes[0].volume > 0 ? (r.volume / topVolumes[0].volume * 100).toFixed(0) : 0;
     var bg = i === 0 ? 'var(--gold)' : i === 1 ? 'rgba(184,150,78,0.6)' : 'rgba(184,150,78,0.3)';
-    return '<div class="top-item">' +
+    return '<div class="top-item" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
       '<span class="top-rank">' + (i + 1) + '</span>' +
       '<span class="top-ticker">' + r.ticker + '</span>' +
       '<div class="top-bar-container">' +
@@ -269,7 +268,7 @@ function renderSessionAnalytics() {
   var valeursHtml = topValeurs.map(function(r, i) {
     var pct = topValeurs[0].valeur > 0 ? (r.valeur / topValeurs[0].valeur * 100).toFixed(0) : 0;
     var bg = i === 0 ? 'var(--gold)' : i === 1 ? 'rgba(184,150,78,0.6)' : 'rgba(184,150,78,0.3)';
-    return '<div class="top-item">' +
+    return '<div class="top-item" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
       '<span class="top-rank">' + (i + 1) + '</span>' +
       '<span class="top-ticker">' + r.ticker + '</span>' +
       '<div class="top-bar-container">' +
@@ -287,17 +286,17 @@ function renderSessionAnalytics() {
     '<div class="session-card">' +
       '<div class="session-card-title">Tendances</div>' +
       '<div class="tendance-grid">' +
-        '<div class="tendance-item up">' +
+        '<div class="tendance-item up" onclick="nav(\'titres\')" style="cursor:pointer">' +
           '<div class="tendance-icon">▲</div>' +
           '<div class="tendance-count">' + hausses + '</div>' +
           '<div class="tendance-label">Titres en hausse</div>' +
         '</div>' +
-        '<div class="tendance-item neutral">' +
+        '<div class="tendance-item neutral" onclick="nav(\'titres\')" style="cursor:pointer">' +
           '<div class="tendance-icon">=</div>' +
           '<div class="tendance-count">' + stables + '</div>' +
           '<div class="tendance-label">Titres stables</div>' +
         '</div>' +
-        '<div class="tendance-item down">' +
+        '<div class="tendance-item down" onclick="nav(\'titres\')" style="cursor:pointer">' +
           '<div class="tendance-icon">▼</div>' +
           '<div class="tendance-count">' + baisses + '</div>' +
           '<div class="tendance-label">Titres en baisse</div>' +
@@ -348,7 +347,7 @@ function renderSectorHeatmap() {
   container.innerHTML = sectors.map(function(s) {
     const cls = s.avg > 0 ? 'heatmap-up' : s.avg < 0 ? 'heatmap-down' : 'heatmap-neutral';
     const color = s.avg > 0 ? 'var(--green)' : s.avg < 0 ? 'var(--red)' : 'var(--dim)';
-    return '<div class="heatmap-cell ' + cls + '">' +
+    return '<div class="heatmap-cell ' + cls + '" onclick="nav(\'titres\')" style="cursor:pointer">' +
       '<div class="hm-name">' + s.name + '</div>' +
       '<div class="hm-val" style="color:' + color + '">' + (s.avg > 0 ? '+' : '') + s.avg.toFixed(2) + '%</div>' +
       '<div class="hm-count">' + s.count + ' titre' + (s.count > 1 ? 's' : '') + '</div>' +
@@ -371,7 +370,7 @@ function renderNewsFeed() {
     const badgeClass = (a.recommandation || '').toLowerCase();
     const badgeText = a.recommandation || 'NEWS';
     const ticker = a.ticker || '—';
-    return '<div class="feed-item">' +
+    return '<div class="feed-item" onclick="openFiche(\'' + ticker + '\')" style="cursor:pointer">' +
       '<span class="feed-badge ' + badgeClass + '">' + badgeText + '</span>' +
       '<div class="feed-title">' + (a.titre || 'Analyse ' + ticker) + '</div>' +
       '<div class="feed-meta">' + ticker + ' • ' + fmtDate(a.date_analyse) + ' • Objectif: ' + (a.objectif || '—') + ' FCFA</div>' +
@@ -389,15 +388,22 @@ function setMoversTab(tab, btn) {
 }
 
 // ═══════════════════════════════════════════════════════
-// TOP MOVERS — AVEC BARRES DE PROGRESSION
+// TOP MOVERS — AVEC BARRES + ONGLETS CLIQUABLES + CLIQUE SUR LIGNE
 // ═══════════════════════════════════════════════════════
 
 function renderTopMovers() {
   const container = document.getElementById('topMovers');
   if (!container) return;
 
+  // AJOUT : onglets en haut
+  var tabsHtml = '<div class="tm-tabs" style="display:flex;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(184,150,78,0.1)">' +
+    '<button class="tm-tab ' + (_moversTab === 'gainers' ? 'active' : '') + '" onclick="setMoversTab(\'gainers\',this)">▲ Hausses</button>' +
+    '<button class="tm-tab ' + (_moversTab === 'losers' ? 'active' : '') + '" onclick="setMoversTab(\'losers\',this)">▼ Baisses</button>' +
+    '<button class="tm-tab ' + (_moversTab === 'volume' ? 'active' : '') + '" onclick="setMoversTab(\'volume\',this)">⇅ Volumes</button>' +
+  '</div>';
+
   if (!Array.isArray(allCours) || allCours.length === 0) {
-    container.innerHTML = '<div class="feed-placeholder">Aucune donnée</div>';
+    container.innerHTML = tabsHtml + '<div class="feed-placeholder">Aucune donnée</div>';
     return;
   }
 
@@ -418,21 +424,19 @@ function renderTopMovers() {
   }
 
   if (!sorted.length) {
-    container.innerHTML = '<div class="feed-placeholder">Aucune donnée</div>';
+    container.innerHTML = tabsHtml + '<div class="feed-placeholder">Aucune donnée</div>';
     return;
   }
 
-  // Calculer le max pour normaliser les barres
   const maxVal = _moversTab === 'volume'
     ? Math.max.apply(null, sorted.map(function(c) { return c.volume || 0; }))
     : Math.max.apply(null, sorted.map(function(c) { return Math.abs(parseFloat(c.variation) || 0); }));
 
-  container.innerHTML = sorted.map(function(c) {
+  var rowsHtml = sorted.map(function(c) {
     const v = parseFloat(c.variation) || 0;
     const vol = _moversTab === 'volume';
     const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
 
-    // Pourcentage de la barre (normalisé par rapport au max)
     const barPct = vol
       ? ((c.volume || 0) / maxVal * 100).toFixed(1)
       : (Math.abs(v) / maxVal * 100).toFixed(1);
@@ -440,7 +444,8 @@ function renderTopMovers() {
     const rightVal = vol ? fmt(c.volume) : (Math.abs(v).toFixed(2) + '%');
     const sign = v > 0 ? '+' : '';
 
-    return '<div class="mover-row ' + cls + '">' +
+    // CLIQUABLE : onclick="openFiche('TICKER')"
+    return '<div class="mover-row ' + cls + '" onclick="openFiche(\'' + c.ticker + '\')" style="cursor:pointer" title="Cliquez pour voir ' + c.ticker + '">' +
       '<div class="mover-info">' +
         '<div class="mover-ticker">' + c.ticker + '</div>' +
         '<div class="mover-price">' + fmt(c.cours) + ' FCFA</div>' +
@@ -453,6 +458,8 @@ function renderTopMovers() {
       '<div class="mover-var">' + sign + rightVal + '</div>' +
     '</div>';
   }).join('');
+
+  container.innerHTML = tabsHtml + rowsHtml;
 }
 
 function renderPubFeed() {
@@ -475,7 +482,7 @@ function renderPubFeed() {
     const isPublished = p.resultat_net != null;
     const month = isPublished ? '03' : '06';
 
-    return '<div class="pub-item">' +
+    return '<div class="pub-item" onclick="openFiche(\'' + ticker + '\')" style="cursor:pointer">' +
       '<div class="pub-date"><div class="pub-day">15</div><div class="pub-month">' + month + '</div></div>' +
       '<div class="pub-info">' +
         '<div class="pub-ticker">' + ticker + '</div>' +
@@ -505,7 +512,7 @@ function renderAlertFeed() {
     const current = c && c.cours ? c.cours : 0;
     const triggered = a.condition === 'above' ? current >= a.price : current <= a.price;
 
-    return '<div class="alert-row ' + (triggered ? 'triggered' : '') + '">' +
+    return '<div class="alert-row ' + (triggered ? 'triggered' : '') + '" onclick="openFiche(\'' + a.ticker + '\')" style="cursor:pointer">' +
       '<div class="alert-ticker">' + a.ticker + '</div>' +
       '<div class="alert-cond">' + (a.condition === 'above' ? '>' : '<') + ' ' + a.price + ' FCFA</div>' +
       '<div class="alert-current">' + fmt(current) + '</div>' +
@@ -535,7 +542,7 @@ function renderWatchFeed() {
     const v = parseFloat(c.variation) || 0;
     const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
     const ent = entMap[t];
-    return '<div class="watch-row ' + cls + '">' +
+    return '<div class="watch-row ' + cls + '" onclick="openFiche(\'' + t + '\')" style="cursor:pointer">' +
       '<div class="watch-ticker">' + t + '</div>' +
       '<div class="watch-name">' + (ent && ent.nom ? ent.nom : '') + '</div>' +
       '<div class="watch-price">' + fmt(c.cours) + '</div>' +
