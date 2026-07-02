@@ -748,3 +748,390 @@
 .tc-table tbody tr:hover .ticker-cell {
   color: var(--gold, #B8964E);
 }
+
+
+/* ═══════════════════════════════════════════════════════
+   TITRES BRVM — NOUVEAU DESIGN
+   ═══════════════════════════════════════════════════════ */
+
+/* ─── Header avec filtres pays (silhouettes) ─── */
+.titres-header {
+  margin-bottom: 24px;
+}
+
+.titres-view-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.view-btn {
+  padding: 8px 16px;
+  border-radius: 6px;
+  border: 1px solid rgba(184,150,78,0.15);
+  background: transparent;
+  color: var(--dim, #6a6a6a);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.view-btn:hover {
+  color: var(--cream, #F5F0E8);
+  border-color: rgba(184,150,78,0.3);
+}
+
+.view-btn.active {
+  background: rgba(184,150,78,0.1);
+  color: var(--gold, #B8964E);
+  border-color: rgba(184,150,78,0.4);
+}
+
+.titres-search-wrap {
+  margin-bottom: 16px;
+}
+
+.titres-search {
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(184,150,78,0.15);
+  background: var(--surface, #1A1610);
+  color: var(--cream, #F5F0E8);
+  font-size: 14px;
+  font-family: var(--sans, 'DM Sans', sans-serif);
+}
+
+.titres-search::placeholder {
+  color: var(--dim, #6a6a6a);
+}
+
+/* ─── Filtres Pays (silhouettes) ─── */
+.titres-pays-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  padding: 12px;
+  background: rgba(184,150,78,0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(184,150,78,0.08);
+}
+
+.pays-filter-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--dim, #6a6a6a);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 50px;
+}
+
+.pays-filter-btn:hover {
+  background: rgba(184,150,78,0.06);
+  color: var(--cream, #F5F0E8);
+}
+
+.pays-filter-btn.active {
+  background: rgba(184,150,78,0.1);
+  border-color: rgba(184,150,78,0.25);
+  color: var(--gold, #B8964E);
+}
+
+.pays-shape {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pays-shape svg {
+  width: 100%;
+  height: 100%;
+}
+
+.pays-shape-all {
+  font-size: 18px;
+  color: var(--gold, #B8964E);
+}
+
+.pays-code {
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* ─── Filtres Secteurs ─── */
+.titres-sector-filter {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.sector-filter-btn {
+  padding: 6px 14px;
+  border-radius: 6px;
+  border: 1px solid rgba(184,150,78,0.15);
+  background: transparent;
+  color: var(--dim, #6a6a6a);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sector-filter-btn:hover {
+  color: var(--cream, #F5F0E8);
+  border-color: rgba(184,150,78,0.3);
+}
+
+.sector-filter-btn.active {
+  background: rgba(184,150,78,0.12);
+  color: var(--gold, #B8964E);
+  border-color: rgba(184,150,78,0.35);
+}
+
+/* ─── Barre de comparaison ─── */
+.titres-compare-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(184,150,78,0.08);
+  border-radius: 8px;
+  border: 1px solid rgba(184,150,78,0.2);
+  margin-bottom: 16px;
+}
+
+.titres-compare-bar button {
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--gold, #B8964E);
+  background: rgba(184,150,78,0.15);
+  color: var(--gold, #B8964E);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.titres-compare-bar button:hover {
+  background: var(--gold, #B8964E);
+  color: var(--bg, #0D0B08);
+}
+
+/* ─── Grille de Cartes ─── */
+.titres-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+/* ─── Carte Titre ─── */
+.titre-card {
+  background: var(--surface, #1A1610);
+  border: 1px solid rgba(184,150,78,0.1);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.titre-card:hover {
+  border-color: rgba(184,150,78,0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+}
+
+.titre-card.up {
+  border-left: 3px solid var(--green, #4ADE80);
+}
+
+.titre-card.down {
+  border-left: 3px solid var(--red, #F87171);
+}
+
+.titre-card.neutral {
+  border-left: 3px solid rgba(184,150,78,0.3);
+}
+
+.titre-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.titre-card-pays {
+  width: 36px;
+  height: 36px;
+  opacity: 0.6;
+  transition: opacity 0.2s ease;
+}
+
+.titre-card:hover .titre-card-pays {
+  opacity: 1;
+}
+
+.titre-card-pays svg {
+  width: 100%;
+  height: 100%;
+}
+
+.titre-card-badges {
+  display: flex;
+  gap: 4px;
+}
+
+.titre-badge {
+  font-size: 12px;
+  opacity: 0.8;
+}
+
+.titre-card-body {
+  margin-bottom: 12px;
+}
+
+.titre-card-ticker {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--cream, #F5F0E8);
+  margin-bottom: 2px;
+}
+
+.titre-card-nom {
+  font-size: 12px;
+  color: var(--dim, #6a6a6a);
+  margin-bottom: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.titre-card-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.titre-card-price {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--cream, #F5F0E8);
+}
+
+.titre-card-var {
+  font-family: var(--mono, 'DM Mono', monospace);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.titre-card-var.up {
+  color: var(--green, #4ADE80);
+  background: rgba(74,222,128,0.1);
+}
+
+.titre-card-var.down {
+  color: var(--red, #F87171);
+  background: rgba(248,113,113,0.1);
+}
+
+.titre-card-var.neutral {
+  color: var(--dim, #6a6a6a);
+  background: rgba(150,150,150,0.1);
+}
+
+.titre-card-sparkline {
+  height: 40px;
+  margin-bottom: 8px;
+}
+
+.titre-card-sparkline canvas {
+  width: 100%;
+  height: 100%;
+}
+
+.titre-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid rgba(184,150,78,0.08);
+  font-size: 11px;
+}
+
+.titre-card-sector {
+  color: var(--dim, #6a6a6a);
+}
+
+.titre-card-volume {
+  color: var(--dim, #6a6a6a);
+  font-family: var(--mono, 'DM Mono', monospace);
+}
+
+.titre-card-compare {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(184,150,78,0.06);
+}
+
+.compare-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--dim, #6a6a6a);
+  cursor: pointer;
+}
+
+.compare-checkbox input {
+  cursor: pointer;
+}
+
+/* ─── Pays dot (tableau) ─── */
+.pays-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+/* ─── Empty state ─── */
+.titres-empty {
+  text-align: center;
+  padding: 48px;
+  color: var(--dim, #6a6a6a);
+  font-size: 14px;
+}
+
+/* ─── Country shape SVG ─── */
+.country-shape {
+  width: 100%;
+  height: 100%;
+}
+
+.country-shape path {
+  stroke: currentColor;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
