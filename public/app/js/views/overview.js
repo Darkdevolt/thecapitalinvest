@@ -396,7 +396,7 @@ function renderTopMovers() {
   if (!container) return;
 
   // AJOUT : onglets en haut
-  var tabsHtml = '<div class="tm-tabs" style="display:flex;gap:8px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid rgba(184,150,78,0.1)">' +
+  var tabsHtml = '<div class="tm-tabs">' +
     '<button class="tm-tab ' + (_moversTab === 'gainers' ? 'active' : '') + '" onclick="setMoversTab(\'gainers\',this)">▲ Hausses</button>' +
     '<button class="tm-tab ' + (_moversTab === 'losers' ? 'active' : '') + '" onclick="setMoversTab(\'losers\',this)">▼ Baisses</button>' +
     '<button class="tm-tab ' + (_moversTab === 'volume' ? 'active' : '') + '" onclick="setMoversTab(\'volume\',this)">⇅ Volumes</button>' +
