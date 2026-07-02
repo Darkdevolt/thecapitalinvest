@@ -429,22 +429,20 @@ function renderCoursTable() {
   const byTicker = {};
   allCours.forEach(c => { if (c?.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
   const rows = Object.values(byTicker).sort((a, b) => (a?.ticker || '').localeCompare(b?.ticker || ''));
+  
   document.getElementById('coursCount').textContent = rows.length + ' titre' + (rows.length > 1 ? 's' : '');
+  
+  const tbody = document.getElementById('coursTable');
+  if (!tbody) return;
+  
   if (!rows.length) {
     const isConnected = allCours.length === 0 && allEntreprises.length === 0;
-    const message = isConnected
-      ? '⚠️ Connexion Supabase OK mais aucune donnée dans la table cours_latest. Vérifiez que vos données sont bien insérées.'
-      : 'Aucune donnée de cours disponible.';
-    document.getElementById('coursTable').innerHTML = '<tr><td colspan="6" class="empty-msg">' + message + '</td></tr>';
+    const msg = isConnected
+      ? 'Connexion Supabase OK mais aucune donnee dans la table cours_latest.'
+      : 'Aucune donnee de cours disponible.';
+    tbody.innerHTML = emptyState(msg);
     return;
   }
-  document.getElementById('coursTable').innerHTML = rows.map(c =>
-    `<tr>
-      <td><strong>${c.ticker}</strong></td>
-      <td>${fmt(c.cours)}</td>
-      <td>${changePill(c.variation)}</td>
-      <td>${fmt(c.volume)}</td>
-      <td>${c.capitalisation ? fmtM(c.capitalisation) : '—'}</td>
-      <td>${getSector(c.ticker)}</td>
-    </tr>`).join('');
+  
+  tbody.innerHTML = rows.map(c => tickerRow(c, { showCapital: true })).join('');
 }
