@@ -1,534 +1,23 @@
 // ═══════════════════════════════════════════════════════════════════
-// VIEW — Titres BRVM — REDESIGN « DARK TERMINAL PREMIUM »
-// Dynamique : secteurs extraits depuis entMap/Supabase
+// VIEW — Titres BRVM — ADAPTÉ AU STYLE "THE CAPITAL"
+// Secteurs dynamiques depuis entMap/Supabase — plus de hard-coding
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
   'use strict';
 
-  // ─── ÉTAT GLOBAL ───────────────────────────────────────────────────
-  window._titreFilter   = window._titreFilter   || "all";
-  window._titrePaysFilter = window._titrePaysFilter || "all";
-  window._titreView     = window._titreView     || "cards";
+  // ─── ÉTAT GLOBAL (source unique : window) ──────────────────────────
+  window._titreFilter      = window._titreFilter      || "all";
+  window._titrePaysFilter  = window._titrePaysFilter  || "all";
+  window._titreView        = window._titreView        || "cards";
   window._selectedForCompare = window._selectedForCompare || [];
-  window._titreSort     = window._titreSort     || { field: null, dir: 1 };
-  window._titreSearch   = window._titreSearch   || "";
+  window._titreSort        = window._titreSort        || { field: null, dir: 1 };
+  window._titreSearch      = window._titreSearch      || "";
 
   var _histByTicker = {};
-  var _dynamicSectors = [];   // ← Secteurs extraits dynamiquement
-  var _sectorCounts = {};     // ← Fréquence pour trier les filtres
-
-  // ─── DESIGN TOKENS (CSS injecté) ───────────────────────────────────
-  var DARK_CSS = `
-    <style id="brvm-dark-theme">
-      :root {
-        --bg-primary: #0B0F19;
-        --bg-secondary: #111827;
-        --bg-card: rgba(255,255,255,0.03);
-        --bg-card-hover: rgba(255,255,255,0.06);
-        --border-subtle: rgba(255,255,255,0.06);
-        --text-primary: #F3F4F6;
-        --text-secondary: #9CA3AF;
-        --accent-gold: #D4AF37;
-        --accent-green: #10B981;
-        --accent-red: #EF4444;
-        --glass: backdrop-filter: blur(12px);
-      }
-      #view-titres {
-        background: var(--bg-primary);
-        min-height: 100vh;
-        padding: 24px;
-        color: var(--text-primary);
-        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      }
-      .brvm-header {
-        position: sticky;
-        top: 0;
-        z-index: 100;
-        background: rgba(11,15,25,0.85);
-        backdrop-filter: blur(20px);
-        border-bottom: 1px solid var(--border-subtle);
-        padding: 16px 24px;
-        margin: -24px -24px 24px -24px;
-      }
-      .brvm-header-top {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 16px;
-        flex-wrap: wrap;
-      }
-      .brvm-title {
-        font-size: 1.5rem;
-        font-weight: 700;
-        background: linear-gradient(135deg, #D4AF37 0%, #F3F4F6 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: -0.02em;
-      }
-      .brvm-search-wrap {
-        position: relative;
-        flex: 1;
-        max-width: 400px;
-      }
-      .brvm-search {
-        width: 100%;
-        background: var(--bg-secondary);
-        border: 1px solid var(--border-subtle);
-        border-radius: 12px;
-        padding: 10px 16px 10px 40px;
-        color: var(--text-primary);
-        font-size: 0.9rem;
-        transition: all 0.2s;
-      }
-      .brvm-search:focus {
-        outline: none;
-        border-color: var(--accent-gold);
-        box-shadow: 0 0 0 3px rgba(212,175,55,0.1);
-      }
-      .brvm-search-icon {
-        position: absolute;
-        left: 14px;
-        top: 50%;
-        transform: translateY(-50%);
-        color: var(--text-secondary);
-        font-size: 0.9rem;
-      }
-      .brvm-view-toggle {
-        display: flex;
-        background: var(--bg-secondary);
-        border-radius: 10px;
-        padding: 4px;
-        gap: 4px;
-      }
-      .brvm-view-btn {
-        background: transparent;
-        border: none;
-        color: var(--text-secondary);
-        padding: 8px 16px;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 0.85rem;
-        font-weight: 500;
-        transition: all 0.2s;
-      }
-      .brvm-view-btn.active {
-        background: rgba(212,175,55,0.15);
-        color: var(--accent-gold);
-      }
-      .brvm-filters-dock {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 8px;
-        margin-top: 16px;
-        align-items: center;
-      }
-      .brvm-filter-group {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      .brvm-filter-label {
-        font-size: 0.75rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-secondary);
-        margin-right: 4px;
-      }
-      .brvm-pill {
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-secondary);
-        padding: 6px 14px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-weight: 500;
-      }
-      .brvm-pill:hover {
-        background: var(--bg-card-hover);
-        color: var(--text-primary);
-        transform: translateY(-1px);
-      }
-      .brvm-pill.active {
-        background: rgba(212,175,55,0.15);
-        border-color: rgba(212,175,55,0.3);
-        color: var(--accent-gold);
-      }
-      .brvm-pays-pill {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-      }
-      .brvm-pays-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-      }
-      .brvm-reset {
-        background: transparent;
-        border: 1px dashed var(--border-subtle);
-        color: var(--text-secondary);
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-size: 0.75rem;
-        cursor: pointer;
-        margin-left: auto;
-        transition: all 0.2s;
-      }
-      .brvm-reset:hover {
-        border-color: var(--accent-red);
-        color: var(--accent-red);
-      }
-      /* ─── CARTES ─── */
-      .brvm-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-        gap: 16px;
-        margin-top: 24px;
-      }
-      .brvm-card {
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: 16px;
-        padding: 20px;
-        cursor: pointer;
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        animation: cardEnter 0.5s ease-out backwards;
-      }
-      .brvm-card:nth-child(1) { animation-delay: 0.05s; }
-      .brvm-card:nth-child(2) { animation-delay: 0.10s; }
-      .brvm-card:nth-child(3) { animation-delay: 0.15s; }
-      .brvm-card:nth-child(4) { animation-delay: 0.20s; }
-      .brvm-card:nth-child(5) { animation-delay: 0.25s; }
-      .brvm-card:nth-child(6) { animation-delay: 0.30s; }
-      .brvm-card:hover {
-        background: var(--bg-card-hover);
-        border-color: rgba(212,175,55,0.2);
-        transform: translateY(-4px);
-        box-shadow: 0 20px 40px rgba(0,0,0,0.3);
-      }
-      .brvm-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 3px;
-        background: linear-gradient(90deg, transparent, var(--accent-gold), transparent);
-        opacity: 0;
-        transition: opacity 0.3s;
-      }
-      .brvm-card:hover::before {
-        opacity: 1;
-      }
-      .brvm-card.up { border-left: 3px solid var(--accent-green); }
-      .brvm-card.down { border-left: 3px solid var(--accent-red); }
-      .brvm-card.neutral { border-left: 3px solid #6B7280; }
-      @keyframes cardEnter {
-        from { opacity: 0; transform: translateY(20px) scale(0.95); }
-        to { opacity: 1; transform: translateY(0) scale(1); }
-      }
-      .brvm-card-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        margin-bottom: 12px;
-      }
-      .brvm-card-pays {
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        padding: 4px 10px;
-        border-radius: 6px;
-        background: rgba(255,255,255,0.05);
-      }
-      .brvm-card-badges {
-        display: flex;
-        gap: 6px;
-      }
-      .brvm-badge {
-        font-size: 0.7rem;
-        padding: 3px 8px;
-        border-radius: 6px;
-        font-weight: 600;
-      }
-      .brvm-badge.hot { background: rgba(239,68,68,0.15); color: #FCA5A5; }
-      .brvm-badge.trend { background: rgba(16,185,129,0.15); color: #6EE7B7; }
-      .brvm-badge.alert { background: rgba(245,158,11,0.15); color: #FCD34D; }
-      .brvm-badge.alert-low { background: rgba(59,130,246,0.15); color: #93C5FD; }
-      .brvm-card-ticker {
-        font-size: 1.25rem;
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        margin-bottom: 2px;
-      }
-      .brvm-card-nom {
-        font-size: 0.85rem;
-        color: var(--text-secondary);
-        margin-bottom: 16px;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .brvm-card-price-row {
-        display: flex;
-        align-items: baseline;
-        justify-content: space-between;
-        margin-bottom: 12px;
-      }
-      .brvm-card-price {
-        font-size: 1.5rem;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-      }
-      .brvm-card-var {
-        font-size: 0.9rem;
-        font-weight: 700;
-        padding: 4px 10px;
-        border-radius: 8px;
-        font-variant-numeric: tabular-nums;
-      }
-      .brvm-card-var.up { background: rgba(16,185,129,0.15); color: var(--accent-green); }
-      .brvm-card-var.down { background: rgba(239,68,68,0.15); color: var(--accent-red); }
-      .brvm-card-var.neutral { background: rgba(107,114,128,0.15); color: #9CA3AF; }
-      .brvm-sparkline-wrap {
-        height: 50px;
-        margin-bottom: 12px;
-        position: relative;
-      }
-      .brvm-sparkline-wrap canvas {
-        width: 100%;
-        height: 100%;
-      }
-      .brvm-card-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        padding-top: 12px;
-        border-top: 1px solid var(--border-subtle);
-      }
-      .brvm-sector-tag {
-        background: rgba(212,175,55,0.1);
-        color: var(--accent-gold);
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 600;
-      }
-      .brvm-compare {
-        margin-top: 12px;
-        padding-top: 12px;
-        border-top: 1px solid var(--border-subtle);
-      }
-      .brvm-compare label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        font-size: 0.8rem;
-        color: var(--text-secondary);
-        cursor: pointer;
-      }
-      .brvm-compare input[type="checkbox"] {
-        accent-color: var(--accent-gold);
-        width: 16px;
-        height: 16px;
-      }
-      /* ─── TABLEAU ─── */
-      .brvm-table-wrap {
-        margin-top: 24px;
-        border: 1px solid var(--border-subtle);
-        border-radius: 16px;
-        overflow: hidden;
-      }
-      .brvm-table {
-        width: 100%;
-        border-collapse: collapse;
-        font-size: 0.9rem;
-      }
-      .brvm-table thead {
-        background: var(--bg-secondary);
-      }
-      .brvm-table th {
-        padding: 14px 16px;
-        text-align: left;
-        font-weight: 600;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: var(--text-secondary);
-        cursor: pointer;
-        user-select: none;
-        white-space: nowrap;
-        transition: color 0.2s;
-      }
-      .brvm-table th:hover {
-        color: var(--text-primary);
-      }
-      .brvm-table th.sortable::after {
-        content: ' ⇅';
-        opacity: 0.3;
-        font-size: 0.75rem;
-      }
-      .brvm-table th.sort-asc::after { content: ' ▲'; opacity: 1; color: var(--accent-gold); }
-      .brvm-table th.sort-desc::after { content: ' ▼'; opacity: 1; color: var(--accent-gold); }
-      .brvm-table td {
-        padding: 14px 16px;
-        border-top: 1px solid var(--border-subtle);
-        font-variant-numeric: tabular-nums;
-      }
-      .brvm-table tbody tr {
-        transition: background 0.15s;
-        cursor: pointer;
-      }
-      .brvm-table tbody tr:hover {
-        background: var(--bg-card-hover);
-      }
-      .brvm-table .right { text-align: right; }
-      .brvm-pill-table {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 6px;
-        font-size: 0.85rem;
-        font-weight: 600;
-      }
-      .brvm-pill-table.up { background: rgba(16,185,129,0.15); color: var(--accent-green); }
-      .brvm-pill-table.down { background: rgba(239,68,68,0.15); color: var(--accent-red); }
-      .brvm-pill-table.neutral { background: rgba(107,114,128,0.15); color: #9CA3AF; }
-      /* ─── DRAWER COMPARAISON ─── */
-      .brvm-compare-drawer {
-        position: fixed;
-        right: 0;
-        top: 0;
-        bottom: 0;
-        width: 380px;
-        max-width: 90vw;
-        background: var(--bg-secondary);
-        border-left: 1px solid var(--border-subtle);
-        transform: translateX(100%);
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 200;
-        display: flex;
-        flex-direction: column;
-        box-shadow: -10px 0 40px rgba(0,0,0,0.4);
-      }
-      .brvm-compare-drawer.open {
-        transform: translateX(0);
-      }
-      .brvm-drawer-header {
-        padding: 24px;
-        border-bottom: 1px solid var(--border-subtle);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .brvm-drawer-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-      }
-      .brvm-drawer-close {
-        background: none;
-        border: none;
-        color: var(--text-secondary);
-        font-size: 1.5rem;
-        cursor: pointer;
-        padding: 4px;
-      }
-      .brvm-drawer-body {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-      }
-      .brvm-drawer-item {
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        border-radius: 12px;
-        padding: 16px;
-        margin-bottom: 12px;
-      }
-      .brvm-drawer-footer {
-        padding: 16px 24px;
-        border-top: 1px solid var(--border-subtle);
-        display: flex;
-        gap: 12px;
-      }
-      .brvm-btn {
-        flex: 1;
-        padding: 12px;
-        border-radius: 10px;
-        border: none;
-        font-weight: 600;
-        cursor: pointer;
-        transition: all 0.2s;
-        font-size: 0.9rem;
-      }
-      .brvm-btn-primary {
-        background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
-        color: #000;
-      }
-      .brvm-btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(212,175,55,0.3);
-      }
-      .brvm-btn-secondary {
-        background: var(--bg-card);
-        border: 1px solid var(--border-subtle);
-        color: var(--text-primary);
-      }
-      .brvm-btn-secondary:hover {
-        background: var(--bg-card-hover);
-      }
-      .brvm-compare-trigger {
-        position: fixed;
-        bottom: 24px;
-        right: 24px;
-        background: linear-gradient(135deg, #D4AF37 0%, #B8941F 100%);
-        color: #000;
-        border: none;
-        border-radius: 50px;
-        padding: 14px 24px;
-        font-weight: 700;
-        cursor: pointer;
-        box-shadow: 0 8px 30px rgba(212,175,55,0.3);
-        z-index: 150;
-        transition: all 0.3s;
-        display: none;
-        align-items: center;
-        gap: 8px;
-      }
-      .brvm-compare-trigger.visible {
-        display: flex;
-        animation: bounceIn 0.5s;
-      }
-      .brvm-compare-trigger:hover {
-        transform: scale(1.05);
-      }
-      @keyframes bounceIn {
-        0% { transform: scale(0.3); opacity: 0; }
-        50% { transform: scale(1.05); }
-        70% { transform: scale(0.9); }
-        100% { transform: scale(1); opacity: 1; }
-      }
-      .brvm-empty {
-        text-align: center;
-        padding: 60px 20px;
-        color: var(--text-secondary);
-      }
-      .brvm-empty-icon {
-        font-size: 3rem;
-        margin-bottom: 16px;
-        opacity: 0.5;
-      }
-    </style>
-  `;
+  var _dynamicSectors = [];   // ← Extraits dynamiquement depuis entMap
+  var _sectorCounts = {};
+  var _cssInjected = false;
 
   // ─── DONNÉES PAYS (UEMOA) ─────────────────────────────────────────
   var PAYS_NAMES = {
@@ -561,34 +50,39 @@
   }
 
   // ─── EXTRACTION DYNAMIQUE DES SECTEURS ─────────────────────────────
-  // Plus de tableau codé en dur ! On scanne entMap et on déduit.
+  // Scan entMap (Supabase) puis fallback sur allCours
   function extractDynamicSectors() {
     var sectors = new Set();
     var counts = {};
 
+    // 1. Depuis entMap (Supabase — source primaire)
     if (typeof entMap !== "undefined" && entMap) {
       Object.keys(entMap).forEach(function (tk) {
         var ent = entMap[tk];
         if (ent && ent.secteur) {
           var s = normalizeSector(ent.secteur);
-          sectors.add(s);
-          counts[s] = (counts[s] || 0) + 1;
+          if (s) {
+            sectors.add(s);
+            counts[s] = (counts[s] || 0) + 1;
+          }
         }
       });
     }
 
-    // Si entMap est vide ou pas de secteurs, on essaie depuis allCours
+    // 2. Fallback depuis allCours si entMap vide
     if (sectors.size === 0 && typeof allCours !== "undefined" && Array.isArray(allCours)) {
       allCours.forEach(function (c) {
         if (c && c.secteur) {
           var s = normalizeSector(c.secteur);
-          sectors.add(s);
-          counts[s] = (counts[s] || 0) + 1;
+          if (s) {
+            sectors.add(s);
+            counts[s] = (counts[s] || 0) + 1;
+          }
         }
       });
     }
 
-    // Tri par fréquence décroissante
+    // Tri par fréquence décroissante (les plus populaires en premier)
     _dynamicSectors = Array.from(sectors).sort(function (a, b) {
       return (counts[b] || 0) - (counts[a] || 0);
     });
@@ -597,21 +91,24 @@
     return _dynamicSectors;
   }
 
-  // Normalise les noms de secteur (ex: "banque" → "Banque", "assurances" → "Assurance")
+  // Normalise : "banques" → "Banque", "ASSURANCES" → "Assurance", "  telecom  " → "Telecom"
   function normalizeSector(raw) {
-    if (!raw) return "Autre";
+    if (!raw) return "";
     var s = String(raw).trim().toLowerCase();
-    // Singularisation basique
+    if (!s) return "";
+    // Singularisation basique (pas "Banques" mais "Banque")
     if (s.endsWith("s") && s.length > 3) s = s.slice(0, -1);
-    // Capitalisation
+    // Capitalisation première lettre
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
-  function getSector(ticker) {
+  // Récupère le secteur d'un ticker depuis entMap (Supabase)
+  function getSectorFromEntMap(ticker) {
     if (typeof entMap !== "undefined" && entMap && entMap[ticker] && entMap[ticker].secteur) {
       return normalizeSector(entMap[ticker].secteur);
     }
-    if (typeof getSectorOriginal === "function") return getSectorOriginal(ticker);
+    // Fallback sur la fonction globale si elle existe (nav.js)
+    if (typeof getSector === "function") return getSector(ticker);
     return "Autre";
   }
 
@@ -630,10 +127,11 @@
       // Extraction dynamique des secteurs AVANT de rendre les filtres
       extractDynamicSectors();
 
+      // Enrichit chaque row avec les métadonnées
       window._titresRows.forEach(function (row) {
         var ent = (typeof entMap !== "undefined" && entMap) ? entMap[row.ticker] : null;
         row._pays = (ent && ent.pays) || "CI";
-        row._secteur = getSector(row.ticker);
+        row._secteur = getSectorFromEntMap(row.ticker);
         row._nom = (ent && ent.nom) || row.ticker;
 
         var hist = _histByTicker[row.ticker] || [];
@@ -660,80 +158,585 @@
     return idx;
   }
 
+  // ─── CSS ADAPTÉ AU STYLE "THE CAPITAL" ─────────────────────────────
+  // Utilise les variables CSS existantes du projet (style.css)
+  function injectTitresCSS() {
+    if (_cssInjected) return;
+    var css = `
+      /* ─── VIEW TITRES — Style The Capital ─── */
+      #view-titres { position: relative; z-index: 1; }
+
+      .tc-titres-header {
+        padding: 24px 0;
+        border-bottom: 1px solid var(--border);
+        margin-bottom: 24px;
+      }
+      .tc-titres-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+      }
+      .tc-titres-title {
+        font-family: var(--serif);
+        font-size: clamp(28px, 4vw, 48px);
+        font-weight: 900;
+        line-height: 1.05;
+        color: var(--cream);
+        letter-spacing: -1px;
+      }
+      .tc-titres-title em { font-style: italic; color: var(--gold); }
+
+      .tc-titres-search-wrap {
+        position: relative;
+        flex: 1;
+        max-width: 360px;
+      }
+      .tc-titres-search-wrap input {
+        width: 100%;
+        padding: 10px 14px 10px 38px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        color: var(--cream);
+        font-family: var(--sans);
+        font-size: 13px;
+        outline: none;
+        transition: border-color 0.2s;
+      }
+      .tc-titres-search-wrap input:focus { border-color: var(--gold); }
+      .tc-titres-search-wrap input::placeholder { color: var(--dim); }
+      .tc-titres-search-wrap::before {
+        content: '🔍';
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 12px;
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      .tc-view-toggle {
+        display: flex;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 3px;
+        gap: 3px;
+      }
+      .tc-view-btn {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-family: var(--sans);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        transition: all 0.2s;
+      }
+      .tc-view-btn.active {
+        background: var(--gold-bg);
+        color: var(--gold);
+      }
+      .tc-view-btn:hover:not(.active) { color: var(--cream); }
+
+      .tc-filters-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+      .tc-filter-group {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .tc-filter-label {
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-right: 4px;
+      }
+      .tc-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        color: var(--muted);
+        font-family: var(--sans);
+        font-size: 12px;
+        font-weight: 400;
+        cursor: pointer;
+        transition: all 0.2s;
+        white-space: nowrap;
+      }
+      .tc-pill:hover {
+        border-color: var(--gold-dim);
+        color: var(--cream);
+        background: var(--card2);
+      }
+      .tc-pill.active {
+        background: var(--gold-bg);
+        border-color: rgba(184,150,78,0.3);
+        color: var(--gold);
+      }
+      .tc-pill .tc-count {
+        font-size: 10px;
+        opacity: 0.5;
+        font-family: var(--mono);
+      }
+      .tc-pays-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+      .tc-reset {
+        margin-left: auto;
+        padding: 6px 14px;
+        background: transparent;
+        border: 1px dashed var(--border);
+        border-radius: var(--r);
+        color: var(--muted);
+        font-family: var(--sans);
+        font-size: 11px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .tc-reset:hover {
+        border-color: var(--red);
+        color: var(--red);
+      }
+
+      /* ─── GRILLE DE CARTES ─── */
+      .tc-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1px;
+        background: var(--border);
+        border: 1px solid var(--border);
+      }
+      .tc-titre-card {
+        background: var(--card);
+        padding: 28px 24px;
+        cursor: pointer;
+        transition: background 0.3s;
+        position: relative;
+        overflow: hidden;
+        animation: fadeUp 0.6s ease forwards;
+        opacity: 0;
+      }
+      .tc-titre-card:nth-child(1) { animation-delay: 0.05s; }
+      .tc-titre-card:nth-child(2) { animation-delay: 0.10s; }
+      .tc-titre-card:nth-child(3) { animation-delay: 0.15s; }
+      .tc-titre-card:nth-child(4) { animation-delay: 0.20s; }
+      .tc-titre-card:nth-child(5) { animation-delay: 0.25s; }
+      .tc-titre-card:nth-child(6) { animation-delay: 0.30s; }
+      .tc-titre-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        transform: scaleX(0);
+        transition: transform 0.4s ease;
+      }
+      .tc-titre-card:hover { background: var(--surface); }
+      .tc-titre-card:hover::before { transform: scaleX(1); }
+      .tc-titre-card.up { border-left: 2px solid var(--green); }
+      .tc-titre-card.down { border-left: 2px solid var(--red); }
+      .tc-titre-card.neutral { border-left: 2px solid var(--stone); }
+
+      .tc-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 16px;
+      }
+      .tc-card-pays {
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 3px 10px;
+        background: var(--bg-row);
+        border-radius: 3px;
+      }
+      .tc-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+      .tc-card-ticker {
+        font-family: var(--serif);
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--cream);
+        letter-spacing: -0.5px;
+        margin-bottom: 4px;
+      }
+      .tc-card-nom {
+        font-size: 13px;
+        color: var(--muted);
+        margin-bottom: 20px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tc-card-price-row {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .tc-card-price {
+        font-family: var(--serif);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--cream);
+        font-variant-numeric: tabular-nums;
+      }
+      .tc-card-price span {
+        font-size: 12px;
+        font-weight: 400;
+        color: var(--muted);
+        margin-left: 4px;
+      }
+      .tc-card-var {
+        font-family: var(--mono);
+        font-size: 14px;
+        font-weight: 500;
+        padding: 4px 10px;
+        border-radius: 3px;
+        font-variant-numeric: tabular-nums;
+      }
+      .tc-card-var.up { background: rgba(74,222,128,0.1); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+      .tc-card-var.down { background: rgba(248,113,113,0.1); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+      .tc-card-var.neutral { background: rgba(245,240,232,0.05); color: var(--muted); border: 1px solid var(--border2); }
+
+      .tc-sparkline-wrap {
+        height: 50px;
+        margin-bottom: 16px;
+      }
+      .tc-sparkline-wrap canvas {
+        width: 100%;
+        height: 100%;
+      }
+
+      .tc-card-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 14px;
+        border-top: 1px solid var(--border2);
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .tc-card-footer .tc-sector-tag {
+        background: var(--gold-bg);
+        color: var(--gold);
+        padding: 2px 8px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.05em;
+      }
+      .tc-card-compare {
+        margin-top: 14px;
+        padding-top: 14px;
+        border-top: 1px solid var(--border2);
+      }
+      .tc-card-compare label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: var(--muted);
+        cursor: pointer;
+      }
+      .tc-card-compare input[type="checkbox"] {
+        accent-color: var(--gold);
+        width: 14px; height: 14px;
+      }
+
+      /* ─── TABLEAU ─── */
+      .tc-table-wrap {
+        border: 1px solid var(--border);
+        overflow: hidden;
+      }
+      .tc-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 13px;
+      }
+      .tc-table thead th {
+        padding: 12px 14px;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+        border-bottom: 1px solid var(--border);
+        background: rgba(0,0,0,0.3);
+        text-align: left;
+        cursor: pointer;
+        user-select: none;
+        white-space: nowrap;
+        transition: color 0.2s;
+        font-family: var(--sans);
+      }
+      .tc-table thead th:hover { color: var(--cream); }
+      .tc-table thead th.r, .tc-table td.r { text-align: right; }
+      .tc-table thead th.sortable::after {
+        content: ' ⇅';
+        opacity: 0.3;
+        font-size: 9px;
+      }
+      .tc-table thead th.sort-asc::after { content: ' ▲'; opacity: 1; color: var(--gold); }
+      .tc-table thead th.sort-desc::after { content: ' ▼'; opacity: 1; color: var(--gold); }
+      .tc-table tbody tr {
+        border-bottom: 1px solid rgba(245,240,232,0.05);
+        transition: background 0.15s;
+        cursor: pointer;
+      }
+      .tc-table tbody tr:hover { background: var(--bg-row); }
+      .tc-table tbody tr:last-child { border-bottom: none; }
+      .tc-table td {
+        padding: 12px 14px;
+        vertical-align: middle;
+        font-variant-numeric: tabular-nums;
+      }
+      .tc-table .tc-ticker-cell { font-weight: 700; color: var(--cream); }
+      .tc-table .tc-pays-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+      }
+
+      /* ─── DRAWER COMPARAISON ─── */
+      .tc-compare-trigger {
+        position: fixed;
+        bottom: 24px; right: 24px;
+        background: var(--gold);
+        color: var(--bg);
+        border: none;
+        border-radius: 2px;
+        padding: 12px 20px;
+        font-family: var(--sans);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: var(--shadow);
+        z-index: 150;
+        display: none;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+      }
+      .tc-compare-trigger.visible { display: flex; }
+      .tc-compare-trigger:hover {
+        background: var(--gold-l);
+        transform: translateY(-2px);
+      }
+      .tc-compare-drawer {
+        position: fixed;
+        right: 0; top: 0; bottom: 0;
+        width: 380px;
+        max-width: 90vw;
+        background: var(--surface);
+        border-left: 1px solid var(--border);
+        transform: translateX(100%);
+        transition: transform 0.3s ease;
+        z-index: 200;
+        display: flex;
+        flex-direction: column;
+        box-shadow: -10px 0 40px rgba(0,0,0,0.4);
+      }
+      .tc-compare-drawer.open { transform: translateX(0); }
+      .tc-drawer-header {
+        padding: 24px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .tc-drawer-title {
+        font-family: var(--serif);
+        font-size: 20px;
+        font-weight: 700;
+        color: var(--cream);
+      }
+      .tc-drawer-close {
+        background: none;
+        border: none;
+        color: var(--muted);
+        font-size: 24px;
+        cursor: pointer;
+        padding: 4px;
+        transition: color 0.2s;
+      }
+      .tc-drawer-close:hover { color: var(--cream); }
+      .tc-drawer-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 16px;
+      }
+      .tc-drawer-item {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--r);
+        padding: 16px;
+        margin-bottom: 10px;
+      }
+      .tc-drawer-footer {
+        padding: 16px 24px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 10px;
+      }
+      .tc-btn {
+        flex: 1;
+        padding: 12px;
+        border-radius: 2px;
+        border: none;
+        font-family: var(--sans);
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .tc-btn-primary {
+        background: var(--gold);
+        color: var(--bg);
+      }
+      .tc-btn-primary:hover { background: var(--gold-l); }
+      .tc-btn-secondary {
+        background: transparent;
+        border: 1px solid var(--border);
+        color: var(--muted);
+      }
+      .tc-btn-secondary:hover {
+        border-color: var(--gold-dim);
+        color: var(--cream);
+      }
+
+      /* ─── ÉTAT VIDE ─── */
+      .tc-empty {
+        text-align: center;
+        padding: 80px 20px;
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .tc-empty-icon {
+        font-size: 3rem;
+        margin-bottom: 16px;
+        opacity: 0.3;
+      }
+
+      /* ─── RESPONSIVE ─── */
+      @media (max-width: 900px) {
+        .tc-titres-top { flex-direction: column; align-items: stretch; }
+        .tc-titres-search-wrap { max-width: none; }
+        .tc-cards-grid { grid-template-columns: 1fr; }
+        .tc-compare-drawer { width: 100%; max-width: 100%; }
+      }
+    `;
+    var style = document.createElement('style');
+    style.id = 'tc-titres-style';
+    style.textContent = css;
+    document.head.appendChild(style);
+    _cssInjected = true;
+  }
+
   // ─── HEADER ────────────────────────────────────────────────────────
   function renderTitresHeader() {
     var container = document.getElementById("view-titres");
     if (!container) return;
 
-    // Injecte le CSS une seule fois
-    if (!document.getElementById("brvm-dark-theme")) {
-      document.head.insertAdjacentHTML("beforeend", DARK_CSS);
-    }
+    injectTitresCSS();
 
-    if (container.querySelector(".brvm-header")) return;
+    // Si header déjà créé, on ne recrée pas (évite le flicker)
+    if (container.querySelector(".tc-titres-header")) return;
 
+    // Pills pays
     var paysPills = Object.keys(PAYS_NAMES).map(function (code) {
       var isActive = window._titrePaysFilter === code;
-      return '<button class="brvm-pill brvm-pays-pill ' + (isActive ? 'active' : '') + '" data-pays="' + code + '">' +
-        '<span class="brvm-pays-dot" style="background:' + PAYS_COLORS[code] + '"></span>' +
-        PAYS_NAMES[code] +
+      return '<button class="tc-pill ' + (isActive ? 'active' : '') + '" data-pays="' + esc(code) + '">' +
+        '<span class="tc-pays-dot" style="background:' + PAYS_COLORS[code] + '"></span>' +
+        esc(PAYS_NAMES[code]) +
       '</button>';
     }).join("");
 
-    // Filtres secteurs dynamiques
+    // Pills secteurs dynamiques (depuis entMap/Supabase)
     var sectorPills = _dynamicSectors.map(function (s) {
       var isActive = window._titreFilter === s;
-      return '<button class="brvm-pill ' + (isActive ? 'active' : '') + '" data-sector="' + esc(s) + '">' +
-        esc(s) + ' <span style="opacity:0.5;font-size:0.75em;">(' + (_sectorCounts[s] || 0) + ')</span>' +
+      return '<button class="tc-pill ' + (isActive ? 'active' : '') + '" data-sector="' + esc(s) + '">' +
+        esc(s) + ' <span class="tc-count">(' + (_sectorCounts[s] || 0) + ')</span>' +
       '</button>';
     }).join("");
 
     var headerHtml =
-      '<div class="brvm-header">' +
-        '<div class="brvm-header-top">' +
-          '<div class="brvm-title">📈 Titres BRVM</div>' +
-          '<div class="brvm-search-wrap">' +
-            '<span class="brvm-search-icon">🔍</span>' +
-            '<input class="brvm-search" id="searchTitres" placeholder="Rechercher un ticker, une société..." value="' + esc(window._titreSearch) + '">' +
+      '<div class="tc-titres-header">' +
+        '<div class="tc-titres-top">' +
+          '<h2 class="tc-titres-title">Titres <em>BRVM</em></h2>' +
+          '<div class="tc-titres-search-wrap">' +
+            '<input type="text" id="searchTitres" placeholder="Rechercher un ticker, une société..." value="' + esc(window._titreSearch) + '">' +
           '</div>' +
-          '<div class="brvm-view-toggle">' +
-            '<button class="brvm-view-btn ' + (window._titreView === "cards" ? "active" : "") + '" data-view="cards">Cartes</button>' +
-            '<button class="brvm-view-btn ' + (window._titreView === "table" ? "active" : "") + '" data-view="table">Tableau</button>' +
+          '<div class="tc-view-toggle">' +
+            '<button class="tc-view-btn ' + (window._titreView === "cards" ? "active" : "") + '" data-view="cards">Cartes</button>' +
+            '<button class="tc-view-btn ' + (window._titreView === "table" ? "active" : "") + '" data-view="table">Tableau</button>' +
           '</div>' +
         '</div>' +
-        '<div class="brvm-filters-dock">' +
-          '<div class="brvm-filter-group">' +
-            '<span class="brvm-filter-label">Pays</span>' +
-            '<button class="brvm-pill ' + (window._titrePaysFilter === "all" ? 'active' : '') + '" data-pays="all">Tous</button>' +
+        '<div class="tc-filters-row">' +
+          '<div class="tc-filter-group">' +
+            '<span class="tc-filter-label">Pays</span>' +
+            '<button class="tc-pill ' + (window._titrePaysFilter === "all" ? 'active' : '') + '" data-pays="all">Tous</button>' +
             paysPills +
           '</div>' +
-          '<div class="brvm-filter-group" style="margin-left:16px;">' +
-            '<span class="brvm-filter-label">Secteur</span>' +
-            '<button class="brvm-pill ' + (window._titreFilter === "all" ? 'active' : '') + '" data-sector="all">Tous</button>' +
+          '<div class="tc-filter-group" style="margin-left:16px;">' +
+            '<span class="tc-filter-label">Secteur</span>' +
+            '<button class="tc-pill ' + (window._titreFilter === "all" ? 'active' : '') + '" data-sector="all">Tous</button>' +
             sectorPills +
           '</div>' +
-          '<button class="brvm-reset" id="resetTitresBtn">↺ Réinitialiser</button>' +
+          '<button class="tc-reset" id="resetTitresBtn">↺ Réinitialiser</button>' +
         '</div>' +
       '</div>' +
       '<div id="titresResults"></div>' +
-      '<button class="brvm-compare-trigger" id="compareTrigger">' +
-        '<span>⚖️</span> <span id="compareTriggerText">0</span>' +
+      '<button class="tc-compare-trigger" id="compareTrigger">' +
+        'Comparer <span id="compareTriggerText">0</span>' +
       '</button>' +
-      '<div class="brvm-compare-drawer" id="compareDrawer">' +
-        '<div class="brvm-drawer-header">' +
-          '<div class="brvm-drawer-title">Comparaison</div>' +
-          '<button class="brvm-drawer-close" id="closeDrawer">&times;</button>' +
+      '<div class="tc-compare-drawer" id="compareDrawer">' +
+        '<div class="tc-drawer-header">' +
+          '<div class="tc-drawer-title">Comparaison</div>' +
+          '<button class="tc-drawer-close" id="closeDrawer">&times;</button>' +
         '</div>' +
-        '<div class="brvm-drawer-body" id="compareDrawerBody"></div>' +
-        '<div class="brvm-drawer-footer">' +
-          '<button class="brvm-btn brvm-btn-secondary" id="clearCompareBtn">Vider</button>' +
-          '<button class="brvm-btn brvm-btn-primary" id="launchCompareBtn">Comparer</button>' +
+        '<div class="tc-drawer-body" id="compareDrawerBody"></div>' +
+        '<div class="tc-drawer-footer">' +
+          '<button class="tc-btn tc-btn-secondary" id="clearCompareBtn">Vider</button>' +
+          '<button class="tc-btn tc-btn-primary" id="launchCompareBtn">Comparer</button>' +
         '</div>' +
       '</div>';
 
     container.innerHTML = headerHtml;
 
-    // Listeners
+    // ─── Listeners ───
     document.getElementById("searchTitres").addEventListener("input", debounce(function (e) {
       window._titreSearch = e.target.value;
       filterTitres();
@@ -741,21 +744,19 @@
 
     document.getElementById("resetTitresBtn").addEventListener("click", resetTitresFilters);
 
-    // Délégation filtres pays
-    container.querySelector(".brvm-filters-dock").addEventListener("click", function (e) {
+    // Délégation filtres
+    container.querySelector(".tc-filters-row").addEventListener("click", function (e) {
       var pill = e.target.closest("[data-pays]");
       if (pill) {
         setPaysFilter(pill.getAttribute("data-pays"));
         return;
       }
       var sect = e.target.closest("[data-sector]");
-      if (sect) {
-        setTitreFilter(sect.getAttribute("data-sector"));
-      }
+      if (sect) setTitreFilter(sect.getAttribute("data-sector"));
     });
 
     // Toggle view
-    container.querySelector(".brvm-view-toggle").addEventListener("click", function (e) {
+    container.querySelector(".tc-view-toggle").addEventListener("click", function (e) {
       var btn = e.target.closest("[data-view]");
       if (btn) setTitreView(btn.getAttribute("data-view"));
     });
@@ -776,7 +777,7 @@
   // ─── FILTRES / TRI ─────────────────────────────────────────────────
   function setTitreView(view) {
     window._titreView = view;
-    document.querySelectorAll(".brvm-view-btn").forEach(function (b) {
+    document.querySelectorAll(".tc-view-btn").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-view") === view);
     });
     filterTitres();
@@ -814,7 +815,8 @@
     window._titrePaysFilter = "all";
     window._titreSort = { field: null, dir: 1 };
     window._titreSearch = "";
-    document.getElementById("searchTitres").value = "";
+    var searchInput = document.getElementById("searchTitres");
+    if (searchInput) searchInput.value = "";
     document.querySelectorAll("[data-pays]").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-pays") === "all");
     });
@@ -865,8 +867,8 @@
 
     if (!rows.length) {
       resultsContainer.innerHTML =
-        '<div class="brvm-empty">' +
-          '<div class="brvm-empty-icon">📭</div>' +
+        '<div class="tc-empty">' +
+          '<div class="tc-empty-icon">📭</div>' +
           '<div>Aucun titre ne correspond à vos critères</div>' +
         '</div>';
       updateCompareUI();
@@ -875,7 +877,6 @@
 
     if (window._titreView === "cards") {
       resultsContainer.innerHTML = renderCardsView(rows);
-      // Dessine les sparklines après injection DOM
       setTimeout(function () {
         rows.forEach(function (c) {
           var v = parseFloat(c.variation) || 0;
@@ -893,10 +894,10 @@
   // ─── DÉLÉGATION ÉVÉNEMENTS ───────────────────────────────────────
   function attachResultsListeners() {
     var container = document.getElementById("view-titres");
-    if (!container || container._listenersAttached) return;
+    if (!container || container._tcListenersAttached) return;
 
     container.addEventListener("click", function (e) {
-      if (e.target.closest(".brvm-compare") || e.target.closest("th")) return;
+      if (e.target.closest(".tc-card-compare") || e.target.closest("th")) return;
       var el = e.target.closest("[data-ticker]");
       if (el && typeof openFiche === "function") openFiche(el.getAttribute("data-ticker"));
     });
@@ -912,12 +913,12 @@
       if (th) sortTitresBy(th.getAttribute("data-field"));
     });
 
-    container._listenersAttached = true;
+    container._tcListenersAttached = true;
   }
 
   // ─── VUE CARTES ────────────────────────────────────────────────────
   function renderCardsView(rows) {
-    return '<div class="brvm-grid">' + rows.map(renderTitreCard).join("") + '</div>';
+    return '<div class="tc-cards-grid">' + rows.map(renderTitreCard).join("") + '</div>';
   }
 
   function renderTitreCard(c) {
@@ -928,30 +929,30 @@
     var isChecked = window._selectedForCompare.indexOf(c.ticker) !== -1;
 
     var badges = "";
-    if (c._volumeAnormal) badges += '<span class="brvm-badge hot">🔥 Volume</span>';
-    if (c._tendanceHaussiere) badges += '<span class="brvm-badge trend">📈 Tendance</span>';
-    if (c._proche52Haut) badges += '<span class="brvm-badge alert">⚠️ 52H</span>';
-    if (c._proche52Bas) badges += '<span class="brvm-badge alert-low">📉 52B</span>';
+    if (c._volumeAnormal) badges += '<span class="tagp">🔥 Volume</span>';
+    if (c._tendanceHaussiere) badges += '<span class="badge-green">📈 Tendance</span>';
+    if (c._proche52Haut) badges += '<span class="badge-orange">⚠️ 52H</span>';
+    if (c._proche52Bas) badges += '<span class="badge-red">📉 52B</span>';
 
-    return '<div class="brvm-card ' + cls + '" data-ticker="' + esc(c.ticker) + '">' +
-      '<div class="brvm-card-header">' +
-        '<span class="brvm-card-pays" style="color:' + paysColor + '">' + esc(PAYS_NAMES[c._pays] || c._pays) + '</span>' +
-        '<div class="brvm-card-badges">' + badges + '</div>' +
+    return '<div class="tc-titre-card ' + cls + '" data-ticker="' + esc(c.ticker) + '">' +
+      '<div class="tc-card-header">' +
+        '<span class="tc-card-pays" style="color:' + paysColor + '">' + esc(PAYS_NAMES[c._pays] || c._pays) + '</span>' +
+        '<div class="tc-card-badges">' + badges + '</div>' +
       '</div>' +
-      '<div class="brvm-card-ticker">' + esc(c.ticker) + '</div>' +
-      '<div class="brvm-card-nom">' + esc(c._nom) + '</div>' +
-      '<div class="brvm-card-price-row">' +
-        '<span class="brvm-card-price">' + safeFmt(c.cours) + ' <span style="font-size:0.6em;opacity:0.6;">FCFA</span></span>' +
-        '<span class="brvm-card-var ' + cls + '">' + sign + v.toFixed(2) + '%</span>' +
+      '<div class="tc-card-ticker">' + esc(c.ticker) + '</div>' +
+      '<div class="tc-card-nom">' + esc(c._nom) + '</div>' +
+      '<div class="tc-card-price-row">' +
+        '<span class="tc-card-price">' + safeFmt(c.cours) + '<span>FCFA</span></span>' +
+        '<span class="tc-card-var ' + cls + '">' + sign + v.toFixed(2) + '%</span>' +
       '</div>' +
-      '<div class="brvm-sparkline-wrap">' +
+      '<div class="tc-sparkline-wrap">' +
         '<canvas id="spark-' + esc(c.ticker) + '" width="240" height="50"></canvas>' +
       '</div>' +
-      '<div class="brvm-card-footer">' +
-        '<span class="brvm-sector-tag">' + esc(c._secteur) + '</span>' +
+      '<div class="tc-card-footer">' +
+        '<span class="tc-sector-tag">' + esc(c._secteur) + '</span>' +
         '<span>Vol ' + safeFmt(c.volume) + '</span>' +
       '</div>' +
-      '<div class="brvm-compare">' +
+      '<div class="tc-card-compare">' +
         '<label onclick="event.stopPropagation()">' +
           '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" ' + (isChecked ? "checked" : "") + '>' +
           '<span>Ajouter à la comparaison</span>' +
@@ -960,7 +961,7 @@
     '</div>';
   }
 
-  // ─── SPARKLINE AVEC GRADIENT ───────────────────────────────────────
+  // ─── SPARKLINE ─────────────────────────────────────────────────────
   function drawSparkline(ticker, cls) {
     var canvas = document.getElementById("spark-" + ticker);
     if (!canvas || !canvas.getContext) return;
@@ -993,8 +994,8 @@
 
     // Fill gradient
     var grad = ctx.createLinearGradient(0, 0, 0, h);
-    var color = cls === "up" ? "16,185,129" : cls === "down" ? "239,68,68" : "107,114,128";
-    grad.addColorStop(0, "rgba(" + color + ",0.2)");
+    var color = cls === "up" ? "74,222,128" : cls === "down" ? "248,113,113" : "107,114,128";
+    grad.addColorStop(0, "rgba(" + color + ",0.15)");
     grad.addColorStop(1, "rgba(" + color + ",0.0)");
 
     ctx.beginPath();
@@ -1011,20 +1012,16 @@
       if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
     });
     ctx.strokeStyle = "rgb(" + color + ")";
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 1.5;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.stroke();
 
-    // Glow point at end
+    // Point final
     var last = points[points.length - 1];
     ctx.beginPath();
-    ctx.arc(last.x, last.y, 3, 0, Math.PI * 2);
+    ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2);
     ctx.fillStyle = "rgb(" + color + ")";
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 6, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(" + color + ",0.3)";
     ctx.fill();
   }
 
@@ -1036,16 +1033,16 @@
   }
 
   function renderTableView(rows) {
-    return '<div class="brvm-table-wrap">' +
-      '<table class="brvm-table">' +
+    return '<div class="tc-table-wrap">' +
+      '<table class="tc-table">' +
         '<thead><tr>' +
           '<th>Pays</th>' +
           '<th data-field="ticker" class="sortable ' + sortArrow("ticker") + '">Ticker</th>' +
           '<th data-field="_nom" class="sortable ' + sortArrow("_nom") + '">Société</th>' +
-          '<th data-field="cours" class="right sortable ' + sortArrow("cours") + '">Cours</th>' +
-          '<th data-field="variation" class="right sortable ' + sortArrow("variation") + '">Variation</th>' +
-          '<th data-field="volume" class="right sortable ' + sortArrow("volume") + '">Volume</th>' +
-          '<th data-field="capitalisation" class="right sortable ' + sortArrow("capitalisation") + '">Cap.</th>' +
+          '<th data-field="cours" class="r sortable ' + sortArrow("cours") + '">Cours</th>' +
+          '<th data-field="variation" class="r sortable ' + sortArrow("variation") + '">Variation</th>' +
+          '<th data-field="volume" class="r sortable ' + sortArrow("volume") + '">Volume</th>' +
+          '<th data-field="capitalisation" class="r sortable ' + sortArrow("capitalisation") + '">Cap.</th>' +
           '<th>Secteur</th>' +
           '<th></th>' +
         '</tr></thead>' +
@@ -1061,17 +1058,20 @@
     var paysColor = PAYS_COLORS[c._pays] || "#B8964E";
     var isChecked = window._selectedForCompare.indexOf(c.ticker) !== -1;
 
+    var varClass = v > 0 ? 'badge-green' : v < 0 ? 'badge-red' : '';
+    var varHtml = v > 0 ? '▲ ' + v.toFixed(2) + '%' : v < 0 ? '▼ ' + Math.abs(v).toFixed(2) + '%' : '= 0.00%';
+
     return '<tr data-ticker="' + esc(c.ticker) + '">' +
-      '<td><span class="brvm-pays-dot" style="background:' + paysColor + '" title="' + esc(PAYS_NAMES[c._pays] || "") + '"></span></td>' +
-      '<td style="font-weight:700;">' + esc(c.ticker) + '</td>' +
+      '<td><span class="tc-pays-dot" style="background:' + paysColor + '" title="' + esc(PAYS_NAMES[c._pays] || "") + '"></span></td>' +
+      '<td class="tc-ticker-cell">' + esc(c.ticker) + '</td>' +
       '<td>' + esc(c._nom) + '</td>' +
-      '<td class="right" style="font-weight:600;">' + safeFmt(c.cours) + '</td>' +
-      '<td class="right"><span class="brvm-pill-table ' + cls + '">' + sign + v.toFixed(2) + '%</span></td>' +
-      '<td class="right">' + safeFmt(c.volume) + '</td>' +
-      '<td class="right">' + (c.capitalisation ? safeFmtM(c.capitalisation) : "—") + '</td>' +
-      '<td><span class="brvm-sector-tag">' + esc(c._secteur) + '</span></td>' +
+      '<td class="r" style="font-weight:600;">' + safeFmt(c.cours) + '</td>' +
+      '<td class="r"><span class="tag ' + varClass + '">' + varHtml + '</span></td>' +
+      '<td class="r">' + safeFmt(c.volume) + '</td>' +
+      '<td class="r">' + (c.capitalisation ? safeFmtM(c.capitalisation) : "—") + '</td>' +
+      '<td><span class="tagp">' + esc(c._secteur) + '</span></td>' +
       '<td><label onclick="event.stopPropagation()">' +
-        '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" ' + (isChecked ? "checked" : "") + ' style="accent-color:#D4AF37;width:16px;height:16px;">' +
+        '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" ' + (isChecked ? "checked" : "") + ' style="accent-color:#B8964E;width:14px;height:14px;">' +
       '</label></td>' +
     '</tr>';
   }
@@ -1133,7 +1133,7 @@
 
     if (drawerBody) {
       if (n === 0) {
-        drawerBody.innerHTML = '<div style="color:var(--text-secondary);text-align:center;padding:40px 20px;">Sélectionnez des titres pour comparer</div>';
+        drawerBody.innerHTML = '<div class="tc-empty" style="padding:40px 20px;">Sélectionnez des titres pour comparer</div>';
       } else {
         drawerBody.innerHTML = window._selectedForCompare.map(function (tk) {
           var row = (window._titresRows || []).find(function (r) { return r.ticker === tk; });
@@ -1141,14 +1141,15 @@
           var v = parseFloat(row.variation) || 0;
           var cls = v > 0 ? "up" : v < 0 ? "down" : "neutral";
           var sign = v > 0 ? "+" : "";
-          return '<div class="brvm-drawer-item">' +
+          var varClass = v > 0 ? 'badge-green' : v < 0 ? 'badge-red' : '';
+          return '<div class="tc-drawer-item">' +
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">' +
-              '<div style="font-weight:700;">' + esc(row.ticker) + '</div>' +
-              '<div style="font-size:0.85rem;color:var(--text-secondary);">' + esc(row._nom) + '</div>' +
+              '<div style="font-family:var(--serif);font-weight:700;font-size:16px;">' + esc(row.ticker) + '</div>' +
+              '<div style="font-size:12px;color:var(--muted);">' + esc(row._nom) + '</div>' +
             '</div>' +
             '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-              '<span style="font-size:1.1rem;font-weight:700;">' + safeFmt(row.cours) + ' FCFA</span>' +
-              '<span class="brvm-pill-table ' + cls + '">' + sign + v.toFixed(2) + '%</span>' +
+              '<span style="font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;">' + safeFmt(row.cours) + ' FCFA</span>' +
+              '<span class="tag ' + varClass + '">' + sign + v.toFixed(2) + '%</span>' +
             '</div>' +
           '</div>';
         }).join("");
@@ -1164,7 +1165,7 @@
 
   function compareSelected() {
     if (window._selectedForCompare.length < 2) {
-      if (typeof toast === "function") toast("Sélectionnez au moins 2 titres", "warning");
+      if (typeof toast === "function") toast("Sélectionnez au moins 2 titres à comparer", "warning");
       return;
     }
     try {
@@ -1186,5 +1187,9 @@
   window.toggleCompare = toggleCompare;
   window.clearSelection = clearSelection;
   window.compareSelected = compareSelected;
+  window.isVolumeAnormal = isVolumeAnormal;
+  window.isTendanceHaussiere = isTendanceHaussiere;
+  window.isProche52Haut = isProche52Haut;
+  window.isProche52Bas = isProche52Bas;
 
 })();
