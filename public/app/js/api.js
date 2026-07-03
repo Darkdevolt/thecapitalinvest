@@ -1,9 +1,61 @@
 // ═══════════════════════════════════════
-// MAIN — Entry Point (CORRIGÉ)
+// API — Supabase Client (CORRIGÉ)
 // ═══════════════════════════════════════
 
-// Auth & Init — BLOCAGE STRICT
+// ═══════════════════════════════════════
+// SUPABASE HELPER (CORRIGÉ)
+// ═══════════════════════════════════════
+async function sb(table, params) {
+  params = params || {};
+
+  // CORRECTION: Vérifier que SB_URL et SB_KEY existent
+  if (typeof SB_URL === 'undefined' || !SB_URL) {
+    console.error('SB_URL non défini. Vérifiez que utils.js est chargé avant api.js');
+    throw new Error('SB_URL non défini');
+  }
+  if (typeof SB_KEY === 'undefined' || !SB_KEY) {
+    console.error('SB_KEY non défini. Vérifiez que utils.js est chargé avant api.js');
+    throw new Error('SB_KEY non défini');
+  }
+
+  const url = new URL(`${SB_URL}/rest/v1/${table}`);
+  Object.entries(params).forEach(([k, v]) => {
+    if (v !== undefined && v !== null) url.searchParams.set(k, v);
+  });
+
+  try {
+    const r = await fetch(url.toString(), {
+      headers: {
+        'Authorization': `Bearer ${SB_KEY}`,
+        'apikey': SB_KEY,
+        'Accept': 'application/json',
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!r.ok) {
+      const text = await r.text().catch(() => '');
+      console.error(`Erreur API ${table}: ${r.status} ${r.statusText}`, text);
+      throw new Error(`${table}: ${r.status} ${r.statusText} ${text}`);
+    }
+    return r.json();
+  } catch (e) {
+    console.error(`Erreur fetch ${table}:`, e.message);
+    throw e;
+  }
+}
+
+// ═══════════════════════════════════════
+// AUTH & INIT — BLOCAGE STRICT (CORRIGÉ)
+// ═══════════════════════════════════════
 (async function initApp() {
+  // CORRECTION: Vérifier que SK existe
+  if (typeof SK === 'undefined') {
+    console.error('SK non défini. Vérifiez que utils.js est chargé avant api.js');
+    showLoginScreen();
+    return;
+  }
+
   const raw = localStorage.getItem(SK);
 
   if (!raw) {
@@ -54,7 +106,8 @@
     const hdName = document.getElementById('headerName');
     if (hdAvatar) hdAvatar.textContent = avatar;
     if (hdName) hdName.textContent = name;
-    // Plan utilisateur depuis Supabase (fallback 'free' si non défini)
+
+    // CORRECTION: Plan utilisateur depuis Supabase (fallback 'free' si non défini)
     window._userPlan = user.plan || user.role || 'free';
 
     if (window._userPlan === 'pro' || window._userPlan === 'admin') {
@@ -65,7 +118,7 @@
     loadAll();
 
   } catch (e) {
-    console.warn('Auth echouee :', e);
+    console.warn('Auth échouée :', e);
     localStorage.removeItem(SK);
     showLoginScreen();
   }
@@ -86,9 +139,9 @@ function showLoginScreen() {
     loginScreen.innerHTML = `
       <div style="text-align:center;max-width:360px;padding:40px;">
         <div style="font-family:var(--serif);font-size:28px;font-weight:700;letter-spacing:3px;color:var(--cream);margin-bottom:8px;">THE <span style="color:var(--gold)">&#183;</span> CAPITAL</div>
-        <div style="font-size:12px;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:40px;">Intelligence Financiere Africaine</div>
+        <div style="font-size:12px;color:var(--dim);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:40px;">Intelligence Financière Africaine</div>
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:32px;">
-          <div style="font-size:14px;color:var(--muted);margin-bottom:24px;">Connectez-vous pour acceder a la plateforme</div>
+          <div style="font-size:14px;color:var(--muted);margin-bottom:24px;">Connectez-vous pour accéder à la plateforme</div>
           <button onclick="window.location.href='login.html'" style="width:100%;padding:12px;background:var(--gold);border:none;border-radius:8px;color:var(--bg);font-family:var(--sans);font-size:14px;font-weight:600;cursor:pointer;">Se connecter</button>
           <div style="margin-top:16px;font-size:12px;color:var(--dim);">Pas encore de compte ? <a href="register.html" style="color:var(--gold);text-decoration:none;">S'inscrire</a></div>
         </div>
@@ -105,18 +158,14 @@ function doLogout() {
   window.location.reload();
 }
 
+
+
 // ═══════════════════════════════════════
-// LOAD — 100% SUPABASE (CORRIGÉ)
+// LOAD ALL DATA — Ajout allCoursHistorique
 // ═══════════════════════════════════════
 async function loadAll() {
   try {
-    // CORRECTION: Vérifier que sb() existe avant de l'appeler
-    if (typeof sb !== 'function') {
-      console.error('Fonction sb() non definie. Verifiez que api.js est charge avant main.js');
-      toast('Erreur: API non initialisee', 'error');
-      return;
-    }
-
+    // CORRECTION: Utiliser Promise.allSettled pour éviter qu'un échec bloque tout
     const results = await Promise.allSettled([
       sb('cours_latest', {}),
       sb('boc', { order: 'date_seance.desc', limit: 200 }),
@@ -124,39 +173,31 @@ async function loadAll() {
       sb('financials', { order: 'annee.desc,periode.desc', limit: 500 }),
       sb('entreprises', { limit: 500 }),
       sb('indices', { order: 'date_seance.desc', limit: 90 }),
-      sb('historique', { order: 'date_seance.asc' }),
+      sb('historique', { order: 'date_seance.asc' })
     ]);
 
     if (results[0].status === 'fulfilled') allCours = results[0].value || [];
-    else toast('Erreur chargement cours: ' + results[0].reason, 'error');
+    else { console.error('cours échoué:', results[0].reason); allCours = []; }
 
     if (results[1].status === 'fulfilled') allBoc = results[1].value || [];
-    else toast('Erreur chargement BOC: ' + results[1].reason, 'error');
+    else { console.error('boc échoué:', results[1].reason); allBoc = []; }
 
     if (results[2].status === 'fulfilled') allAnalyses = results[2].value || [];
-    else toast('Erreur chargement analyses: ' + results[2].reason, 'error');
+    else { console.error('analyses échoué:', results[2].reason); allAnalyses = []; }
 
     if (results[3].status === 'fulfilled') allFinancials = results[3].value || [];
-    else toast('Erreur chargement financials: ' + results[3].reason, 'error');
+    else { console.error('financials échoué:', results[3].reason); allFinancials = []; }
 
     if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
-    else toast('Erreur chargement entreprises: ' + results[4].reason, 'error');
+    else { console.error('entreprises échoué:', results[4].reason); allEntreprises = []; }
 
     if (results[5].status === 'fulfilled') allIndices = results[5].value || [];
-    else { 
-      allIndices = [];
-      toast('Erreur chargement indices: ' + results[5].reason, 'warn');
-    }
+    else { console.warn('indices échoué:', results[5].reason); allIndices = []; }
 
     if (results[6].status === 'fulfilled') allCoursHistorique = results[6].value || [];
-    else {
-      allCoursHistorique = [];
-      console.warn('Erreur chargement historique:', results[6].reason);
-    }
+    else { console.warn('historique échoué:', results[6].reason); allCoursHistorique = []; }
 
-    entMap = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
-
-    // Exposer globalement pour toutes les vues
+    // Exposer globalement
     window.allCours = allCours;
     window.allBoc = allBoc;
     window.allAnalyses = allAnalyses;
@@ -164,83 +205,55 @@ async function loadAll() {
     window.allEntreprises = allEntreprises;
     window.allIndices = allIndices;
     window.allCoursHistorique = allCoursHistorique;
+
+    // Build entMap
+    entMap = {};
+    allEntreprises.forEach(e => { if (e.ticker) entMap[e.ticker] = e; });
     window.entMap = entMap;
 
-    // Dispatch dataLoaded AVANT les renders
+    // Dispatch event pour notifier que les données sont prêtes
     window.dispatchEvent(new Event('dataLoaded'));
 
-    // CORRECTION: Appeler les renders avec verification
+    // CORRECTION: Vérifier que les fonctions existent avant de les appeler
     if (typeof renderOverview === 'function') renderOverview();
-    else console.warn('renderOverview non definie');
+    else console.warn('renderOverview non définie');
 
     if (typeof renderTitres === 'function') renderTitres();
-    else console.warn('renderTitres non definie');
+    else console.warn('renderTitres non définie');
 
     if (typeof renderBoc === 'function') renderBoc();
-    else console.warn('renderBoc non definie');
+    else console.warn('renderBoc non définie');
 
     if (typeof renderAnalyses === 'function') renderAnalyses();
-    else console.warn('renderAnalyses non definie');
+    else console.warn('renderAnalyses non définie');
 
     if (typeof renderFinancials === 'function') renderFinancials();
-    else console.warn('renderFinancials non definie');
+    else console.warn('renderFinancials non définie');
 
     if (typeof renderPublications === 'function') renderPublications();
-    else console.warn('renderPublications non definie');
+    else console.warn('renderPublications non définie');
 
-    populateTickerSelects();
+    if (typeof populateTickerSelects === 'function') populateTickerSelects();
 
     if (typeof atInit === 'function') atInit();
-    else console.warn('atInit non definie');
 
     if (typeof initGlobalSearch === 'function') initGlobalSearch();
-    else console.warn('initGlobalSearch non definie');
 
     if (typeof runScreener === 'function') runScreener();
-    else console.warn('runScreener non definie');
 
-    if (typeof initPortefeuille === 'function') {
-      initPortefeuille();
+    if (typeof initPortefeuille === 'function') initPortefeuille();
+
+    try {
+      if (typeof renderAlerts === 'function') renderAlerts();
+    } catch (e) {
+      console.warn('renderAlerts error:', e);
     }
 
-    try { 
-      if (typeof renderAlerts === "function") renderAlerts(); 
-    } catch(e) { 
-      console.warn("renderAlerts error:", e); 
-    }
+    if (typeof parseHash === 'function') parseHash();
+    else console.warn('parseHash non définie');
 
-    // CORRECTION: parseHash est maintenant dans router.js, appele ici
-    if (typeof parseHash === 'function') {
-      parseHash();
-    } else {
-      console.warn('parseHash non definie');
-    }
-  } catch(e) {
-    toast('Erreur globale de chargement: ' + e.message, 'error');
+  } catch (e) {
+    console.error('Erreur chargement données:', e);
+    toast('Erreur de chargement des données', 'error');
   }
 }
-
-function populateTickerSelects() {
-  const byTicker = {};
-  if (Array.isArray(allCours)) {
-    allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  }
-  const tickers = Object.keys(byTicker).sort();
-  const opts = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
-
-  const pf = document.getElementById('pfTicker');
-  if (pf) pf.innerHTML = '<option value="">Ticker...</option>' + opts;
-
-  const al = document.getElementById('alertTicker');
-  if (al) al.innerHTML = '<option value="">Ticker...</option>' + opts;
-
-  const fu = document.getElementById('fundTickerSelect');
-  if (fu) fu.innerHTML = '<option value="">Choisir un ticker...</option>' + opts;
-}
-
-// ═══════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════
-window.addEventListener('hashchange', function() {
-  if (typeof parseHash === 'function') parseHash();
-});
