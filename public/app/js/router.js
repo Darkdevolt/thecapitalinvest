@@ -44,7 +44,7 @@ const BREADCRUMBS = {
   alertes: [{label:'Tableau de bord', view:'overview'}, {label:'Alertes', view:'alertes'}],
   financials: [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}],
   'financials-detail': [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}, {label:'Détail', view:'financials-detail'}],
-  publications: [{label:'Tableau de bord', view:'overview'}, {label:'Calendrier', view:'publications'}],
+  publications: [{label:'Tableau de bord', view:'overview'}, {label:'Publications', view:'publications'}],
   formation: [{label:'Tableau de bord', view:'overview'}, {label:'Formation', view:'formation'}]
 };
 
@@ -72,8 +72,8 @@ function nav(id, noHash) {
   if (id === 'portefeuille') {
     if (typeof initPortefeuille === 'function') {
       setTimeout(() => initPortefeuille(), 50);
-    } else if (typeof renderPortfolio === 'function') {
-      setTimeout(() => renderPortfolio(), 50);
+    } else if (typeof renderPortefolio === 'function') {
+      setTimeout(() => renderPortefolio(), 50);
     }
   }
 
@@ -145,7 +145,7 @@ function updateBreadcrumb(viewId) {
   const items = BREADCRUMBS[viewId] || BREADCRUMBS['overview'];
   bc.innerHTML = items.map((item, i) => {
     if (i === items.length - 1) return `<span>${item.label}</span>`;
-    return `<a onclick="nav('${item.view}')">${item.label}</a><span>›</span>`;
+    return `<a onclick="nav('${item.view}')">${item.label}</a><span> › </span>`;
   }).join('');
 }
 
@@ -164,6 +164,8 @@ function parseHash() {
     const ticker = h.replace('#fiche=', '');
     if (typeof openFiche === 'function') {
       openFiche(ticker, 'titres', true);
+    } else {
+      console.warn('openFiche non définie');
     }
     return;
   }
@@ -171,6 +173,8 @@ function parseHash() {
     const id = h.replace('#analyse=', '');
     if (typeof openAnalyseDetail === 'function') {
       openAnalyseDetail(+id, true);
+    } else {
+      console.warn('openAnalyseDetail non définie');
     }
     return;
   }
