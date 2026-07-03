@@ -1,15 +1,30 @@
 // ═══════════════════════════════════════════════════════════════════
-// VIEW — Titres BRVM (NOUVEAU DESIGN)
+// VIEW — Titres BRVM (NOUVEAU DESIGN) — CORRIGÉ
 // Vue Cartes avec silhouettes de pays + Tableau + Comparaison
 // ═══════════════════════════════════════════════════════════════════
 
-let _titreFilter = "all";
-let _titrePaysFilter = "all";
-let _titreView = "cards";
-let _selectedForCompare = [];
+// ─── ÉTAT GLOBAL (protégé contre redéclaration) ──────────────────────────────
+if (typeof window._titreFilter === 'undefined') {
+  window._titreFilter = "all";
+}
+if (typeof window._titrePaysFilter === 'undefined') {
+  window._titrePaysFilter = "all";
+}
+if (typeof window._titreView === 'undefined') {
+  window._titreView = "cards";
+}
+if (typeof window._selectedForCompare === 'undefined') {
+  window._selectedForCompare = [];
+}
+
+// Alias locaux (référencent les variables window)
+var _titreFilter = window._titreFilter;
+var _titrePaysFilter = window._titrePaysFilter;
+var _titreView = window._titreView;
+var _selectedForCompare = window._selectedForCompare;
 
 // Silhouettes SVG stylisees des pays UEMOA
-const PAYS_SHAPES = {
+var PAYS_SHAPES = {
   "CI": '<svg viewBox="0 0 60 80" class="country-shape"><path d="M15,5 L45,5 L50,25 L55,40 L50,60 L45,75 L15,75 L10,60 L5,40 L10,25 Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
   "SN": '<svg viewBox="0 0 70 60" class="country-shape"><path d="M10,15 L35,5 L60,15 L65,35 L55,55 L35,50 L15,55 L5,35 Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
   "BF": '<svg viewBox="0 0 60 70" class="country-shape"><path d="M20,5 L40,5 L50,20 L55,40 L50,60 L40,65 L20,65 L10,60 L5,40 L10,20 Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>',
@@ -20,7 +35,7 @@ const PAYS_SHAPES = {
   "GW": '<svg viewBox="0 0 50 40" class="country-shape"><path d="M10,10 L40,10 L45,20 L40,30 L10,30 L5,20 Z" fill="none" stroke="currentColor" stroke-width="1.5"/></svg>'
 };
 
-const PAYS_NAMES = {
+var PAYS_NAMES = {
   "CI": "Cote d'Ivoire",
   "SN": "Senegal",
   "BF": "Burkina Faso",
@@ -31,7 +46,7 @@ const PAYS_NAMES = {
   "GW": "Guinee-Bissau"
 };
 
-const PAYS_COLORS = {
+var PAYS_COLORS = {
   "CI": "#FF8200",
   "SN": "#00853F",
   "BF": "#EF2B2D",
@@ -42,19 +57,23 @@ const PAYS_COLORS = {
   "GW": "#FFD700"
 };
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // RENDER PRINCIPAL
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function renderTitres() {
   const byTicker = {};
-  allCours.forEach(function(c) { if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  if (typeof allCours !== 'undefined' && Array.isArray(allCours)) {
+    allCours.forEach(function(c) { 
+      if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; 
+    });
+  }
   window._titresRows = Object.values(byTicker);
 
   // Ajouter les metadonnees
   window._titresRows.forEach(function(row) {
-    const ent = entMap[row.ticker];
+    const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[row.ticker] : null;
     row._pays = (ent && ent.pays) || "CI";
-    row._secteur = getSector(row.ticker);
+    row._secteur = (typeof getSector === 'function') ? getSector(row.ticker) : 'Autre';
     row._nom = (ent && ent.nom) || row.ticker;
 
     // Calculer indicateurs
@@ -68,9 +87,9 @@ function renderTitres() {
   filterTitres();
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // HEADER AVEC FILTRES PAYS (silhouettes)
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function renderTitresHeader() {
   const container = document.getElementById("view-titres");
   if (!container) return;
@@ -127,10 +146,11 @@ function renderTitresHeader() {
   }
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // FILTRES
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function setTitreView(view, btn) {
+  window._titreView = view;
   _titreView = view;
   document.querySelectorAll(".titres-view-toggle .view-btn").forEach(function(b) { b.classList.remove("active"); });
   if (btn) btn.classList.add("active");
@@ -138,6 +158,7 @@ function setTitreView(view, btn) {
 }
 
 function setPaysFilter(pays, btn) {
+  window._titrePaysFilter = pays;
   _titrePaysFilter = pays;
   document.querySelectorAll(".pays-filter-btn").forEach(function(b) { b.classList.remove("active"); });
   if (btn) btn.classList.add("active");
@@ -145,6 +166,7 @@ function setPaysFilter(pays, btn) {
 }
 
 function setTitreFilter(f, btn) {
+  window._titreFilter = f;
   _titreFilter = f;
   document.querySelectorAll(".sector-filter-btn").forEach(function(b) { b.classList.remove("active"); });
   if (btn) btn.classList.add("active");
@@ -169,12 +191,12 @@ function filterTitres() {
   if (q) {
     rows = rows.filter(function(r) { 
       return (r.ticker || "").toLowerCase().indexOf(q) !== -1 || 
-        (r._nom || "").toLowerCase().indexOf(q) !== -1;
+             (r._nom || "").toLowerCase().indexOf(q) !== -1;
     });
   }
 
   var container = document.getElementById("titresResults");
-  if (!container) {
+  if (!container) { 
     var viewTitres = document.getElementById("view-titres");
     if (viewTitres) {
       viewTitres.insertAdjacentHTML("beforeend", '<div id="titresResults"></div>');
@@ -196,9 +218,9 @@ function filterTitres() {
   }
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // VUE CARTES
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function renderCardsView(rows) {
   return '<div class="titres-cards-grid">' +
     rows.map(function(c) { return renderTitreCard(c); }).join("") +
@@ -237,7 +259,7 @@ function renderTitreCard(c) {
       '</div>' +
     '</div>' +
     '<div class="titre-card-footer">' +
-      '<span class="titre-card-sector">' + (entMap[c.ticker] && entMap[c.ticker].secteur || "Autre") + '</span>' +
+      '<span class="titre-card-sector">' + ((typeof entMap !== 'undefined' && entMap[c.ticker]) ? entMap[c.ticker].secteur : "Autre") + '</span>' +
       '<span class="titre-card-volume">Vol: ' + fmt(c.volume) + '</span>' +
     '</div>' +
     '<div class="titre-card-compare">' +
@@ -250,9 +272,9 @@ function renderTitreCard(c) {
   '</div>';
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // VUE TABLEAU
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function renderTableView(rows) {
   return '<div class="titres-table-wrap">' +
     '<table class="tc-table">' +
@@ -264,7 +286,7 @@ function renderTableView(rows) {
           '<th class="right">Cours</th>' +
           '<th class="right">Variation</th>' +
           '<th class="right">Volume</th>' +
-          '<th class="right">Cap</th>' +
+          '<th>Cap</th>' +
           '<th>Secteur</th>' +
           '<th></th>' +
         '</tr>' +
@@ -290,23 +312,23 @@ function renderTitreTableRow(c) {
     '<td class="var-cell right"><span class="pill ' + cls + '">' + sign + v.toFixed(2) + '%</span></td>' +
     '<td class="vol-cell right">' + fmt(c.volume) + '</td>' +
     '<td class="cap-cell right">' + (c.capitalisation ? fmtM(c.capitalisation) : "&#8212;") + '</td>' +
-    '<td class="sector-cell right"><span class="sector-badge ' + c._secteur + '">' + (entMap[c.ticker] && entMap[c.ticker].secteur || "Autre") + '</span></td>' +
+    '<td class="sector-cell right"><span class="sector-badge ' + c._secteur + '">' + ((typeof entMap !== 'undefined' && entMap[c.ticker]) ? entMap[c.ticker].secteur : "Autre") + '</span></td>' +
     '<td><label class="compare-checkbox"><input type="checkbox" onchange="toggleCompare(\'' + c.ticker + '\', this.checked)"></label></td>' +
   '</tr>';
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // INDICATEURS (calculs depuis les donnees API)
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function isVolumeAnormal(ticker, currentVolume) {
-  var history = (allCoursHistorique || []).filter(function(h) { return h.ticker === ticker; }).slice(-20);
+  var history = ((typeof allCoursHistorique !== 'undefined' && allCoursHistorique) || []).filter(function(h) { return h.ticker === ticker; }).slice(-20);
   if (history.length < 5) return false;
   var avg = history.reduce(function(sum, h) { return sum + (h.volume || 0); }, 0) / history.length;
   return currentVolume > avg * 2;
 }
 
 function isTendanceHaussiere(ticker) {
-  var history = (allCoursHistorique || []).filter(function(h) { return h.ticker === ticker; }).slice(-20);
+  var history = ((typeof allCoursHistorique !== 'undefined' && allCoursHistorique) || []).filter(function(h) { return h.ticker === ticker; }).slice(-20);
   if (history.length < 20) return false;
   var sma20 = history.reduce(function(sum, h) { return sum + (h.cours_cloture || h.cours || 0); }, 0) / history.length;
   var last = history[history.length - 1];
@@ -314,29 +336,31 @@ function isTendanceHaussiere(ticker) {
 }
 
 function isProche52Haut(ticker, currentPrice) {
-  var history = (allCoursHistorique || []).filter(function(h) { return h.ticker === ticker; });
+  var history = ((typeof allCoursHistorique !== 'undefined' && allCoursHistorique) || []).filter(function(h) { return h.ticker === ticker; });
   if (history.length < 20) return false;
   var high52 = Math.max.apply(null, history.map(function(h) { return h.plus_haut || h.cours || 0; }));
   return currentPrice > high52 * 0.95;
 }
 
 function isProche52Bas(ticker, currentPrice) {
-  var history = (allCoursHistorique || []).filter(function(h) { return h.ticker === ticker; });
+  var history = ((typeof allCoursHistorique !== 'undefined' && allCoursHistorique) || []).filter(function(h) { return h.ticker === ticker; });
   if (history.length < 20) return false;
   var low52 = Math.min.apply(null, history.map(function(h) { return h.plus_bas || h.cours || 0; }));
   return currentPrice < low52 * 1.05;
 }
 
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 // COMPARAISON MULTI-TITRES
-// ═══════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
 function toggleCompare(ticker, checked) {
   if (checked) {
     if (_selectedForCompare.indexOf(ticker) === -1) {
       _selectedForCompare.push(ticker);
+      window._selectedForCompare.push(ticker);
     }
   } else {
     _selectedForCompare = _selectedForCompare.filter(function(t) { return t !== ticker; });
+    window._selectedForCompare = window._selectedForCompare.filter(function(t) { return t !== ticker; });
   }
   updateCompareBar();
 }
@@ -356,6 +380,7 @@ function updateCompareBar() {
 
 function clearSelection() {
   _selectedForCompare = [];
+  window._selectedForCompare = [];
   document.querySelectorAll(".compare-checkbox input").forEach(function(cb) { cb.checked = false; });
   updateCompareBar();
   filterTitres();
