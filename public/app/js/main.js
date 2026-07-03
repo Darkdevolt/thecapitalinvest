@@ -55,7 +55,7 @@
     if (hdAvatar) hdAvatar.textContent = avatar;
     if (hdName) hdName.textContent = name;
     // Plan utilisateur depuis Supabase (fallback 'free' si non défini)
-window._userPlan = user.plan || user.role || 'free';
+    window._userPlan = user.plan || user.role || 'free';
 
     if (window._userPlan === 'pro' || window._userPlan === 'admin') {
       const adminLink = document.getElementById('adminLink');
@@ -110,6 +110,13 @@ function doLogout() {
 // ═══════════════════════════════════════
 async function loadAll() {
   try {
+    // CORRECTION: Vérifier que sb() existe avant de l'appeler
+    if (typeof sb !== 'function') {
+      console.error('Fonction sb() non definie. Verifiez que api.js est charge avant main.js');
+      toast('Erreur: API non initialisee', 'error');
+      return;
+    }
+
     const results = await Promise.allSettled([
       sb('cours_latest', {}),
       sb('boc', { order: 'date_seance.desc', limit: 200 }),
@@ -130,7 +137,7 @@ async function loadAll() {
     else toast('Erreur chargement analyses: ' + results[2].reason, 'error');
 
     if (results[3].status === 'fulfilled') allFinancials = results[3].value || [];
-    else toast('Erreur chargement financiers: ' + results[3].reason, 'error');
+    else toast('Erreur chargement financials: ' + results[3].reason, 'error');
 
     if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
     else toast('Erreur chargement entreprises: ' + results[4].reason, 'error');
@@ -162,26 +169,51 @@ async function loadAll() {
     // Dispatch dataLoaded AVANT les renders
     window.dispatchEvent(new Event('dataLoaded'));
 
-    renderOverview();
-    renderTitres();
-    renderBoc();
-    renderAnalyses();
-    renderFinancials();
-    renderPublications();
+    // CORRECTION: Appeler les renders avec verification
+    if (typeof renderOverview === 'function') renderOverview();
+    else console.warn('renderOverview non definie');
+
+    if (typeof renderTitres === 'function') renderTitres();
+    else console.warn('renderTitres non definie');
+
+    if (typeof renderBoc === 'function') renderBoc();
+    else console.warn('renderBoc non definie');
+
+    if (typeof renderAnalyses === 'function') renderAnalyses();
+    else console.warn('renderAnalyses non definie');
+
+    if (typeof renderFinancials === 'function') renderFinancials();
+    else console.warn('renderFinancials non definie');
+
+    if (typeof renderPublications === 'function') renderPublications();
+    else console.warn('renderPublications non definie');
+
     populateTickerSelects();
-    atInit();
-    initGlobalSearch();
-    runScreener();
+
+    if (typeof atInit === 'function') atInit();
+    else console.warn('atInit non definie');
+
+    if (typeof initGlobalSearch === 'function') initGlobalSearch();
+    else console.warn('initGlobalSearch non definie');
+
+    if (typeof runScreener === 'function') runScreener();
+    else console.warn('runScreener non definie');
 
     if (typeof initPortefeuille === 'function') {
       initPortefeuille();
     }
 
-    try { if (typeof renderAlerts === "function") renderAlerts(); } catch(e) { console.warn("renderAlerts error:", e); }
+    try { 
+      if (typeof renderAlerts === "function") renderAlerts(); 
+    } catch(e) { 
+      console.warn("renderAlerts error:", e); 
+    }
 
-    // CORRECTION : parseHash est maintenant dans router.js, appelé ici
+    // CORRECTION: parseHash est maintenant dans router.js, appele ici
     if (typeof parseHash === 'function') {
       parseHash();
+    } else {
+      console.warn('parseHash non definie');
     }
   } catch(e) {
     toast('Erreur globale de chargement: ' + e.message, 'error');
