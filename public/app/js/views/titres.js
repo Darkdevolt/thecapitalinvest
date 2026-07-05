@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════
-// VIEW — Titres BRVM — CORRECTION FINALE
-// Problème : renderTitres() appelé plusieurs fois → DOM recréé à chaque fois
-// Solution : séparer l'init du header du rendu des résultats
+// VIEW — Titres BRVM — CORRECTION Z-INDEX & VISIBILITÉ
+// Problème : cartes générées mais cachées par un overlay/drap
+// Solution : z-index correct, position relative, overflow visible
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
@@ -20,7 +20,7 @@
   var _sectorCounts = {};
   var _cssInjected = false;
   var _listenersAttached = false;
-  var _headerCreated = false;  // ← NOUVEAU : évite de recréer le header
+  var _headerCreated = false;
   var _dataCheckInterval = null;
   var _isInitialized = false;
 
@@ -131,7 +131,6 @@
       return;
     }
 
-    // Ne pas bloquer si déjà en cours, mais logger
     if (_isInitialized) {
       log("Déjà initialisé, mise à jour uniquement...");
       updateDataAndRender();
@@ -145,7 +144,7 @@
     var container = document.getElementById("view-titres");
     if (!container) return;
     injectTitresCSS();
-    if (container.querySelector(".tc-titres-header")) return; // Déjà un header
+    if (container.querySelector(".tc-titres-header")) return;
     container.innerHTML =
       '<div class="tc-empty" style="padding:80px 20px;">' +
         '<div class="tc-empty-icon">⏳</div>' +
@@ -160,7 +159,6 @@
     _dataCheckInterval = setInterval(function () {
       attempts++;
       var status = hasData();
-      log("Vérification données (tentative " + attempts + "):", status);
       if (status.ready) {
         log("Données prêtes !");
         clearInterval(_dataCheckInterval);
@@ -194,16 +192,13 @@
       return;
     }
 
-    // 1. Construire les données
     buildData();
     
-    // 2. Créer le header (UNE SEULE FOIS)
     if (!_headerCreated) {
       createHeader();
       _headerCreated = true;
     }
     
-    // 3. Rendre les résultats
     filterTitres();
     
     _isInitialized = true;
@@ -213,7 +208,6 @@
   function updateDataAndRender() {
     log("=== MISE À JOUR DONNÉES ===");
     buildData();
-    // Mettre à jour les pills si les secteurs ont changé
     updateSectorPills();
     filterTitres();
   }
@@ -256,13 +250,30 @@
     return idx;
   }
 
-  // ─── CSS ───────────────────────────────────────────────────────────
+  // ─── CSS CORRIGÉ ─────────────────────────────────────────────────
+  // FIX CRITIQUE : z-index, position, visibility pour éviter le "drap"
   function injectTitresCSS() {
     if (_cssInjected) return;
     var css = `
-      #view-titres { position: relative; z-index: 1; }
+      /* ─── FIX CRITIQUE : Le container principal doit être visible ─── */
+      #view-titres {
+        position: relative;
+        z-index: 1;
+        min-height: 100vh;
+        overflow: visible;
+      }
+
+      /* ─── FIX : S'assurer que le contenu n'est pas caché ─── */
+      #titresResults {
+        position: relative;
+        z-index: 2;
+        min-height: 200px;
+        overflow: visible;
+      }
 
       .tc-titres-header {
+        position: relative;
+        z-index: 3;
         padding: 24px 0;
         border-bottom: 1px solid var(--border);
         margin-bottom: 24px;
@@ -419,13 +430,18 @@
         color: var(--red);
       }
 
+      /* ─── FIX CRITIQUE : Grille de cartes ─── */
       .tc-cards-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 1px;
         background: var(--border);
         border: 1px solid var(--border);
+        position: relative;
+        z-index: 2;
       }
+
+      /* ─── FIX CRITIQUE : Carte individuelle ─── */
       .tc-titre-card {
         background: var(--card);
         padding: 28px 24px;
@@ -435,6 +451,7 @@
         overflow: hidden;
         animation: fadeUp 0.6s ease forwards;
         opacity: 0;
+        z-index: 2;
       }
       .tc-titre-card:nth-child(1) { animation-delay: 0.05s; }
       .tc-titre-card:nth-child(2) { animation-delay: 0.10s; }
@@ -763,10 +780,8 @@
 
     injectTitresCSS();
 
-    // Vider le container mais garder la structure
     container.innerHTML = '';
 
-    // Pills pays
     var paysPills = Object.keys(PAYS_NAMES).map(function (code) {
       return '<button class="tc-pill" data-pays="' + esc(code) + '">' +
         '<span class="tc-pays-dot" style="background:' + PAYS_COLORS[code] + '"></span>' +
@@ -774,7 +789,6 @@
       '</button>';
     }).join("");
 
-    // Pills secteurs (seront mis à jour dynamiquement)
     var sectorPills = _dynamicSectors.map(function (s) {
       return '<button class="tc-pill" data-sector="' + esc(s) + '">' +
         esc(s) + ' <span class="tc-count">(' + (_sectorCounts[s] || 0) + ')</span>' +
@@ -825,7 +839,6 @@
 
     container.innerHTML = headerHtml;
 
-    // ─── Listeners ───
     var searchInput = document.getElementById("searchTitres");
     if (searchInput) {
       searchInput.addEventListener("input", debounce(function (e) {
@@ -888,10 +901,9 @@
     });
 
     attachResultsListeners();
-    updateHeaderState(); // Mettre à jour l'état visuel initial
+    updateHeaderState();
   }
 
-  // Met à jour les pills secteurs sans recréer le header
   function updateSectorPills() {
     var sectorGroup = document.getElementById("sectorFilters");
     if (!sectorGroup) return;
