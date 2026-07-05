@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════════
 // VIEW — Titres BRVM — ADAPTÉ AU STYLE "THE CAPITAL"
-// VERSION CORRIGÉE : Gestion asynchrone des données Supabase
+// VERSION DEBUG COMPLÈTE — CORRECTION DU RENDU VIDE
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
@@ -63,6 +63,8 @@
   function hasData() {
     var hasCours = typeof allCours !== "undefined" && Array.isArray(allCours) && allCours.length > 0;
     var hasEntMap = typeof entMap !== "undefined" && entMap && Object.keys(entMap).length > 0;
+    log("hasData check — allCours length:", typeof allCours !== "undefined" && Array.isArray(allCours) ? allCours.length : "undefined");
+    log("hasData check — entMap keys:", typeof entMap !== "undefined" && entMap ? Object.keys(entMap).length : "undefined");
     return { hasCours: hasCours, hasEntMap: hasEntMap, ready: hasCours };
   }
 
@@ -89,7 +91,6 @@
     var sectors = new Set();
     var counts = {};
 
-    // 1. Depuis entMap (Supabase — source primaire)
     if (typeof entMap !== "undefined" && entMap) {
       Object.keys(entMap).forEach(function (tk) {
         var ent = entMap[tk];
@@ -103,7 +104,6 @@
       });
     }
 
-    // 2. Fallback depuis allCours si entMap vide
     if (sectors.size === 0 && typeof allCours !== "undefined" && Array.isArray(allCours)) {
       allCours.forEach(function (c) {
         if (c && c.secteur) {
@@ -143,7 +143,7 @@
 
   // ─── RENDER PRINCIPAL ─────────────────────────────────────────────
   function renderTitres() {
-    log("renderTitres() appelé");
+    log("=== renderTitres() appelé ===");
     var dataStatus = hasData();
     log("Statut données:", dataStatus);
 
@@ -154,23 +154,31 @@
       return;
     }
 
-    if (_renderPending) return;
+    if (_renderPending) {
+      log("Rendu déjà en cours, on ignore");
+      return;
+    }
     _renderPending = true;
 
-    requestAnimationFrame(function () {
+    // Utiliser setTimeout au lieu de requestAnimationFrame pour être sûr
+    setTimeout(function () {
       try {
         _doRenderTitres();
       } catch (err) {
-        console.error("[TITRES] renderTitres() a échoué :", err);
+        console.error("[TITRES] ERREUR CRITIQUE:", err);
+        showError("Erreur de rendu: " + err.message);
       } finally {
         _renderPending = false;
       }
-    });
+    }, 0);
   }
 
   function showLoader() {
     var container = document.getElementById("view-titres");
-    if (!container) return;
+    if (!container) {
+      log("ERREUR: #view-titres introuvable pour le loader");
+      return;
+    }
     injectTitresCSS();
     container.innerHTML =
       '<div class="tc-titres-header">' +
@@ -181,28 +189,25 @@
       '<div class="tc-empty">' +
         '<div class="tc-empty-icon">⏳</div>' +
         '<div>Chargement des données BRVM...</div>' +
-        '<div style="font-size:12px;color:var(--muted);margin-top:8px;">Veuillez patienter</div>' +
       '</div>';
   }
 
   function startDataWatcher() {
     if (_dataCheckInterval) return;
-    log("Démarrage du watcher de données...");
+    log("Démarrage watcher...");
     var attempts = 0;
     _dataCheckInterval = setInterval(function () {
       attempts++;
       var status = hasData();
-      log("Vérification données (tentative " + attempts + "):", status);
-
       if (status.ready) {
-        log("Données prêtes ! Rendu en cours...");
+        log("Données prêtes après " + attempts + " tentatives");
         clearInterval(_dataCheckInterval);
         _dataCheckInterval = null;
         renderTitres();
-      } else if (attempts > 30) { // ~15 secondes max
+      } else if (attempts > 60) {
         clearInterval(_dataCheckInterval);
         _dataCheckInterval = null;
-        showError("Impossible de charger les données. Veuillez rafraîchir la page.");
+        showError("Timeout: données non chargées après 30s");
       }
     }, 500);
   }
@@ -211,33 +216,46 @@
     var container = document.getElementById("view-titres");
     if (!container) return;
     container.innerHTML =
-      '<div class="tc-titres-header">' +
-        '<div class="tc-titres-top">' +
-          '<h2 class="tc-titres-title">Titres <em>BRVM</em></h2>' +
-        '</div>' +
-      '</div>' +
       '<div class="tc-empty">' +
         '<div class="tc-empty-icon">⚠️</div>' +
         '<div>' + esc(msg) + '</div>' +
-        '<button onclick="location.reload()" style="margin-top:16px;padding:8px 16px;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r);cursor:pointer;">Rafraîchir</button>' +
       '</div>';
   }
 
   function _doRenderTitres() {
-    log("Début du rendu effectif...");
+    log("=== _doRenderTitres() ===");
+    
+    // Vérifier le container
+    var container = document.getElementById("view-titres");
+    if (!container) {
+      log("ERREUR FATAL: #view-titres n'existe pas dans le DOM");
+      return;
+    }
+
+    // Construire les données
     var byTicker = {};
     if (typeof allCours !== "undefined" && Array.isArray(allCours)) {
+      log("allCours trouvé, longueur:", allCours.length);
       allCours.forEach(function (c) {
         if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c;
       });
+    } else {
+      log("ATTENTION: allCours non défini ou vide");
     }
+    
     window._titresRows = Object.values(byTicker);
-    log("Titres trouvés:", window._titresRows.length);
+    log("Titres uniques trouvés:", window._titresRows.length);
+    
+    if (window._titresRows.length === 0) {
+      log("ERREUR: Aucun titre trouvé dans allCours");
+      showError("Aucun titre disponible dans les données");
+      return;
+    }
 
     _histByTicker = buildHistoryIndex();
     extractDynamicSectors();
 
-    // Enrichit chaque row
+    // Enrichir les rows
     window._titresRows.forEach(function (row) {
       var ent = (typeof entMap !== "undefined" && entMap) ? entMap[row.ticker] : null;
       row._pays = (ent && ent.pays) || "CI";
@@ -251,10 +269,18 @@
       row._proche52Bas = isProche52Bas(row.ticker, row.cours, hist);
     });
 
+    log("Premier titre:", window._titresRows[0]);
+    log("Dernier titre:", window._titresRows[window._titresRows.length - 1]);
+
+    // Rendre le header
     renderTitresHeader();
+    
+    // Rendre les résultats
+    log("Appel de filterTitres()...");
     filterTitres();
+    
     _isInitialized = true;
-    log("Rendu terminé avec succès");
+    log("=== Rendu terminé ===");
   }
 
   function buildHistoryIndex() {
@@ -1008,15 +1034,19 @@
   }
 
   function _doFilterTitres() {
+    log("=== _doFilterTitres() ===");
     var q = window._titreSearch.toLowerCase().trim();
     var rows = window._titresRows || [];
+    log("Rows avant filtre:", rows.length);
 
     if (window._titrePaysFilter !== "all") {
       rows = rows.filter(function (r) { return r._pays === window._titrePaysFilter; });
+      log("Après filtre pays:", rows.length);
     }
 
     if (window._titreFilter !== "all") {
       rows = rows.filter(function (r) { return r._secteur === window._titreFilter; });
+      log("Après filtre secteur:", rows.length);
     }
 
     if (q) {
@@ -1024,14 +1054,18 @@
         return (r.ticker || "").toLowerCase().indexOf(q) !== -1 ||
                (r._nom || "").toLowerCase().indexOf(q) !== -1;
       });
+      log("Après filtre recherche:", rows.length);
     }
 
     rows = applySort(rows);
+    log("Après tri:", rows.length);
 
     var resultsContainer = document.getElementById("titresResults");
+    log("resultsContainer:", resultsContainer ? "trouvé" : "MANQUANT");
     if (!resultsContainer) return;
 
     if (!rows.length) {
+      log("Aucun résultat après filtrage");
       resultsContainer.innerHTML =
         '<div class="tc-empty">' +
           '<div class="tc-empty-icon">📭</div>' +
@@ -1041,20 +1075,27 @@
       return;
     }
 
+    log("Rendu de", rows.length, "cartes en mode", window._titreView);
+
     if (window._titreView === "cards") {
-      resultsContainer.innerHTML = renderCardsView(rows);
-      requestAnimationFrame(function () {
+      var cardsHtml = renderCardsView(rows);
+      log("HTML cartes généré, longueur:", cardsHtml.length);
+      resultsContainer.innerHTML = cardsHtml;
+      
+      // Dessiner les sparklines après que le DOM soit mis à jour
+      setTimeout(function () {
         rows.forEach(function (c) {
           var v = parseFloat(c.variation) || 0;
           var cls = v > 0 ? "up" : v < 0 ? "down" : "neutral";
           drawSparkline(c.ticker, cls);
         });
-      });
+      }, 50);
     } else {
       resultsContainer.innerHTML = renderTableView(rows);
     }
 
     updateCompareUI();
+    log("=== filterTitres terminé ===");
   }
 
   // ─── DÉLÉGATION ÉVÉNEMENTS ───────────────────────────────────────
@@ -1085,7 +1126,10 @@
 
   // ─── VUE CARTES ────────────────────────────────────────────────────
   function renderCardsView(rows) {
-    return '<div class="tc-cards-grid">' + rows.map(renderTitreCard).join("") + '</div>';
+    log("renderCardsView avec", rows.length, "rows");
+    var html = '<div class="tc-cards-grid">' + rows.map(renderTitreCard).join("") + '</div>';
+    log("HTML généré, contient grid:", html.indexOf('tc-cards-grid') !== -1);
+    return html;
   }
 
   function renderTitreCard(c) {
@@ -1361,12 +1405,12 @@
   window.isProche52Bas = isProche52Bas;
 
   // ─── AUTO-INIT ───────────────────────────────────────────────────
-  // Si les données sont déjà là au chargement du script
+  log("Script titre.js chargé, vérification initiale...");
   if (hasData().ready) {
-    log("Données déjà disponibles au chargement");
+    log("Données déjà disponibles, rendu immédiat");
     renderTitres();
   } else {
-    log("En attente des données...");
+    log("Données non prêtes, lancement du watcher");
     startDataWatcher();
   }
 
