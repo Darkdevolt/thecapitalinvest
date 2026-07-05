@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════
-// VIEW — Titres BRVM — ADAPTÉ AU STYLE "THE CAPITAL"
-// VERSION DEBUG COMPLÈTE — CORRECTION DU RENDU VIDE
+// VIEW — Titres BRVM — CORRECTION FINALE
+// Problème : renderTitres() appelé plusieurs fois → DOM recréé à chaque fois
+// Solution : séparer l'init du header du rendu des résultats
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
@@ -19,8 +20,7 @@
   var _sectorCounts = {};
   var _cssInjected = false;
   var _listenersAttached = false;
-  var _renderPending = false;
-  var _lastEntMapHash = null;
+  var _headerCreated = false;  // ← NOUVEAU : évite de recréer le header
   var _dataCheckInterval = null;
   var _isInitialized = false;
 
@@ -62,32 +62,11 @@
   // ─── VÉRIFICATION DONNÉES ────────────────────────────────────────
   function hasData() {
     var hasCours = typeof allCours !== "undefined" && Array.isArray(allCours) && allCours.length > 0;
-    var hasEntMap = typeof entMap !== "undefined" && entMap && Object.keys(entMap).length > 0;
-    log("hasData check — allCours length:", typeof allCours !== "undefined" && Array.isArray(allCours) ? allCours.length : "undefined");
-    log("hasData check — entMap keys:", typeof entMap !== "undefined" && entMap ? Object.keys(entMap).length : "undefined");
-    return { hasCours: hasCours, hasEntMap: hasEntMap, ready: hasCours };
-  }
-
-  // ─── HASH POUR DETECTER LES CHANGEMENTS ──────────────────────────
-  function hashEntMap() {
-    if (typeof entMap === "undefined" || !entMap) return "";
-    var keys = Object.keys(entMap).sort();
-    var hash = keys.length + "|";
-    for (var i = 0; i < Math.min(keys.length, 50); i++) {
-      var e = entMap[keys[i]];
-      hash += (e && e.secteur ? e.secteur : "") + "|";
-    }
-    return hash;
+    return { hasCours: hasCours, ready: hasCours };
   }
 
   // ─── EXTRACTION DYNAMIQUE DES SECTEURS ─────────────────────────────
   function extractDynamicSectors() {
-    var currentHash = hashEntMap();
-    if (currentHash === _lastEntMapHash && _dynamicSectors.length > 0) {
-      return _dynamicSectors;
-    }
-    _lastEntMapHash = currentHash;
-
     var sectors = new Set();
     var counts = {};
 
@@ -121,7 +100,6 @@
     });
 
     _sectorCounts = counts;
-    log("Secteurs extraits:", _dynamicSectors);
     return _dynamicSectors;
   }
 
@@ -144,49 +122,32 @@
   // ─── RENDER PRINCIPAL ─────────────────────────────────────────────
   function renderTitres() {
     log("=== renderTitres() appelé ===");
+    
     var dataStatus = hasData();
-    log("Statut données:", dataStatus);
-
     if (!dataStatus.ready) {
-      log("Données non prêtes, affichage du loader...");
+      log("Données non prêtes, attente...");
       showLoader();
       startDataWatcher();
       return;
     }
 
-    if (_renderPending) {
-      log("Rendu déjà en cours, on ignore");
+    // Ne pas bloquer si déjà en cours, mais logger
+    if (_isInitialized) {
+      log("Déjà initialisé, mise à jour uniquement...");
+      updateDataAndRender();
       return;
     }
-    _renderPending = true;
 
-    // Utiliser setTimeout au lieu de requestAnimationFrame pour être sûr
-    setTimeout(function () {
-      try {
-        _doRenderTitres();
-      } catch (err) {
-        console.error("[TITRES] ERREUR CRITIQUE:", err);
-        showError("Erreur de rendu: " + err.message);
-      } finally {
-        _renderPending = false;
-      }
-    }, 0);
+    _doInit();
   }
 
   function showLoader() {
     var container = document.getElementById("view-titres");
-    if (!container) {
-      log("ERREUR: #view-titres introuvable pour le loader");
-      return;
-    }
+    if (!container) return;
     injectTitresCSS();
+    if (container.querySelector(".tc-titres-header")) return; // Déjà un header
     container.innerHTML =
-      '<div class="tc-titres-header">' +
-        '<div class="tc-titres-top">' +
-          '<h2 class="tc-titres-title">Titres <em>BRVM</em></h2>' +
-        '</div>' +
-      '</div>' +
-      '<div class="tc-empty">' +
+      '<div class="tc-empty" style="padding:80px 20px;">' +
         '<div class="tc-empty-icon">⏳</div>' +
         '<div>Chargement des données BRVM...</div>' +
       '</div>';
@@ -199,15 +160,16 @@
     _dataCheckInterval = setInterval(function () {
       attempts++;
       var status = hasData();
+      log("Vérification données (tentative " + attempts + "):", status);
       if (status.ready) {
-        log("Données prêtes après " + attempts + " tentatives");
+        log("Données prêtes !");
         clearInterval(_dataCheckInterval);
         _dataCheckInterval = null;
         renderTitres();
       } else if (attempts > 60) {
         clearInterval(_dataCheckInterval);
         _dataCheckInterval = null;
-        showError("Timeout: données non chargées après 30s");
+        showError("Timeout après 30s");
       }
     }, 500);
   }
@@ -215,47 +177,61 @@
   function showError(msg) {
     var container = document.getElementById("view-titres");
     if (!container) return;
-    container.innerHTML =
-      '<div class="tc-empty">' +
-        '<div class="tc-empty-icon">⚠️</div>' +
-        '<div>' + esc(msg) + '</div>' +
-      '</div>';
+    var results = container.querySelector("#titresResults");
+    if (results) {
+      results.innerHTML = '<div class="tc-empty"><div class="tc-empty-icon">⚠️</div><div>' + esc(msg) + '</div></div>';
+    } else {
+      container.innerHTML = '<div class="tc-empty"><div class="tc-empty-icon">⚠️</div><div>' + esc(msg) + '</div></div>';
+    }
   }
 
-  function _doRenderTitres() {
-    log("=== _doRenderTitres() ===");
+  function _doInit() {
+    log("=== INITIALISATION COMPLÈTE ===");
     
-    // Vérifier le container
     var container = document.getElementById("view-titres");
     if (!container) {
-      log("ERREUR FATAL: #view-titres n'existe pas dans le DOM");
+      log("ERREUR FATAL: #view-titres n'existe pas");
       return;
     }
 
-    // Construire les données
+    // 1. Construire les données
+    buildData();
+    
+    // 2. Créer le header (UNE SEULE FOIS)
+    if (!_headerCreated) {
+      createHeader();
+      _headerCreated = true;
+    }
+    
+    // 3. Rendre les résultats
+    filterTitres();
+    
+    _isInitialized = true;
+    log("=== Initialisation terminée ===");
+  }
+
+  function updateDataAndRender() {
+    log("=== MISE À JOUR DONNÉES ===");
+    buildData();
+    // Mettre à jour les pills si les secteurs ont changé
+    updateSectorPills();
+    filterTitres();
+  }
+
+  function buildData() {
     var byTicker = {};
     if (typeof allCours !== "undefined" && Array.isArray(allCours)) {
-      log("allCours trouvé, longueur:", allCours.length);
       allCours.forEach(function (c) {
         if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c;
       });
-    } else {
-      log("ATTENTION: allCours non défini ou vide");
     }
     
     window._titresRows = Object.values(byTicker);
-    log("Titres uniques trouvés:", window._titresRows.length);
-    
-    if (window._titresRows.length === 0) {
-      log("ERREUR: Aucun titre trouvé dans allCours");
-      showError("Aucun titre disponible dans les données");
-      return;
-    }
+    log("Titres uniques:", window._titresRows.length);
 
     _histByTicker = buildHistoryIndex();
     extractDynamicSectors();
 
-    // Enrichir les rows
     window._titresRows.forEach(function (row) {
       var ent = (typeof entMap !== "undefined" && entMap) ? entMap[row.ticker] : null;
       row._pays = (ent && ent.pays) || "CI";
@@ -268,19 +244,6 @@
       row._proche52Haut = isProche52Haut(row.ticker, row.cours, hist);
       row._proche52Bas = isProche52Bas(row.ticker, row.cours, hist);
     });
-
-    log("Premier titre:", window._titresRows[0]);
-    log("Dernier titre:", window._titresRows[window._titresRows.length - 1]);
-
-    // Rendre le header
-    renderTitresHeader();
-    
-    // Rendre les résultats
-    log("Appel de filterTitres()...");
-    filterTitres();
-    
-    _isInitialized = true;
-    log("=== Rendu terminé ===");
   }
 
   function buildHistoryIndex() {
@@ -456,7 +419,6 @@
         color: var(--red);
       }
 
-      /* ─── GRILLE DE CARTES ─── */
       .tc-cards-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -605,7 +567,6 @@
         width: 14px; height: 14px;
       }
 
-      /* ─── TABLEAU ─── */
       .tc-table-wrap {
         border: 1px solid var(--border);
         overflow: hidden;
@@ -659,7 +620,6 @@
         display: inline-block;
       }
 
-      /* ─── DRAWER COMPARAISON ─── */
       .tc-compare-trigger {
         position: fixed;
         bottom: 24px; right: 24px;
@@ -770,7 +730,6 @@
         color: var(--cream);
       }
 
-      /* ─── ÉTAT VIDE ─── */
       .tc-empty {
         text-align: center;
         padding: 80px 20px;
@@ -783,7 +742,6 @@
         opacity: 0.3;
       }
 
-      /* ─── RESPONSIVE ─── */
       @media (max-width: 900px) {
         .tc-titres-top { flex-direction: column; align-items: stretch; }
         .tc-titres-search-wrap { max-width: none; }
@@ -798,35 +756,27 @@
     _cssInjected = true;
   }
 
-  // ─── HEADER ────────────────────────────────────────────────────────
-  function renderTitresHeader() {
+  // ─── CRÉATION DU HEADER (UNE SEULE FOIS) ─────────────────────────
+  function createHeader() {
     var container = document.getElementById("view-titres");
-    if (!container) {
-      log("ERREUR: container #view-titres non trouvé !");
-      return;
-    }
+    if (!container) return;
 
     injectTitresCSS();
 
-    var existingHeader = container.querySelector(".tc-titres-header");
-    if (existingHeader) {
-      updateHeaderState();
-      return;
-    }
+    // Vider le container mais garder la structure
+    container.innerHTML = '';
 
     // Pills pays
     var paysPills = Object.keys(PAYS_NAMES).map(function (code) {
-      var isActive = window._titrePaysFilter === code;
-      return '<button class="tc-pill ' + (isActive ? 'active' : '') + '" data-pays="' + esc(code) + '">' +
+      return '<button class="tc-pill" data-pays="' + esc(code) + '">' +
         '<span class="tc-pays-dot" style="background:' + PAYS_COLORS[code] + '"></span>' +
         esc(PAYS_NAMES[code]) +
       '</button>';
     }).join("");
 
-    // Pills secteurs dynamiques
+    // Pills secteurs (seront mis à jour dynamiquement)
     var sectorPills = _dynamicSectors.map(function (s) {
-      var isActive = window._titreFilter === s;
-      return '<button class="tc-pill ' + (isActive ? 'active' : '') + '" data-sector="' + esc(s) + '">' +
+      return '<button class="tc-pill" data-sector="' + esc(s) + '">' +
         esc(s) + ' <span class="tc-count">(' + (_sectorCounts[s] || 0) + ')</span>' +
       '</button>';
     }).join("");
@@ -839,19 +789,19 @@
             '<input type="text" id="searchTitres" placeholder="Rechercher un ticker, une société..." value="' + esc(window._titreSearch) + '">' +
           '</div>' +
           '<div class="tc-view-toggle">' +
-            '<button class="tc-view-btn ' + (window._titreView === "cards" ? "active" : "") + '" data-view="cards">Cartes</button>' +
-            '<button class="tc-view-btn ' + (window._titreView === "table" ? "active" : "") + '" data-view="table">Tableau</button>' +
+            '<button class="tc-view-btn" data-view="cards">Cartes</button>' +
+            '<button class="tc-view-btn" data-view="table">Tableau</button>' +
           '</div>' +
         '</div>' +
         '<div class="tc-filters-row">' +
           '<div class="tc-filter-group">' +
             '<span class="tc-filter-label">Pays</span>' +
-            '<button class="tc-pill ' + (window._titrePaysFilter === "all" ? 'active' : '') + '" data-pays="all">Tous</button>' +
+            '<button class="tc-pill" data-pays="all">Tous</button>' +
             paysPills +
           '</div>' +
-          '<div class="tc-filter-group" style="margin-left:16px;">' +
+          '<div class="tc-filter-group" style="margin-left:16px;" id="sectorFilters">' +
             '<span class="tc-filter-label">Secteur</span>' +
-            '<button class="tc-pill ' + (window._titreFilter === "all" ? 'active' : '') + '" data-sector="all">Tous</button>' +
+            '<button class="tc-pill" data-sector="all">Tous</button>' +
             sectorPills +
           '</div>' +
           '<button class="tc-reset" id="resetTitresBtn">↺ Réinitialiser</button>' +
@@ -938,6 +888,25 @@
     });
 
     attachResultsListeners();
+    updateHeaderState(); // Mettre à jour l'état visuel initial
+  }
+
+  // Met à jour les pills secteurs sans recréer le header
+  function updateSectorPills() {
+    var sectorGroup = document.getElementById("sectorFilters");
+    if (!sectorGroup) return;
+
+    var sectorPills = _dynamicSectors.map(function (s) {
+      var isActive = window._titreFilter === s;
+      return '<button class="tc-pill ' + (isActive ? 'active' : '') + '" data-sector="' + esc(s) + '">' +
+        esc(s) + ' <span class="tc-count">(' + (_sectorCounts[s] || 0) + ')</span>' +
+      '</button>';
+    }).join("");
+
+    sectorGroup.innerHTML =
+      '<span class="tc-filter-label">Secteur</span>' +
+      '<button class="tc-pill ' + (window._titreFilter === "all" ? 'active' : '') + '" data-sector="all">Tous</button>' +
+      sectorPills;
   }
 
   function updateHeaderState() {
@@ -1037,16 +1006,14 @@
     log("=== _doFilterTitres() ===");
     var q = window._titreSearch.toLowerCase().trim();
     var rows = window._titresRows || [];
-    log("Rows avant filtre:", rows.length);
+    log("Rows au départ:", rows.length);
 
     if (window._titrePaysFilter !== "all") {
       rows = rows.filter(function (r) { return r._pays === window._titrePaysFilter; });
-      log("Après filtre pays:", rows.length);
     }
 
     if (window._titreFilter !== "all") {
       rows = rows.filter(function (r) { return r._secteur === window._titreFilter; });
-      log("Après filtre secteur:", rows.length);
     }
 
     if (q) {
@@ -1054,18 +1021,19 @@
         return (r.ticker || "").toLowerCase().indexOf(q) !== -1 ||
                (r._nom || "").toLowerCase().indexOf(q) !== -1;
       });
-      log("Après filtre recherche:", rows.length);
     }
 
     rows = applySort(rows);
-    log("Après tri:", rows.length);
+    log("Rows après filtre/tri:", rows.length);
 
     var resultsContainer = document.getElementById("titresResults");
-    log("resultsContainer:", resultsContainer ? "trouvé" : "MANQUANT");
-    if (!resultsContainer) return;
+    log("resultsContainer:", resultsContainer ? "TROUVÉ" : "MANQUANT");
+    if (!resultsContainer) {
+      log("ERREUR: #titresResults introuvable !");
+      return;
+    }
 
     if (!rows.length) {
-      log("Aucun résultat après filtrage");
       resultsContainer.innerHTML =
         '<div class="tc-empty">' +
           '<div class="tc-empty-icon">📭</div>' +
@@ -1075,14 +1043,11 @@
       return;
     }
 
-    log("Rendu de", rows.length, "cartes en mode", window._titreView);
-
     if (window._titreView === "cards") {
       var cardsHtml = renderCardsView(rows);
-      log("HTML cartes généré, longueur:", cardsHtml.length);
+      log("Injection HTML cartes, longueur:", cardsHtml.length);
       resultsContainer.innerHTML = cardsHtml;
       
-      // Dessiner les sparklines après que le DOM soit mis à jour
       setTimeout(function () {
         rows.forEach(function (c) {
           var v = parseFloat(c.variation) || 0;
@@ -1126,10 +1091,7 @@
 
   // ─── VUE CARTES ────────────────────────────────────────────────────
   function renderCardsView(rows) {
-    log("renderCardsView avec", rows.length, "rows");
-    var html = '<div class="tc-cards-grid">' + rows.map(renderTitreCard).join("") + '</div>';
-    log("HTML généré, contient grid:", html.indexOf('tc-cards-grid') !== -1);
-    return html;
+    return '<div class="tc-cards-grid">' + rows.map(renderTitreCard).join("") + '</div>';
   }
 
   function renderTitreCard(c) {
@@ -1351,7 +1313,6 @@
           var row = (window._titresRows || []).find(function (r) { return r.ticker === tk; });
           if (!row) return "";
           var v = parseFloat(row.variation) || 0;
-          var cls = v > 0 ? "up" : v < 0 ? "down" : "neutral";
           var sign = v > 0 ? "+" : "";
           var varClass = v > 0 ? 'badge-green' : v < 0 ? 'badge-red' : '';
           return '<div class="tc-drawer-item">' +
@@ -1405,12 +1366,12 @@
   window.isProche52Bas = isProche52Bas;
 
   // ─── AUTO-INIT ───────────────────────────────────────────────────
-  log("Script titre.js chargé, vérification initiale...");
+  log("Script chargé. Vérification initiale...");
   if (hasData().ready) {
-    log("Données déjà disponibles, rendu immédiat");
+    log("Données prêtes, init immédiate");
     renderTitres();
   } else {
-    log("Données non prêtes, lancement du watcher");
+    log("Données non prêtes, watcher...");
     startDataWatcher();
   }
 
