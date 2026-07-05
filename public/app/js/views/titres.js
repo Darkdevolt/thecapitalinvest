@@ -1,13 +1,12 @@
 // ═══════════════════════════════════════════════════════════════════
 // VIEW — Titres BRVM — ADAPTÉ AU STYLE "THE CAPITAL"
-// Secteurs dynamiques depuis entMap/Supabase — plus de hard-coding
-// VERSION CORRIGÉE & OPTIMISÉE
+// VERSION CORRIGÉE : Gestion asynchrone des données Supabase
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
   'use strict';
 
-  // ─── ÉTAT GLOBAL (source unique : window) ──────────────────────────
+  // ─── ÉTAT GLOBAL ─────────────────────────────────────────────────
   window._titreFilter      = window._titreFilter      || "all";
   window._titrePaysFilter  = window._titrePaysFilter  || "all";
   window._titreView        = window._titreView        || "cards";
@@ -21,7 +20,9 @@
   var _cssInjected = false;
   var _listenersAttached = false;
   var _renderPending = false;
-  var _lastEntMapHash = null; // Pour détecter les changements d'entMap
+  var _lastEntMapHash = null;
+  var _dataCheckInterval = null;
+  var _isInitialized = false;
 
   // ─── DONNÉES PAYS (UEMOA) ─────────────────────────────────────────
   var PAYS_NAMES = {
@@ -53,16 +54,16 @@
     };
   }
 
-  function throttle(fn, limit) {
-    var inThrottle;
-    return function () {
-      var args = arguments, ctx = this;
-      if (!inThrottle) {
-        fn.apply(ctx, args);
-        inThrottle = true;
-        setTimeout(function () { inThrottle = false; }, limit);
-      }
-    };
+  // ─── DEBUG ─────────────────────────────────────────────────────────
+  function log(msg, data) {
+    console.log("[TITRES] " + msg, data !== undefined ? data : "");
+  }
+
+  // ─── VÉRIFICATION DONNÉES ────────────────────────────────────────
+  function hasData() {
+    var hasCours = typeof allCours !== "undefined" && Array.isArray(allCours) && allCours.length > 0;
+    var hasEntMap = typeof entMap !== "undefined" && entMap && Object.keys(entMap).length > 0;
+    return { hasCours: hasCours, hasEntMap: hasEntMap, ready: hasCours };
   }
 
   // ─── HASH POUR DETECTER LES CHANGEMENTS ──────────────────────────
@@ -81,7 +82,7 @@
   function extractDynamicSectors() {
     var currentHash = hashEntMap();
     if (currentHash === _lastEntMapHash && _dynamicSectors.length > 0) {
-      return _dynamicSectors; // Pas de changement, on garde le cache
+      return _dynamicSectors;
     }
     _lastEntMapHash = currentHash;
 
@@ -115,12 +116,12 @@
       });
     }
 
-    // Tri par fréquence décroissante
     _dynamicSectors = Array.from(sectors).sort(function (a, b) {
       return (counts[b] || 0) - (counts[a] || 0);
     });
 
     _sectorCounts = counts;
+    log("Secteurs extraits:", _dynamicSectors);
     return _dynamicSectors;
   }
 
@@ -128,7 +129,6 @@
     if (!raw) return "";
     var s = String(raw).trim().toLowerCase();
     if (!s) return "";
-    // Singularisation basique
     if (s.endsWith("s") && s.length > 3) s = s.slice(0, -1);
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
@@ -143,6 +143,17 @@
 
   // ─── RENDER PRINCIPAL ─────────────────────────────────────────────
   function renderTitres() {
+    log("renderTitres() appelé");
+    var dataStatus = hasData();
+    log("Statut données:", dataStatus);
+
+    if (!dataStatus.ready) {
+      log("Données non prêtes, affichage du loader...");
+      showLoader();
+      startDataWatcher();
+      return;
+    }
+
     if (_renderPending) return;
     _renderPending = true;
 
@@ -150,14 +161,70 @@
       try {
         _doRenderTitres();
       } catch (err) {
-        console.error("renderTitres() a échoué :", err);
+        console.error("[TITRES] renderTitres() a échoué :", err);
       } finally {
         _renderPending = false;
       }
     });
   }
 
+  function showLoader() {
+    var container = document.getElementById("view-titres");
+    if (!container) return;
+    injectTitresCSS();
+    container.innerHTML =
+      '<div class="tc-titres-header">' +
+        '<div class="tc-titres-top">' +
+          '<h2 class="tc-titres-title">Titres <em>BRVM</em></h2>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tc-empty">' +
+        '<div class="tc-empty-icon">⏳</div>' +
+        '<div>Chargement des données BRVM...</div>' +
+        '<div style="font-size:12px;color:var(--muted);margin-top:8px;">Veuillez patienter</div>' +
+      '</div>';
+  }
+
+  function startDataWatcher() {
+    if (_dataCheckInterval) return;
+    log("Démarrage du watcher de données...");
+    var attempts = 0;
+    _dataCheckInterval = setInterval(function () {
+      attempts++;
+      var status = hasData();
+      log("Vérification données (tentative " + attempts + "):", status);
+
+      if (status.ready) {
+        log("Données prêtes ! Rendu en cours...");
+        clearInterval(_dataCheckInterval);
+        _dataCheckInterval = null;
+        renderTitres();
+      } else if (attempts > 30) { // ~15 secondes max
+        clearInterval(_dataCheckInterval);
+        _dataCheckInterval = null;
+        showError("Impossible de charger les données. Veuillez rafraîchir la page.");
+      }
+    }, 500);
+  }
+
+  function showError(msg) {
+    var container = document.getElementById("view-titres");
+    if (!container) return;
+    container.innerHTML =
+      '<div class="tc-titres-header">' +
+        '<div class="tc-titres-top">' +
+          '<h2 class="tc-titres-title">Titres <em>BRVM</em></h2>' +
+        '</div>' +
+      '</div>' +
+      '<div class="tc-empty">' +
+        '<div class="tc-empty-icon">⚠️</div>' +
+        '<div>' + esc(msg) + '</div>' +
+        '<button onclick="location.reload()" style="margin-top:16px;padding:8px 16px;background:var(--gold);color:var(--bg);border:none;border-radius:var(--r);cursor:pointer;">Rafraîchir</button>' +
+      '</div>';
+  }
+
   function _doRenderTitres() {
+    log("Début du rendu effectif...");
     var byTicker = {};
     if (typeof allCours !== "undefined" && Array.isArray(allCours)) {
       allCours.forEach(function (c) {
@@ -165,12 +232,12 @@
       });
     }
     window._titresRows = Object.values(byTicker);
-    _histByTicker = buildHistoryIndex();
+    log("Titres trouvés:", window._titresRows.length);
 
-    // Extraction dynamique des secteurs AVANT de rendre les filtres
+    _histByTicker = buildHistoryIndex();
     extractDynamicSectors();
 
-    // Enrichit chaque row avec les métadonnées
+    // Enrichit chaque row
     window._titresRows.forEach(function (row) {
       var ent = (typeof entMap !== "undefined" && entMap) ? entMap[row.ticker] : null;
       row._pays = (ent && ent.pays) || "CI";
@@ -186,6 +253,8 @@
 
     renderTitresHeader();
     filterTitres();
+    _isInitialized = true;
+    log("Rendu terminé avec succès");
   }
 
   function buildHistoryIndex() {
@@ -198,11 +267,10 @@
     return idx;
   }
 
-  // ─── CSS ADAPTÉ AU STYLE "THE CAPITAL" ─────────────────────────────
+  // ─── CSS ───────────────────────────────────────────────────────────
   function injectTitresCSS() {
     if (_cssInjected) return;
     var css = `
-      /* ─── VIEW TITRES — Style The Capital ─── */
       #view-titres { position: relative; z-index: 1; }
 
       .tc-titres-header {
@@ -707,11 +775,13 @@
   // ─── HEADER ────────────────────────────────────────────────────────
   function renderTitresHeader() {
     var container = document.getElementById("view-titres");
-    if (!container) return;
+    if (!container) {
+      log("ERREUR: container #view-titres non trouvé !");
+      return;
+    }
 
     injectTitresCSS();
 
-    // Si header déjà créé, on met juste à jour les pills et l'état
     var existingHeader = container.querySelector(".tc-titres-header");
     if (existingHeader) {
       updateHeaderState();
@@ -791,7 +861,6 @@
     var resetBtn = document.getElementById("resetTitresBtn");
     if (resetBtn) resetBtn.addEventListener("click", resetTitresFilters);
 
-    // Délégation filtres
     var filtersRow = container.querySelector(".tc-filters-row");
     if (filtersRow) {
       filtersRow.addEventListener("click", function (e) {
@@ -805,7 +874,6 @@
       });
     }
 
-    // Toggle view
     var viewToggle = container.querySelector(".tc-view-toggle");
     if (viewToggle) {
       viewToggle.addEventListener("click", function (e) {
@@ -814,7 +882,6 @@
       });
     }
 
-    // Drawer
     var compareTrigger = document.getElementById("compareTrigger");
     if (compareTrigger) {
       compareTrigger.addEventListener("click", function () {
@@ -837,7 +904,6 @@
     var launchCompareBtn = document.getElementById("launchCompareBtn");
     if (launchCompareBtn) launchCompareBtn.addEventListener("click", compareSelected);
 
-    // Escape pour fermer le drawer
     document.addEventListener("keydown", function (e) {
       if (e.key === "Escape") {
         var drawer = document.getElementById("compareDrawer");
@@ -848,24 +914,16 @@
     attachResultsListeners();
   }
 
-  // Met à jour l'état visuel du header sans le recréer
   function updateHeaderState() {
-    // Met à jour les pills pays
     document.querySelectorAll("[data-pays]").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-pays") === window._titrePaysFilter);
     });
-
-    // Met à jour les pills secteurs
     document.querySelectorAll("[data-sector]").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-sector") === window._titreFilter);
     });
-
-    // Met à jour les boutons de vue
     document.querySelectorAll("[data-view]").forEach(function (b) {
       b.classList.toggle("active", b.getAttribute("data-view") === window._titreView);
     });
-
-    // Met à jour la recherche si nécessaire
     var searchInput = document.getElementById("searchTitres");
     if (searchInput && searchInput.value !== window._titreSearch) {
       searchInput.value = window._titreSearch;
@@ -1102,7 +1160,6 @@
         };
       });
 
-      // Fill gradient
       var grad = ctx.createLinearGradient(0, 0, 0, h);
       var color = cls === "up" ? "74,222,128" : cls === "down" ? "248,113,113" : "107,114,128";
       grad.addColorStop(0, "rgba(" + color + ",0.15)");
@@ -1116,7 +1173,6 @@
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Line
       ctx.beginPath();
       points.forEach(function (p, i) {
         if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
@@ -1127,7 +1183,6 @@
       ctx.lineCap = "round";
       ctx.stroke();
 
-      // Point final
       var last = points[points.length - 1];
       ctx.beginPath();
       ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2);
@@ -1304,5 +1359,15 @@
   window.isTendanceHaussiere = isTendanceHaussiere;
   window.isProche52Haut = isProche52Haut;
   window.isProche52Bas = isProche52Bas;
+
+  // ─── AUTO-INIT ───────────────────────────────────────────────────
+  // Si les données sont déjà là au chargement du script
+  if (hasData().ready) {
+    log("Données déjà disponibles au chargement");
+    renderTitres();
+  } else {
+    log("En attente des données...");
+    startDataWatcher();
+  }
 
 })();
