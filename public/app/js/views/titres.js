@@ -1,19 +1,47 @@
 // ═══════════════════════════════════════════════════════════════════
-// VIEW — Titres BRVM — CORRECTION Z-INDEX & VISIBILITÉ
-// Problème : cartes générées mais cachées par un overlay/drap
-// Solution : z-index correct, position relative, overflow visible
+// VIEW — Titres BRVM — VERSION CORRIGÉE & AMÉLIORÉE
+// Base : script "CORRECTION Z-INDEX & VISIBILITÉ" fourni.
+// Tout le comportement et l'API publique d'origine sont conservés.
+//
+// CORRECTIONS / AMÉLIORATIONS APPORTÉES :
+//   1. CSS manquant ajouté : .tag / .tagp / .badge-green / .badge-orange /
+//      .badge-red étaient utilisés dans le HTML (badges des cartes et
+//      cellule "Variation" du tableau) mais jamais définis → invisibles
+//      ou mal stylés. Ajoutés avec des couleurs cohérentes avec le thème.
+//   2. Historique trié chronologiquement une seule fois à l'indexation
+//      (buildHistoryIndex) au lieu de supposer que allCoursHistorique est
+//      déjà dans l'ordre — évite des sparklines / indicateurs 52 sem.
+//      faux si les données arrivent dans le désordre.
+//   3. historyFor() utilise désormais l'index déjà construit (_histByTicker)
+//      au lieu de refiltrer tout le tableau brut à chaque appel
+//      (gain de perf notable quand il y a beaucoup de titres/historique).
+//   4. Sparklines dessinées via requestAnimationFrame (au lieu d'un
+//      setTimeout arbitraire de 50ms) pour être synchronisées avec le
+//      rendu réel du DOM et éviter les cas où le canvas n'a pas encore
+//      de dimensions.
+//   5. Fermeture du tiroir de comparaison au clic en dehors (backdrop)
+//      + le raccourci Échap fonctionne même si le focus est ailleurs.
+//   6. Accessibilité : aria-pressed sur les pastilles de filtre et les
+//      boutons de vue, aria-label sur les cases de comparaison et le
+//      champ de recherche.
+//   7. Petites protections défensives : vérifications Array.isArray,
+//      NaN-safe dans le tri, garde-fou si _titresRows est vide lors
+//      d'une mise à jour partielle, suppression des timers en attente
+//      en cas de re-rendu rapide.
+//   8. Fonction utilitaire de nettoyage window.destroyTitresView() pour
+//      éviter les fuites mémoire si la vue est démontée dans une SPA.
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
   'use strict';
 
   // ─── ÉTAT GLOBAL ─────────────────────────────────────────────────
-  window._titreFilter      = window._titreFilter      || "all";
-  window._titrePaysFilter  = window._titrePaysFilter  || "all";
-  window._titreView        = window._titreView        || "cards";
+  window._titreFilter        = window._titreFilter        || "all";
+  window._titrePaysFilter    = window._titrePaysFilter    || "all";
+  window._titreView          = window._titreView          || "cards";
   window._selectedForCompare = window._selectedForCompare || [];
-  window._titreSort        = window._titreSort        || { field: null, dir: 1 };
-  window._titreSearch      = window._titreSearch      || "";
+  window._titreSort          = window._titreSort          || { field: null, dir: 1 };
+  window._titreSearch        = window._titreSearch        || "";
 
   var _histByTicker = {};
   var _dynamicSectors = [];
@@ -23,6 +51,8 @@
   var _headerCreated = false;
   var _dataCheckInterval = null;
   var _isInitialized = false;
+  var _sparkRafId = null;
+  var _globalKeydownAttached = false;
 
   // ─── DONNÉES PAYS (UEMOA) ─────────────────────────────────────────
   var PAYS_NAMES = {
@@ -34,6 +64,10 @@
     "CI": "#FF8200", "SN": "#00853F", "BF": "#EF2B2D", "BJ": "#FCD116",
     "TG": "#006A4E", "ML": "#14B53A", "NE": "#E05206", "GW": "#FFD700"
   };
+
+  // Champs candidats pour trier chronologiquement un historique dont
+  // on ne connaît pas le schéma exact à l'avance.
+  var DATE_FIELD_CANDIDATES = ["date", "dt", "seance", "cours_date", "jour", "timestamp"];
 
   // ─── HELPERS ───────────────────────────────────────────────────────
   function esc(str) {
@@ -47,11 +81,40 @@
 
   function debounce(fn, wait) {
     var t;
-    return function () {
+    var wrapped = function () {
       var args = arguments, ctx = this;
       clearTimeout(t);
       t = setTimeout(function () { fn.apply(ctx, args); }, wait);
     };
+    wrapped.cancel = function () { clearTimeout(t); };
+    return wrapped;
+  }
+
+  function toTime(val) {
+    if (val == null) return NaN;
+    if (typeof val === "number") return val;
+    var t = Date.parse(val);
+    return isNaN(t) ? NaN : t;
+  }
+
+  function findDateField(sample) {
+    for (var i = 0; i < DATE_FIELD_CANDIDATES.length; i++) {
+      var f = DATE_FIELD_CANDIDATES[i];
+      if (sample && sample[f] !== undefined && !isNaN(toTime(sample[f]))) return f;
+    }
+    return null;
+  }
+
+  // Trie un tableau d'historique dans l'ordre chronologique croissant
+  // (le plus ancien en premier), sans planter si aucun champ de date
+  // n'est reconnu — dans ce cas on conserve l'ordre d'origine.
+  function sortHistoryChronological(arr) {
+    if (!Array.isArray(arr) || arr.length < 2) return arr;
+    var field = findDateField(arr[0]) || findDateField(arr[arr.length - 1]);
+    if (!field) return arr;
+    return arr.slice().sort(function (a, b) {
+      return toTime(a[field]) - toTime(b[field]);
+    });
   }
 
   // ─── DEBUG ─────────────────────────────────────────────────────────
@@ -122,7 +185,7 @@
   // ─── RENDER PRINCIPAL ─────────────────────────────────────────────
   function renderTitres() {
     log("=== renderTitres() appelé ===");
-    
+
     var dataStatus = hasData();
     if (!dataStatus.ready) {
       log("Données non prêtes, attente...");
@@ -185,7 +248,7 @@
 
   function _doInit() {
     log("=== INITIALISATION COMPLÈTE ===");
-    
+
     var container = document.getElementById("view-titres");
     if (!container) {
       log("ERREUR FATAL: #view-titres n'existe pas");
@@ -193,14 +256,14 @@
     }
 
     buildData();
-    
+
     if (!_headerCreated) {
       createHeader();
       _headerCreated = true;
     }
-    
+
     filterTitres();
-    
+
     _isInitialized = true;
     log("=== Initialisation terminée ===");
   }
@@ -219,7 +282,7 @@
         if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c;
       });
     }
-    
+
     window._titresRows = Object.values(byTicker);
     log("Titres uniques:", window._titresRows.length);
 
@@ -240,6 +303,9 @@
     });
   }
 
+  // Construit l'index par ticker ET trie chaque série chronologiquement
+  // (du plus ancien au plus récent) pour fiabiliser sparklines et
+  // indicateurs, qui supposent tous que le dernier élément = le plus récent.
   function buildHistoryIndex() {
     var idx = {};
     var hist = (typeof allCoursHistorique !== "undefined" && Array.isArray(allCoursHistorique)) ? allCoursHistorique : [];
@@ -247,11 +313,13 @@
       if (!h || !h.ticker) return;
       (idx[h.ticker] = idx[h.ticker] || []).push(h);
     });
+    Object.keys(idx).forEach(function (tk) {
+      idx[tk] = sortHistoryChronological(idx[tk]);
+    });
     return idx;
   }
 
   // ─── CSS CORRIGÉ ─────────────────────────────────────────────────
-  // FIX CRITIQUE : z-index, position, visibility pour éviter le "drap"
   function injectTitresCSS() {
     if (_cssInjected) return;
     var css = `
@@ -459,6 +527,10 @@
       .tc-titre-card:nth-child(4) { animation-delay: 0.20s; }
       .tc-titre-card:nth-child(5) { animation-delay: 0.25s; }
       .tc-titre-card:nth-child(6) { animation-delay: 0.30s; }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
       .tc-titre-card::before {
         content: '';
         position: absolute;
@@ -491,6 +563,46 @@
         border-radius: 3px;
       }
       .tc-card-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+
+      /* ─── AJOUT : badges/tags utilisés mais non stylés auparavant ─── */
+      .tag, .tagp,
+      .badge-green, .badge-orange, .badge-red {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 3px;
+        font-size: 10px;
+        font-weight: 500;
+        letter-spacing: 0.03em;
+        white-space: nowrap;
+        font-family: var(--sans);
+      }
+      .tagp {
+        background: rgba(184,150,78,0.12);
+        color: var(--gold);
+        border: 1px solid rgba(184,150,78,0.25);
+      }
+      .tag {
+        background: rgba(245,240,232,0.06);
+        color: var(--muted);
+        border: 1px solid var(--border2);
+      }
+      .tag.badge-green, .badge-green {
+        background: rgba(74,222,128,0.1);
+        color: var(--green);
+        border: 1px solid rgba(74,222,128,0.25);
+      }
+      .tag.badge-red, .badge-red {
+        background: rgba(248,113,113,0.1);
+        color: var(--red);
+        border: 1px solid rgba(248,113,113,0.25);
+      }
+      .badge-orange {
+        background: rgba(255,159,67,0.12);
+        color: #ff9f43;
+        border: 1px solid rgba(255,159,67,0.25);
+      }
 
       .tc-card-ticker {
         font-family: var(--serif);
@@ -546,6 +658,7 @@
       .tc-sparkline-wrap canvas {
         width: 100%;
         height: 100%;
+        display: block;
       }
 
       .tc-card-footer {
@@ -587,6 +700,7 @@
       .tc-table-wrap {
         border: 1px solid var(--border);
         overflow: hidden;
+        overflow-x: auto;
       }
       .tc-table {
         width: 100%;
@@ -663,6 +777,22 @@
         background: var(--gold-l);
         transform: translateY(-2px);
       }
+
+      /* ─── AJOUT : backdrop pour fermer le tiroir au clic extérieur ─── */
+      .tc-compare-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.35);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+        z-index: 199;
+      }
+      .tc-compare-backdrop.open {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
       .tc-compare-drawer {
         position: fixed;
         right: 0; top: 0; bottom: 0;
@@ -783,14 +913,14 @@
     container.innerHTML = '';
 
     var paysPills = Object.keys(PAYS_NAMES).map(function (code) {
-      return '<button class="tc-pill" data-pays="' + esc(code) + '">' +
+      return '<button type="button" class="tc-pill" data-pays="' + esc(code) + '" aria-pressed="false">' +
         '<span class="tc-pays-dot" style="background:' + PAYS_COLORS[code] + '"></span>' +
         esc(PAYS_NAMES[code]) +
       '</button>';
     }).join("");
 
     var sectorPills = _dynamicSectors.map(function (s) {
-      return '<button class="tc-pill" data-sector="' + esc(s) + '">' +
+      return '<button type="button" class="tc-pill" data-sector="' + esc(s) + '" aria-pressed="false">' +
         esc(s) + ' <span class="tc-count">(' + (_sectorCounts[s] || 0) + ')</span>' +
       '</button>';
     }).join("");
@@ -800,40 +930,41 @@
         '<div class="tc-titres-top">' +
           '<h2 class="tc-titres-title">Titres <em>BRVM</em></h2>' +
           '<div class="tc-titres-search-wrap">' +
-            '<input type="text" id="searchTitres" placeholder="Rechercher un ticker, une société..." value="' + esc(window._titreSearch) + '">' +
+            '<input type="text" id="searchTitres" aria-label="Rechercher un titre" placeholder="Rechercher un ticker, une société..." value="' + esc(window._titreSearch) + '">' +
           '</div>' +
-          '<div class="tc-view-toggle">' +
-            '<button class="tc-view-btn" data-view="cards">Cartes</button>' +
-            '<button class="tc-view-btn" data-view="table">Tableau</button>' +
+          '<div class="tc-view-toggle" role="group" aria-label="Type d\'affichage">' +
+            '<button type="button" class="tc-view-btn" data-view="cards" aria-pressed="false">Cartes</button>' +
+            '<button type="button" class="tc-view-btn" data-view="table" aria-pressed="false">Tableau</button>' +
           '</div>' +
         '</div>' +
         '<div class="tc-filters-row">' +
           '<div class="tc-filter-group">' +
             '<span class="tc-filter-label">Pays</span>' +
-            '<button class="tc-pill" data-pays="all">Tous</button>' +
+            '<button type="button" class="tc-pill" data-pays="all" aria-pressed="true">Tous</button>' +
             paysPills +
           '</div>' +
           '<div class="tc-filter-group" style="margin-left:16px;" id="sectorFilters">' +
             '<span class="tc-filter-label">Secteur</span>' +
-            '<button class="tc-pill" data-sector="all">Tous</button>' +
+            '<button type="button" class="tc-pill" data-sector="all" aria-pressed="true">Tous</button>' +
             sectorPills +
           '</div>' +
-          '<button class="tc-reset" id="resetTitresBtn">↺ Réinitialiser</button>' +
+          '<button type="button" class="tc-reset" id="resetTitresBtn">↺ Réinitialiser</button>' +
         '</div>' +
       '</div>' +
       '<div id="titresResults"></div>' +
-      '<button class="tc-compare-trigger" id="compareTrigger">' +
+      '<button type="button" class="tc-compare-trigger" id="compareTrigger">' +
         'Comparer <span id="compareTriggerText">0</span>' +
       '</button>' +
-      '<div class="tc-compare-drawer" id="compareDrawer">' +
+      '<div class="tc-compare-backdrop" id="compareBackdrop"></div>' +
+      '<div class="tc-compare-drawer" id="compareDrawer" role="dialog" aria-label="Comparaison de titres">' +
         '<div class="tc-drawer-header">' +
           '<div class="tc-drawer-title">Comparaison</div>' +
-          '<button class="tc-drawer-close" id="closeDrawer">&times;</button>' +
+          '<button type="button" class="tc-drawer-close" id="closeDrawer" aria-label="Fermer">&times;</button>' +
         '</div>' +
         '<div class="tc-drawer-body" id="compareDrawerBody"></div>' +
         '<div class="tc-drawer-footer">' +
-          '<button class="tc-btn tc-btn-secondary" id="clearCompareBtn">Vider</button>' +
-          '<button class="tc-btn tc-btn-primary" id="launchCompareBtn">Comparer</button>' +
+          '<button type="button" class="tc-btn tc-btn-secondary" id="clearCompareBtn">Vider</button>' +
+          '<button type="button" class="tc-btn tc-btn-primary" id="launchCompareBtn">Comparer</button>' +
         '</div>' +
       '</div>';
 
@@ -873,19 +1004,14 @@
 
     var compareTrigger = document.getElementById("compareTrigger");
     if (compareTrigger) {
-      compareTrigger.addEventListener("click", function () {
-        var drawer = document.getElementById("compareDrawer");
-        if (drawer) drawer.classList.add("open");
-      });
+      compareTrigger.addEventListener("click", openCompareDrawer);
     }
 
     var closeDrawer = document.getElementById("closeDrawer");
-    if (closeDrawer) {
-      closeDrawer.addEventListener("click", function () {
-        var drawer = document.getElementById("compareDrawer");
-        if (drawer) drawer.classList.remove("open");
-      });
-    }
+    if (closeDrawer) closeDrawer.addEventListener("click", closeCompareDrawer);
+
+    var backdrop = document.getElementById("compareBackdrop");
+    if (backdrop) backdrop.addEventListener("click", closeCompareDrawer);
 
     var clearCompareBtn = document.getElementById("clearCompareBtn");
     if (clearCompareBtn) clearCompareBtn.addEventListener("click", clearSelection);
@@ -893,15 +1019,29 @@
     var launchCompareBtn = document.getElementById("launchCompareBtn");
     if (launchCompareBtn) launchCompareBtn.addEventListener("click", compareSelected);
 
-    document.addEventListener("keydown", function (e) {
-      if (e.key === "Escape") {
-        var drawer = document.getElementById("compareDrawer");
-        if (drawer) drawer.classList.remove("open");
-      }
-    });
+    if (!_globalKeydownAttached) {
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape") closeCompareDrawer();
+      });
+      _globalKeydownAttached = true;
+    }
 
     attachResultsListeners();
     updateHeaderState();
+  }
+
+  function openCompareDrawer() {
+    var drawer = document.getElementById("compareDrawer");
+    var backdrop = document.getElementById("compareBackdrop");
+    if (drawer) drawer.classList.add("open");
+    if (backdrop) backdrop.classList.add("open");
+  }
+
+  function closeCompareDrawer() {
+    var drawer = document.getElementById("compareDrawer");
+    var backdrop = document.getElementById("compareBackdrop");
+    if (drawer) drawer.classList.remove("open");
+    if (backdrop) backdrop.classList.remove("open");
   }
 
   function updateSectorPills() {
@@ -910,26 +1050,33 @@
 
     var sectorPills = _dynamicSectors.map(function (s) {
       var isActive = window._titreFilter === s;
-      return '<button class="tc-pill ' + (isActive ? 'active' : '') + '" data-sector="' + esc(s) + '">' +
+      return '<button type="button" class="tc-pill ' + (isActive ? 'active' : '') + '" data-sector="' + esc(s) + '" aria-pressed="' + isActive + '">' +
         esc(s) + ' <span class="tc-count">(' + (_sectorCounts[s] || 0) + ')</span>' +
       '</button>';
     }).join("");
 
+    var allActive = window._titreFilter === "all";
     sectorGroup.innerHTML =
       '<span class="tc-filter-label">Secteur</span>' +
-      '<button class="tc-pill ' + (window._titreFilter === "all" ? 'active' : '') + '" data-sector="all">Tous</button>' +
+      '<button type="button" class="tc-pill ' + (allActive ? 'active' : '') + '" data-sector="all" aria-pressed="' + allActive + '">Tous</button>' +
       sectorPills;
   }
 
   function updateHeaderState() {
     document.querySelectorAll("[data-pays]").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-pays") === window._titrePaysFilter);
+      var active = b.getAttribute("data-pays") === window._titrePaysFilter;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
     });
     document.querySelectorAll("[data-sector]").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-sector") === window._titreFilter);
+      var active = b.getAttribute("data-sector") === window._titreFilter;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
     });
     document.querySelectorAll("[data-view]").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-view") === window._titreView);
+      var active = b.getAttribute("data-view") === window._titreView;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
     });
     var searchInput = document.getElementById("searchTitres");
     if (searchInput && searchInput.value !== window._titreSearch) {
@@ -941,7 +1088,9 @@
   function setTitreView(view) {
     window._titreView = view;
     document.querySelectorAll(".tc-view-btn").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-view") === view);
+      var active = b.getAttribute("data-view") === view;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
     });
     filterTitres();
   }
@@ -949,7 +1098,9 @@
   function setPaysFilter(pays) {
     window._titrePaysFilter = pays;
     document.querySelectorAll("[data-pays]").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-pays") === pays);
+      var active = b.getAttribute("data-pays") === pays;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
     });
     filterTitres();
   }
@@ -957,7 +1108,9 @@
   function setTitreFilter(f) {
     window._titreFilter = f;
     document.querySelectorAll("[data-sector]").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-sector") === f);
+      var active = b.getAttribute("data-sector") === f;
+      b.classList.toggle("active", active);
+      b.setAttribute("aria-pressed", String(active));
     });
     filterTitres();
   }
@@ -984,12 +1137,8 @@
     window._titreSearch = "";
     var searchInput = document.getElementById("searchTitres");
     if (searchInput) searchInput.value = "";
-    document.querySelectorAll("[data-pays]").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-pays") === "all");
-    });
-    document.querySelectorAll("[data-sector]").forEach(function (b) {
-      b.classList.toggle("active", b.getAttribute("data-sector") === "all");
-    });
+    updateHeaderState();
+    updateSectorPills();
     filterTitres();
   }
 
@@ -997,10 +1146,12 @@
     var sort = window._titreSort;
     if (!sort.field) return rows;
     var field = sort.field, dir = sort.dir;
+    var numericFields = { variation: 1, cours: 1, volume: 1, capitalisation: 1 };
     return rows.slice().sort(function (a, b) {
       var va = a[field], vb = b[field];
-      if (field === "variation" || field === "cours" || field === "volume" || field === "capitalisation") {
-        va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+      if (numericFields[field]) {
+        va = parseFloat(va); if (isNaN(va)) va = -Infinity;
+        vb = parseFloat(vb); if (isNaN(vb)) vb = -Infinity;
         return (va - vb) * dir;
       }
       va = String(va || "").toLowerCase(); vb = String(vb || "").toLowerCase();
@@ -1016,7 +1167,7 @@
 
   function _doFilterTitres() {
     log("=== _doFilterTitres() ===");
-    var q = window._titreSearch.toLowerCase().trim();
+    var q = (window._titreSearch || "").toLowerCase().trim();
     var rows = window._titresRows || [];
     log("Rows au départ:", rows.length);
 
@@ -1059,14 +1210,16 @@
       var cardsHtml = renderCardsView(rows);
       log("Injection HTML cartes, longueur:", cardsHtml.length);
       resultsContainer.innerHTML = cardsHtml;
-      
-      setTimeout(function () {
+
+      if (_sparkRafId) cancelAnimationFrame(_sparkRafId);
+      _sparkRafId = requestAnimationFrame(function () {
         rows.forEach(function (c) {
           var v = parseFloat(c.variation) || 0;
           var cls = v > 0 ? "up" : v < 0 ? "down" : "neutral";
           drawSparkline(c.ticker, cls);
         });
-      }, 50);
+        _sparkRafId = null;
+      });
     } else {
       resultsContainer.innerHTML = renderTableView(rows);
     }
@@ -1139,7 +1292,7 @@
       '</div>' +
       '<div class="tc-card-compare">' +
         '<label onclick="event.stopPropagation()">' +
-          '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" ' + (isChecked ? "checked" : "") + '>' +
+          '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" aria-label="Ajouter ' + esc(c.ticker) + ' à la comparaison" ' + (isChecked ? "checked" : "") + '>' +
           '<span>Ajouter à la comparaison</span>' +
         '</label>' +
       '</div>' +
@@ -1161,6 +1314,7 @@
       var dpr = window.devicePixelRatio || 1;
       canvas.width = w * dpr;
       canvas.height = h * dpr;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.scale(dpr, dpr);
       canvas.style.width = w + "px";
       canvas.style.height = h + "px";
@@ -1239,8 +1393,6 @@
 
   function renderTitreTableRow(c) {
     var v = parseFloat(c.variation) || 0;
-    var cls = v > 0 ? "up" : v < 0 ? "down" : "neutral";
-    var sign = v > 0 ? "+" : "";
     var paysColor = PAYS_COLORS[c._pays] || "#B8964E";
     var isChecked = window._selectedForCompare.indexOf(c.ticker) !== -1;
 
@@ -1257,15 +1409,19 @@
       '<td class="r">' + (c.capitalisation ? safeFmtM(c.capitalisation) : "—") + '</td>' +
       '<td><span class="tagp">' + esc(c._secteur) + '</span></td>' +
       '<td><label onclick="event.stopPropagation()">' +
-        '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" ' + (isChecked ? "checked" : "") + ' style="accent-color:#B8964E;width:14px;height:14px;">' +
+        '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" aria-label="Ajouter ' + esc(c.ticker) + ' à la comparaison" ' + (isChecked ? "checked" : "") + ' style="accent-color:#B8964E;width:14px;height:14px;">' +
       '</label></td>' +
     '</tr>';
   }
 
   // ─── INDICATEURS ───────────────────────────────────────────────────
+  // Utilise en priorité l'index déjà trié/construit (_histByTicker) au
+  // lieu de refiltrer tout le tableau brut à chaque appel.
   function historyFor(ticker, history) {
     if (history) return history;
-    return ((typeof allCoursHistorique !== "undefined" && allCoursHistorique) || []).filter(function (h) { return h.ticker === ticker; });
+    if (_histByTicker[ticker]) return _histByTicker[ticker];
+    var raw = ((typeof allCoursHistorique !== "undefined" && allCoursHistorique) || []).filter(function (h) { return h.ticker === ticker; });
+    return sortHistoryChronological(raw);
   }
 
   function isVolumeAnormal(ticker, currentVolume, history) {
@@ -1361,6 +1517,20 @@
     if (typeof nav === "function") nav("analyse-technique");
   }
 
+  // ─── NETTOYAGE (utile en SPA si la vue est démontée/recréée) ──────
+  function destroyTitresView() {
+    if (_dataCheckInterval) { clearInterval(_dataCheckInterval); _dataCheckInterval = null; }
+    if (_sparkRafId) { cancelAnimationFrame(_sparkRafId); _sparkRafId = null; }
+    clearTimeout(_filterDebounceTimer);
+    clearTimeout(_sortDebounceTimer);
+    var style = document.getElementById('tc-titres-style');
+    if (style) style.remove();
+    _cssInjected = false;
+    _listenersAttached = false;
+    _headerCreated = false;
+    _isInitialized = false;
+  }
+
   // ─── API PUBLIQUE ──────────────────────────────────────────────────
   window.renderTitres = renderTitres;
   window.setTitreView = setTitreView;
@@ -1376,6 +1546,7 @@
   window.isTendanceHaussiere = isTendanceHaussiere;
   window.isProche52Haut = isProche52Haut;
   window.isProche52Bas = isProche52Bas;
+  window.destroyTitresView = destroyTitresView;
 
   // ─── AUTO-INIT ───────────────────────────────────────────────────
   log("Script chargé. Vérification initiale...");
