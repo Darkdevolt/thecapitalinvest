@@ -1,6 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════
 // VIEW — Titres BRVM — ADAPTÉ AU STYLE "THE CAPITAL"
 // Secteurs dynamiques depuis entMap/Supabase — plus de hard-coding
+// VERSION CORRIGÉE & OPTIMISÉE
 // ═══════════════════════════════════════════════════════════════════
 
 (function () {
@@ -15,9 +16,12 @@
   window._titreSearch      = window._titreSearch      || "";
 
   var _histByTicker = {};
-  var _dynamicSectors = [];   // ← Extraits dynamiquement depuis entMap
+  var _dynamicSectors = [];
   var _sectorCounts = {};
   var _cssInjected = false;
+  var _listenersAttached = false;
+  var _renderPending = false;
+  var _lastEntMapHash = null; // Pour détecter les changements d'entMap
 
   // ─── DONNÉES PAYS (UEMOA) ─────────────────────────────────────────
   var PAYS_NAMES = {
@@ -49,9 +53,38 @@
     };
   }
 
+  function throttle(fn, limit) {
+    var inThrottle;
+    return function () {
+      var args = arguments, ctx = this;
+      if (!inThrottle) {
+        fn.apply(ctx, args);
+        inThrottle = true;
+        setTimeout(function () { inThrottle = false; }, limit);
+      }
+    };
+  }
+
+  // ─── HASH POUR DETECTER LES CHANGEMENTS ──────────────────────────
+  function hashEntMap() {
+    if (typeof entMap === "undefined" || !entMap) return "";
+    var keys = Object.keys(entMap).sort();
+    var hash = keys.length + "|";
+    for (var i = 0; i < Math.min(keys.length, 50); i++) {
+      var e = entMap[keys[i]];
+      hash += (e && e.secteur ? e.secteur : "") + "|";
+    }
+    return hash;
+  }
+
   // ─── EXTRACTION DYNAMIQUE DES SECTEURS ─────────────────────────────
-  // Scan entMap (Supabase) puis fallback sur allCours
   function extractDynamicSectors() {
+    var currentHash = hashEntMap();
+    if (currentHash === _lastEntMapHash && _dynamicSectors.length > 0) {
+      return _dynamicSectors; // Pas de changement, on garde le cache
+    }
+    _lastEntMapHash = currentHash;
+
     var sectors = new Set();
     var counts = {};
 
@@ -82,7 +115,7 @@
       });
     }
 
-    // Tri par fréquence décroissante (les plus populaires en premier)
+    // Tri par fréquence décroissante
     _dynamicSectors = Array.from(sectors).sort(function (a, b) {
       return (counts[b] || 0) - (counts[a] || 0);
     });
@@ -91,61 +124,68 @@
     return _dynamicSectors;
   }
 
-  // Normalise : "banques" → "Banque", "ASSURANCES" → "Assurance", "  telecom  " → "Telecom"
   function normalizeSector(raw) {
     if (!raw) return "";
     var s = String(raw).trim().toLowerCase();
     if (!s) return "";
-    // Singularisation basique (pas "Banques" mais "Banque")
+    // Singularisation basique
     if (s.endsWith("s") && s.length > 3) s = s.slice(0, -1);
-    // Capitalisation première lettre
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
 
-  // Récupère le secteur d'un ticker depuis entMap (Supabase)
   function getSectorFromEntMap(ticker) {
     if (typeof entMap !== "undefined" && entMap && entMap[ticker] && entMap[ticker].secteur) {
       return normalizeSector(entMap[ticker].secteur);
     }
-    // Fallback sur la fonction globale si elle existe (nav.js)
     if (typeof getSector === "function") return getSector(ticker);
     return "Autre";
   }
 
   // ─── RENDER PRINCIPAL ─────────────────────────────────────────────
   function renderTitres() {
-    try {
-      var byTicker = {};
-      if (typeof allCours !== "undefined" && Array.isArray(allCours)) {
-        allCours.forEach(function (c) {
-          if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c;
-        });
+    if (_renderPending) return;
+    _renderPending = true;
+
+    requestAnimationFrame(function () {
+      try {
+        _doRenderTitres();
+      } catch (err) {
+        console.error("renderTitres() a échoué :", err);
+      } finally {
+        _renderPending = false;
       }
-      window._titresRows = Object.values(byTicker);
-      _histByTicker = buildHistoryIndex();
+    });
+  }
 
-      // Extraction dynamique des secteurs AVANT de rendre les filtres
-      extractDynamicSectors();
-
-      // Enrichit chaque row avec les métadonnées
-      window._titresRows.forEach(function (row) {
-        var ent = (typeof entMap !== "undefined" && entMap) ? entMap[row.ticker] : null;
-        row._pays = (ent && ent.pays) || "CI";
-        row._secteur = getSectorFromEntMap(row.ticker);
-        row._nom = (ent && ent.nom) || row.ticker;
-
-        var hist = _histByTicker[row.ticker] || [];
-        row._volumeAnormal = isVolumeAnormal(row.ticker, row.volume, hist);
-        row._tendanceHaussiere = isTendanceHaussiere(row.ticker, hist);
-        row._proche52Haut = isProche52Haut(row.ticker, row.cours, hist);
-        row._proche52Bas = isProche52Bas(row.ticker, row.cours, hist);
+  function _doRenderTitres() {
+    var byTicker = {};
+    if (typeof allCours !== "undefined" && Array.isArray(allCours)) {
+      allCours.forEach(function (c) {
+        if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c;
       });
-
-      renderTitresHeader();
-      filterTitres();
-    } catch (err) {
-      console.error("renderTitres() a échoué :", err);
     }
+    window._titresRows = Object.values(byTicker);
+    _histByTicker = buildHistoryIndex();
+
+    // Extraction dynamique des secteurs AVANT de rendre les filtres
+    extractDynamicSectors();
+
+    // Enrichit chaque row avec les métadonnées
+    window._titresRows.forEach(function (row) {
+      var ent = (typeof entMap !== "undefined" && entMap) ? entMap[row.ticker] : null;
+      row._pays = (ent && ent.pays) || "CI";
+      row._secteur = getSectorFromEntMap(row.ticker);
+      row._nom = (ent && ent.nom) || row.ticker;
+
+      var hist = _histByTicker[row.ticker] || [];
+      row._volumeAnormal = isVolumeAnormal(row.ticker, row.volume, hist);
+      row._tendanceHaussiere = isTendanceHaussiere(row.ticker, hist);
+      row._proche52Haut = isProche52Haut(row.ticker, row.cours, hist);
+      row._proche52Bas = isProche52Bas(row.ticker, row.cours, hist);
+    });
+
+    renderTitresHeader();
+    filterTitres();
   }
 
   function buildHistoryIndex() {
@@ -159,7 +199,6 @@
   }
 
   // ─── CSS ADAPTÉ AU STYLE "THE CAPITAL" ─────────────────────────────
-  // Utilise les variables CSS existantes du projet (style.css)
   function injectTitresCSS() {
     if (_cssInjected) return;
     var css = `
@@ -672,8 +711,12 @@
 
     injectTitresCSS();
 
-    // Si header déjà créé, on ne recrée pas (évite le flicker)
-    if (container.querySelector(".tc-titres-header")) return;
+    // Si header déjà créé, on met juste à jour les pills et l'état
+    var existingHeader = container.querySelector(".tc-titres-header");
+    if (existingHeader) {
+      updateHeaderState();
+      return;
+    }
 
     // Pills pays
     var paysPills = Object.keys(PAYS_NAMES).map(function (code) {
@@ -684,7 +727,7 @@
       '</button>';
     }).join("");
 
-    // Pills secteurs dynamiques (depuis entMap/Supabase)
+    // Pills secteurs dynamiques
     var sectorPills = _dynamicSectors.map(function (s) {
       var isActive = window._titreFilter === s;
       return '<button class="tc-pill ' + (isActive ? 'active' : '') + '" data-sector="' + esc(s) + '">' +
@@ -737,41 +780,96 @@
     container.innerHTML = headerHtml;
 
     // ─── Listeners ───
-    document.getElementById("searchTitres").addEventListener("input", debounce(function (e) {
-      window._titreSearch = e.target.value;
-      filterTitres();
-    }, 250));
+    var searchInput = document.getElementById("searchTitres");
+    if (searchInput) {
+      searchInput.addEventListener("input", debounce(function (e) {
+        window._titreSearch = e.target.value;
+        filterTitres();
+      }, 250));
+    }
 
-    document.getElementById("resetTitresBtn").addEventListener("click", resetTitresFilters);
+    var resetBtn = document.getElementById("resetTitresBtn");
+    if (resetBtn) resetBtn.addEventListener("click", resetTitresFilters);
 
     // Délégation filtres
-    container.querySelector(".tc-filters-row").addEventListener("click", function (e) {
-      var pill = e.target.closest("[data-pays]");
-      if (pill) {
-        setPaysFilter(pill.getAttribute("data-pays"));
-        return;
-      }
-      var sect = e.target.closest("[data-sector]");
-      if (sect) setTitreFilter(sect.getAttribute("data-sector"));
-    });
+    var filtersRow = container.querySelector(".tc-filters-row");
+    if (filtersRow) {
+      filtersRow.addEventListener("click", function (e) {
+        var pill = e.target.closest("[data-pays]");
+        if (pill) {
+          setPaysFilter(pill.getAttribute("data-pays"));
+          return;
+        }
+        var sect = e.target.closest("[data-sector]");
+        if (sect) setTitreFilter(sect.getAttribute("data-sector"));
+      });
+    }
 
     // Toggle view
-    container.querySelector(".tc-view-toggle").addEventListener("click", function (e) {
-      var btn = e.target.closest("[data-view]");
-      if (btn) setTitreView(btn.getAttribute("data-view"));
-    });
+    var viewToggle = container.querySelector(".tc-view-toggle");
+    if (viewToggle) {
+      viewToggle.addEventListener("click", function (e) {
+        var btn = e.target.closest("[data-view]");
+        if (btn) setTitreView(btn.getAttribute("data-view"));
+      });
+    }
 
     // Drawer
-    document.getElementById("compareTrigger").addEventListener("click", function () {
-      document.getElementById("compareDrawer").classList.add("open");
+    var compareTrigger = document.getElementById("compareTrigger");
+    if (compareTrigger) {
+      compareTrigger.addEventListener("click", function () {
+        var drawer = document.getElementById("compareDrawer");
+        if (drawer) drawer.classList.add("open");
+      });
+    }
+
+    var closeDrawer = document.getElementById("closeDrawer");
+    if (closeDrawer) {
+      closeDrawer.addEventListener("click", function () {
+        var drawer = document.getElementById("compareDrawer");
+        if (drawer) drawer.classList.remove("open");
+      });
+    }
+
+    var clearCompareBtn = document.getElementById("clearCompareBtn");
+    if (clearCompareBtn) clearCompareBtn.addEventListener("click", clearSelection);
+
+    var launchCompareBtn = document.getElementById("launchCompareBtn");
+    if (launchCompareBtn) launchCompareBtn.addEventListener("click", compareSelected);
+
+    // Escape pour fermer le drawer
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape") {
+        var drawer = document.getElementById("compareDrawer");
+        if (drawer) drawer.classList.remove("open");
+      }
     });
-    document.getElementById("closeDrawer").addEventListener("click", function () {
-      document.getElementById("compareDrawer").classList.remove("open");
-    });
-    document.getElementById("clearCompareBtn").addEventListener("click", clearSelection);
-    document.getElementById("launchCompareBtn").addEventListener("click", compareSelected);
 
     attachResultsListeners();
+  }
+
+  // Met à jour l'état visuel du header sans le recréer
+  function updateHeaderState() {
+    // Met à jour les pills pays
+    document.querySelectorAll("[data-pays]").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-pays") === window._titrePaysFilter);
+    });
+
+    // Met à jour les pills secteurs
+    document.querySelectorAll("[data-sector]").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-sector") === window._titreFilter);
+    });
+
+    // Met à jour les boutons de vue
+    document.querySelectorAll("[data-view]").forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-view") === window._titreView);
+    });
+
+    // Met à jour la recherche si nécessaire
+    var searchInput = document.getElementById("searchTitres");
+    if (searchInput && searchInput.value !== window._titreSearch) {
+      searchInput.value = window._titreSearch;
+    }
   }
 
   // ─── FILTRES / TRI ─────────────────────────────────────────────────
@@ -799,15 +897,19 @@
     filterTitres();
   }
 
+  var _sortDebounceTimer = null;
   function sortTitresBy(field) {
-    var sort = window._titreSort;
-    if (sort.field === field) {
-      sort.dir = -sort.dir;
-    } else {
-      sort.field = field;
-      sort.dir = 1;
-    }
-    filterTitres();
+    clearTimeout(_sortDebounceTimer);
+    _sortDebounceTimer = setTimeout(function () {
+      var sort = window._titreSort;
+      if (sort.field === field) {
+        sort.dir = -sort.dir;
+      } else {
+        sort.field = field;
+        sort.dir = 1;
+      }
+      filterTitres();
+    }, 50);
   }
 
   function resetTitresFilters() {
@@ -841,7 +943,13 @@
     });
   }
 
+  var _filterDebounceTimer = null;
   function filterTitres() {
+    clearTimeout(_filterDebounceTimer);
+    _filterDebounceTimer = setTimeout(_doFilterTitres, 10);
+  }
+
+  function _doFilterTitres() {
     var q = window._titreSearch.toLowerCase().trim();
     var rows = window._titresRows || [];
 
@@ -877,13 +985,13 @@
 
     if (window._titreView === "cards") {
       resultsContainer.innerHTML = renderCardsView(rows);
-      setTimeout(function () {
+      requestAnimationFrame(function () {
         rows.forEach(function (c) {
           var v = parseFloat(c.variation) || 0;
           var cls = v > 0 ? "up" : v < 0 ? "down" : "neutral";
           drawSparkline(c.ticker, cls);
         });
-      }, 0);
+      });
     } else {
       resultsContainer.innerHTML = renderTableView(rows);
     }
@@ -893,8 +1001,9 @@
 
   // ─── DÉLÉGATION ÉVÉNEMENTS ───────────────────────────────────────
   function attachResultsListeners() {
+    if (_listenersAttached) return;
     var container = document.getElementById("view-titres");
-    if (!container || container._tcListenersAttached) return;
+    if (!container) return;
 
     container.addEventListener("click", function (e) {
       if (e.target.closest(".tc-card-compare") || e.target.closest("th")) return;
@@ -913,7 +1022,7 @@
       if (th) sortTitresBy(th.getAttribute("data-field"));
     });
 
-    container._tcListenersAttached = true;
+    _listenersAttached = true;
   }
 
   // ─── VUE CARTES ────────────────────────────────────────────────────
@@ -963,66 +1072,70 @@
 
   // ─── SPARKLINE ─────────────────────────────────────────────────────
   function drawSparkline(ticker, cls) {
-    var canvas = document.getElementById("spark-" + ticker);
-    if (!canvas || !canvas.getContext) return;
-    var hist = (_histByTicker[ticker] || []).slice(-30);
-    if (hist.length < 2) return;
+    try {
+      var canvas = document.getElementById("spark-" + ticker);
+      if (!canvas || !canvas.getContext) return;
+      var hist = (_histByTicker[ticker] || []).slice(-30);
+      if (hist.length < 2) return;
 
-    var values = hist.map(function (h) { return parseFloat(h.cours_cloture || h.cours || 0); });
-    var ctx = canvas.getContext("2d");
-    var w = canvas.width, h = canvas.height, pad = 4;
+      var values = hist.map(function (h) { return parseFloat(h.cours_cloture || h.cours || 0); });
+      var ctx = canvas.getContext("2d");
+      var w = 240, h = 50, pad = 4;
 
-    var dpr = window.devicePixelRatio || 1;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
-    ctx.scale(dpr, dpr);
-    canvas.style.width = w + "px";
-    canvas.style.height = h + "px";
+      var dpr = window.devicePixelRatio || 1;
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.scale(dpr, dpr);
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
 
-    ctx.clearRect(0, 0, w, h);
+      ctx.clearRect(0, 0, w, h);
 
-    var min = Math.min.apply(null, values);
-    var max = Math.max.apply(null, values);
-    var range = (max - min) || 1;
+      var min = Math.min.apply(null, values);
+      var max = Math.max.apply(null, values);
+      var range = (max - min) || 1;
 
-    var points = values.map(function (val, i) {
-      return {
-        x: pad + (i / (values.length - 1)) * (w - pad * 2),
-        y: h - pad - ((val - min) / range) * (h - pad * 2)
-      };
-    });
+      var points = values.map(function (val, i) {
+        return {
+          x: pad + (i / (values.length - 1)) * (w - pad * 2),
+          y: h - pad - ((val - min) / range) * (h - pad * 2)
+        };
+      });
 
-    // Fill gradient
-    var grad = ctx.createLinearGradient(0, 0, 0, h);
-    var color = cls === "up" ? "74,222,128" : cls === "down" ? "248,113,113" : "107,114,128";
-    grad.addColorStop(0, "rgba(" + color + ",0.15)");
-    grad.addColorStop(1, "rgba(" + color + ",0.0)");
+      // Fill gradient
+      var grad = ctx.createLinearGradient(0, 0, 0, h);
+      var color = cls === "up" ? "74,222,128" : cls === "down" ? "248,113,113" : "107,114,128";
+      grad.addColorStop(0, "rgba(" + color + ",0.15)");
+      grad.addColorStop(1, "rgba(" + color + ",0.0)");
 
-    ctx.beginPath();
-    ctx.moveTo(points[0].x, h - pad);
-    points.forEach(function (p) { ctx.lineTo(p.x, p.y); });
-    ctx.lineTo(points[points.length - 1].x, h - pad);
-    ctx.closePath();
-    ctx.fillStyle = grad;
-    ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(points[0].x, h - pad);
+      points.forEach(function (p) { ctx.lineTo(p.x, p.y); });
+      ctx.lineTo(points[points.length - 1].x, h - pad);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
 
-    // Line
-    ctx.beginPath();
-    points.forEach(function (p, i) {
-      if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
-    });
-    ctx.strokeStyle = "rgb(" + color + ")";
-    ctx.lineWidth = 1.5;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    ctx.stroke();
+      // Line
+      ctx.beginPath();
+      points.forEach(function (p, i) {
+        if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+      });
+      ctx.strokeStyle = "rgb(" + color + ")";
+      ctx.lineWidth = 1.5;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.stroke();
 
-    // Point final
-    var last = points[points.length - 1];
-    ctx.beginPath();
-    ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2);
-    ctx.fillStyle = "rgb(" + color + ")";
-    ctx.fill();
+      // Point final
+      var last = points[points.length - 1];
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 2.5, 0, Math.PI * 2);
+      ctx.fillStyle = "rgb(" + color + ")";
+      ctx.fill();
+    } catch (err) {
+      console.warn("drawSparkline failed for " + ticker + ":", err);
+    }
   }
 
   // ─── VUE TABLEAU ───────────────────────────────────────────────────
