@@ -71,7 +71,8 @@ async function atLoadTicker() {
     raw = AT.histCache[ticker];
   } else {
     try {
-      raw = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 5000 });
+      // PAS DE LIMITE — charge toute la base pour ce ticker
+      raw = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc' });
       if (Array.isArray(raw) && raw.length) AT.histCache[ticker] = raw;
     } catch(e) {
       toast('Historique indisponible : ' + e.message, 'error');
@@ -105,7 +106,14 @@ function atSetPeriod(n, btn) {
   AT.period = n;
   document.querySelectorAll('.at-toolbar .at-btn').forEach(b => { if ([5,20,60,120,252,504,99999].map(String).some(v => b.textContent.includes(v.replace('99999','Max'))||b.textContent===v+'J'||b.textContent==='Max')) b.classList.remove('on'); });
   if(btn) btn.classList.add('on');
-  atRender();
+
+  // Si Max (99999), invalider le cache et recharger toutes les données
+  if (n === 99999 && AT.ticker) {
+    delete AT.histCache[AT.ticker];
+    atLoadTicker();
+  } else {
+    atRender();
+  }
 }
 function atSetInterval(v, btn) {
   AT.interval = v;
