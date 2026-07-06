@@ -4,7 +4,7 @@
 
 // AT Configuration Object
 const AT = {
-  ticker: '', type: 'line', period: 60, interval: 'daily',
+  ticker: '', type: 'line', period: 252, interval: 'daily',
   hist: [], draws: [], drawMode: 'cursor',
   trendPts: [], channelPts: [], rectPts: [],
   zoom: { start: 0, end: 1 }, panning: false, panStart: 0, panZoomStart: null,
@@ -58,6 +58,26 @@ const IND_CATALOG = [
   ]},
 ];
 
+// ── Formatage volume lisible ──
+function fmtVol(n) {
+  if (n == null || isNaN(+n)) return '—';
+  const v = +n;
+  if (v >= 1e9) return (v/1e9).toFixed(2) + ' Mrd';
+  if (v >= 1e6) return (v/1e6).toFixed(1) + ' M';
+  if (v >= 1e3) return (v/1e3).toFixed(0) + ' k';
+  return v.toLocaleString('fr-FR');
+}
+
+// ── Formatage date complète avec heure ──
+function fmtDateFull(d) {
+  if (!d) return '—';
+  const date = new Date(d);
+  return date.toLocaleDateString('fr-FR', { 
+    day: '2-digit', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
 // ── Chargement ticker ──
 async function atLoadTicker() {
   const ticker = document.getElementById('atTicker').value;
@@ -71,7 +91,6 @@ async function atLoadTicker() {
     raw = AT.histCache[ticker];
   } else {
     try {
-      // PAS DE LIMITE — charge toute la base pour ce ticker
       raw = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc' });
       if (Array.isArray(raw) && raw.length) AT.histCache[ticker] = raw;
     } catch(e) {
@@ -82,7 +101,6 @@ async function atLoadTicker() {
 
   AT.hist = atExtract(Array.isArray(raw) ? raw : []);
 
-  // Fallback : cours actuel si historique vide
   if (!AT.hist.length) {
     const cur = allCours.find(c => c.ticker === ticker);
     if (cur) {
@@ -107,7 +125,6 @@ function atSetPeriod(n, btn) {
   document.querySelectorAll('.at-toolbar .at-btn').forEach(b => { if ([5,20,60,120,252,504,99999].map(String).some(v => b.textContent.includes(v.replace('99999','Max'))||b.textContent===v+'J'||b.textContent==='Max')) b.classList.remove('on'); });
   if(btn) btn.classList.add('on');
 
-  // Si Max (99999), invalider le cache et recharger toutes les données
   if (n === 99999 && AT.ticker) {
     delete AT.histCache[AT.ticker];
     atLoadTicker();
@@ -127,7 +144,16 @@ function atSetDraw(mode) {
   document.querySelectorAll('[id^="atTool"],[id^="dBtn"]').forEach(el => el.classList.remove('on'));
   const toolMap = { cursor: ['atToolCursor','dBtnCursor'], hline: ['atToolHline','dBtnHLine'], trend: ['atToolTrend','dBtnTrend'], channel: ['atToolChannel','dBtnChannel'], rect: ['atToolRect','dBtnRect'], fib: ['atToolFib','dBtnFib'], pitch: ['atToolPitch','dBtnPitch'], text: ['atToolText','dBtnText'] };
   (toolMap[mode] || []).forEach(id => document.getElementById(id)?.classList.add('on'));
-  const msgs = { cursor: '', hline: 'Cliquez pour placer une S/R', trend: 'Cliquez point 1 de la tendance', channel: 'Cliquez point 1 du canal', rect: 'Cliquez coin 1 de la zone', fib: 'Cliquez bas puis haut pour Fibonacci', pitch: 'Cliquez 3 points pour le Pitchfork', text: 'Cliquez pour ajouter une annotation' };
+  const msgs = { 
+    cursor: '', 
+    hline: 'Cliquez pour placer un Support / Résistance horizontal', 
+    trend: 'Cliquez point 1 de la ligne de tendance', 
+    channel: 'Cliquez point 1 du canal de tendance', 
+    rect: 'Cliquez coin 1 de la zone de prix', 
+    fib: 'Cliquez bas puis haut pour les retracements de Fibonacci', 
+    pitch: 'Cliquez 3 points pour le Pitchfork d\'Andrews', 
+    text: 'Cliquez pour ajouter une annotation texte' 
+  };
   document.getElementById('atDrawStatus').textContent = msgs[mode] || '';
 }
 function atClearDrawings() { AT.draws = []; atRender(); toast('Dessins effacés', 'success'); }
@@ -144,19 +170,16 @@ function atVisibleData() {
 
 // ── Init AT ──
 function atInit() {
-  // Peupler le select ticker
   const byTicker = {};
   allCours.forEach(c => { if(!byTicker[c.ticker]) byTicker[c.ticker]=c; });
   const tickers = Object.keys(byTicker).sort();
   const sel = document.getElementById('atTicker');
   if(sel) sel.innerHTML='<option value="">Ticker...</option>'+tickers.map(t=>`<option value="${t}">${t}</option>`).join('');
 
-  // Sélectionner "Ligne" par défaut dans l'UI
   document.getElementById('atBtnLine')?.classList.add('on');
 
   atInitCrosshair();
   atUpdateWatchlist();
-  // Observer redimensionnement
   const ro = new ResizeObserver(() => { if(AT.hist.length) atRender(); });
   const wrap = document.getElementById('atWrap');
   if(wrap) ro.observe(wrap);
