@@ -354,6 +354,80 @@
     .grid-3, .grid-2 { grid-template-columns: 1fr; }
     .page-content { padding: 20px 16px; }
   }
+
+  /* ========== RECOMMANDATION & INDICATEURS AVANCÉS ========== */
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+  @media (max-width: 900px) { .grid-4 { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 560px) { .grid-4 { grid-template-columns: 1fr; } }
+
+  .weight-toggle { display: flex; gap: 6px; }
+
+  .reco-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 11px; border-radius: 20px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.05em; white-space: nowrap;
+  }
+  .reco-strongbuy { background: rgba(74,222,128,0.14); color: var(--green); border: 1px solid rgba(74,222,128,0.35); }
+  .reco-buy       { background: var(--green-bg); color: var(--green); border: 1px solid rgba(74,222,128,0.2); }
+  .reco-hold      { background: rgba(184,150,78,0.1); color: var(--gold-light); border: 1px solid var(--gold-dim); }
+  .reco-sell      { background: var(--red-bg); color: var(--red); border: 1px solid rgba(248,113,113,0.2); }
+  .reco-strongsell{ background: rgba(248,113,113,0.16); color: var(--red); border: 1px solid rgba(248,113,113,0.4); }
+
+  .risk-badge { display:inline-block; padding: 2px 9px; border-radius: 20px; font-size: 10px; font-weight: 600; font-family: var(--mono); letter-spacing:0.04em; }
+  .risk-low { color: var(--green); background: var(--green-bg); }
+  .risk-mid { color: var(--gold-light); background: rgba(184,150,78,0.1); }
+  .risk-high { color: var(--red); background: var(--red-bg); }
+
+  .top-pick-card {
+    background: linear-gradient(160deg, var(--card2), var(--surface));
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .18s, transform .18s;
+  }
+  .top-pick-card:hover { border-color: var(--gold-dim); transform: translateY(-2px); }
+  .top-pick-rank {
+    position: absolute; top: 12px; right: 14px;
+    font-family: var(--serif); font-size: 30px; color: rgba(184,150,78,0.18); font-weight: 700; line-height: 1;
+  }
+  .top-pick-ticker { font-family: var(--mono); font-size: 15px; color: var(--gold); letter-spacing: 0.05em; margin-bottom: 8px; }
+  .top-pick-score { font-family: var(--mono); font-size: 30px; color: var(--cream); font-weight: 500; line-height: 1; }
+  .top-pick-score span { font-size: 13px; color: var(--dim); font-weight: 400; }
+  .top-pick-rationale { font-size: 12px; color: var(--muted); margin-top: 10px; line-height: 1.5; }
+
+  .score-gauge-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .score-gauge { width: 150px; height: 150px; position: relative; flex-shrink: 0; }
+  .score-gauge-num { position: absolute; inset: 0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .score-gauge-num .n { font-family: var(--mono); font-size: 34px; font-weight: 500; color: var(--cream); line-height:1; }
+  .score-gauge-num .l { font-size: 9px; color: var(--dim); text-transform: uppercase; letter-spacing: .1em; margin-top:4px; }
+
+  .breakdown-row { margin-bottom: 14px; }
+  .breakdown-row:last-child { margin-bottom: 0; }
+  .breakdown-head { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+  .breakdown-head b { color: var(--cream); font-family: var(--mono); font-weight: 500; }
+  .breakdown-bar-bg { height: 6px; border-radius: 6px; background: var(--border2); overflow: hidden; }
+  .breakdown-bar-fill { height: 100%; border-radius: 6px; transition: width .5s ease; }
+
+  .flag-list { list-style: none; margin: 0; padding: 0; }
+  .flag-list li { display: flex; gap: 8px; align-items: flex-start; font-size: 12.5px; color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--border2); }
+  .flag-list li:last-child { border-bottom: none; }
+  .flag-dot { flex-shrink:0; margin-top:4px; width:6px; height:6px; border-radius:50%; }
+  .flag-good .flag-dot { background: var(--green); }
+  .flag-bad .flag-dot { background: var(--red); }
+
+  .target-card { display:flex; align-items:center; justify-content: space-between; flex-wrap:wrap; gap:16px; padding: 4px 0; }
+  .target-block .l { font-size: 10px; color: var(--dim); text-transform:uppercase; letter-spacing:.1em; margin-bottom:4px; }
+  .target-block .v { font-family: var(--mono); font-size: 18px; color: var(--cream); }
+
+  .reco-table-row-clickable { cursor: pointer; }
+
+  .synth-text { font-size: 13.5px; line-height: 1.75; color: var(--muted); }
+  .synth-text b { color: var(--cream); font-weight: 500; }
+
+  .mini-tag { font-family: var(--mono); font-size: 10.5px; color: var(--dim); border: 1px solid var(--border2); border-radius: 6px; padding: 2px 7px; }
 </style>
 </head>
 <body>
@@ -451,6 +525,24 @@
       <div class="card-header"><div class="card-title">RSI — Relative Strength Index (14 périodes)</div><div style="font-size:11px;color:var(--dim)">Survente &lt;30 · Neutre 30–70 · Surachat &gt;70</div></div>
       <div class="card-body"><div id="rsiDisplay" style="text-align:center;padding:10px 0"><div style="color:var(--dim);font-size:13px">Sélectionnez un titre pour voir le RSI</div></div></div>
     </div>
+
+    <div class="grid-4" id="advStatCards">
+      <div class="stat-card"><div class="stat-label">Volatilité (annualisée)</div><div class="stat-value" id="stat-vol">—</div><div class="stat-change neutral" id="stat-vol-note">écart-type des rendements</div></div>
+      <div class="stat-card"><div class="stat-label">Momentum 1M / 3M</div><div class="stat-value" id="stat-mom">—</div><div class="stat-change neutral" id="stat-mom-note">performance glissante</div></div>
+      <div class="stat-card"><div class="stat-label">MACD (12,26,9)</div><div class="stat-value" id="stat-macd">—</div><div class="stat-change neutral" id="stat-macd-note">ligne MACD vs signal</div></div>
+      <div class="stat-card"><div class="stat-label">Bandes de Bollinger</div><div class="stat-value" id="stat-boll">—</div><div class="stat-change neutral" id="stat-boll-note">position dans le canal (20,2σ)</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">MACD — Convergence / Divergence</div></div>
+        <div class="card-body"><div class="chart-container short"><canvas id="chartMacd"></canvas></div></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Bandes de Bollinger</div></div>
+        <div class="card-body"><div class="chart-container short"><canvas id="chartBoll"></canvas></div></div>
+      </div>
+    </div>
   </div>
 
   <!-- SIGNAUX -->
@@ -489,6 +581,70 @@
     <div class="section-title">Notations Financières</div>
     <div class="section-sub">Scores de qualité fondamentale calculés sur les données financières disponibles</div>
     <div class="card"><div class="card-header"><div class="card-title">Notation par titre</div><div style="font-size:11px;color:var(--dim)">Score /100 · Rentabilité · Valorisation · Solidité</div></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">P/E</th><th class="right">Div. Yield</th><th>Rentabilité</th><th>Valorisation</th><th>Solidité</th><th class="right">Score global</th></tr></thead><tbody id="notationsTable"></tbody></table></div></div>
+  </div>
+
+  <!-- RECOMMANDATION -->
+  <div class="section" id="recommandation">
+    <div class="section-title">Recommandation d'Investissement</div>
+    <div class="section-sub">Score composite (technique + fondamental) généré automatiquement pour chaque titre BRVM — à titre indicatif, ne constitue pas un conseil en investissement</div>
+
+    <div class="card mb20">
+      <div class="card-body" style="padding:16px 20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+          <div>
+            <div style="font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--dim);margin-bottom:6px">Horizon d'investissement</div>
+            <div class="weight-toggle" id="recoWeightBtns">
+              <button class="filter-btn" onclick="setRecoWeight('technical',this)">Court terme (technique)</button>
+              <button class="filter-btn active" onclick="setRecoWeight('balanced',this)">Équilibré</button>
+              <button class="filter-btn" onclick="setRecoWeight('fundamental',this)">Long terme (fondamental)</button>
+            </div>
+          </div>
+          <div style="font-size:11px;color:var(--dim);max-width:320px;text-align:right">Le poids attribué aux indicateurs techniques vs fondamentaux ajuste le score global et le classement ci-dessous.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-3 mb20">
+      <div class="stat-card"><div class="stat-label">Achat (fort + simple)</div><div class="stat-value" id="reco-buy-count" style="color:var(--green)">—</div><div class="stat-change neutral">titres recommandés à l'achat</div></div>
+      <div class="stat-card"><div class="stat-label">Conserver</div><div class="stat-value" id="reco-hold-count">—</div><div class="stat-change neutral">titres neutres</div></div>
+      <div class="stat-card"><div class="stat-label">Vente (forte + simple)</div><div class="stat-value" id="reco-sell-count" style="color:var(--red)">—</div><div class="stat-change neutral">titres recommandés à la vente</div></div>
+    </div>
+
+    <div class="card mb20">
+      <div class="card-header"><div class="card-title">Meilleures opportunités</div><div style="font-size:11px;color:var(--dim)">Top 3 par score global décroissant</div></div>
+      <div class="card-body">
+        <div class="grid-3" id="topPicksGrid" style="margin-bottom:0"></div>
+      </div>
+    </div>
+
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title">Classement complet</div>
+        <div style="display:flex;gap:6px">
+          <button class="filter-btn active" onclick="setRecoFilter('all',this)">Tous</button>
+          <button class="filter-btn" onclick="setRecoFilter('buy',this)">Achat</button>
+          <button class="filter-btn" onclick="setRecoFilter('hold',this)">Conserver</button>
+          <button class="filter-btn" onclick="setRecoFilter('sell',this)">Vente</button>
+        </div>
+      </div>
+      <div class="table-wrap"><table>
+        <thead><tr>
+          <th>Titre</th><th class="right">Cours</th><th class="right">Score Techn.</th><th class="right">Score Fond.</th><th class="right">Score Global</th>
+          <th>Recommandation</th><th class="right">Objectif</th><th class="right">Potentiel</th><th>Risque</th>
+        </tr></thead>
+        <tbody id="recoTable"></tbody>
+      </table></div>
+    </div>
+
+    <div class="card" id="recoDetailCard">
+      <div class="card-header">
+        <div class="card-title">Analyse détaillée</div>
+        <div style="font-size:11px;color:var(--dim)" id="recoDetailSub">Sélectionnez un titre dans le tableau ci-dessus</div>
+      </div>
+      <div class="card-body" id="recoDetailBody">
+        <div style="color:var(--dim);text-align:center;padding:30px 0;font-size:13px">Cliquez sur un titre du classement pour afficher son analyse complète</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -581,6 +737,7 @@
     renderNotations();
     buildCompButtons();
     renderCompChart();
+    if (window.renderRecommandations) renderRecommandations();
   }
 
   function injectDemoData() {
@@ -634,6 +791,8 @@
     }
     renderGraphChart();
     renderTechnique();
+    if (window.renderAdvancedIndicators) renderAdvancedIndicators(ticker);
+    if (window.renderRecoDetail) renderRecoDetail(ticker, false);
   }
 
   function generateDemoHistorique(ticker, baseCours) {
@@ -961,5 +1120,6 @@
 
   loadAll();
 </script>
+<script src="recommandation.js"></script>
 </body>
 </html>
