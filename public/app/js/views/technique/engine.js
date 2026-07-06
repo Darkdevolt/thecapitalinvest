@@ -172,11 +172,11 @@ function _atDraw() {
   const curCours = allCours.find(c => c.ticker === AT.ticker);
   const liveC = curCours ? +curCours.cours : last.c;
   const liveVar = curCours ? +curCours.variation : (prev ? ((last.c - prev.c) / prev.c * 100) : 0);
-  const varColor = liveVar >= 0 ? 'var(--green)' : 'var(--red)';
+  const varColor = liveVar >= 0 ? '#4ADE80' : '#F87171';
   document.getElementById('atO').textContent = fmt(last.o); document.getElementById('atO').style.color = '';
   document.getElementById('atH').textContent = fmt(last.h);
   document.getElementById('atL').textContent = fmt(last.l);
-  document.getElementById('atC').textContent = fmt(liveC); document.getElementById('atC').style.color = liveVar >= 0 ? 'var(--green)' : 'var(--red)';
+  document.getElementById('atC').textContent = fmt(liveC); document.getElementById('atC').style.color = liveVar >= 0 ? '#4ADE80' : '#F87171';
   document.getElementById('atV').textContent = fmt(last.v);
   document.getElementById('atVar').innerHTML = `<span style="color:${varColor}">${liveVar >= 0 ? '+' : ''}${liveVar.toFixed(2)}%</span>`;
   document.getElementById('atLastUpdate').textContent = fmtDate(last.date);
@@ -220,7 +220,7 @@ function _atDraw() {
   if (tagY > 0 && tagY < H) {
     tag.style.display = 'block';
     tag.style.top = (tagY - 10) + 'px';
-    tag.style.background = liveVar >= 0 ? 'var(--green)' : 'var(--red)';
+    tag.style.background = liveVar >= 0 ? '#4ADE80' : '#F87171';
     tag.style.color = '#0A0804';
     tag.textContent = fmt(liveC);
   } else { tag.style.display = 'none'; }
@@ -272,7 +272,7 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
     for (let i = 1; i < n; i++) {
       if (!senkA[i] || !senkB[i]) continue;
       const bull = senkA[i] >= senkB[i];
-      ctx.fillStyle = bull ? 'var(--green)' : 'var(--red)';
+      ctx.fillStyle = bull ? '#4ADE80' : '#F87171';
       const x1 = scX(i-1), x2 = scX(i);
       ctx.beginPath();
       ctx.moveTo(x1, scY(senkA[i-1]||senkA[i])); ctx.lineTo(x2, scY(senkA[i]));
@@ -345,12 +345,17 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
       c.forEach((v,i) => ctx.lineTo(scX(i), scY(v)));
       ctx.lineTo(scX(n-1), H); ctx.lineTo(scX(0), H); ctx.closePath(); ctx.fill();
     }
-    ctx.strokeStyle = 'var(--gold)'; ctx.lineWidth = 1.8;
+    // LIGNE PRINCIPALE — couleur visible + glow
+    ctx.strokeStyle = '#B8964E'; ctx.lineWidth = 2.5;
+    // Glow effect
+    ctx.shadowColor = 'rgba(184,150,78,0.4)';
+    ctx.shadowBlur = 6;
     ctx.beginPath(); c.forEach((v,i) => i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v))); ctx.stroke();
+    ctx.shadowBlur = 0;
   } else if (AT.type === 'bar') {
     for (let i = 0; i < n; i++) {
       const up = c[i] >= o[i]; const x = scX(i);
-      ctx.strokeStyle = up ? 'var(--green)' : 'var(--red)'; ctx.lineWidth = 1;
+      ctx.strokeStyle = up ? '#4ADE80' : '#F87171'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(x, scY(h[i])); ctx.lineTo(x, scY(l[i])); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x - cw*0.4, scY(o[i])); ctx.lineTo(x, scY(o[i])); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(x, scY(c[i])); ctx.lineTo(x + cw*0.4, scY(c[i])); ctx.stroke();
@@ -385,7 +390,7 @@ function _atDrawVol(ctx, W, H, data, vols, c, o) {
   vols.forEach((v, i) => {
     const bh = (v/maxV)*(H-8);
     const up = c[i] >= o[i];
-    ctx.fillStyle = up ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)';
+    ctx.fillStyle = up ? 'rgba(74,222,128,0.5)' : 'rgba(248,113,113,0.5)';
     ctx.fillRect(scX(i)-bw/2, H-bh, bw, bh);
   });
   const smaV = atSMA(vols, Math.min(20, n));
@@ -427,7 +432,7 @@ function _atDrawMACD(ctx, W, H, closes) {
   const bw = Math.max(1, Wr/n - 1);
   macd.forEach((d,i) => {
     const x = scX(i), bh = Math.abs(scY(d.hist)-zero);
-    ctx.fillStyle = d.hist>=0?'rgba(38,166,154,0.55)':'rgba(239,83,80,0.55)';
+    ctx.fillStyle = d.hist>=0?'rgba(74,222,128,0.55)':'rgba(248,113,113,0.55)';
     ctx.fillRect(x-bw/2, d.hist>=0?zero-bh:zero, bw, bh||1);
   });
   [[macd.map(d=>d.macd),'#60a5fa'],[macd.map(d=>d.signal),'#f87171']].forEach(([arr,col]) => {
