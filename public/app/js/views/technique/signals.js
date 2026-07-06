@@ -1,36 +1,103 @@
 // ═══════════════════════════════════════
-// AT — Signal Generation
+// AT — Explainable Signals
 // ═══════════════════════════════════════
 
-// ── Signaux ──
 function atUpdateSignals(closes, highs, lows, vols, liveVar, liveC) {
   const n = closes.length;
-  const sma20 = atSMA(closes,20), sma50 = atSMA(closes,50);
-  const lc = closes[n-1], lsma20 = sma20[n-1], lsma50 = sma50[n-1];
-
-  const trend = lsma20 && lsma50 ? (lc > lsma20 && lsma20 > lsma50 ? ['HAUSSIÈRE','b'] : lc < lsma20 && lsma20 < lsma50 ? ['BAISSIÈRE','s'] : ['LATÉRALE','n']) : ['—','n'];
-  const rsi = atRSI(closes); const lr = rsi[n-1];
-  const mom = lr > 65 ? ['ACHAT FORT','b'] : lr > 55 ? ['ACHAT','b'] : lr < 35 ? ['VENTE','s'] : lr < 45 ? ['NEUTRE-','n'] : ['NEUTRE','n'];
-  const bb = atBB(closes); const lb = bb[n-1];
-  const volatility = lb.upper ? ((lb.upper-lb.lower)/lb.mid*100) > 5 ? ['ÉLEVÉE','s'] : ((lb.upper-lb.lower)/lb.mid*100) < 1.5 ? ['COMPRESSION','n'] : ['NORMALE','n'] : ['—','n'];
-  const volSMA = atSMA(vols,20); const lv = vols[n-1], lvsma = volSMA[n-1];
-  const volTrend = lvsma && lv > lvsma*1.5 ? (lc > closes[n-2] ? ['FORT ACHAT','b'] : ['DISTRIBUTION','s']) : ['NORMAL','n'];
-  const rsiSig = lr > 70 ? ['SURACHAT','s'] : lr < 30 ? ['SURVENTE','b'] : [`${lr.toFixed(1)}`,'n'];
-  const macd = atMACD(closes); const lm = macd[n-1], lm2 = macd[n-2];
-  const macdSig = lm && lm2 ? (lm.macd > lm.signal && lm2.macd <= lm2.signal ? ['CROISEMENT ↑','b'] : lm.hist > 0 ? ['HAUSSIER','b'] : ['BAISSIER','s']) : ['—','n'];
-  const st = atStoch(highs,lows,closes); const sk=st.K[n-1], sd=st.D[n-1];
-  const stochSig = sk && sd ? [`${sk.toFixed(0)}/${sd.toFixed(0)}`, sk>80?'s':sk<20?'b':'n'] : ['—','n'];
-
-  let score = 0;
-  if (trend[1]==='b') score+=2; if (trend[1]==='s') score-=2;
-  if (mom[1]==='b') score+=1; if (mom[1]==='s') score-=1;
-  if (volTrend[1]==='b') score+=1; if (volTrend[1]==='s') score-=1;
-  if (macdSig[1]==='b') score+=1; if (macdSig[1]==='s') score-=1;
-  const glob = score >= 3 ? ['ACHAT FORT','b'] : score >= 1 ? ['ACHAT','b'] : score <= -3 ? ['VENTE FORTE','s'] : score <= -1 ? ['VENTE','s'] : ['NEUTRE','n'];
-
-  [['sigGlob',glob],['sigTrend',trend],['sigMom',mom],['sigVol',volatility],['sigVolTrend',volTrend],['sigRSI',rsiSig],['sigMACD',macdSig],['sigStoch',stochSig]].forEach(([id,[label,cls]])=>{
+  const signals = [];
+  
+  // ── Calculs ──
+  const sma20 = atSMA(closes, atGetIndParam('sma20', 'period') || 20);
+  const sma50 = atSMA(closes, atGetIndParam('sma50', 'period') || 50);
+  const lc = closes[n-1], ls20 = sma20[n-1], ls50 = sma50[n-1];
+  
+  // 1. TREND
+  let trendScore = 0, trendReason = '';
+  if (ls20 && ls50) {
+    if (lc > ls20 && ls20 > ls50) { trendScore = 2; trendReason = 'Prix > SMA20 > SMA50'; }
+    else if (lc < ls20 && ls20 < ls50) { trendScore = -2; trendReason = 'Prix < SMA20 < SMA50'; }
+    else { trendScore = 0; trendReason = 'Moyennes enchevêtrées'; }
+  }
+  signals.push({ id: 'sigTrend', label: 'Tendance', value: trendScore, reason: trendReason, icon: '📊' });
+  
+  // 2. MOMENTUM (RSI)
+  const rsi = atRSI(closes, atGetIndParam('rsi', 'period') || 14);
+  const lr = rsi[n-1];
+  let rsiScore = 0, rsiReason = '';
+  if (lr > 70) { rsiScore = -1; rsiReason = `RSI ${lr.toFixed(1)} > 70 (surachat)`; }
+  else if (lr < 30) { rsiScore = 1; rsiReason = `RSI ${lr.toFixed(1)} < 30 (survente)`; }
+  else { rsiReason = `RSI ${lr.toFixed(1)} — zone neutre`; }
+  signals.push({ id: 'sigMom', label: 'Momentum', value: rsiScore, reason: rsiReason, icon: '⚡' });
+  
+  // 3. VOLATILITÉ (Bollinger)
+  const bb = atBB(closes, atGetIndParam('bb', 'period') || 20);
+  const lb = bb[n-1];
+  let volScore = 0, volReason = '';
+  if (lb?.upper) {
+    const width = ((lb.upper - lb.lower) / lb.mid * 100);
+    if (width > 5) { volScore = 0; volReason = `Volatilité élevée (${width.toFixed(1)}%)`; }
+    else if (width < 1.5) { volScore = 0; volReason = `Compression des bandes (${width.toFixed(1)}%)`; }
+    else { volReason = `Volatilité normale (${width.toFixed(1)}%)`; }
+  }
+  signals.push({ id: 'sigVol', label: 'Volatilité', value: volScore, reason: volReason, icon: '🌊' });
+  
+  // 4. MACD
+  const macd = atMACD(closes);
+  const lm = macd[n-1], lm2 = macd[n-2];
+  let macdScore = 0, macdReason = '';
+  if (lm && lm2) {
+    if (lm.macd > lm.signal && lm2.macd <= lm2.signal) { macdScore = 1; macdReason = 'Croisement MACD haussier'; }
+    else if (lm.hist > 0) { macdScore = 0.5; macdReason = 'Histogramme positif'; }
+    else { macdScore = -0.5; macdReason = 'Histogramme négatif'; }
+  }
+  signals.push({ id: 'sigMACD', label: 'MACD', value: macdScore, reason: macdReason, icon: '📉' });
+  
+  // ── Score global ──
+  const totalScore = signals.reduce((a, s) => a + s.value, 0);
+  const glob = totalScore >= 2 ? ['ACHAT FORT', 'b', '#4ADE80'] 
+    : totalScore >= 0.5 ? ['ACHAT', 'b', '#4ADE80']
+    : totalScore <= -2 ? ['VENTE FORTE', 's', '#F87171']
+    : totalScore <= -0.5 ? ['VENTE', 's', '#F87171']
+    : ['NEUTRE', 'n', '#FBBF24'];
+  
+  // ── Rendu ──
+  const container = document.getElementById('atSignalsPanel');
+  if (container) {
+    container.innerHTML = `
+      <div class="at-sig-header">
+        <div class="at-sig-glob" style="background:${glob[2]}20;color:${glob[2]};border:1px solid ${glob[2]}40">
+          ${glob[0]} <span style="font-size:11px;opacity:0.7">Score ${totalScore.toFixed(1)}/10</span>
+        </div>
+        ${AT.eduMode ? `<div class="at-sig-help">💡 Cliquez un signal pour comprendre le calcul</div>` : ''}
+      </div>
+      <div class="at-sig-grid">
+        ${signals.map(s => `
+          <div class="at-sig-card ${s.value > 0 ? 'bull' : s.value < 0 ? 'bear' : 'neutral'}" 
+               onclick="atShowSignalDetail('${s.id}')">
+            <div class="at-sig-icon">${s.icon}</div>
+            <div class="at-sig-name">${s.label}</div>
+            <div class="at-sig-bar">
+              <div class="at-sig-fill" style="width:${Math.min(100, Math.abs(s.value/2)*100)}%;background:${s.value>0?'var(--green)':s.value<0?'var(--red)':'var(--dim)'}"></div>
+            </div>
+            ${AT.eduMode ? `<div class="at-sig-reason">${s.reason}</div>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+  
+  // Fallback pour les IDs legacy
+  const legacyMap = { 'sigTrend': signals[0], 'sigMom': signals[1], 'sigVol': signals[2], 'sigMACD': signals[3] };
+  Object.entries(legacyMap).forEach(([id, sig]) => {
     const el = document.getElementById(id); if (!el) return;
-    el.textContent = label;
-    el.className = `sig-badge ${cls==='b'?'sig-b':cls==='s'?'sig-s':'sig-n'}`;
+    const cls = sig.value > 0 ? 'sig-b' : sig.value < 0 ? 'sig-s' : 'sig-n';
+    el.textContent = sig.label.toUpperCase();
+    el.className = `sig-badge ${cls}`;
   });
+}
+
+function atShowSignalDetail(id) {
+  // Pourrait ouvrir un modal avec l'explication détaillée
+  const sig = document.getElementById(id);
+  if (sig) sig.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
