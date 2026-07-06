@@ -361,10 +361,12 @@ async function showPreview(templateKey, rows) {
 
 async function verifyTickers(tickers) {
     if (!tickers.length) return { ok: true, missing: [] };
-    var params = 'select=ticker&ticker=in.(' + tickers.map(encodeURIComponent).join(',') + ')';
-    var rows = await sbGet('entreprises', params);
-    var found = new Set((rows || []).map(function(r){ return r.ticker; }));
-    var missing = tickers.filter(function(t){ return !found.has(t); });
+    // Dédoublonner et normaliser en majuscules
+    var uniqueTickers = [...new Set(tickers.map(function(t){ return String(t).trim().toUpperCase(); }))];
+    // Charger TOUTES les entreprises (il n'y en a que ~47, requête légère)
+    var rows = await sbGet('entreprises', 'select=ticker');
+    var found = new Set((rows || []).map(function(r){ return String(r.ticker).trim().toUpperCase(); }));
+    var missing = uniqueTickers.filter(function(t){ return !found.has(t); });
     return { ok: missing.length === 0, missing: missing };
 }
 
