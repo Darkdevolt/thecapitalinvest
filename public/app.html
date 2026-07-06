@@ -19,6 +19,7 @@
 <base target="_blank">
 <base target="_blank">
 <base target="_blank">
+<base target="_blank">
 </head>
 <body class="init-hidden">
 
@@ -405,8 +406,8 @@
       </div>
       <div class="at-tb-group">
         <span class="at-tb-label">Type</span>
-        <button class="at-btn" id="atBtnLine" onclick="atSetType('line',this)">Ligne</button>
-        <button class="at-btn on" id="atBtnCandle" onclick="atSetType('candle',this)">Chandelier</button>
+        <button class="at-btn on" id="atBtnLine" onclick="atSetType('line',this)">Ligne</button>
+        <button class="at-btn" id="atBtnCandle" onclick="atSetType('candle',this)">Chandelier</button>
         <button class="at-btn" id="atBtnHA" onclick="atSetType('ha',this)">Heikin-Ashi</button>
         <button class="at-btn" id="atBtnBar" onclick="atSetType('bar',this)">Barres</button>
       </div>
@@ -414,9 +415,9 @@
         <span class="at-tb-label">Période</span>
         <button class="at-btn" onclick="atSetPeriod(5,this)">5J</button>
         <button class="at-btn" onclick="atSetPeriod(20,this)">1M</button>
-        <button class="at-btn on" onclick="atSetPeriod(60,this)">3M</button>
+        <button class="at-btn" onclick="atSetPeriod(60,this)">3M</button>
         <button class="at-btn" onclick="atSetPeriod(120,this)">6M</button>
-        <button class="at-btn" onclick="atSetPeriod(252,this)">1A</button>
+        <button class="at-btn on" onclick="atSetPeriod(252,this)">1A</button>
         <button class="at-btn" onclick="atSetPeriod(504,this)">2A</button>
         <button class="at-btn" onclick="atSetPeriod(99999,this)">Max</button>
       </div>
@@ -440,15 +441,15 @@
       <span class="at-tb-label">Dessin</span>
       <button class="at-btn" id="dBtnCursor" onclick="atSetDraw('cursor')" title="Curseur">↖ Curseur</button>
       <div class="at-sep"></div>
-      <button class="at-btn" id="dBtnHLine" onclick="atSetDraw('hline')" title="S/R Horizontale">— S/R</button>
-      <button class="at-btn" id="dBtnTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱ Tendance</button>
-      <button class="at-btn" id="dBtnChannel" onclick="atSetDraw('channel')" title="Canal">⫴ Canal</button>
-      <button class="at-btn" id="dBtnRect" onclick="atSetDraw('rect')" title="Rectangle">▭ Zone</button>
+      <button class="at-btn" id="dBtnHLine" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">— Support / Résistance</button>
+      <button class="at-btn" id="dBtnTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱ Ligne de tendance</button>
+      <button class="at-btn" id="dBtnChannel" onclick="atSetDraw('channel')" title="Canal de tendance">⫴ Canal</button>
+      <button class="at-btn" id="dBtnRect" onclick="atSetDraw('rect')" title="Zone de prix">▭ Zone de prix</button>
       <div class="at-sep"></div>
-      <button class="at-btn" id="dBtnFib" onclick="atSetDraw('fib')" title="Fibonacci">🌀 Fibonacci</button>
-      <button class="at-btn" id="dBtnPitch" onclick="atSetDraw('pitch')" title="Pitchfork">⑂ Pitchfork</button>
+      <button class="at-btn" id="dBtnFib" onclick="atSetDraw('fib')" title="Retracements de Fibonacci">🌀 Fibonacci</button>
+      <button class="at-btn" id="dBtnPitch" onclick="atSetDraw('pitch')" title="Pitchfork d'Andrews">⑂ Pitchfork</button>
       <div class="at-sep"></div>
-      <button class="at-btn" id="dBtnText" onclick="atSetDraw('text')" title="Annotation">T Texte</button>
+      <button class="at-btn" id="dBtnText" onclick="atSetDraw('text')" title="Annotation texte">T Annotation</button>
       <div class="at-sep"></div>
       <button class="at-btn danger" onclick="atClearDrawings()">🗑 Effacer tout</button>
       <span class="draw-status" id="atDrawStatus"></span>
@@ -460,17 +461,17 @@
       <div class="at-left">
         <div class="at-tool on" id="atToolCursor" onclick="atSetDraw('cursor')" title="Curseur">↖</div>
         <div class="at-tool-sep"></div>
-        <div class="at-tool" id="atToolHline" onclick="atSetDraw('hline')" title="Horizontale">—</div>
-        <div class="at-tool" id="atToolTrend" onclick="atSetDraw('trend')" title="Tendance">╱</div>
-        <div class="at-tool" id="atToolChannel" onclick="atSetDraw('channel')" title="Canal">⫴</div>
-        <div class="at-tool" id="atToolRect" onclick="atSetDraw('rect')" title="Zone">▭</div>
+        <div class="at-tool" id="atToolHline" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">—</div>
+        <div class="at-tool" id="atToolTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱</div>
+        <div class="at-tool" id="atToolChannel" onclick="atSetDraw('channel')" title="Canal de tendance">⫴</div>
+        <div class="at-tool" id="atToolRect" onclick="atSetDraw('rect')" title="Zone de prix">▭</div>
         <div class="at-tool-sep"></div>
-        <div class="at-tool" id="atToolFib" onclick="atSetDraw('fib')" title="Fibonacci">🌀</div>
-        <div class="at-tool" id="atToolPitch" onclick="atSetDraw('pitch')" title="Pitchfork">⑂</div>
+        <div class="at-tool" id="atToolFib" onclick="atSetDraw('fib')" title="Retracements de Fibonacci">🌀</div>
+        <div class="at-tool" id="atToolPitch" onclick="atSetDraw('pitch')" title="Pitchfork d'Andrews">⑂</div>
         <div class="at-tool-sep"></div>
-        <div class="at-tool" id="atToolText" onclick="atSetDraw('text')" title="Texte">T</div>
+        <div class="at-tool" id="atToolText" onclick="atSetDraw('text')" title="Annotation texte">T</div>
         <div class="at-tool-sep"></div>
-        <div class="at-tool" style="color:var(--red)" onclick="atClearDrawings()" title="Effacer">🗑</div>
+        <div class="at-tool" style="color:var(--red)" onclick="atClearDrawings()" title="Effacer tous les dessins">🗑</div>
       </div>
 
       <!-- CENTRE -->
@@ -479,13 +480,13 @@
         <!-- OHLCV BAR -->
         <div class="at-ohlc" id="atOHLC">
           <span style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600" id="atOhlcTicker">—</span>
-          <div class="ohlc-item"><span class="ohlc-lbl">O</span><span class="ohlc-v" id="atO">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">H</span><span class="ohlc-v up" id="atH">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">L</span><span class="ohlc-v down" id="atL">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">C</span><span class="ohlc-v" id="atC">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">Vol</span><span class="ohlc-v" style="color:var(--dim)" id="atV">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">Var</span><span class="ohlc-v" id="atVar">—</span></div>
-          <div class="ohlc-item" style="margin-left:auto"><span class="ohlc-lbl">Dernière MAJ</span><span class="ohlc-v" style="color:var(--dim);font-size:10px" id="atLastUpdate">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Ouverture</span><span class="ohlc-v" id="atO">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Plus Haut</span><span class="ohlc-v up" id="atH">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Plus Bas</span><span class="ohlc-v down" id="atL">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Clôture</span><span class="ohlc-v" id="atC">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Volume</span><span class="ohlc-v" style="color:var(--dim)" id="atV">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Variation</span><span class="ohlc-v" id="atVar">—</span></div>
+          <div class="ohlc-item" style="margin-left:auto"><span class="ohlc-lbl">Dernière Mise à Jour</span><span class="ohlc-v" style="color:var(--dim);font-size:10px" id="atLastUpdate">—</span></div>
         </div>
 
         <!-- CHART PRINCIPAL -->
