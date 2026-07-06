@@ -202,7 +202,8 @@ function validateRow(row, lineIndex, config) {
         errors.push("Ligne " + lineIndex + " : le " + idField + " est vide.");
         display[idField] = '';
     } else {
-        cleaned[idField] = String(idVal).trim();
+        // ✅ CORRECTION : forcer en majuscules
+        cleaned[idField] = String(idVal).trim().toUpperCase();
         display[idField] = cleaned[idField];
     }
 
@@ -359,20 +360,23 @@ async function showPreview(templateKey, rows) {
     }
 }
 
+// ✅ CORRECTION : charger toutes les entreprises sans URL trop longue
 async function verifyTickers(tickers) {
     if (!tickers.length) return { ok: true, missing: [] };
     // Dédoublonner et normaliser en majuscules
     var uniqueTickers = [...new Set(tickers.map(function(t){ return String(t).trim().toUpperCase(); }))];
-    // Charger TOUTES les entreprises (il n'y en a que ~47, requête légère)
+    // Charger toutes les entreprises (il n'y en a que ~47, requête légère)
     var rows = await sbGet('entreprises', 'select=ticker');
     var found = new Set((rows || []).map(function(r){ return String(r.ticker).trim().toUpperCase(); }));
     var missing = uniqueTickers.filter(function(t){ return !found.has(t); });
     return { ok: missing.length === 0, missing: missing };
 }
 
+// ✅ CORRECTION : forcer les tickers créés en majuscules
 async function createMissingTickers(missing) {
     var body = missing.map(function(t){
-        return { ticker: t, nom: t, pays: '', secteur: '', compartiment: 'PRINCIPAL' };
+        var ticker = String(t).trim().toUpperCase();
+        return { ticker: ticker, nom: ticker, pays: '', secteur: '', compartiment: 'PRINCIPAL' };
     });
     var r = await sbPost('entreprises', body, 'ticker');
     return r !== null;
