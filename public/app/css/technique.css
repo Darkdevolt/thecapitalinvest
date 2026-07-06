@@ -209,3 +209,125 @@
   .global-search { max-width: 130px; }
   .nav-dropdown-menu { min-width: 180px; }
 }
+/* ═══════════════════════════════════════════════════════════════════════
+   CSS COMPLEMENTAIRE — Couches 6 & 7
+   A ajouter dans ton fichier CSS principal (app.css ou technique.css)
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Info Agregation (Couche 6) ── */
+#atAggInfo {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 8, 4, 0.85);
+  border: 1px solid rgba(184, 150, 78, 0.2);
+  border-radius: 6px;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--dim);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+/* ── Tooltip enrichi (Couche 7) ── */
+#atTooltip {
+  position: absolute;
+  background: rgba(10, 8, 4, 0.95);
+  border: 1px solid rgba(184, 150, 78, 0.25);
+  border-radius: 10px;
+  padding: 12px;
+  color: var(--cream);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  z-index: 100;
+  pointer-events: none;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
+  max-width: 220px;
+  backdrop-filter: blur(8px);
+}
+
+/* ── Status de dessin (Couche 7) ── */
+#atDrawStatus {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(10, 8, 4, 0.9);
+  border: 1px solid rgba(184, 150, 78, 0.3);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 12px;
+  color: var(--gold);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  animation: atPulse 2s ease-in-out infinite;
+}
+
+@keyframes atPulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+/* ── Barre de navigation zoom/pan (optionnel) ── */
+.at-nav-bar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  background: rgba(10, 8, 4, 0.85);
+  border: 1px solid rgba(184, 150, 78, 0.2);
+  border-radius: 10px;
+  padding: 6px;
+  z-index: 50;
+  backdrop-filter: blur(8px);
+}
+
+.at-nav-btn {
+  background: transparent;
+  border: none;
+  color: var(--cream);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.at-nav-btn:hover {
+  background: rgba(184, 150, 78, 0.15);
+}
+
+.at-nav-sep {
+  width: 1px;
+  background: rgba(184, 150, 78, 0.15);
+  margin: 4px 2px;
+}
+
+/* ── Overlay canvas pour preview ── */
+#cvOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ── Animation de transition entre tickers ── */
+#atWrap {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+/* ── Curseurs personnalises pour les outils ── */
+.at-tool-hline { cursor: row-resize !important; }
+.at-tool-trend { cursor: crosshair !important; }
+.at-tool-text  { cursor: text !important; }
