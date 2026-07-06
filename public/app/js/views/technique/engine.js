@@ -136,7 +136,7 @@ function atAggregate(data, interval) {
   return Object.values(buckets);
 }
 
-// ── Formatage dates avec année ──
+// ── Formatage dates avec année complète ──
 function atFmtDate(dateStr, interval) {
   const d = new Date(dateStr);
   if (interval === 'monthly') return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
@@ -160,42 +160,40 @@ function _atDraw() {
   const lows = data.map(d => d.l);
   const vols = data.map(d => d.v);
 
-  // Heikin-Ashi
   let drawO = opens, drawH = highs, drawL = lows, drawC = closes;
   if (AT.type === 'ha') {
     const ha = atHeikinAshi(opens, highs, lows, closes);
     drawO = ha.o; drawH = ha.h; drawL = ha.l; drawC = ha.c;
   }
 
-  // Mise à jour OHLCV bar
   const last = data[data.length - 1];
   const prev = data[data.length - 2];
   const curCours = allCours.find(c => c.ticker === AT.ticker);
   const liveC = curCours ? +curCours.cours : last.c;
   const liveVar = curCours ? +curCours.variation : (prev ? ((last.c - prev.c) / prev.c * 100) : 0);
   const varColor = liveVar >= 0 ? '#4ADE80' : '#F87171';
-  document.getElementById('atO').textContent = fmt(last.o); document.getElementById('atO').style.color = '';
+
+  // Labels complets + format volume lisible
+  document.getElementById('atO').textContent = fmt(last.o); 
+  document.getElementById('atO').style.color = '';
   document.getElementById('atH').textContent = fmt(last.h);
   document.getElementById('atL').textContent = fmt(last.l);
-  document.getElementById('atC').textContent = fmt(liveC); document.getElementById('atC').style.color = liveVar >= 0 ? '#4ADE80' : '#F87171';
-  document.getElementById('atV').textContent = fmt(last.v);
+  document.getElementById('atC').textContent = fmt(liveC); 
+  document.getElementById('atC').style.color = liveVar >= 0 ? '#4ADE80' : '#F87171';
+  document.getElementById('atV').textContent = fmtVol(last.v);
   document.getElementById('atVar').innerHTML = `<span style="color:${varColor}">${liveVar >= 0 ? '+' : ''}${liveVar.toFixed(2)}%</span>`;
-  document.getElementById('atLastUpdate').textContent = fmtDate(last.date);
+  document.getElementById('atLastUpdate').textContent = fmtDateFull(last.date);
 
-  // Plage de prix
   let minP = Math.min(...drawL.filter(v => v > 0)), maxP = Math.max(...drawH);
   const inds = AT.activeInds;
-  // Étendre pour les indicateurs sur-graphe
   if (inds.bb.on) { const bb = atBB(closes); bb.forEach(b => { if(b.upper) maxP = Math.max(maxP, b.upper); if(b.lower) minP = Math.min(minP, b.lower); }); }
   const pad = (maxP - minP) * 0.05;
   minP -= pad; maxP += pad;
 
-  // Canvas main
   atDrawCanvas('cvMain', (ctx, W, H) => {
     _atDrawMain(ctx, W, H, data, drawO, drawH, drawL, drawC, vols, closes, opens, highs, lows, minP, maxP);
   });
 
-  // Sous-panneaux
   if (inds.vol.on) atDrawCanvas('cvVol', (ctx, W, H) => _atDrawVol(ctx, W, H, data, vols, drawC, drawO));
   if (inds.rsi.on) { document.getElementById('subRSI').style.display = ''; atDrawCanvas('cvRSI', (ctx, W, H) => _atDrawRSI(ctx, W, H, closes)); }
   if (inds.macd.on) { document.getElementById('subMACD').style.display = ''; atDrawCanvas('cvMACD', (ctx, W, H) => _atDrawMACD(ctx, W, H, closes)); }
@@ -204,7 +202,6 @@ function _atDraw() {
   if (inds.cci.on) { document.getElementById('subCCI').style.display = ''; atDrawCanvas('cvCCI', (ctx, W, H) => _atDrawCCI(ctx, W, H, highs, lows, closes)); }
   if (inds.obv.on) { document.getElementById('subOBV').style.display = ''; atDrawCanvas('cvOBV', (ctx, W, H) => _atDrawOBV(ctx, W, H, closes, vols)); }
 
-  // Axes
   atDrawAxisY(minP, maxP);
   atDrawAxisX(data);
   atDrawLegend(closes, highs, lows, vols);
@@ -212,7 +209,6 @@ function _atDraw() {
   atUpdateActiveInds(closes, highs, lows, vols);
   atUpdateIndexBar();
 
-  // Price tag
   const tag = document.getElementById('atPriceTag');
   const mainEl = document.getElementById('atMainChart');
   const H = mainEl.clientHeight;
@@ -262,13 +258,11 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
 
   const inds = AT.activeInds;
 
-  // Ichimoku
   if (inds.ichimoku.on && closes.length >= 52) {
     const tenkan = closes.map((_, i) => i < 8 ? null : (Math.max(...rawH.slice(i-8,i+1)) + Math.min(...rawL.slice(i-8,i+1)))/2);
     const kijun = closes.map((_, i) => i < 25 ? null : (Math.max(...rawH.slice(i-25,i+1)) + Math.min(...rawL.slice(i-25,i+1)))/2);
     const senkA = tenkan.map((v,i) => v && kijun[i] ? (v+kijun[i])/2 : null);
     const senkB = closes.map((_, i) => i < 51 ? null : (Math.max(...rawH.slice(i-51,i+1))+Math.min(...rawL.slice(i-51,i+1)))/2);
-    // Kumo cloud
     ctx.globalAlpha = 0.12;
     for (let i = 1; i < n; i++) {
       if (!senkA[i] || !senkB[i]) continue;
@@ -289,7 +283,6 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
     });
   }
 
-  // BB
   if (inds.bb.on) {
     const bb = atBB(closes);
     ['upper','lower'].forEach(k => {
@@ -302,14 +295,12 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
     ctx.beginPath(); bb.forEach((b,i) => { if(!b.mid) return; i===0||!bb[i-1].mid?ctx.moveTo(scX(i),scY(b.mid)):ctx.lineTo(scX(i),scY(b.mid)); }); ctx.stroke();
   }
 
-  // VWAP
   if (inds.vwap.on) {
     const vw = atVWAP(closes, vols);
     ctx.strokeStyle = '#e879f9'; ctx.lineWidth = 1.5; ctx.setLineDash([5,4]);
     ctx.beginPath(); vw.forEach((v,i) => i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v))); ctx.stroke(); ctx.setLineDash([]);
   }
 
-  // SMAs / EMAs
   const maConf = [
     ['sma20',()=>atSMA(closes,20)],['sma50',()=>atSMA(closes,50)],['sma200',()=>atSMA(closes,200)],
     ['ema12',()=>atEMA(closes,12)],['ema26',()=>atEMA(closes,26)],
@@ -323,7 +314,6 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
     ctx.stroke();
   });
 
-  // Compare overlay
   if (AT.compareData && AT.compareData.length) {
     const cd = AT.compareData.slice(-n);
     const cMin = Math.min(...cd.map(d=>d.c)), cMax = Math.max(...cd.map(d=>d.c));
@@ -336,7 +326,6 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
     ctx.stroke();
   }
 
-  // Chandeliers / ligne / barres
   if (AT.type === 'line' || AT.type === 'area') {
     if (AT.type === 'area') {
       const grad = ctx.createLinearGradient(0,0,0,H);
@@ -346,9 +335,7 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
       c.forEach((v,i) => ctx.lineTo(scX(i), scY(v)));
       ctx.lineTo(scX(n-1), H); ctx.lineTo(scX(0), H); ctx.closePath(); ctx.fill();
     }
-    // LIGNE PRINCIPALE — couleur visible + glow
     ctx.strokeStyle = '#B8964E'; ctx.lineWidth = 2.5;
-    // Glow effect
     ctx.shadowColor = 'rgba(184,150,78,0.4)';
     ctx.shadowBlur = 6;
     ctx.beginPath(); c.forEach((v,i) => i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v))); ctx.stroke();
@@ -362,7 +349,6 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
       ctx.beginPath(); ctx.moveTo(x, scY(c[i])); ctx.lineTo(x + cw*0.4, scY(c[i])); ctx.stroke();
     }
   } else {
-    // Candles (normal ou HA)
     for (let i = 0; i < n; i++) {
       const up = c[i] >= o[i]; const x = scX(i);
       const bullC = '#26a69a', bearC = '#ef5350';
@@ -374,10 +360,8 @@ function _atDrawMain(ctx, W, H, data, o, h, l, c, vols, closes, rawO, rawH, rawL
     }
   }
 
-  // Dessins
   AT.draws.forEach(draw => atRenderDraw(ctx, draw, scX, scY, W, H));
 
-  // Dernière séance ligne pointillée
   const lx = scX(n-1);
   ctx.strokeStyle = 'rgba(184,150,78,0.3)'; ctx.lineWidth = 0.5; ctx.setLineDash([4,4]);
   ctx.beginPath(); ctx.moveTo(lx, 0); ctx.lineTo(lx, H); ctx.stroke(); ctx.setLineDash([]);
@@ -398,7 +382,7 @@ function _atDrawVol(ctx, W, H, data, vols, c, o) {
   ctx.strokeStyle = 'rgba(184,150,78,0.6)'; ctx.lineWidth = 1;
   ctx.beginPath(); smaV.forEach((v,i)=>{ if(!v) return; const y=H-(v/maxV)*(H-8); i===0?ctx.moveTo(scX(i),y):ctx.lineTo(scX(i),y); }); ctx.stroke();
   const lastV = vols[vols.length-1];
-  document.getElementById('lblVol').textContent = `Volume · ${fmt(lastV)}`;
+  document.getElementById('lblVol').textContent = `Volume · ${fmtVol(lastV)}`;
 }
 
 function _atDrawRSI(ctx, W, H, closes) {
