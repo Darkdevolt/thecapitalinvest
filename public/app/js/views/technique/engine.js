@@ -112,39 +112,176 @@ function atExtract(raw) {
   })).filter(d => d.c > 0);
 }
 
+/**
+ * Agregation des donnees historiques avec tracabilite complete.
+ * 
+ * PRINCIPE EDUCATIF pour le debutant :
+ * ─────────────────────────────────────
+ * Daily    : 1 bougie = 1 jour de cotation
+ * Weekly   : 1 bougie = 1 semaine (lundi-vendredi)
+ *            -> Open = cours d'ouverture du lundi
+ *            -> High = plus haut de la semaine
+ *            -> Low  = plus bas de la semaine
+ *            -> Close = cours de cloture du vendredi
+ *            -> Volume = somme des volumes de la semaine
+ * Monthly  : 1 bougie = 1 mois calendaire
+ *            -> Meme logique que Weekly sur le mois entier
+ */
 function atAggregate(data, interval) {
-  if (interval === 'daily') return data;
+  // ── Cas Daily : pas d'agregation ──
+  if (interval === 'daily') {
+    AT._lastAggMeta = {
+      interval: 'daily',
+      candles: data.length,
+      sourceCandles: data.length,
+      compression: 1,
+      description: 'Chaque bougie represente une seance de cotation',
+      periodLabel: 'seance'
+    };
+    return data;
+  }
+
+  // ── Bucketisation par periode ──
   const buckets = {};
+
   data.forEach(d => {
-    const dt = new Date(d.date);
-    let key;
+    const dt = new Date(d.date + 'T00:00:00'); // Force timezone neutre
+    let key, label, weekStart, weekEnd;
+
     if (interval === 'weekly') {
-      const day = dt.getDay() || 7;
-      const mon = new Date(dt); mon.setDate(dt.getDate() - day + 1);
-      key = mon.toISOString().slice(0, 10);
+      // Trouver le lundi de la semaine
+      const dayOfWeek = dt.getDay(); // 0=Dim, 1=Lun, ..., 6=Sam
+      const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      const monday = new Date(dt);
+      monday.setDate(dt.getDate() - daysToMonday);
+
+      const friday = new Date(monday);
+      friday.setDate(monday.getDate() + 4);
+
+      key = monday.toISOString().slice(0, 10);
+      weekStart = monday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      weekEnd = friday.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+      label = 'Sem. ' + weekStart + '-' + weekEnd;
+
+    } else if (interval === 'monthly') {
+      const year = dt.getFullYear();
+      const month = dt.getMonth(); // 0-11
+      const monthName = new Date(year, month).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
+      key = year + '-' + String(month + 1).padStart(2, '0');
+      label = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+
     } else {
-      key = d.date.slice(0, 7);
+      // Fallback securise
+      key = d.date;
+      label = d.date;
     }
-    if (!buckets[key]) buckets[key] = { ...d, date: key };
-    else {
-      buckets[key].h = Math.max(buckets[key].h, d.h);
-      buckets[key].l = Math.min(buckets[key].l, d.l);
-      buckets[key].c = d.c;
-      buckets[key].v += d.v;
+
+    // ── Creation ou mise a jour du bucket ──
+    if (!buckets[key]) {
+      buckets[key] = {
+        date: key,
+        label: label,
+        o: d.o,
+        h: d.h,
+        l: d.l,
+        c: d.c,
+        v: d.v,
+        // Metadonnees internes pour debug/education
+        _firstDate: d.date,
+        _lastDate: d.date,
+        _count: 1,
+        _dates: [d.date]
+      };
+    } else {
+      const b = buckets[key];
+      b.h = Math.max(b.h, d.h);
+      b.l = Math.min(b.l, d.l);
+      b.c = d.c; // Cloture = dernier cours de la periode
+      b.v += d.v;
+      b._lastDate = d.date;
+      b._count += 1;
+      b._dates.push(d.date);
     }
   });
-  return Object.values(buckets);
+
+  const result = Object.values(buckets);
+
+  // ── Metadonnees pour l'UI educative ──
+  const compression = result.length > 0 ? Math.round(data.length / result.length * 10) / 10 : 1;
+
+  AT._lastAggMeta = {
+    interval: interval,
+    candles: result.length,
+    sourceCandles: data.length,
+    compression: compression,
+    description: interval === 'weekly' 
+      ? 'Chaque bougie regroupe ' + compression + ' seances (1 semaine)'
+      : interval === 'monthly'
+      ? 'Chaque bougie regroupe ~' + Math.round(compression) + ' seances (1 mois)'
+      : "Pas d'agregation",
+    periodLabel: interval === 'weekly' ? 'semaine' : interval === 'monthly' ? 'mois' : 'seance'
+  };
+
+  return result;
 }
 
-// ── Formatage dates avec année complète ──
+// ── Formatage des dates avec annee complete et contexte agregation ──
 function atFmtDate(dateStr, interval) {
-  const d = new Date(dateStr);
-  if (interval === 'monthly') return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-  if (interval === 'weekly') return 'S' + Math.ceil(d.getDate() / 7) + ' ' + d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
-  return d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+  if (!dateStr) return '—';
+
+  const d = new Date(dateStr + 'T00:00:00');
+
+  if (interval === 'monthly') {
+    return d.toLocaleDateString('fr-FR', { 
+      month: 'short', 
+      year: 'numeric' 
+    });
+  }
+
+  if (interval === 'weekly') {
+    // Format: "S3 nov. 2024" (Semaine 3 de novembre)
+    const weekNum = Math.ceil(d.getDate() / 7);
+    const monthYear = d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
+    return 'S' + weekNum + ' ' + monthYear;
+  }
+
+  // Daily — format complet
+  return d.toLocaleDateString('fr-FR', { 
+    day: '2-digit', 
+    month: 'short', 
+    year: 'numeric' 
+  });
 }
 
-// ── RENDU PRINCIPAL ──
+// ── Affichage de l'info agregation dans l'UI ──
+function atShowAggInfo() {
+  const meta = AT._lastAggMeta;
+  const el = document.getElementById('atAggInfo');
+
+  if (!el || !meta) return;
+
+  if (meta.interval === 'daily') {
+    el.style.display = 'none';
+    return;
+  }
+
+  const icon = meta.interval === 'weekly' ? '📅' : '📆';
+  el.innerHTML = icon + ' ' + meta.candles + ' ' + meta.periodLabel + 's · ' + meta.description;
+  el.style.display = 'block';
+  el.title = 'Agregation : ' + meta.sourceCandles + ' seances -> ' + meta.candles + ' ' + meta.periodLabel + 's';
+}
+
+// ── Helper pour le tooltip : recuperer la vraie date source ──
+function atGetSourceDate(bucket, interval) {
+  if (interval === 'daily') return bucket.date;
+  if (bucket._dates && bucket._dates.length > 0) {
+    return bucket._dates[bucket._dates.length - 1]; // Derniere date du bucket
+  }
+  return bucket.date;
+}
+
+
 function atRender() {
   if (AT.rafId) cancelAnimationFrame(AT.rafId);
   AT.rafId = requestAnimationFrame(_atDraw);
@@ -208,6 +345,8 @@ function _atDraw() {
   atUpdateSignals(closes, highs, lows, vols, liveVar, liveC);
   atUpdateActiveInds(closes, highs, lows, vols);
   atUpdateIndexBar();
+
+  atShowAggInfo();
 
   const tag = document.getElementById('atPriceTag');
   const mainEl = document.getElementById('atMainChart');
@@ -494,3 +633,4 @@ function _atDrawOBV(ctx, W, H, c, v) {
   const fmtObv=v=>{ const a=Math.abs(v); return a>=1e6?(v/1e6).toFixed(1)+'M':a>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0); };
   document.getElementById('lblOBV').textContent=`OBV · ${fmtObv(obv[n-1]||0)}`;
 }
+)
