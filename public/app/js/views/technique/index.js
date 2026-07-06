@@ -4,21 +4,21 @@
 
 // AT Configuration Object
 const AT = {
-  ticker: '', type: 'candle', period: 60, interval: 'daily',
+  ticker: '', type: 'line', period: 60, interval: 'daily',
   hist: [], draws: [], drawMode: 'cursor',
   trendPts: [], channelPts: [], rectPts: [],
   zoom: { start: 0, end: 1 }, panning: false, panStart: 0, panZoomStart: null,
   focus: false,
   activeInds: {
-    sma20: { on: true, color: '#60a5fa', label: 'SMA 20', sub: null },
-    sma50: { on: true, color: '#f87171', label: 'SMA 50', sub: null },
+    sma20: { on: false, color: '#60a5fa', label: 'SMA 20', sub: null },
+    sma50: { on: false, color: '#f87171', label: 'SMA 50', sub: null },
     sma200: { on: false, color: '#a78bfa', label: 'SMA 200', sub: null },
     ema12: { on: false, color: '#4ade80', label: 'EMA 12', sub: null },
     ema26: { on: false, color: '#fb923c', label: 'EMA 26', sub: null },
-    bb: { on: true, color: 'rgba(184,150,78,0.5)', label: 'Bollinger (20)', sub: null },
+    bb: { on: false, color: 'rgba(184,150,78,0.5)', label: 'Bollinger (20)', sub: null },
     vwap: { on: false, color: '#e879f9', label: 'VWAP', sub: null },
     ichimoku: { on: false, color: '#06b6d4', label: 'Ichimoku', sub: null },
-    vol: { on: true, color: '#4ade80', label: 'Volume', sub: 'subVol' },
+    vol: { on: false, color: '#4ade80', label: 'Volume', sub: 'subVol' },
     rsi: { on: false, color: '#fb923c', label: 'RSI (14)', sub: 'subRSI' },
     macd: { on: false, color: '#60a5fa', label: 'MACD', sub: 'subMACD' },
     stoch: { on: false, color: '#e879f9', label: 'Stochastique', sub: 'subStoch' },
@@ -142,6 +142,10 @@ function atInit() {
   const tickers = Object.keys(byTicker).sort();
   const sel = document.getElementById('atTicker');
   if(sel) sel.innerHTML='<option value="">Ticker...</option>'+tickers.map(t=>`<option value="${t}">${t}</option>`).join('');
+
+  // Sélectionner "Ligne" par défaut dans l'UI
+  document.getElementById('atBtnLine')?.classList.add('on');
+
   atInitCrosshair();
   atUpdateWatchlist();
   // Observer redimensionnement
