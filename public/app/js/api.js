@@ -173,7 +173,7 @@ async function loadAll() {
       sb('financials', { order: 'annee.desc,periode.desc', limit: 500 }),
       sb('entreprises', { limit: 500 }),
       sb('indices', { order: 'date_seance.desc', limit: 90 }),
-      sb('historique', { order: 'date_seance.asc' })
+      // sb('historique', { order: 'date_seance.desc', limit: 5000 })
     ]);
 
     if (results[0].status === 'fulfilled') allCours = results[0].value || [];
