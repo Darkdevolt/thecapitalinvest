@@ -360,6 +360,7 @@ function _atDraw() {
     tag.style.color = '#0A0804';
     tag.textContent = fmt(liveC);
   } else { tag.style.display = 'none'; }
+  atDrawNav();
 }
 
 function atDrawCanvas(id, fn) {
@@ -633,6 +634,7 @@ function _atDrawOBV(ctx, W, H, c, v) {
   const fmtObv=v=>{ const a=Math.abs(v); return a>=1e6?(v/1e6).toFixed(1)+'M':a>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0); };
   document.getElementById('lblOBV').textContent=`OBV · ${fmtObv(obv[n-1]||0)}`;
 }
+
 // ═══════════════════════════════════════
 // AT — Navigation Bar (Mini Overview)
 // ═══════════════════════════════════════
@@ -666,7 +668,6 @@ function atDrawNav() {
   const maxC = Math.max(...closes);
   const rng = maxC - minC || 1;
 
-  // Dessiner la ligne d'aperçu complète
   ctx.strokeStyle = 'rgba(184,150,78,0.25)';
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -677,21 +678,17 @@ function atDrawNav() {
   });
   ctx.stroke();
 
-  // Zone de sélection (zoom actuel)
   const selX = AT.zoom.start * W;
   const selW = (AT.zoom.end - AT.zoom.start) * W;
 
-  // Fond extérieur (assombri)
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.fillRect(0, 0, selX, H);
   ctx.fillRect(selX + selW, 0, W - selX - selW, H);
 
-  // Bordures de la sélection
   ctx.strokeStyle = 'rgba(184,150,78,0.8)';
   ctx.lineWidth = 1;
   ctx.strokeRect(selX, 2, selW, H - 4);
 
-  // Handles de resize (gauche / droite)
   const handleW = 6;
   ctx.fillStyle = 'rgba(184,150,78,0.9)';
   ctx.fillRect(selX - handleW/2, H/2 - 8, handleW, 16);
@@ -713,7 +710,7 @@ function atInitNav() {
     const x = getX(e);
     const selX = AT.zoom.start;
     const selW = AT.zoom.end - AT.zoom.start;
-    const edge = 0.02; // 2% de marge pour les handles
+    const edge = 0.02;
 
     if (Math.abs(x - selX) < edge) {
       navResizeL = true;
