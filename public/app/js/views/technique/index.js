@@ -88,22 +88,20 @@ async function atLoadTicker() {
 
   let raw = [];
 
-  // 1. PRIORITÉ : utiliser allCoursHistorique déjà chargé par loadAll()
   if (typeof allCoursHistorique !== 'undefined' && Array.isArray(allCoursHistorique) && allCoursHistorique.length > 0) {
     raw = allCoursHistorique.filter(h => h.ticker === ticker);
     console.log(`[AT] ${raw.length} points depuis allCoursHistorique pour ${ticker}`);
   }
 
-  // 2. Fallback : cache local
   if (!raw.length && AT.histCache[ticker]) {
     raw = AT.histCache[ticker];
     console.log(`[AT] ${raw.length} points depuis cache pour ${ticker}`);
   }
 
-  // 3. Dernier recours : requête AJAX
   if (!raw.length) {
     try {
-      raw = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc' });
+      raw = await sb('historique', { ticker: `eq.${ticker}`, order: 'date_seance.desc', limit: 3000 });
+      if (Array.isArray(raw)) raw = raw.reverse();
       if (Array.isArray(raw) && raw.length) {
         AT.histCache[ticker] = raw;
         console.log(`[AT] ${raw.length} points depuis API pour ${ticker}`);
@@ -111,7 +109,7 @@ async function atLoadTicker() {
         console.warn(`[AT] API historique vide pour ${ticker}`);
       }
     } catch(e) {
-      console.error(`[AT] Erreur API historique pour ${ticker}:`, e);
+      console.error(`[AT] Erreur API historique:`, e);
       toast('Historique indisponible : ' + e.message, 'error');
       raw = [];
     }
@@ -119,23 +117,12 @@ async function atLoadTicker() {
 
   AT.hist = atExtract(Array.isArray(raw) ? raw : []);
 
-  // Fallback ultime : cours actuel depuis allCours
   if (!AT.hist.length) {
     const cur = allCours.find(c => c.ticker === ticker);
     if (cur) {
-      AT.hist = [{ 
-        date: cur.date_seance || new Date().toISOString().slice(0,10), 
-        o: +cur.cours, 
-        h: +cur.cours, 
-        l: +cur.cours, 
-        c: +cur.cours, 
-        v: +cur.volume || 0 
-      }];
+      AT.hist = [{ date: cur.date_seance || new Date().toISOString().slice(0,10), o: +cur.cours, h: +cur.cours, l: +cur.cours, c: +cur.cours, v: +cur.volume || 0 }];
       toast('Historique limité — cours actuel uniquement', 'warn');
-    } else { 
-      toast('Aucune donnée pour ' + ticker, 'error'); 
-      return; 
-    }
+    } else { toast('Aucune donnée pour ' + ticker, 'error'); return; }
   }
 
   atRender();
@@ -208,6 +195,7 @@ function atInit() {
   document.getElementById('atBtnLine')?.classList.add('on');
 
   atInitCrosshair();
+  atInitNav();
   atUpdateWatchlist();
   const ro = new ResizeObserver(() => { if(AT.hist.length) atRender(); });
   const wrap = document.getElementById('atWrap');
