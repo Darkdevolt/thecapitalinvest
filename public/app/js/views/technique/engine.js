@@ -633,3 +633,119 @@ function _atDrawOBV(ctx, W, H, c, v) {
   const fmtObv=v=>{ const a=Math.abs(v); return a>=1e6?(v/1e6).toFixed(1)+'M':a>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0); };
   document.getElementById('lblOBV').textContent=`OBV · ${fmtObv(obv[n-1]||0)}`;
 }
+// ═══════════════════════════════════════
+// AT — Navigation Bar (Mini Overview)
+// ═══════════════════════════════════════
+
+let navDragging = false;
+let navResizeL = false;
+let navResizeR = false;
+let navStartX = 0;
+let navStartZoom = null;
+
+function atDrawNav() {
+  const el = document.getElementById('cvNav');
+  const wrap = document.getElementById('atNavWrap');
+  if (!el || !wrap || !AT.hist.length) return;
+
+  const W = wrap.clientWidth;
+  const H = 48;
+  const dpr = window.devicePixelRatio || 1;
+  if (el.width !== W * dpr || el.height !== H * dpr) {
+    el.width = W * dpr; el.height = H * dpr;
+    el.style.width = W + 'px'; el.style.height = H + 'px';
+  }
+  const ctx = el.getContext('2d');
+  ctx.save(); ctx.scale(dpr, dpr);
+  ctx.clearRect(0, 0, W, H);
+
+  const data = AT.hist;
+  const n = data.length;
+  const closes = data.map(d => d.c);
+  const minC = Math.min(...closes);
+  const maxC = Math.max(...closes);
+  const rng = maxC - minC || 1;
+
+  // Dessiner la ligne d'aperçu complète
+  ctx.strokeStyle = 'rgba(184,150,78,0.25)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  data.forEach((d, i) => {
+    const x = (i / (n - 1 || 1)) * W;
+    const y = H - ((d.c - minC) / rng) * (H - 8) - 4;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Zone de sélection (zoom actuel)
+  const selX = AT.zoom.start * W;
+  const selW = (AT.zoom.end - AT.zoom.start) * W;
+
+  // Fond extérieur (assombri)
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.fillRect(0, 0, selX, H);
+  ctx.fillRect(selX + selW, 0, W - selX - selW, H);
+
+  // Bordures de la sélection
+  ctx.strokeStyle = 'rgba(184,150,78,0.8)';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(selX, 2, selW, H - 4);
+
+  // Handles de resize (gauche / droite)
+  const handleW = 6;
+  ctx.fillStyle = 'rgba(184,150,78,0.9)';
+  ctx.fillRect(selX - handleW/2, H/2 - 8, handleW, 16);
+  ctx.fillRect(selX + selW - handleW/2, H/2 - 8, handleW, 16);
+
+  ctx.restore();
+}
+
+function atInitNav() {
+  const el = document.getElementById('cvNav');
+  if (!el) return;
+
+  const getX = e => {
+    const rect = el.getBoundingClientRect();
+    return (e.clientX - rect.left) / rect.width;
+  };
+
+  el.addEventListener('mousedown', e => {
+    const x = getX(e);
+    const selX = AT.zoom.start;
+    const selW = AT.zoom.end - AT.zoom.start;
+    const edge = 0.02; // 2% de marge pour les handles
+
+    if (Math.abs(x - selX) < edge) {
+      navResizeL = true;
+    } else if (Math.abs(x - (selX + selW)) < edge) {
+      navResizeR = true;
+    } else if (x >= selX && x <= selX + selW) {
+      navDragging = true;
+    }
+    navStartX = x;
+    navStartZoom = { ...AT.zoom };
+  });
+
+  window.addEventListener('mousemove', e => {
+    if (!navDragging && !navResizeL && !navResizeR) return;
+    const x = getX(e);
+    const dx = x - navStartX;
+    const zs = navStartZoom.start;
+    const ze = navStartZoom.end;
+
+    if (navDragging) {
+      AT.zoom.start = Math.max(0, Math.min(1 - (ze - zs), zs + dx));
+      AT.zoom.end = AT.zoom.start + (ze - zs);
+    } else if (navResizeL) {
+      AT.zoom.start = Math.max(0, Math.min(ze - 0.05, zs + dx));
+    } else if (navResizeR) {
+      AT.zoom.end = Math.min(1, Math.max(zs + 0.05, ze + dx));
+    }
+    atRender();
+    atDrawNav();
+  });
+
+  window.addEventListener('mouseup', () => {
+    navDragging = false; navResizeL = false; navResizeR = false;
+  });
+}
