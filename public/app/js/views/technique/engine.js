@@ -633,4 +633,3 @@ function _atDrawOBV(ctx, W, H, c, v) {
   const fmtObv=v=>{ const a=Math.abs(v); return a>=1e6?(v/1e6).toFixed(1)+'M':a>=1e3?(v/1e3).toFixed(0)+'k':v.toFixed(0); };
   document.getElementById('lblOBV').textContent=`OBV · ${fmtObv(obv[n-1]||0)}`;
 }
-)
