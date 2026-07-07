@@ -17,7 +17,12 @@ AT.indParams = AT.indParams || {};
 function atGetIndParam(key, subKey) {
   return AT.indParams[key]?.[subKey] ?? IND_PARAMS[key.split(/\d+/)[0]]?.defaultPeriod ?? 14;
 }
-
+function atGetIndParam(key) {
+  if (!AT || !AT.activeInds) return { on: false, color: '#ccc', label: key };
+  const ind = AT.activeInds[key];
+  if (!ind) return { on: false, color: '#ccc', label: key };
+  return ind;
+}
 function atSetIndParam(key, subKey, val) {
   AT.indParams[key] = AT.indParams[key] || {};
   AT.indParams[key][subKey] = parseInt(val);
