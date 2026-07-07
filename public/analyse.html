@@ -429,6 +429,7 @@
 
   .mini-tag { font-family: var(--mono); font-size: 10.5px; color: var(--dim); border: 1px solid var(--border2); border-radius: 6px; padding: 2px 7px; }
 </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -501,6 +502,11 @@
       <div class="card-body">
         <div class="chart-container" style="height:300px">
           <canvas id="chartGraph"></canvas>
+        </div>
+        <!-- Barre de navigation historique -->
+        <div id="navWrap" style="position:relative;height:48px;margin-top:8px;border-top:1px solid var(--border);cursor:crosshair;">
+          <canvas id="chartNav"></canvas>
+          <div id="navOverlay" style="position:absolute;top:0;bottom:0;background:rgba(184,150,78,0.15);border:1px solid var(--gold);border-radius:4px;pointer-events:none;transition:left 0.1s,width 0.1s;"></div>
         </div>
       </div>
     </div>
@@ -782,14 +788,19 @@
 
     if (!tickerHistorique[ticker]) {
       try {
-        const hist = await sbQuery('historique', { ticker: `eq.${ticker}`, order: 'date_seance.asc', limit: 252 });
-        tickerHistorique[ticker] = hist || [];
-      } catch {
+        const hist = await sbQuery('historique', { ticker: `eq.${ticker}`, order: 'date_seance.desc', limit: 3000 });
+        let arr = Array.isArray(hist) ? hist : [];
+        arr.reverse(); // remettre en ordre chronologique croissant
+        tickerHistorique[ticker] = arr;
+        console.log(`[Analyse] ${arr.length} points historiques chargés pour ${ticker}`);
+      } catch(e) {
+        console.warn(`[Analyse] Erreur chargement historique ${ticker}:`, e);
         tickerHistorique[ticker] = generateDemoHistorique(ticker, c.cours || 5000);
       }
       if (!tickerHistorique[ticker].length) tickerHistorique[ticker] = generateDemoHistorique(ticker, c.cours || 5000);
     }
     renderGraphChart();
+    renderNavChart();
     renderTechnique();
     if (window.renderAdvancedIndicators) renderAdvancedIndicators(ticker);
     if (window.renderRecoDetail) renderRecoDetail(ticker, false);
@@ -870,7 +881,7 @@
     graphPeriod = n;
     document.querySelectorAll('#graphique .filter-btn[onclick^="setGraphPeriod"]').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
-    if (graphTicker) renderGraphChart();
+    if (graphTicker) { renderGraphChart(); renderNavChart(); }
   }
 
   function toggleIndicator(ind, btn) {
@@ -878,7 +889,7 @@
     if (ind === 'mm50') showMM50 = !showMM50;
     if (ind === 'vol') showVol = !showVol;
     btn.classList.toggle('active');
-    if (graphTicker) renderGraphChart();
+    if (graphTicker) { renderGraphChart(); renderNavChart(); }
   }
 
   function renderTechnique() {
@@ -1117,6 +1128,137 @@
       <td class="right"><span class="score-badge" style="color:${r.score>=70?'var(--green)':r.score>=40?'var(--gold)':'var(--red)'};border-color:${r.score>=70?'var(--green)':r.score>=40?'var(--gold)':'var(--red)'}">${r.score}</span></td>
     </tr>`).join('');
   }
+
+
+  // ═══════════════════════════════════════
+  // NAVIGATION BAR — Mini Overview
+  // ═══════════════════════════════════════
+  let navChartInst = null;
+  let navRange = { start: 0, end: 1 }; // 0-1 fraction of full data
+
+  function renderNavChart() {
+    const hist = tickerHistorique[graphTicker];
+    if (!hist || !hist.length) return;
+
+    const labels = hist.map(d => fmtDateShort(d.date_seance));
+    const prix = hist.map(d => d.cloture || d.cours || 0);
+
+    if (navChartInst) navChartInst.destroy();
+    navChartInst = new Chart(document.getElementById('chartNav'), {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: prix,
+          borderColor: 'rgba(184,150,78,0.3)',
+          borderWidth: 1,
+          pointRadius: 0,
+          fill: false,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { display: false },
+          y: { display: false }
+        },
+        animation: false,
+        interaction: { mode: 'index', intersect: false }
+      }
+    });
+    updateNavOverlay();
+  }
+
+  function updateNavOverlay() {
+    const wrap = document.getElementById('navWrap');
+    const overlay = document.getElementById('navOverlay');
+    if (!wrap || !overlay) return;
+    const W = wrap.clientWidth;
+    overlay.style.left = (navRange.start * W) + 'px';
+    overlay.style.width = ((navRange.end - navRange.start) * W) + 'px';
+  }
+
+  // Interaction drag sur la barre de nav
+  (function initNavDrag() {
+    const wrap = document.getElementById('navWrap');
+    if (!wrap) return;
+    let dragging = false;
+    let resizingL = false;
+    let resizingR = false;
+    let startX = 0;
+    let startRange = null;
+
+    const getFrac = e => {
+      const rect = wrap.getBoundingClientRect();
+      return Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    };
+
+    wrap.addEventListener('mousedown', e => {
+      const x = getFrac(e);
+      const edge = 0.03;
+      startX = x;
+      startRange = { ...navRange };
+      if (Math.abs(x - navRange.start) < edge) resizingL = true;
+      else if (Math.abs(x - navRange.end) < edge) resizingR = true;
+      else if (x >= navRange.start && x <= navRange.end) dragging = true;
+    });
+
+    window.addEventListener('mousemove', e => {
+      if (!dragging && !resizingL && !resizingR) return;
+      const x = getFrac(e);
+      const dx = x - startX;
+      const span = startRange.end - startRange.start;
+
+      if (dragging) {
+        navRange.start = Math.max(0, Math.min(1 - span, startRange.start + dx));
+        navRange.end = navRange.start + span;
+      } else if (resizingL) {
+        navRange.start = Math.max(0, Math.min(startRange.end - 0.05, startRange.start + dx));
+      } else if (resizingR) {
+        navRange.end = Math.min(1, Math.max(startRange.start + 0.05, startRange.end + dx));
+      }
+      updateNavOverlay();
+      // Mettre à jour le graphique principal avec le zoom
+      if (graphChartInst) {
+        const hist = tickerHistorique[graphTicker] || [];
+        const n = hist.length;
+        const sIdx = Math.floor(navRange.start * n);
+        const eIdx = Math.ceil(navRange.end * n);
+        const slice = hist.slice(Math.max(0, sIdx), Math.max(1, eIdx));
+        graphChartInst.data.labels = slice.map(d => fmtDateShort(d.date_seance));
+        graphChartInst.data.datasets[0].data = slice.map(d => d.cloture || d.cours || 0);
+        // Recalculer les MM si actives
+        if (showMM20 || showMM50) {
+          const prix = slice.map(d => d.cloture || d.cours || 0);
+          function calcMM(data, n) {
+            return data.map((_, i) => {
+              if (i < n - 1) return null;
+              return data.slice(i - n + 1, i + 1).reduce((s, v) => s + v, 0) / n;
+            });
+          }
+          if (showMM20 && graphChartInst.data.datasets[1]) {
+            graphChartInst.data.datasets[1].data = calcMM(prix, Math.min(20, prix.length));
+          }
+          if (showMM50 && graphChartInst.data.datasets[2]) {
+            graphChartInst.data.datasets[2].data = calcMM(prix, Math.min(50, prix.length));
+          }
+        }
+        graphChartInst.update('none');
+        // Mettre à jour la date range affichée
+        if (slice.length >= 2) {
+          document.getElementById('graphDateRange').textContent = 
+            fmtDate(slice[0].date_seance) + ' → ' + fmtDate(slice[slice.length-1].date_seance);
+        }
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      dragging = false; resizingL = false; resizingR = false;
+    });
+  })();
 
   loadAll();
 </script>
