@@ -11,12 +11,12 @@ const NAV_PAGES = [
     { label: 'Cours des actions', anchor: '#cours' },
     { label: 'Cours des indices', anchor: '#indices' },
     { label: 'Dividendes', anchor: '#dividendes' },
-    { label: 'Palmarès hebdomadaires', anchor: '#palmares' },
+    { label: "Palmarès hebdomadaires", anchor: '#palmares' },
     { label: 'Publications officielles', anchor: '#publications' },
     { label: 'Calendrier des évènements', anchor: '#calendrier' },
   ]},
   { id: 'analyse', label: 'Analyse', icon: '◎', href: 'analyse.html', sub: [
-    { label: 'Graphique d\'une action', anchor: '#graphique' },
+    { label: "Graphique d'une action", anchor: '#graphique' },
     { label: 'Analyse technique', anchor: '#technique' },
     { label: 'Signaux techniques', anchor: '#signaux' },
     { label: 'Comparaison des cours', anchor: '#comparaison' },
@@ -24,7 +24,7 @@ const NAV_PAGES = [
   ]},
   { id: 'screener', label: 'Screener', icon: '⊟', href: 'screener.html', sub: [] },
   { id: 'societes', label: 'Sociétés', icon: '◉', href: 'societes.html', sub: [
-    { label: 'Rapports d\'activité', anchor: '#rapports' },
+    { label: "Rapports d'activité", anchor: '#rapports' },
     { label: 'Dividendes historiques', anchor: '#dividendes-hist' },
     { label: 'Ratios par société', anchor: '#ratios-societe' },
     { label: 'Ratios par secteur', anchor: '#ratios-secteur' },
@@ -296,6 +296,201 @@ tbody td.mono { font-family: var(--mono); font-size: 12px; }
 `;
 
 // ═══════════════════════════════════════
+// SIDEBAR CSS — Injecté dans app.html
+// ═══════════════════════════════════════
+const SIDEBAR_CSS = `
+<style id="tc-sidebar-style">
+:root { --sidebar-w: 240px; }
+
+body { padding-left: var(--sidebar-w); }
+
+#tc-sidebar {
+  position: fixed;
+  top: 0; left: 0; bottom: 0;
+  width: var(--sidebar-w);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.tc-sidebar-header {
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--border2);
+}
+
+.tc-sidebar-logo {
+  font-family: var(--serif);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--cream);
+  text-decoration: none;
+  display: block;
+  margin-bottom: 16px;
+}
+.tc-sidebar-logo span { color: var(--gold); }
+
+.tc-sidebar-search {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: var(--cream);
+  outline: none;
+}
+.tc-sidebar-search::placeholder { color: var(--dim); }
+.tc-sidebar-search:focus { border-color: var(--gold); }
+
+.tc-sidebar-nav {
+  flex: 1;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tc-sidebar-item {
+  position: relative;
+}
+
+.tc-sidebar-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.tc-sidebar-link .nav-icon { font-size: 14px; opacity: 0.7; width: 20px; text-align: center; }
+
+.tc-sidebar-link:hover {
+  color: var(--cream);
+  background: rgba(184,150,78,0.04);
+}
+
+.tc-sidebar-link.active {
+  color: var(--gold);
+  background: rgba(184,150,78,0.08);
+}
+
+.tc-sidebar-link .nav-arrow {
+  margin-left: auto;
+  font-size: 9px;
+  opacity: 0.5;
+  transition: transform 0.2s;
+}
+
+.tc-sidebar-item.open .nav-arrow { transform: rotate(180deg); }
+
+.tc-sidebar-subs {
+  display: none;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 0 4px 42px;
+}
+
+.tc-sidebar-item.open .tc-sidebar-subs { display: flex; }
+
+.tc-sidebar-subs a {
+  display: block;
+  padding: 7px 12px;
+  font-size: 12px;
+  color: var(--dim);
+  text-decoration: none;
+  border-radius: 6px;
+  transition: all 0.15s;
+  border-left: 2px solid transparent;
+}
+
+.tc-sidebar-subs a:hover {
+  color: var(--gold);
+  background: rgba(184,150,78,0.04);
+  border-left-color: var(--gold);
+}
+
+.tc-sidebar-footer {
+  padding: 12px 16px;
+  border-top: 1px solid var(--border2);
+}
+
+.tc-sidebar-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-bg);
+  border: 1px solid rgba(74,222,128,0.2);
+  border-radius: 20px;
+  padding: 5px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--green);
+  margin-bottom: 8px;
+}
+
+.tc-live-dot {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: tc-pulse 2s infinite;
+}
+
+@keyframes tc-pulse {
+  0%,100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+.tc-sidebar-time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--dim);
+  text-align: center;
+}
+
+/* MOBILE SIDEBAR TOGGLE */
+#tc-sidebar-toggle {
+  display: none;
+  position: fixed;
+  top: 12px; left: 12px;
+  z-index: 1001;
+  width: 40px; height: 40px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--cream);
+  font-size: 18px;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 768px) {
+  body { padding-left: 0; }
+  #tc-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  #tc-sidebar.open { transform: translateX(0); }
+  #tc-sidebar-toggle { display: flex; }
+  .page-content { padding-top: 64px !important; }
+}
+</style>
+`;
+
+// ═══════════════════════════════════════
 // TOPNAV CSS — Uniquement pour pages standalone
 // ═══════════════════════════════════════
 const TOPNAV_CSS = `
@@ -543,12 +738,118 @@ function initNav(activePage = '') {
 }
 
 // ═══════════════════════════════════════
+// INIT SIDEBAR — Mode sidebar pour app.html
+// ═══════════════════════════════════════
+function initSidebar(activePage = '') {
+  // Injecter le CSS de base (toujours)
+  if (!document.getElementById('tc-base-style')) {
+    document.head.insertAdjacentHTML('beforeend', BASE_CSS);
+  }
+
+  // Injecter le CSS de la sidebar
+  if (!document.getElementById('tc-sidebar-style')) {
+    document.head.insertAdjacentHTML('beforeend', SIDEBAR_CSS);
+  }
+
+  // Injecter Google Fonts si pas déjà
+  if (!document.querySelector('link[href*="Playfair"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap';
+    document.head.appendChild(link);
+  }
+
+  // Vérifier si la sidebar existe déjà dans le DOM
+  if (document.getElementById('tc-sidebar')) return;
+
+  // Construire le HTML de la sidebar
+  const itemsHTML = NAV_PAGES.map(p => {
+    const isActive = p.id === activePage;
+    const hasSub = p.sub && p.sub.length > 0;
+    const subsHTML = hasSub
+      ? `<div class="tc-sidebar-subs">${p.sub.map(s =>
+          `<a href="${p.href}${s.anchor}">${s.label}</a>`
+        ).join('')}</div>`
+      : '';
+
+    return `<div class="tc-sidebar-item ${isActive ? 'open' : ''}">
+      <a class="tc-sidebar-link ${isActive ? 'active' : ''}" href="${p.href}" ${hasSub ? 'onclick="toggleSidebarSub(this); return false;"' : ''}>
+        <span class="nav-icon">${p.icon}</span>
+        <span class="nav-label">${p.label}</span>
+        ${hasSub ? '<span class="nav-arrow">▾</span>' : ''}
+      </a>
+      ${subsHTML}
+    </div>`;
+  }).join('');
+
+  const sidebarHTML = `
+  <button id="tc-sidebar-toggle" onclick="toggleSidebar()">☰</button>
+  <aside id="tc-sidebar">
+    <div class="tc-sidebar-header">
+      <a class="tc-sidebar-logo" href="app.html">THE <span>·</span> CAPITAL</a>
+      <input type="text" class="tc-sidebar-search" placeholder="Rechercher..." oninput="filterSidebar(this.value)">
+    </div>
+    <nav class="tc-sidebar-nav">
+      ${itemsHTML}
+    </nav>
+    <div class="tc-sidebar-footer">
+      <div class="tc-sidebar-live">
+        <div class="tc-live-dot"></div>
+        BRVM Live
+      </div>
+      <div class="tc-sidebar-time" id="tc-sidebar-clock">--:--</div>
+    </div>
+  </aside>`;
+
+  document.body.insertAdjacentHTML('afterbegin', sidebarHTML);
+
+  // Horloge sidebar
+  function updateSidebarClock() {
+    const el = document.getElementById('tc-sidebar-clock');
+    if (el) el.textContent = new Date().toLocaleTimeString('fr-FR', {
+      hour: '2-digit', minute: '2-digit'
+    });
+  }
+  setInterval(updateSidebarClock, 60000);
+  updateSidebarClock();
+}
+
+// Toggle sous-menu sidebar
+function toggleSidebarSub(link) {
+  const item = link.closest('.tc-sidebar-item');
+  item.classList.toggle('open');
+}
+
+// Toggle sidebar mobile
+function toggleSidebar() {
+  const sb = document.getElementById('tc-sidebar');
+  if (sb) sb.classList.toggle('open');
+}
+
+// Filtre sidebar
+function filterSidebar(query) {
+  const q = query.toLowerCase();
+  document.querySelectorAll('.tc-sidebar-item').forEach(item => {
+    const label = item.querySelector('.nav-label')?.textContent.toLowerCase() || '';
+    const subs = item.querySelectorAll('.tc-sidebar-subs a');
+    let subMatch = false;
+    subs.forEach(sub => {
+      const visible = sub.textContent.toLowerCase().includes(q);
+      sub.style.display = visible ? 'block' : 'none';
+      if (visible) subMatch = true;
+    });
+    item.style.display = (label.includes(q) || subMatch || !q) ? '' : 'none';
+  });
+}
+
+// ═══════════════════════════════════════
 // SUPABASE HELPERS
 // ═══════════════════════════════════════
 const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbb3d4ZW9sYmJndm0iLCJyb2xlIjoiYW5vbiIsImlhdCI6MTcyMjk3MzY0OSwiZXhwIjoyMDM4NTQ5NjQ5fQ.HZ5xbUhQKLRhRPl7VYdQZrWPJUZsEJLIvp8_zQXLmVA';
 
 async function sbQuery(table, params = {}) {
+  console.warn('%c[THE CAPITAL] ⚠️ sbQuery() est déprécié. Utilisez fetch() directement ou une librairie moderne.', 'color: #B8964E; font-weight: bold;');
   const url = new URL(`${SB_URL}/rest/v1/${table}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
   const r = await fetch(url, {
