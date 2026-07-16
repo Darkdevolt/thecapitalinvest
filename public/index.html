@@ -5,14 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital — Intelligence Financière Africaine</title>
 <meta name="description" content="Plateforme d'intelligence financière dédiée aux marchés africains et à la BRVM. Données en temps réel, analyses fondamentales, screeners.">
-<meta property="og:title" content="The Capital — Intelligence Financière Africaine">
-<meta property="og:description" content="La première plateforme d'intelligence financière dédiée à la BRVM et aux marchés africains.">
-<meta property="og:url" content="https://thecapitalinvest.vercel.app">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap');
-
 :root {
   --black: #0A0804;
   --deep: #111009;
@@ -38,44 +33,18 @@ body {
   font-weight: 300;
   line-height: 1.7;
   min-height: 100vh;
-  cursor: none;
   overflow-x: hidden;
 }
 
-/* Curseur custom */
-.cursor {
-  position: fixed;
-  width: 8px; height: 8px;
-  background: var(--gold);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9999;
-  transform: translate(-50%, -50%);
-  transition: transform 0.1s ease, width 0.3s ease, height 0.3s ease, background 0.3s;
-}
-.cursor-ring {
-  position: fixed;
-  width: 36px; height: 36px;
-  border: 1px solid var(--gold-dim);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 9998;
-  transform: translate(-50%, -50%);
-  transition: transform 0.18s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s;
-}
-
-/* Grain overlay */
 body::before {
   content: '';
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
   pointer-events: none;
   z-index: 1;
   opacity: 0.6;
 }
 
-/* Navigation */
 header {
   position: fixed;
   top: 0; left: 0; right: 0;
@@ -85,12 +54,10 @@ header {
   align-items: center;
   padding: 28px 60px;
   background: linear-gradient(to bottom, rgba(10,8,4,0.98) 0%, rgba(10,8,4,0) 100%);
-  backdrop-filter: blur(0px);
   border-bottom: 1px solid transparent;
   transition: all 0.4s ease;
 }
 header.scrolled {
-  backdrop-filter: blur(20px);
   background: rgba(10,8,4,0.92);
   border-bottom-color: var(--border);
   padding: 20px 60px;
@@ -146,10 +113,8 @@ nav a.active { color: var(--gold); }
 .nav-cta:hover { background: var(--gold-light) !important; }
 .nav-cta::after { display: none !important; }
 
-/* Container */
 .container { max-width: 1280px; margin: 0 auto; padding: 0 60px; }
 
-/* Hero */
 .hero {
   min-height: 100vh;
   display: grid;
@@ -284,7 +249,6 @@ nav a.active { color: var(--gold); }
   background: var(--gold-dim);
 }
 
-/* Ticker */
 .ticker {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -318,7 +282,6 @@ nav a.active { color: var(--gold); }
   100% { transform: translateX(-50%); }
 }
 
-/* Section features */
 .section { padding: 100px 60px; max-width: 1280px; margin: 0 auto; }
 .section-label {
   font-size: 11px;
@@ -369,7 +332,6 @@ nav a.active { color: var(--gold); }
 }
 .feature p { font-size: 14px; color: var(--muted); line-height: 1.8; }
 
-/* Stats */
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -400,7 +362,6 @@ nav a.active { color: var(--gold); }
   display: block;
 }
 
-/* CTA */
 .cta-section {
   margin: 0;
   padding: 120px 60px;
@@ -420,7 +381,6 @@ nav a.active { color: var(--gold); }
 .cta-section h2 em { font-style: italic; color: var(--gold); }
 .cta-section p { font-size: 17px; color: var(--muted); margin-bottom: 48px; }
 
-/* Boutons */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -434,7 +394,6 @@ nav a.active { color: var(--gold); }
   text-decoration: none;
   border-radius: 2px;
   transition: all 0.3s ease;
-  cursor: none;
 }
 .btn-primary {
   background: var(--gold);
@@ -446,9 +405,7 @@ nav a.active { color: var(--gold); }
   color: var(--gold);
 }
 .btn-outline:hover { border-color: var(--gold); background: rgba(184,150,78,0.07); }
-.btn-arrow::after { content: '->'; font-size: 16px; }
 
-/* Footer */
 footer {
   border-top: 1px solid var(--border);
   padding: 40px 60px;
@@ -468,7 +425,6 @@ footer .logo-sm {
 }
 footer .logo-sm span { color: var(--gold); }
 
-/* Animations */
 @keyframes fadeUp {
   from { opacity: 0; transform: translateY(30px); }
   to   { opacity: 1; transform: translateY(0); }
@@ -480,7 +436,6 @@ footer .logo-sm span { color: var(--gold); }
 .anim-delay-3 { animation-delay: 0.3s; }
 .anim-delay-4 { animation-delay: 0.4s; }
 
-/* Scroll indicator */
 .scroll-line {
   position: fixed;
   top: 0; left: 0;
@@ -490,7 +445,6 @@ footer .logo-sm span { color: var(--gold); }
   transition: width 0.1s linear;
 }
 
-/* Responsive */
 @media (max-width: 900px) {
   header { padding: 16px 24px; }
   header.scrolled { padding: 14px 24px; }
@@ -501,24 +455,20 @@ footer .logo-sm span { color: var(--gold); }
   .stats-row { grid-template-columns: repeat(2, 1fr); }
   .cta-section { padding: 80px 24px; }
   footer { padding: 28px 24px; flex-direction: column; gap: 10px; text-align: center; }
-  body { cursor: auto; }
-  .cursor, .cursor-ring { display: none; }
 }
 </style>
 </head>
 <body>
 
-<div class="cursor" id="cursor"></div>
-<div class="cursor-ring" id="cursorRing"></div>
 <div class="scroll-line" id="scrollLine"></div>
 
 <header>
   <a href="index.html" class="logo">THE <span class="dot">·</span> CAPITAL</a>
   <nav>
     <a href="index.html" class="active">Accueil</a>
-    <a href="platform.html">Plateforme</a>
+    <a href="app.html">Plateforme</a>
+    <a href="app.html#titres">Marché</a>
     <a href="features.html">Fonctionnalités</a>
-    <a href="marche.html">Marché</a>
     <a href="pricing.html">Tarifs</a>
     <a href="about.html">À propos</a>
     <a href="contact.html">Contact</a>
@@ -544,17 +494,16 @@ footer .logo-sm span { color: var(--gold); }
       Données de marché, analyses fondamentales et outils de suivi de portefeuille — conçus pour les marchés africains. Décidez mieux, plus vite.
     </p>
     <div class="hero-actions anim anim-delay-3">
-      <a href="app.html" class="btn btn-primary btn-arrow">Accéder au Dashboard</a>
-      <a href="marche.html" class="btn btn-outline">Voir le marché BRVM</a>
+      <a href="app.html" class="btn btn-primary">Accéder au Dashboard</a>
+      <a href="app.html#titres" class="btn btn-outline">Voir le marché BRVM</a>
     </div>
   </div>
   <div class="hero-scroll">Défiler</div>
 </section>
 
-<!-- Ticker -->
+<!-- Ticker avec vraies données -->
 <div class="ticker">
   <div class="ticker-track" id="tickerTrack">
-    <!-- Fallback hardcodé — remplacé par vraies données si l'API répond -->
     <div class="ticker-item"><span class="sym">BRVM CI</span> 246.78 <span class="up">▲ +1.2%</span></div>
     <div class="ticker-item"><span class="sym">SONATEL</span> 14 500 <span class="up">▲ +0.8%</span></div>
     <div class="ticker-item"><span class="sym">ECOBANK TG</span> 22.10 <span class="dn">▼ -0.4%</span></div>
@@ -563,7 +512,6 @@ footer .logo-sm span { color: var(--gold); }
     <div class="ticker-item"><span class="sym">TOTAL SN</span> 2 150 <span class="up">▲ +0.6%</span></div>
     <div class="ticker-item"><span class="sym">CIE</span> 1 890 <span class="up">▲ +1.4%</span></div>
     <div class="ticker-item"><span class="sym">PALMCI</span> 7 900 <span class="dn">▼ -0.9%</span></div>
-    <!-- Doublon pour boucle infinie -->
     <div class="ticker-item"><span class="sym">BRVM CI</span> 246.78 <span class="up">▲ +1.2%</span></div>
     <div class="ticker-item"><span class="sym">SONATEL</span> 14 500 <span class="up">▲ +0.8%</span></div>
     <div class="ticker-item"><span class="sym">ECOBANK TG</span> 22.10 <span class="dn">▼ -0.4%</span></div>
@@ -575,7 +523,6 @@ footer .logo-sm span { color: var(--gold); }
   </div>
 </div>
 
-<!-- Stats -->
 <div class="container">
   <div class="stats-row anim">
     <div class="stat"><span class="num">45+</span><span class="label">Sociétés cotées suivies</span></div>
@@ -585,7 +532,6 @@ footer .logo-sm span { color: var(--gold); }
   </div>
 </div>
 
-<!-- Features -->
 <section class="section">
   <div class="section-label anim">Pourquoi The Capital</div>
   <h2 class="section-title anim anim-delay-1">Une plateforme <em>construite pour l'Afrique.</em></h2>
@@ -623,12 +569,11 @@ footer .logo-sm span { color: var(--gold); }
   </div>
 </section>
 
-<!-- CTA -->
 <div class="cta-section">
   <h2 class="anim">Prêt à investir<br><em>en connaissance de cause ?</em></h2>
   <p class="anim anim-delay-1">Accès gratuit au dashboard de démonstration. Sans carte bancaire.</p>
   <div class="anim anim-delay-2">
-    <a href="app.html" class="btn btn-primary btn-arrow">Essayer gratuitement</a>
+    <a href="app.html" class="btn btn-primary">Essayer gratuitement</a>
   </div>
 </div>
 
@@ -639,23 +584,7 @@ footer .logo-sm span { color: var(--gold); }
 </footer>
 
 <script>
-// ═══════════════════════════════════════
-// CURSEUR CUSTOM + SCROLL + ANIMATIONS
-// ═══════════════════════════════════════
-const cursor = document.getElementById('cursor');
-const ring = document.getElementById('cursorRing');
-let mx = 0, my = 0, rx = 0, ry = 0;
-document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
-(function loop() {
-  rx += (mx - rx) * 0.18; ry += (my - ry) * 0.18;
-  cursor.style.left = mx + 'px'; cursor.style.top = my + 'px';
-  ring.style.left = rx + 'px'; ring.style.top = ry + 'px';
-  requestAnimationFrame(loop);
-})();
-document.querySelectorAll('a, button').forEach(el => {
-  el.addEventListener('mouseenter', () => { cursor.style.width = '16px'; cursor.style.height = '16px'; ring.style.width = '56px'; ring.style.height = '56px'; });
-  el.addEventListener('mouseleave', () => { cursor.style.width = '8px'; cursor.style.height = '8px'; ring.style.width = '36px'; ring.style.height = '36px'; });
-});
+// Scroll + animations
 const header = document.querySelector('header');
 const scrollLine = document.getElementById('scrollLine');
 window.addEventListener('scroll', () => {
@@ -665,9 +594,7 @@ window.addEventListener('scroll', () => {
 const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
 document.querySelectorAll('.anim').forEach(el => obs.observe(el));
 
-// ═══════════════════════════════════════
-// TICKER AVEC VRAIES DONNÉES BRVM
-// ═══════════════════════════════════════
+// Ticker avec vraies données BRVM
 async function loadTicker() {
   try {
     const res = await fetch('/api/marche?type=cours');
@@ -675,13 +602,11 @@ async function loadTicker() {
     const json = await res.json();
     const cours = json.data || [];
     
-    // Si pas de données, on garde le fallback hardcodé
     if (cours.length === 0) {
       console.log('Ticker: pas de données API, fallback hardcodé conservé');
       return;
     }
     
-    // Dédoublonner par ticker (prendre le plus récent)
     const seen = new Set();
     const unique = [];
     for (const c of cours) {
@@ -691,10 +616,8 @@ async function loadTicker() {
       }
     }
     
-    // Prendre les 8 premiers pour le ticker
     const items = unique.slice(0, 8);
     
-    // Construire le HTML du ticker
     const buildItem = (c) => {
       const v = parseFloat(c.variation) || 0;
       const cls = v >= 0 ? 'up' : 'dn';
@@ -705,19 +628,14 @@ async function loadTicker() {
     };
     
     const html = items.map(buildItem).join('');
-    // Doublon pour l'animation infinie
     const track = document.getElementById('tickerTrack');
     if (track) track.innerHTML = html + html;
     
-    console.log('Ticker: ' + items.length + ' valeurs chargées depuis l\'API');
-    
   } catch (err) {
     console.error('Ticker: erreur API — fallback hardcodé conservé', err);
-    // En cas d'erreur : le ticker hardcodé reste visible (zero risque)
   }
 }
 
-// Appel au chargement
 document.addEventListener('DOMContentLoaded', loadTicker);
 </script>
 </body>
