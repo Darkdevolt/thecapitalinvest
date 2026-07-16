@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/views.css">
+  <link rel="stylesheet" href="css/portefeuille.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <base target="_blank">
 </head>
@@ -178,10 +179,17 @@
         <span>📋 POSITIONS DÉTAILLÉES</span>
         <span id="pfPositionCount" style="color:var(--dim);font-size:12px">0 position</span>
       </div>
+      <div class="bulk-action-bar" id="bulkActionBar">
+        <span class="bulk-action-count" id="bulkActionCount">0 sélectionnée(s)</span>
+        <button type="button" class="bulk-delete-btn" id="bulkDeleteBtn" onclick="deleteSelectedPositions()">🗑 Supprimer la sélection</button>
+      </div>
       <div class="table-scroll">
         <table class="data-table">
           <thead>
             <tr>
+              <th style="text-align:center;width:40px">
+                <input type="checkbox" id="pfSelectAll" class="position-checkbox" onchange="toggleSelectAllPositions(this)" title="Tout sélectionner">
+              </th>
               <th>TICKER / PAYS</th>
               <th style="text-align:right">QTÉ</th>
               <th style="text-align:right">CMP</th>
@@ -196,7 +204,7 @@
             </tr>
           </thead>
           <tbody id="pfTable">
-            <tr><td colspan="11" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>
+            <tr><td colspan="12" style="text-align:center;padding:24px;color:var(--dim)">Aucune position. Ajoutez-en une ci-dessus.</td></tr>
           </tbody>
         </table>
       </div>
