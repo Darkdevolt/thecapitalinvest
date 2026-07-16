@@ -315,25 +315,23 @@ let _coursFilter = 'all', _pubFilter = 'all';
 let idxChartInst = null, idxPeriod = 30;
 
 // ═══════════════════════════════════════
-// LOAD — Passage par l'API (plus de sbQuery direct)
+// LOAD — TOUT passe par l'API (plus de sbQuery direct)
 // ═══════════════════════════════════════
 async function loadAll() {
   try {
     const [coursRes, bocRes, financialsRes, indicesRes] = await Promise.allSettled([
       fetch('/api/marche?type=cours').then(r => r.ok ? r.json() : Promise.reject(r.status)),
       fetch('/api/boc').then(r => r.ok ? r.json() : Promise.reject(r.status)),
-      // financials n'a pas d'endpoint public dédié — on garde sbQuery temporairement
-      sbQuery('financials', { order: 'annee.desc', limit: 300 }),
+      fetch('/api/marche?type=financials').then(r => r.ok ? r.json() : Promise.reject(r.status)),
       fetch('/api/marche?type=indices').then(r => r.ok ? r.json() : Promise.reject(r.status)),
     ]);
 
     if (coursRes.status === 'fulfilled') allCours = coursRes.value.data || [];
     if (bocRes.status === 'fulfilled') allBoc = bocRes.value.data || [];
-    if (financialsRes.status === 'fulfilled') allFinancials = financialsRes.value || [];
+    if (financialsRes.status === 'fulfilled') allFinancials = financialsRes.value.data || [];
     if (indicesRes.status === 'fulfilled') allIndices = indicesRes.value.data || [];
 
-    // SUPPRESSION de injectDemoData() — on affiche "Pas de données" si vide
-    // Plus jamais de fausses données
+    // Plus jamais de données fictives
 
     renderIndices();
     renderCours();
@@ -345,16 +343,10 @@ async function loadAll() {
     
   } catch (err) {
     console.error('Erreur chargement marché:', err);
-    // Afficher un message d'erreur global si tout échoue
     document.getElementById('coursTable').innerHTML = 
       '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--red)">Erreur de chargement des données. Veuillez réessayer.</td></tr>';
   }
 }
-
-// ═══════════════════════════════════════
-// DEMO DATA — SUPPRIMÉ
-// Plus de données fictives. Si la base est vide, les tableaux affichent "Pas de données".
-// ═══════════════════════════════════════
 
 // ═══════════════════════════════════════
 // RENDER INDICES
@@ -564,8 +556,6 @@ function bocCard(boc) {
 // RENDER CALENDRIER — Plus de données codées en dur
 // ═══════════════════════════════════════
 function renderCalendrier() {
-  // En production, ces données viendront d'une table 'evenements' dans Supabase
-  // Pour l'instant, on affiche un message invitant à contribuer
   document.getElementById('calendrierList').innerHTML = `
     <div class="event-item" style="justify-content:center;padding:30px;">
       <div style="text-align:center;color:var(--dim);">
