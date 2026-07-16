@@ -10,6 +10,20 @@ import { validate } from './lib/validate.js';
 import { corsHeaders, handleOptions } from './lib/cors.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// HELPERS — Cache HTTP pour endpoints publics
+// ═══════════════════════════════════════════════════════════════════════════════
+function withPublicCache(response) {
+  // Clone la réponse pour ajouter les headers de cache
+  const newHeaders = new Headers(response.headers);
+  newHeaders.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: newHeaders,
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // HELPERS — Portefeuille
 // ═══════════════════════════════════════════════════════════════════════════════
 const FRAIS = {
@@ -62,7 +76,7 @@ async function handleAuth(req) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HANDLER — BOC (public)
+// HANDLER — BOC (public) — AVEC CACHE
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleBoc(req) {
   if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
@@ -75,7 +89,8 @@ async function handleBoc(req) {
       .order('date_seance', { ascending: false })
       .limit(100);
     if (dbError) throw dbError;
-    return success({ data: data || [] });
+    const resp = success({ data: data || [] });
+    return withPublicCache(resp);
   } catch (e) {
     console.error('BOC API error:', e);
     return error('Erreur serveur', 500, 'SERVER_ERROR');
@@ -124,7 +139,7 @@ async function handleContact(req) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HANDLER — FICHE (public)
+// HANDLER — FICHE (public) — AVEC CACHE
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleFiche(req) {
   if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
@@ -164,7 +179,7 @@ async function handleFiche(req) {
       };
     }
 
-    return success({
+    const resp = success({
       entreprise: entreprise || null,
       cours: cours || null,
       chartData: chartData || [],
@@ -172,6 +187,7 @@ async function handleFiche(req) {
       analyses: analyses || [],
       valuation,
     });
+    return withPublicCache(resp);
   } catch (e) {
     console.error('Fiche API error:', e);
     return error('Erreur serveur', 500, 'SERVER_ERROR');
@@ -179,7 +195,7 @@ async function handleFiche(req) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// HANDLER — MARCHE (public)
+// HANDLER — MARCHE (public) — AVEC CACHE + ENDPOINT APERCU
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleMarche(req) {
   if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
@@ -190,6 +206,51 @@ async function handleMarche(req) {
 
   try {
     switch (type) {
+      case 'apercu': {
+        // ═══════════════════════════════════════
+        // ENDPOINT AGRÉGÉ pour la page d'accueil
+        // 1 seul appel = indices + cours + palmarès
+        // ═══════════════════════════════════════
+        const [
+          { data: indices, error: idxErr },
+          { data: cours, error: crsErr },
+        ] = await Promise.all([
+          supabase.from('indices').select('*').order('date_seance', { ascending: false }).limit(20),
+          supabase.from('cours').select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
+            .order('date_seance', { ascending: false }).limit(200),
+        ]);
+
+        if (idxErr) throw idxErr;
+        if (crsErr) throw crsErr;
+
+        // Dédoublonner cours par ticker (prendre le plus récent)
+        const seen = new Set();
+        const uniqueCours = [];
+        for (const c of cours || []) {
+          if (!seen.has(c.ticker)) {
+            seen.add(c.ticker);
+            uniqueCours.push(c);
+          }
+        }
+
+        // Palmarès
+        const sorted = [...uniqueCours].sort((a, b) => (b.variation || 0) - (a.variation || 0));
+        const topHausses = sorted.filter(c => (c.variation || 0) > 0).slice(0, 5);
+        const topBaisses = sorted.filter(c => (c.variation || 0) < 0).slice(0, 5).reverse();
+        const topVolumes = [...uniqueCours].sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 5);
+
+        const resp = success({
+          indices: (indices || []).slice(0, 3),
+          cours: uniqueCours.slice(0, 15),
+          topHausses,
+          topBaisses,
+          topVolumes,
+          dateSeance: uniqueCours[0]?.date_seance || new Date().toISOString().split('T')[0],
+          totalValeurs: uniqueCours.length,
+        });
+        return withPublicCache(resp);
+      }
+
       case 'indices': {
         const { data, error: dbError } = await supabase
           .from('indices')
@@ -197,8 +258,10 @@ async function handleMarche(req) {
           .order('date_seance', { ascending: false })
           .limit(20);
         if (dbError) throw dbError;
-        return success({ data: data || [] });
+        const resp = success({ data: data || [] });
+        return withPublicCache(resp);
       }
+
       case 'cours': {
         const { data, error: dbError } = await supabase
           .from('cours')
@@ -206,8 +269,10 @@ async function handleMarche(req) {
           .order('date_seance', { ascending: false })
           .limit(100);
         if (dbError) throw dbError;
-        return success({ data: data || [] });
+        const resp = success({ data: data || [] });
+        return withPublicCache(resp);
       }
+
       case 'historique': {
         const ticker = url.searchParams.get('ticker')?.toUpperCase();
         if (!ticker) return error('Ticker requis', 400, 'MISSING_TICKER');
@@ -218,8 +283,22 @@ async function handleMarche(req) {
           .order('date_seance', { ascending: false })
           .limit(252);
         if (dbError) throw dbError;
-        return success({ data: data || [] });
+        const resp = success({ data: data || [] });
+        return withPublicCache(resp);
       }
+
+      case 'financials': {
+        // Nouveau endpoint public pour les données financières
+        const { data, error: dbError } = await supabase
+          .from('financials')
+          .select('*')
+          .order('annee', { ascending: false })
+          .limit(300);
+        if (dbError) throw dbError;
+        const resp = success({ data: data || [] });
+        return withPublicCache(resp);
+      }
+
       default:
         return error('Type invalide', 400, 'INVALID_TYPE');
     }
