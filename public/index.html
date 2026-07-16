@@ -518,7 +518,7 @@ footer .logo-sm span { color: var(--gold); }
     <a href="index.html" class="active">Accueil</a>
     <a href="platform.html">Plateforme</a>
     <a href="features.html">Fonctionnalités</a>
-    <a href="markets.html">Marchés</a>
+    <a href="marche.html">Marché</a>
     <a href="pricing.html">Tarifs</a>
     <a href="about.html">À propos</a>
     <a href="contact.html">Contact</a>
@@ -545,7 +545,7 @@ footer .logo-sm span { color: var(--gold); }
     </p>
     <div class="hero-actions anim anim-delay-3">
       <a href="app.html" class="btn btn-primary btn-arrow">Accéder au Dashboard</a>
-      <a href="platform.html" class="btn btn-outline">Découvrir la plateforme</a>
+      <a href="marche.html" class="btn btn-outline">Voir le marché BRVM</a>
     </div>
   </div>
   <div class="hero-scroll">Défiler</div>
@@ -553,7 +553,8 @@ footer .logo-sm span { color: var(--gold); }
 
 <!-- Ticker -->
 <div class="ticker">
-  <div class="ticker-track">
+  <div class="ticker-track" id="tickerTrack">
+    <!-- Fallback hardcodé — remplacé par vraies données si l'API répond -->
     <div class="ticker-item"><span class="sym">BRVM CI</span> 246.78 <span class="up">▲ +1.2%</span></div>
     <div class="ticker-item"><span class="sym">SONATEL</span> 14 500 <span class="up">▲ +0.8%</span></div>
     <div class="ticker-item"><span class="sym">ECOBANK TG</span> 22.10 <span class="dn">▼ -0.4%</span></div>
@@ -638,6 +639,9 @@ footer .logo-sm span { color: var(--gold); }
 </footer>
 
 <script>
+// ═══════════════════════════════════════
+// CURSEUR CUSTOM + SCROLL + ANIMATIONS
+// ═══════════════════════════════════════
 const cursor = document.getElementById('cursor');
 const ring = document.getElementById('cursorRing');
 let mx = 0, my = 0, rx = 0, ry = 0;
@@ -660,6 +664,61 @@ window.addEventListener('scroll', () => {
 });
 const obs = new IntersectionObserver(entries => entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); }), { threshold: 0.1 });
 document.querySelectorAll('.anim').forEach(el => obs.observe(el));
+
+// ═══════════════════════════════════════
+// TICKER AVEC VRAIES DONNÉES BRVM
+// ═══════════════════════════════════════
+async function loadTicker() {
+  try {
+    const res = await fetch('/api/marche?type=cours');
+    if (!res.ok) throw new Error('API error: ' + res.status);
+    const json = await res.json();
+    const cours = json.data || [];
+    
+    // Si pas de données, on garde le fallback hardcodé
+    if (cours.length === 0) {
+      console.log('Ticker: pas de données API, fallback hardcodé conservé');
+      return;
+    }
+    
+    // Dédoublonner par ticker (prendre le plus récent)
+    const seen = new Set();
+    const unique = [];
+    for (const c of cours) {
+      if (!seen.has(c.ticker)) {
+        seen.add(c.ticker);
+        unique.push(c);
+      }
+    }
+    
+    // Prendre les 8 premiers pour le ticker
+    const items = unique.slice(0, 8);
+    
+    // Construire le HTML du ticker
+    const buildItem = (c) => {
+      const v = parseFloat(c.variation) || 0;
+      const cls = v >= 0 ? 'up' : 'dn';
+      const arrow = v >= 0 ? '▲' : '▼';
+      const sign = v >= 0 ? '+' : '';
+      const prix = c.cours ? (+c.cours).toLocaleString('fr-FR') : '—';
+      return `<div class="ticker-item"><span class="sym">${c.ticker}</span> ${prix} <span class="${cls}">${arrow} ${sign}${v.toFixed(2)}%</span></div>`;
+    };
+    
+    const html = items.map(buildItem).join('');
+    // Doublon pour l'animation infinie
+    const track = document.getElementById('tickerTrack');
+    if (track) track.innerHTML = html + html;
+    
+    console.log('Ticker: ' + items.length + ' valeurs chargées depuis l\'API');
+    
+  } catch (err) {
+    console.error('Ticker: erreur API — fallback hardcodé conservé', err);
+    // En cas d'erreur : le ticker hardcodé reste visible (zero risque)
+  }
+}
+
+// Appel au chargement
+document.addEventListener('DOMContentLoaded', loadTicker);
 </script>
 </body>
 </html>
