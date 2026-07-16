@@ -232,6 +232,22 @@
     </div>
   </div>
 
+  <!-- ═══════════════════════════
+       SECTION 7 — CTA CONVERSION
+  ═══════════════════════════ -->
+  <div class="section" style="text-align:center;padding:60px 20px;background:linear-gradient(to right, rgba(184,150,78,0.05), transparent, rgba(184,150,78,0.05));border:1px solid var(--border);border-radius:12px;margin-top:40px;">
+    <div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--cream);margin-bottom:12px;">
+      Vous suivez ces valeurs ?
+    </div>
+    <p style="font-size:14px;color:var(--muted);max-width:500px;margin:0 auto 24px;line-height:1.7;">
+      Créez un compte gratuit pour sauvegarder vos valeurs préférées, recevoir des alertes de prix et accéder à l'analyse technique.
+    </p>
+    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
+      <a href="register.html" class="btn btn-primary">S'inscrire gratuitement</a>
+      <a href="login.html" class="btn btn-outline">J'ai déjà un compte</a>
+    </div>
+  </div>
+
 </div><!-- /page-content -->
 
 <style>
@@ -299,74 +315,46 @@ let _coursFilter = 'all', _pubFilter = 'all';
 let idxChartInst = null, idxPeriod = 30;
 
 // ═══════════════════════════════════════
-// LOAD
+// LOAD — Passage par l'API (plus de sbQuery direct)
 // ═══════════════════════════════════════
 async function loadAll() {
-  const [cours, boc, financials, indices] = await Promise.allSettled([
-    sbQuery('cours', { order: 'date_seance.desc', limit: 300 }),
-    sbQuery('boc', { order: 'date_seance.desc', limit: 100 }),
-    sbQuery('financials', { order: 'annee.desc', limit: 300 }),
-    sbQuery('indices', { order: 'date_seance.desc', limit: 300 }),
-  ]);
+  try {
+    const [coursRes, bocRes, financialsRes, indicesRes] = await Promise.allSettled([
+      fetch('/api/marche?type=cours').then(r => r.ok ? r.json() : Promise.reject(r.status)),
+      fetch('/api/boc').then(r => r.ok ? r.json() : Promise.reject(r.status)),
+      // financials n'a pas d'endpoint public dédié — on garde sbQuery temporairement
+      sbQuery('financials', { order: 'annee.desc', limit: 300 }),
+      fetch('/api/marche?type=indices').then(r => r.ok ? r.json() : Promise.reject(r.status)),
+    ]);
 
-  if (cours.status === 'fulfilled') allCours = cours.value || [];
-  if (boc.status === 'fulfilled') allBoc = boc.value || [];
-  if (financials.status === 'fulfilled') allFinancials = financials.value || [];
-  if (indices.status === 'fulfilled') allIndices = indices.value || [];
+    if (coursRes.status === 'fulfilled') allCours = coursRes.value.data || [];
+    if (bocRes.status === 'fulfilled') allBoc = bocRes.value.data || [];
+    if (financialsRes.status === 'fulfilled') allFinancials = financialsRes.value || [];
+    if (indicesRes.status === 'fulfilled') allIndices = indicesRes.value.data || [];
 
-  if (!allCours.length) injectDemoData();
+    // SUPPRESSION de injectDemoData() — on affiche "Pas de données" si vide
+    // Plus jamais de fausses données
 
-  renderIndices();
-  renderCours();
-  renderPalmares();
-  renderDividendes();
-  renderPublications();
-  renderCalendrier();
-  renderSeanceStats();
+    renderIndices();
+    renderCours();
+    renderPalmares();
+    renderDividendes();
+    renderPublications();
+    renderCalendrier();
+    renderSeanceStats();
+    
+  } catch (err) {
+    console.error('Erreur chargement marché:', err);
+    // Afficher un message d'erreur global si tout échoue
+    document.getElementById('coursTable').innerHTML = 
+      '<tr><td colspan="9" style="text-align:center;padding:30px;color:var(--red)">Erreur de chargement des données. Veuillez réessayer.</td></tr>';
+  }
 }
 
 // ═══════════════════════════════════════
-// DEMO DATA
+// DEMO DATA — SUPPRIMÉ
+// Plus de données fictives. Si la base est vide, les tableaux affichent "Pas de données".
 // ═══════════════════════════════════════
-function injectDemoData() {
-  allCours = [
-    { ticker:'SGBCI', nom:'SGB Côte d\'Ivoire', cours:14500, variation:1.23, plus_haut:14800, plus_bas:14200, volume:42000, capitalisation:504000000000, date_seance:'2024-10-15' },
-    { ticker:'ETIT', nom:'Ecobank Transnational', cours:19, variation:-0.52, plus_haut:20, plus_bas:18, volume:180000, capitalisation:96000000000, date_seance:'2024-10-15' },
-    { ticker:'PALMCI', nom:'Palmeraies CI', cours:6500, variation:2.11, plus_haut:6700, plus_bas:6400, volume:8400, capitalisation:45000000000, date_seance:'2024-10-15' },
-    { ticker:'BICCICI', nom:'BIC Côte d\'Ivoire', cours:9800, variation:-1.01, plus_haut:10000, plus_bas:9700, volume:12000, capitalisation:128000000000, date_seance:'2024-10-15' },
-    { ticker:'ONAB', nom:'Office National des Huiles', cours:3200, variation:0.00, plus_haut:3200, plus_bas:3150, volume:3500, capitalisation:38000000000, date_seance:'2024-10-15' },
-    { ticker:'SIVCOCI', nom:'SIVCO CI', cours:700, variation:3.20, plus_haut:720, plus_bas:690, volume:95000, capitalisation:21000000000, date_seance:'2024-10-15' },
-    { ticker:'NTLC', nom:'NTEL CI', cours:1250, variation:-2.34, plus_haut:1300, plus_bas:1220, volume:22000, capitalisation:40000000000, date_seance:'2024-10-15' },
-    { ticker:'CABC', nom:'CAISSE ABIDJAN', cours:2100, variation:0.48, plus_haut:2150, plus_bas:2080, volume:6700, capitalisation:18000000000, date_seance:'2024-10-15' },
-    { ticker:'BOAB', nom:'BOA Burkina', cours:4650, variation:0.65, plus_haut:4700, plus_bas:4600, volume:9800, capitalisation:185000000000, date_seance:'2024-10-15' },
-    { ticker:'TTLS', nom:'Total Sénégal', cours:1800, variation:-0.83, plus_haut:1850, plus_bas:1780, volume:4100, capitalisation:14000000000, date_seance:'2024-10-15' },
-    { ticker:'SDCC', nom:'SODECI CI', cours:8995, variation:7.47, plus_haut:9100, plus_bas:8400, volume:2800, capitalisation:66000000000, date_seance:'2024-10-15' },
-  ];
-  allFinancials = [
-    { ticker:'SGBCI', annee:2023, bpa:9200, dpa:6000, nombre_actions:34620000 },
-    { ticker:'ETIT', annee:2023, bpa:1.2, dpa:0.8, nombre_actions:5060000000 },
-    { ticker:'PALMCI', annee:2023, bpa:1800, dpa:1200, nombre_actions:6938000 },
-    { ticker:'BICCICI', annee:2023, bpa:2800, dpa:1500, nombre_actions:13060000 },
-    { ticker:'NTLC', annee:2023, bpa:180, dpa:100, nombre_actions:32000000 },
-    { ticker:'BOAB', annee:2023, bpa:1200, dpa:750, nombre_actions:39800000 },
-    { ticker:'SDCC', annee:2023, bpa:2100, dpa:1400, nombre_actions:7350000 },
-  ];
-  allBoc = [
-    { titre:'TPCI 6,50% 2023-2033', type:'obligation', emetteur:'République de Côte d\'Ivoire', montant:150000000000, taux:6.50, date_echeance:'2033-12-31', date_seance:'2024-10-15', valeur_nominale:10000 },
-    { titre:'TPSN 6,25% 2023-2030', type:'obligation', emetteur:'République du Sénégal', montant:100000000000, taux:6.25, date_echeance:'2030-06-30', date_seance:'2024-10-14', valeur_nominale:10000 },
-    { titre:'PALMCI OPV 2024', type:'action', emetteur:'PALMCI', montant:5000000000, prix_offre:6500, date_seance:'2024-10-10', valeur_nominale:1000 },
-    { titre:'FCPE Atlantique Actions', type:'opcvm', emetteur:'Atlantique Gestion', montant:2000000000, valeur_liquidative:12500, date_seance:'2024-10-15' },
-    { titre:'TPBF 6,75% 2022-2029', type:'obligation', emetteur:'République du Burkina Faso', montant:75000000000, taux:6.75, date_echeance:'2029-03-15', date_seance:'2024-10-12', valeur_nominale:10000 },
-  ];
-  // Fake index history
-  const base = 220;
-  allIndices = Array.from({ length: 300 }, (_, i) => ({
-    date_seance: new Date(Date.now() - (299 - i) * 86400000).toISOString().split('T')[0],
-    brvm_composite: base + Math.sin(i * 0.08) * 12 + i * 0.05 + (Math.random() - 0.45) * 2.5,
-    brvm_30: 185 + Math.sin(i * 0.07) * 8 + i * 0.03 + (Math.random() - 0.45) * 1.8,
-    brvm_prestige: 310 + Math.sin(i * 0.06) * 15 + i * 0.06 + (Math.random() - 0.45) * 3,
-  }));
-}
 
 // ═══════════════════════════════════════
 // RENDER INDICES
@@ -573,38 +561,20 @@ function bocCard(boc) {
 }
 
 // ═══════════════════════════════════════
-// RENDER CALENDRIER
+// RENDER CALENDRIER — Plus de données codées en dur
 // ═══════════════════════════════════════
 function renderCalendrier() {
-  // Events fictifs mais réalistes — en production viendront de la DB
-  const events = [
-    { date: '2024-11-05', type: 'ag', titre: 'Assemblée Générale Ordinaire', ticker: 'SGBCI' },
-    { date: '2024-11-12', type: 'div', titre: 'Détachement du dividende', ticker: 'PALMCI' },
-    { date: '2024-11-20', type: 'cot', titre: 'Introduction en bourse', ticker: 'SDCC' },
-    { date: '2024-12-02', type: 'ag', titre: 'Assemblée Générale Ordinaire', ticker: 'ETIT' },
-    { date: '2024-12-10', type: 'div', titre: 'Mise en paiement dividende', ticker: 'BOAB' },
-  ];
-
-  document.getElementById('calendrierList').innerHTML = events.map(e => {
-    const d = new Date(e.date);
-    const day = d.getDate();
-    const month = d.toLocaleDateString('fr-FR', { month: 'short' }).toUpperCase();
-    const badgeCls = { ag: 'badge-ag', div: 'badge-div', cot: 'badge-cot' }[e.type];
-    const badgeLabel = { ag: 'AG', div: 'Dividende', cot: 'Cotation' }[e.type];
-    return `<div class="event-item">
-      <div class="event-date">
-        <div class="event-day">${day}</div>
-        <div class="event-month">${month}</div>
+  // En production, ces données viendront d'une table 'evenements' dans Supabase
+  // Pour l'instant, on affiche un message invitant à contribuer
+  document.getElementById('calendrierList').innerHTML = `
+    <div class="event-item" style="justify-content:center;padding:30px;">
+      <div style="text-align:center;color:var(--dim);">
+        <div style="font-size:24px;margin-bottom:8px;">📅</div>
+        <div style="font-size:13px;margin-bottom:4px;">Calendrier en cours de construction</div>
+        <div style="font-size:11px;">Les prochaines AG et dividendes seront affichées ici.</div>
       </div>
-      <div>
-        <div class="event-title">
-          ${e.titre}
-          <span class="event-badge ${badgeCls}">${badgeLabel}</span>
-        </div>
-        <div class="event-type" style="font-family:var(--mono);color:var(--gold)">${e.ticker}</div>
-      </div>
-    </div>`;
-  }).join('');
+    </div>
+  `;
 }
 
 // ═══════════════════════════════════════
