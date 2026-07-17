@@ -1297,94 +1297,7 @@ const fmtM = n => {
       </div>
     </div>
 </div>  <!-- view-formation -->
-</main>
 
-
-<!-- ═══════════════════════════════════════
-     CORE (d'abord — définit fmt, toast, etc.)
-     ═══════════════════════════════════════ -->
-<script src="app/js/utils.js?v=3"></script>
-<script src="app/js/components.js?v=3"></script>
-<script src="app/js/state.js?v=3"></script>
-<script src="app/js/api.js?v=3"></script>
-<script src="app/js/ui.js?v=3"></script>
-<script src="app/js/search.js?v=3"></script>
-
-<!-- ═══════════════════════════════════════
-     VIEWS (ensuite — utilise fmt, toast, etc.)
-     ═══════════════════════════════════════ -->
-<script src="app/js/views/overview.js?v=3"></script>
-<script src="app/js/views/titres.js?v=3"></script>
-<script src="app/js/views/fiche.js?v=3"></script>
-<script src="app/js/views/boc.js?v=3"></script>
-<script src="app/js/views/analyses.js?v=3"></script>
-<script src="app/js/views/screener.js?v=3"></script>
-<!-- ═══════════════════════════════════════
-     PORTEFEUILLE
-     ═══════════════════════════════════════ -->
-<script src="app/js/views/portefeuille/portefeuille-utils.js?v=3"></script>
-<script src="app/js/views/portefeuille/portefeuille-prices.js?v=3"></script>
-<script src="app/js/views/portefeuille/portefeuille-history.js?v=3"></script>
-<script src="app/js/views/portefeuille/portefeuille-charts.js?v=3"></script>
-<script src="app/js/views/portefeuille/portefeuille-crud.js?v=3"></script>
-<script src="app/js/views/portefeuille/portefeuille-main.js?v=3"></script>
-<script src="app/js/views/alertes.js?v=3"></script>
-<script src="app/js/views/financials.js?v=3"></script>
-<script src="app/js/views/publications.js?v=3"></script>
-<script src="app/js/views/formation.js?v=3"></script>
-<script src="app/js/views/analyse-fondamentale.js?v=3"></script>
-
-<!-- ═══════════════════════════════════════
-     ROUTER (en dernier — appelle les fonctions des views)
-     ═══════════════════════════════════════ -->
-<script src="app/js/router.js?v=3"></script>
-
-<!-- ═══════════════════════════════════════
-     COMPONENTS
-     ═══════════════════════════════════════ -->
-<script src="app/js/components/header.js?v=3"></script>
-<script src="app/js/components/sidebar.js?v=3"></script>
-<script src="app/js/components/cards.js?v=3"></script>
-
-<!-- ═══════════════════════════════════════
-     ANALYSE TECHNIQUE — INDICATORS
-     ═══════════════════════════════════════ -->
-<script src="app/js/views/technique/ind/base.js?v=3"></script>
-<script src="app/js/views/technique/ind/sma.js?v=3"></script>
-<script src="app/js/views/technique/ind/ema.js?v=3"></script>
-<script src="app/js/views/technique/ind/bb.js?v=3"></script>
-<script src="app/js/views/technique/ind/rsi.js?v=3"></script>
-<script src="app/js/views/technique/ind/macd.js?v=3"></script>
-<script src="app/js/views/technique/ind/stoch.js?v=3"></script>
-<script src="app/js/views/technique/ind/adx.js?v=3"></script>
-<script src="app/js/views/technique/ind/cci.js?v=3"></script>
-<script src="app/js/views/technique/ind/vwap.js?v=3"></script>
-<script src="app/js/views/technique/ind/obv.js?v=3"></script>
-<script src="app/js/views/technique/ind/ha.js?v=3"></script>
-
-<!-- ═══════════════════════════════════════
-     ANALYSE TECHNIQUE — ENGINE
-     ═══════════════════════════════════════ -->
-<script src="app/js/views/technique/engine.js?v=3"></script>
-<script src="app/js/views/technique/draw.js?v=3"></script>
-<script src="app/js/views/technique/crosshair.js?v=3"></script>
-<script src="app/js/views/technique/zoom.js?v=3"></script>
-<script src="app/js/views/technique/types.js?v=3"></script>
-<script src="app/js/views/technique/indicators.js?v=3"></script>
-<script src="app/js/views/technique/signals.js?v=3"></script>
-<script src="app/js/views/technique/watchlist.js?v=3"></script>
-<script src="app/js/views/technique/compare.js?v=3"></script>
-<script src="app/js/views/technique/export.js?v=3"></script>
-<script src="app/js/views/technique/focus.js?v=3"></script>
-<script src="app/js/views/technique/index.js?v=3"></script>
-
-<!-- ═══════════════════════════════════════
-     ENTRY POINT
-     ═══════════════════════════════════════ -->
-<script src="app/js/main.js?v=3"></script>
-
-</body>
-</html>
 <!-- ═══ MARCHÉ ═══ -->
 <div class="view" id="view-marche">
   <div class="page-header">
@@ -1566,6 +1479,7 @@ const fmtM = n => {
   </div>
 </div>
 
+
 </main>
 
 
@@ -1594,7 +1508,6 @@ async function loadMarche() {
   marcheLoaded = true;
 
   try {
-    // Essayer d'abord l'API locale
     const [coursRes, bocRes, financialsRes, indicesRes] = await Promise.allSettled([
       fetch('/api/marche?type=cours').then(r => r.ok ? r.json() : Promise.reject(r.status)),
       fetch('/api/boc').then(r => r.ok ? r.json() : Promise.reject(r.status)),
@@ -1607,30 +1520,17 @@ async function loadMarche() {
     if (financialsRes.status === 'fulfilled') marcheAllFinancials = financialsRes.value.data || [];
     if (indicesRes.status === 'fulfilled') marcheAllIndices = indicesRes.value.data || [];
 
-    // Fallback Supabase si API vide
     if (marcheAllCours.length === 0) {
-      try {
-        const cours = await sbQuery('brvm_cours', { order: 'date_seance.desc', limit: 1000 });
-        marcheAllCours = cours || [];
-      } catch (e) { console.warn('Fallback Supabase cours échoué:', e); }
+      try { const cours = await sbQuery('brvm_cours', { order: 'date_seance.desc', limit: 1000 }); marcheAllCours = cours || []; } catch (e) {}
     }
     if (marcheAllIndices.length === 0) {
-      try {
-        const indices = await sbQuery('brvm_indices', { order: 'date_seance.desc', limit: 100 });
-        marcheAllIndices = indices || [];
-      } catch (e) { console.warn('Fallback Supabase indices échoué:', e); }
+      try { const indices = await sbQuery('brvm_indices', { order: 'date_seance.desc', limit: 100 }); marcheAllIndices = indices || []; } catch (e) {}
     }
     if (marcheAllFinancials.length === 0) {
-      try {
-        const fin = await sbQuery('brvm_financials', { order: 'annee.desc', limit: 1000 });
-        marcheAllFinancials = fin || [];
-      } catch (e) { console.warn('Fallback Supabase financials échoué:', e); }
+      try { const fin = await sbQuery('brvm_financials', { order: 'annee.desc', limit: 1000 }); marcheAllFinancials = fin || []; } catch (e) {}
     }
     if (marcheAllBoc.length === 0) {
-      try {
-        const boc = await sbQuery('brvm_boc', { order: 'date_seance.desc', limit: 100 });
-        marcheAllBoc = boc || [];
-      } catch (e) { console.warn('Fallback Supabase boc échoué:', e); }
+      try { const boc = await sbQuery('brvm_boc', { order: 'date_seance.desc', limit: 100 }); marcheAllBoc = boc || []; } catch (e) {}
     }
 
     renderMarcheIndices();
@@ -1833,7 +1733,7 @@ function renderMarchePublications() {
 
 function setMarchePubFilter(f, btn) {
   _marchePubFilter = f;
-  document.querySelectorAll('#view-marche #marcheSearchPub ~ .filter-btn, #view-marche .search-bar .filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#view-marche .search-bar .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   filterMarchePub();
 }
@@ -1857,7 +1757,7 @@ function marcheBocCard(boc) {
     boc.taux && ['Taux', boc.taux.toFixed(2) + '%'],
     boc.montant && ['Montant', fmtM(boc.montant) + ' FCFA'],
     boc.valeur_nominale && ['Val. Nominale', fmt(boc.valeur_nominale) + ' FCFA'],
-    boc.prix_offre && ['Prix d'offre', fmt(boc.prix_offre) + ' FCFA'],
+    boc.prix_offre && ['Prix d\'offre', fmt(boc.prix_offre) + ' FCFA'],
     boc.valeur_liquidative && ['Val. Liquid.', fmt(boc.valeur_liquidative) + ' FCFA'],
     boc.date_echeance && ['Échéance', fmtDate(boc.date_echeance)],
   ].filter(Boolean);
@@ -2000,4 +1900,5 @@ function renderMarcheSeanceStats() {
      ═══════════════════════════════════════ -->
 <script src="app/js/main.js?v=3"></script>
 
-</body></html>
+</body>
+</html>
