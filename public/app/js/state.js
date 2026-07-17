@@ -1,19 +1,54 @@
 // ═══════════════════════════════════════
-// STATE
+// STATE — Garde anti-double exécution
 // ═══════════════════════════════════════
+if (window.__stateLoaded) {
+  console.warn('[STATE] Déjà chargé, skip.');
+} else {
+  window.__stateLoaded = true;
 
-let allCours = [], allBoc = [], allAnalyses = [], allFinancials = [], allEntreprises = [], allIndices = [];
-let allCoursHistorique = [];  // ← AJOUTÉ : données historiques des cours
-let ficheHistorique = [], ficheChartPeriod = 30;
-let ficheChartInst = null, compositeChartInst = null, techChartInst = null, techVolInst = null;
-let prevView = 'titres';
-let _titreFilter = 'all', _bocFilter = 'all', _analyseFilter = 'all', _pubFilter = 'all';
-let _sortState = {};
-let entMap = {};
-let _fundMethod = 'tcam';
+  // ═══════════════════════════════════════
+  // VARIABLES GLOBALES (var pour résister au double chargement)
+  // ═══════════════════════════════════════
+  window.allCours = window.allCours || [];
+  window.allBoc = window.allBoc || [];
+  window.allAnalyses = window.allAnalyses || [];
+  window.allFinancials = window.allFinancials || [];
+  window.allEntreprises = window.allEntreprises || [];
+  window.allIndices = window.allIndices || [];
+  window.ficheHistorique = window.ficheHistorique || [];
+  window.ficheChartPeriod = window.ficheChartPeriod || 30;
+  window.ficheChartInst = window.ficheChartInst || null;
+  window.compositeChartInst = window.compositeChartInst || null;
+  window.techChartInst = window.techChartInst || null;
+  window.techVolInst = window.techVolInst || null;
+  window.prevView = window.prevView || 'titres';
+  window._titreFilter = window._titreFilter || 'all';
+  window._bocFilter = window._bocFilter || 'all';
+  window._analyseFilter = window._analyseFilter || 'all';
+  window._pubFilter = window._pubFilter || 'all';
+  window._sortState = window._sortState || {};
+  window.entMap = window.entMap || {};
+  window._fundMethod = window._fundMethod || 'tcam';
 
-// ── Chart instances Portefeuille ──
-let pfValueChartInst = null;
-let pfSectorChartInst = null;
-let pfGeoChartInst = null;
-let pfPLChartInst = null;
+  // Alias locaux pour compatibilité avec le code existant
+  var allCours = window.allCours;
+  var allBoc = window.allBoc;
+  var allAnalyses = window.allAnalyses;
+  var allFinancials = window.allFinancials;
+  var allEntreprises = window.allEntreprises;
+  var allIndices = window.allIndices;
+  var ficheHistorique = window.ficheHistorique;
+  var ficheChartPeriod = window.ficheChartPeriod;
+  var ficheChartInst = window.ficheChartInst;
+  var compositeChartInst = window.compositeChartInst;
+  var techChartInst = window.techChartInst;
+  var techVolInst = window.techVolInst;
+  var prevView = window.prevView;
+  var _titreFilter = window._titreFilter;
+  var _bocFilter = window._bocFilter;
+  var _analyseFilter = window._analyseFilter;
+  var _pubFilter = window._pubFilter;
+  var _sortState = window._sortState;
+  var entMap = window.entMap;
+  var _fundMethod = window._fundMethod;
+}
