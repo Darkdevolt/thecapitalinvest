@@ -1,192 +1,115 @@
 // ═══════════════════════════════════════
-// ROUTER (CORRIGÉ — avec Marché BRVM)
+// UTILS — Garde anti-double exécution
 // ═══════════════════════════════════════
+if (window.__utilsLoaded) {
+  console.warn('[UTILS] Déjà chargé, skip.');
+} else {
+  window.__utilsLoaded = true;
 
-// ═══════════════════════════════════════
-// CLOCK & NAV
-// ═══════════════════════════════════════
-setInterval(() => {
-  const el = document.getElementById('headerTime');
-  if (el) {
-    el.textContent = new Date().toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit', second:'2-digit' }) + ' GMT';
+  // ═══════════════════════════════════════
+  // TOAST SYSTEM
+  // ═══════════════════════════════════════
+  function toast(msg, type='info') {
+   const container = document.getElementById('toastContainer');
+   const el = document.createElement('div');
+   el.className = `toast ${type}`;
+   el.textContent = msg;
+   container.appendChild(el);
+   setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translateX(20px)'; setTimeout(() => el.remove(), 300); }, 4000);
   }
-}, 1000);
+  window.toast = toast;
 
-const TITLES = {
-  overview:"Vue d'ensemble — BRVM",
-  titres:'Titres BRVM',
-  marche:'Marché BRVM',
-  boc:'BOC — Bulletin Officiel',
-  analyses:'Recommandations',
-  'analyse-fondamentale':'Analyse Fondamentale',
-  'analyse-detail':'Détail Analyse',
-  'analyse-technique':'Analyse Technique',
-  screener:'Screener BRVM',
-  portefeuille:'Portefeuille',
-  alertes:'Alertes de Prix',
-  financials:'États Financiers',
-  'financials-detail':'Détail Financier',
-  fiche:'Fiche Titre',
-  publications:'Calendrier des Publications',
-  formation:'Formation BRVM'
-};
+  // ═══════════════════════════════════════
+  // CONFIG SUPABASE (var pour résister au double chargement)
+  // ═══════════════════════════════════════
+  window.SB_URL = window.SB_URL || 'https://otsiwiwlnowxeolbbgvm.supabase.co';
+  window.SB_KEY = window.SB_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
+  window.SK = window.SK || 'tc_session';
 
-const BREADCRUMBS = {
-  overview: [{label:'Tableau de bord', view:'overview'}],
-  titres: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}],
-  marche: [{label:'Tableau de bord', view:'overview'}, {label:'Marché BRVM', view:'marche'}],
-  fiche: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}, {label:'Fiche', view:'fiche'}],
-  boc: [{label:'Tableau de bord', view:'overview'}, {label:'BOC', view:'boc'}],
-  analyses: [{label:'Tableau de bord', view:'overview'}, {label:'Recommandations', view:'analyses'}],
-  'analyse-detail': [{label:'Tableau de bord', view:'overview'}, {label:'Analyses', view:'analyses'}, {label:'Détail', view:'analyse-detail'}],
-  'analyse-technique': [{label:'Tableau de bord', view:'overview'}, {label:'Analyse Technique', view:'analyse-technique'}],
-  screener: [{label:'Tableau de bord', view:'overview'}, {label:'Screener', view:'screener'}],
-  'analyse-fondamentale': [{label:'Tableau de bord', view:'overview'}, {label:'Analyse Fondamentale', view:'analyse-fondamentale'}],
-  portefeuille: [{label:'Tableau de bord', view:'overview'}, {label:'Portefeuille', view:'portefeuille'}],
-  alertes: [{label:'Tableau de bord', view:'overview'}, {label:'Alertes', view:'alertes'}],
-  financials: [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}],
-  'financials-detail': [{label:'Tableau de bord', view:'overview'}, {label:'États Financiers', view:'financials'}, {label:'Détail', view:'financials-detail'}],
-  publications: [{label:'Tableau de bord', view:'overview'}, {label:'Publications', view:'publications'}],
-  formation: [{label:'Tableau de bord', view:'overview'}, {label:'Formation', view:'formation'}]
-};
+  var SB_URL = window.SB_URL;
+  var SB_KEY = window.SB_KEY;
+  var SK = window.SK;
 
-function nav(id, noHash) {
-  document.querySelectorAll('.nav-dropdown-item, .nav-dropdown-btn').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-
-  const v = document.getElementById('view-' + id);
-  if (v) {
-    v.classList.add('active');
-    v.style.display = '';
+  // ═══════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════
+  function fmt(n, d = 0) {
+    return (n == null || isNaN(+n)) ? '—' : (+n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
   }
+  window.fmt = fmt;
 
-  const navEl = document.getElementById('nav-' + id);
-  if (navEl) navEl.classList.add('active');
-
-  const parentMenu = navEl ? navEl.closest('.nav-dropdown') : null;
-  if (parentMenu) {
-    const parentBtn = parentMenu.querySelector('.nav-dropdown-btn');
-    if (parentBtn) parentBtn.classList.add('active');
+  function fmtDate(d) {
+    return d ? new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
   }
+  window.fmtDate = fmtDate;
 
-  if (!noHash) setHashForView(id);
+  function fmtM(n) {
+   if (n == null || isNaN(+n)) return '—';
+   const v = +n;
+   if (Math.abs(v) >= 1e9) return (v/1e9).toFixed(1) + ' Mrd';
+   if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(0) + ' M';
+   return fmt(v);
+  }
+  window.fmtM = fmtM;
 
-  if (id === 'portefeuille') {
-    if (typeof initPortefeuille === 'function') {
-      setTimeout(() => initPortefeuille(), 50);
-    } else if (typeof renderPortefolio === 'function') {
-      setTimeout(() => renderPortefolio(), 50);
+  function changePill(v) {
+   const n = parseFloat(v);
+   if (isNaN(n)) return '—';
+   if (n > 0) return `▲ ${n.toFixed(2)}%`;
+   if (n < 0) return `▼ ${Math.abs(n).toFixed(2)}%`;
+   return '= 0.00%';
+  }
+  window.changePill = changePill;
+
+  const SECTORS = { SGBC:'Banque', BICC:'Banque', ETIT:'Telecom', NTLC:'Telecom', SAFC:'Finance', PALM:'Agro', SIVC:'Agro', SOLB:'Distribution', BOAB:'Banque', BOAN:'Banque', ONAB:'Agro', CABC:'Agro', TTLS:'Industrie', SHEC:'Industrie' };
+  window.SECTORS = SECTORS;
+
+  function getSector(t) {
+   if (!t) return 'Divers';
+   for (const [k,v] of Object.entries(SECTORS)) if (t.startsWith(k)) return v;
+   return 'Divers';
+  }
+  window.getSector = getSector;
+
+  // ═══════════════════════════════════════
+  // CHART DEFAULTS
+  // ═══════════════════════════════════════
+  const chartOpts = {
+   responsive: true,
+   maintainAspectRatio: false,
+   interaction: { mode: 'index', intersect: false },
+   plugins: {
+    legend: { display: false },
+    tooltip: {
+     backgroundColor: '#1A1610', borderColor: 'rgba(184,150,78,0.3)', borderWidth: 1,
+     titleColor: '#B8964E', bodyColor: '#F5F0E8', padding: 12,
+     callbacks: { label: ctx => ' ' + (ctx.dataset.label ? ctx.dataset.label + ': ' : '') + fmt(ctx.parsed.y, 2) }
     }
-  }
-
-  if (id === 'marche') {
-    if (typeof loadMarche === 'function') {
-      setTimeout(() => loadMarche(), 50);
-    }
-  }
-
-  const searchResults = document.getElementById('globalSearchResults');
-  if (searchResults) searchResults.classList.remove('open');
-  closeDropdowns();
-  updateBreadcrumb(id);
-}
-
-function toggleDropdown(id) {
-  const dd = document.getElementById(id);
-  if (!dd) return;
-  const menu = document.getElementById('menu-' + id);
-  const btn = dd.querySelector('.nav-dropdown-btn');
-  const isOpen = menu && menu.classList.contains('open');
-  closeDropdowns();
-  if (!isOpen && menu && btn) {
-    menu.classList.add('open');
-    btn.classList.add('open');
-  }
-}
-
-function closeDropdowns() {
-  document.querySelectorAll('.nav-dropdown-menu').forEach(m => m.classList.remove('open'));
-  document.querySelectorAll('.nav-dropdown-btn').forEach(b => b.classList.remove('open'));
-}
-
-// ═══════════════════════════════════════
-// HELPERS UI
-// ═══════════════════════════════════════
-function toggleSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('overlay');
-  if (!sidebar) return;
-  const isOpen = sidebar.classList.contains('open');
-  if (isOpen) {
-    sidebar.classList.remove('open');
-    if (overlay) overlay.classList.remove('open');
-  } else {
-    sidebar.classList.add('open');
-    if (overlay) overlay.classList.add('open');
-  }
-}
-
-function closeSidebar() {
-  const sidebar = document.getElementById('sidebar');
-  const overlay = document.getElementById('overlay');
-  if (sidebar) sidebar.classList.remove('open');
-  if (overlay) overlay.classList.remove('open');
-}
-
-function debounce(fn, ms) {
-  let timer;
-  return function(...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn.apply(this, args), ms);
+   },
+   scales: {
+    x: { grid: { color: 'rgba(184,150,78,0.04)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10, family: 'DM Mono' }, maxTicksLimit: 8 } },
+    y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10, family: 'DM Mono' }, callback: v => fmt(v) } }
+   }
   };
-}
+  window.chartOpts = chartOpts;
 
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('.nav-dropdown') && !e.target.closest('.topnav-logo')) {
-    closeDropdowns();
-  }
-});
-
-function updateBreadcrumb(viewId) {
-  const bc = document.getElementById('breadcrumb');
-  if (!bc) return;
-  const items = BREADCRUMBS[viewId] || BREADCRUMBS['overview'];
-  bc.innerHTML = items.map((item, i) => {
-    if (i === items.length - 1) return `<span>${item.label}</span>`;
-    return `<a onclick="nav('${item.view}')">${item.label}</a><span> › </span>`;
-  }).join('');
-}
-
-function setHashForView(id) {
-  const hashMap = { overview:'', titres:'#titres', marche:'#marche', boc:'#boc', analyses:'#analyses', 'analyse-detail':'#analyse-detail', 'analyse-technique':'#analyse-technique', 'analyse-fondamentale':'#analyse-fondamentale', screener:'#screener', portefeuille:'#portefeuille', alertes:'#alertes', financials:'#financials', 'financials-detail':'#financials-detail', fiche:'#fiche', publications:'#publications', formation:'#formation' };
-  const h = hashMap[id] || '';
-  if (h !== location.hash) history.replaceState(null, '', h || location.pathname);
-}
-
-// ═══════════════════════════════════════
-// parseHash — CORRIGÉ : maintenant défini ici
-// ═══════════════════════════════════════
-function parseHash() {
-  const h = location.hash;
-  if (h.startsWith('#fiche=')) {
-    const ticker = h.replace('#fiche=', '');
-    if (typeof openFiche === 'function') {
-      openFiche(ticker, 'titres', true);
-    } else {
-      console.warn('openFiche non définie');
+  function mkDataset(vals, color = '#B8964E', label = '') {
+   return {
+    label,
+    data: vals, borderColor: color, borderWidth: 2,
+    pointRadius: 0, pointHoverRadius: 5, pointHoverBackgroundColor: color, pointHoverBorderColor: '#fff', pointHoverBorderWidth: 2,
+    fill: true, tension: 0.3,
+    backgroundColor: ctx => {
+     const g = ctx.chart.ctx.createLinearGradient(0, 0, 0, ctx.chart.height);
+     g.addColorStop(0, color + '18'); g.addColorStop(1, color + '00');
+     return g;
     }
-    return;
+   };
   }
-  if (h.startsWith('#analyse=')) {
-    const id = h.replace('#analyse=', '');
-    if (typeof openAnalyseDetail === 'function') {
-      openAnalyseDetail(+id, true);
-    } else {
-      console.warn('openAnalyseDetail non définie');
-    }
-    return;
+  window.mkDataset = mkDataset;
+
+  function mkLineDataset(vals, color, label, width = 1.5) {
+   return { label, data: vals, borderColor: color, borderWidth: width, pointRadius: 0, pointHoverRadius: 3, fill: false, tension: 0.3 };
   }
-  const map = { '#titres':'titres', '#marche':'marche', '#boc':'boc', '#analyses':'analyses', '#analyse-detail':'analyse-detail', '#analyse-technique':'analyse-technique', '#analyse-fondamentale':'analyse-fondamentale', '#screener':'screener', '#portefeuille':'portefeuille', '#alertes':'alertes', '#financials':'financials', '#financials-detail':'financials-detail', '#publications':'publications', '#formation':'formation' };
-  const view = map[h] || 'overview';
-  nav(view, true);
+  window.mkLineDataset = mkLineDataset;
 }
