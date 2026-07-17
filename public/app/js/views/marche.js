@@ -2,7 +2,7 @@
 // ═══════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════
-let marcheAllCours = [], allBoc = [], allFinancials = [], allIndices = [];
+let marcheAllCours = [], marcheAllBoc = [], marcheAllFinancials = [], marcheAllIndices = [];
 let _marcheCoursFilter = 'all', _marchePubFilter = 'all';
 let marcheIdxChartInst = null, marcheIdxPeriod = 30;
 
@@ -18,20 +18,20 @@ async function loadMarche() {
       fetch('/api/marche?type=indices').then(r => r.ok ? r.json() : Promise.reject(r.status)),
     ]);
 
-    if (coursRes.status === 'fulfilled') allCours = coursRes.value.data || [];
-    if (bocRes.status === 'fulfilled') allBoc = bocRes.value.data || [];
-    if (financialsRes.status === 'fulfilled') allFinancials = financialsRes.value.data || [];
-    if (indicesRes.status === 'fulfilled') allIndices = indicesRes.value.data || [];
+    if (coursRes.status === 'fulfilled') marcheAllCours = coursRes.value.data || [];
+    if (bocRes.status === 'fulfilled') marcheAllBoc = bocRes.value.data || [];
+    if (financialsRes.status === 'fulfilled') marcheAllFinancials = financialsRes.value.data || [];
+    if (indicesRes.status === 'fulfilled') marcheAllIndices = indicesRes.value.data || [];
 
     // Plus jamais de données fictives
 
-    renderIndices();
-    renderCours();
-    renderPalmares();
-    renderDividendes();
-    renderPublications();
-    renderCalendrier();
-    renderSeanceStats();
+    renderMarcheIndices();
+    renderMarcheCours();
+    renderMarchePalmares();
+    renderMarcheDividendes();
+    renderMarchePublications();
+    renderMarcheCalendrier();
+    renderMarcheSeanceStats();
     
   } catch (err) {
     console.error('Erreur chargement marché:', err);
@@ -44,7 +44,7 @@ async function loadMarche() {
 // RENDER INDICES
 // ═══════════════════════════════════════
 function renderMarcheIndices() {
-  const data = allIndices.slice(0, 2);
+  const data = marcheAllIndices.slice(0, 2);
   const [latest, prev] = data;
   if (!latest) {
     ['composite','30','prestige'].forEach(id => {
@@ -63,11 +63,11 @@ function renderMarcheIndices() {
     if (latest.brvm_30) setIdx('30', latest.brvm_30, prev?.brvm_30);
     if (latest.brvm_prestige) setIdx('prestige', latest.brvm_prestige, prev?.brvm_prestige);
   }
-  renderIdxChart();
+  renderMarcheIdxChart();
 }
 
 function renderMarcheIdxChart() {
-  const slice = allIndices.slice(0, marcheIdxPeriod).reverse();
+  const slice = marcheAllIndices.slice(0, marcheIdxPeriod).reverse();
   const labels = slice.map(d => fmtDateShort(d.date_seance));
   const composite = slice.map(d => d.brvm_composite);
   const brvm30 = slice.map(d => d.brvm_30);
@@ -97,9 +97,9 @@ function renderMarcheIdxChart() {
 
 function setMarcheIdxPeriod(n, btn) {
   marcheIdxPeriod = n;
-  document.querySelectorAll('#marcheIdxPeriodBtns .filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#idxPeriodBtns .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  renderIdxChart();
+  renderMarcheIdxChart();
 }
 
 // ═══════════════════════════════════════
@@ -107,18 +107,18 @@ function setMarcheIdxPeriod(n, btn) {
 // ═══════════════════════════════════════
 function renderMarcheCours() {
   const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  marcheAllCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
   window._coursRows = Object.values(byTicker);
-  const latestDate = allCours[0]?.date_seance;
+  const latestDate = marcheAllCours[0]?.date_seance;
   if (latestDate) document.getElementById('marche-coursDate').textContent = fmtDate(latestDate);
-  filterCours();
+  filterMarcheCours();
 }
 
 function setMarcheCoursFilter(f, btn) {
   _marcheCoursFilter = f;
   document.querySelectorAll('#cours .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  filterCours();
+  filterMarcheCours();
 }
 
 function filterMarcheCours() {
@@ -150,7 +150,7 @@ function filterMarcheCours() {
 // ═══════════════════════════════════════
 function renderMarchePalmares() {
   const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  marcheAllCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
   const all = Object.values(byTicker).filter(c => c.variation != null);
   const sorted = [...all].sort((a,b) => b.variation - a.variation);
   const top5up = sorted.filter(c => c.variation > 0).slice(0, 5);
@@ -170,8 +170,8 @@ function renderMarchePalmares() {
 // ═══════════════════════════════════════
 function renderMarcheDividendes() {
   const coursMap = {};
-  allCours.forEach(c => { if (!coursMap[c.ticker]) coursMap[c.ticker] = c; });
-  const rows = allFinancials.filter(f => f.dpa).sort((a,b) => {
+  marcheAllCours.forEach(c => { if (!coursMap[c.ticker]) coursMap[c.ticker] = c; });
+  const rows = marcheAllFinancials.filter(f => f.dpa).sort((a,b) => {
     const rdtA = (coursMap[a.ticker]?.cours && a.dpa) ? a.dpa / coursMap[a.ticker].cours : 0;
     const rdtB = (coursMap[b.ticker]?.cours && b.dpa) ? b.dpa / coursMap[b.ticker].cours : 0;
     return rdtB - rdtA;
@@ -201,15 +201,15 @@ function renderMarcheDividendes() {
 // RENDER PUBLICATIONS (BOC)
 // ═══════════════════════════════════════
 function renderMarchePublications() {
-  window._pubRows = allBoc;
-  filterPub();
+  window._pubRows = marcheAllBoc;
+  filterMarchePub();
 }
 
 function setMarchePubFilter(f, btn) {
   _marchePubFilter = f;
   document.querySelectorAll('#publications .filter-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  filterPub();
+  filterMarchePub();
 }
 
 function filterMarchePub() {
@@ -219,7 +219,7 @@ function filterMarchePub() {
   if (q) rows = rows.filter(r => (r.titre||'').toLowerCase().includes(q) || (r.emetteur||'').toLowerCase().includes(q));
 
   const grid = document.getElementById('marche-pubGrid');
-  grid.innerHTML = rows.length ? rows.map(bocCard).join('') :
+  grid.innerHTML = rows.length ? rows.map(marcheBocCard).join('') :
     `<div style="grid-column:1/-1" class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">Aucune publication</div><div class="empty-text">Modifiez vos critères</div></div>`;
 }
 
@@ -264,7 +264,7 @@ function renderMarcheCalendrier() {
 // ═══════════════════════════════════════
 function renderMarcheSeanceStats() {
   const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
+  marcheAllCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
   const rows = Object.values(byTicker);
   const hausse = rows.filter(c => c.variation > 0).length;
   const baisse = rows.filter(c => c.variation < 0).length;
@@ -291,4 +291,4 @@ function renderMarcheSeanceStats() {
 }
 
 // INIT
-loadAll();
+loadMarche();
