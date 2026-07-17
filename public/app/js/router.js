@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// ROUTER (CORRIGÉ)
+// ROUTER (CORRIGÉ — avec Marché BRVM)
 // ═══════════════════════════════════════
 
 // ═══════════════════════════════════════
@@ -15,6 +15,7 @@ setInterval(() => {
 const TITLES = {
   overview:"Vue d'ensemble — BRVM",
   titres:'Titres BRVM',
+  marche:'Marché BRVM',
   boc:'BOC — Bulletin Officiel',
   analyses:'Recommandations',
   'analyse-fondamentale':'Analyse Fondamentale',
@@ -33,6 +34,7 @@ const TITLES = {
 const BREADCRUMBS = {
   overview: [{label:'Tableau de bord', view:'overview'}],
   titres: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}],
+  marche: [{label:'Tableau de bord', view:'overview'}, {label:'Marché BRVM', view:'marche'}],
   fiche: [{label:'Tableau de bord', view:'overview'}, {label:'Titres BRVM', view:'titres'}, {label:'Fiche', view:'fiche'}],
   boc: [{label:'Tableau de bord', view:'overview'}, {label:'BOC', view:'boc'}],
   analyses: [{label:'Tableau de bord', view:'overview'}, {label:'Recommandations', view:'analyses'}],
@@ -74,6 +76,12 @@ function nav(id, noHash) {
       setTimeout(() => initPortefeuille(), 50);
     } else if (typeof renderPortefolio === 'function') {
       setTimeout(() => renderPortefolio(), 50);
+    }
+  }
+
+  if (id === 'marche') {
+    if (typeof loadMarche === 'function') {
+      setTimeout(() => loadMarche(), 50);
     }
   }
 
@@ -150,7 +158,7 @@ function updateBreadcrumb(viewId) {
 }
 
 function setHashForView(id) {
-  const hashMap = { overview:'', titres:'#titres', boc:'#boc', analyses:'#analyses', 'analyse-detail':'#analyse-detail', 'analyse-technique':'#analyse-technique', 'analyse-fondamentale':'#analyse-fondamentale', screener:'#screener', portefeuille:'#portefeuille', alertes:'#alertes', financials:'#financials', 'financials-detail':'#financials-detail', fiche:'#fiche', publications:'#publications', formation:'#formation' };
+  const hashMap = { overview:'', titres:'#titres', marche:'#marche', boc:'#boc', analyses:'#analyses', 'analyse-detail':'#analyse-detail', 'analyse-technique':'#analyse-technique', 'analyse-fondamentale':'#analyse-fondamentale', screener:'#screener', portefeuille:'#portefeuille', alertes:'#alertes', financials:'#financials', 'financials-detail':'#financials-detail', fiche:'#fiche', publications:'#publications', formation:'#formation' };
   const h = hashMap[id] || '';
   if (h !== location.hash) history.replaceState(null, '', h || location.pathname);
 }
@@ -178,7 +186,7 @@ function parseHash() {
     }
     return;
   }
-  const map = { '#titres':'titres', '#boc':'boc', '#analyses':'analyses', '#analyse-detail':'analyse-detail', '#analyse-technique':'analyse-technique', '#analyse-fondamentale':'analyse-fondamentale', '#screener':'screener', '#portefeuille':'portefeuille', '#alertes':'alertes', '#financials':'financials', '#financials-detail':'financials-detail', '#publications':'publications', '#formation':'formation' };
+  const map = { '#titres':'titres', '#marche':'marche', '#boc':'boc', '#analyses':'analyses', '#analyse-detail':'analyse-detail', '#analyse-technique':'analyse-technique', '#analyse-fondamentale':'analyse-fondamentale', '#screener':'screener', '#portefeuille':'portefeuille', '#alertes':'alertes', '#financials':'financials', '#financials-detail':'financials-detail', '#publications':'publications', '#formation':'formation' };
   const view = map[h] || 'overview';
   nav(view, true);
 }
