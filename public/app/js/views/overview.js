@@ -1,575 +1,545 @@
 // ═══════════════════════════════════════
 // VIEW — Overview / Tableau de bord
 // ═══════════════════════════════════════
-
-function getLatestIndices() {
-  const map = {};
-  (allIndices || []).forEach(row => {
-    if (!row?.indice || !row?.date_seance) return;
-    const name = String(row.indice).trim();
-    if (!map[name] || new Date(row.date_seance) > new Date(map[name].date_seance)) {
-      map[name] = row;
-    }
-  });
-  return map;
-}
-
-function getIndiceHistory(indiceName, maxDays) {
-  maxDays = maxDays || 30;
-  return (allIndices || [])
-    .filter(function(r) { return r && r.indice && String(r.indice).trim() === indiceName && r.valeur != null; })
-    .sort(function(a, b) { return new Date(a.date_seance) - new Date(b.date_seance); })
-    .slice(-maxDays);
-}
-
-function renderOverview() {
-  const latest = getLatestIndices();
-  const indiceNames = Object.keys(latest);
-
-  console.log('[Overview] Indices découverts :', indiceNames, latest);
-
-  updateMarketStatus();
-  renderIndexCards(latest, indiceNames);
-  renderCompositeChart();
-  renderSessionAnalytics();
-  renderSectorHeatmap();
-  renderNewsFeed();
-  renderTopMovers();
-  renderPubFeed();
-  renderAlertFeed();
-  renderWatchFeed();
-  renderCoursTable();
-}
-
-function updateMarketStatus() {
-  const now = new Date();
-  const hour = now.getHours();
-  const min = now.getMinutes();
-  const day = now.getDay();
-
-  const isOpen = day >= 1 && day <= 5 && (hour > 9 || (hour === 9 && min >= 30)) && (hour < 15 || (hour === 15 && min <= 30));
-
-  const statusEl = document.getElementById('marketStatus');
-  const timeEl = document.getElementById('marketTime');
-  const nextEl = document.getElementById('marketNext');
-
-  if (statusEl) {
-    statusEl.className = 'market-status ' + (isOpen ? '' : 'closed');
-    statusEl.innerHTML = (isOpen ? '' : '● ') + '<span class="status-dot"></span>' + (isOpen ? 'Marché Ouvert' : 'Marché Fermé');
+// Guard pattern
+(function() {
+  if (window.__TC_OVERVIEW_LOADED__) {
+    console.log('[OVERVIEW] Déjà chargé, skip.');
+    return;
   }
+  window.__TC_OVERVIEW_LOADED__ = true;
 
-  if (timeEl) timeEl.textContent = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' GMT';
+  // ═══════════════════════════════════════
+  // VARIABLES LOCALES (pas de conflit global)
+  // ═══════════════════════════════════════
+  let _compositePeriod = 30;  // let au lieu de var globale
+  let _moversTab = 'gainers';
 
-  if (nextEl) {
-    if (isOpen) {
-      const closeTime = new Date(now);
-      closeTime.setHours(15, 30, 0);
-      const diff = Math.floor((closeTime - now) / 60000);
-      nextEl.textContent = 'Fermeture dans ' + diff + ' min';
-    } else {
-      nextEl.textContent = 'Prochaine ouverture : lun. 09:30';
-    }
-  }
-}
-
-function renderIndexCards(latest, indiceNames) {
-  const findIndice = function(patterns) {
-    return indiceNames.find(function(n) {
-      return patterns.some(function(p) { return n.toUpperCase().includes(p); });
-    }) || null;
-  };
-
-  const mapCard = {
-    composite: findIndice(['COMPOSITE', 'BRVM C', 'BRVMC']),
-    brvm30: findIndice(['30', 'BRVM30']),
-    prestige: findIndice(['PRESTIGE'])
-  };
-
-  const setIdx = function(id, val, chgId, chg) {
-    const el = document.getElementById(id);
-    const ce = document.getElementById(chgId);
-    if (el) el.textContent = (val != null && !isNaN(+val)) ? fmt(+val, 2) : '—';
-    if (ce) {
-      const n = parseFloat(chg);
-      const cls = isNaN(n) ? 'neutral' : n > 0 ? 'up' : n < 0 ? 'down' : 'neutral';
-      ce.className = 'stat-change ' + cls;
-      ce.innerHTML = isNaN(n) ? '—' : (n > 0 ? '▲' : n < 0 ? '▼' : '=') + ' ' + Math.abs(n).toFixed(2) + ' pts';
-    }
-  };
-
-  let lastDate = null;
-
-  Object.entries(mapCard).forEach(function(entry) {
-    const key = entry[0];
-    const realName = entry[1];
-    const data = realName ? latest[realName] : null;
-    const cardIds = {
-      composite: { id: 'idx-composite', chgId: 'idx-composite-chg', sparkId: 'sparkComposite' },
-      brvm30: { id: 'idx-30', chgId: 'idx-30-chg', sparkId: 'spark30' },
-      prestige: { id: 'idx-prestige', chgId: 'idx-prestige-chg', sparkId: 'sparkPrestige' }
-    };
-    const card = cardIds[key];
-
-    if (data && card) {
-      setIdx(card.id, data.valeur, card.chgId, data.variation);
-      if (data.date_seance) lastDate = data.date_seance;
-      const history = getIndiceHistory(realName, 20);
-      drawSparkline(card.sparkId, history.map(function(d) { return d.valeur; }));
-    } else if (card) {
-      setIdx(card.id, null, card.chgId, null);
-    }
-  });
-
-  const lastSessionEl = document.getElementById('lastSession');
-  if (lastSessionEl) lastSessionEl.textContent = lastDate ? 'Séance ' + fmtDate(lastDate) : '—';
-}
-
-function drawSparkline(canvasId, values) {
-  const canvas = document.getElementById(canvasId);
-  if (!canvas || values.length < 2) return;
-
-  const ctx = canvas.getContext('2d');
-  const dpr = window.devicePixelRatio || 1;
-  const rect = canvas.getBoundingClientRect();
-  canvas.width = rect.width * dpr;
-  canvas.height = rect.height * dpr;
-  ctx.scale(dpr, dpr);
-
-  const w = rect.width, h = rect.height;
-  const min = Math.min.apply(null, values), max = Math.max.apply(null, values);
-  const range = max - min || 1;
-
-  ctx.clearRect(0, 0, w, h);
-  ctx.beginPath();
-  ctx.strokeStyle = values[values.length-1] >= values[0] ? 'var(--green)' : 'var(--red)';
-  ctx.lineWidth = 2;
-
-  values.forEach(function(v, i) {
-    const x = (i / (values.length - 1)) * w;
-    const y = h - ((v - min) / range) * h * 0.8 - h * 0.1;
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-
-  ctx.stroke();
-}
-
-let _compositePeriod = 30;
-
-function renderCompositeChart() {
-  const latest = getLatestIndices();
-  const indiceNames = Object.keys(latest).sort(function(a, b) { return a.localeCompare(b); });
-  const chartTarget = indiceNames[0] || 'BRVM C';
-
-  const history = getIndiceHistory(chartTarget, _compositePeriod);
-
-  const labels = history.map(function(d) {
-    return d && d.date_seance ? new Date(d.date_seance).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) : '?';
-  });
-  const values = history.map(function(d) { return d && d.valeur != null ? d.valeur : 0; });
-
-  if (compositeChartInst) {
-    compositeChartInst.destroy();
-    compositeChartInst = null;
-  }
-
-  const canvas = document.getElementById('chartComposite');
-  if (canvas && labels.length > 1 && values.some(function(v) { return v > 0; })) {
-    compositeChartInst = new Chart(canvas, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{ data: values, borderColor: '#B8964E', borderWidth: 2, pointRadius: 0, pointHoverRadius: 6, fill: true, tension: 0.3 }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { intersect: false, mode: 'index' },
-        plugins: { legend: { display: false } }
+  // ═══════════════════════════════════════
+  // HELPERS
+  // ═══════════════════════════════════════
+  function getLatestIndices() {
+    const map = {};
+    (window.allIndices || []).forEach(row => {
+      if (!row?.indice || !row?.date_seance) return;
+      const name = String(row.indice).trim();
+      if (!map[name] || new Date(row.date_seance) > new Date(map[name].date_seance)) {
+        map[name] = row;
       }
     });
-  }
-}
-
-function setCompositePeriod(days, btn) {
-  document.querySelectorAll('.chart-tabs .year-tab').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  _compositePeriod = days;
-  renderCompositeChart();
-}
-
-// ═══════════════════════════════════════════════════════
-// SESSION ANALYTICS
-// ═══════════════════════════════════════════════════════
-
-function renderSessionAnalytics() {
-  const container = document.getElementById('sessionAnalytics');
-  if (!container) return;
-
-  const byTicker = {};
-  allCours.forEach(function(c) { if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const rows = Object.values(byTicker);
-
-  if (!rows.length) {
-    container.innerHTML = '';
-    return;
+    return map;
   }
 
-  const hausses = rows.filter(function(r) { return parseFloat(r.variation) > 0; }).length;
-  const baisses = rows.filter(function(r) { return parseFloat(r.variation) < 0; }).length;
-  const stables = rows.filter(function(r) { return parseFloat(r.variation) === 0; }).length;
-
-  const topPerformers = rows.slice().filter(function(r) { return parseFloat(r.variation) > 0; })
-    .sort(function(a, b) { return parseFloat(b.variation) - parseFloat(a.variation); })
-    .slice(0, 5);
-
-  const topLosers = rows.slice().filter(function(r) { return parseFloat(r.variation) < 0; })
-    .sort(function(a, b) { return parseFloat(a.variation) - parseFloat(b.variation); })
-    .slice(0, 5);
-
-  const topVolumes = rows.slice().sort(function(a, b) { return (b.volume || 0) - (a.volume || 0); }).slice(0, 5);
-
-  const topValeurs = rows.slice().map(function(r) {
-    return { ticker: r.ticker, volume: r.volume, cours: r.cours, valeur: (r.volume || 0) * (r.cours || 0) };
-  }).sort(function(a, b) { return b.valeur - a.valeur; }).slice(0, 5);
-
-  var performersHtml = topPerformers.map(function(r) {
-    return '<div class="perf-bar-row" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
-      '<span class="perf-ticker">' + r.ticker + '</span>' +
-      '<div class="perf-bar-container">' +
-        '<div class="perf-bar positive" style="width:' + Math.min(Math.abs(parseFloat(r.variation)) * 3, 100) + '%"></div>' +
-      '</div>' +
-      '<span class="perf-val positive">+' + parseFloat(r.variation).toFixed(2) + '%</span>' +
-    '</div>';
-  }).join('');
-
-  var losersHtml = topLosers.map(function(r) {
-    return '<div class="perf-bar-row" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
-      '<span class="perf-ticker">' + r.ticker + '</span>' +
-      '<div class="perf-bar-container">' +
-        '<div class="perf-bar negative" style="width:' + Math.min(Math.abs(parseFloat(r.variation)) * 3, 100) + '%"></div>' +
-      '</div>' +
-      '<span class="perf-val negative">' + parseFloat(r.variation).toFixed(2) + '%</span>' +
-    '</div>';
-  }).join('');
-
-  var volumesHtml = topVolumes.map(function(r, i) {
-    var pct = topVolumes[0].volume > 0 ? (r.volume / topVolumes[0].volume * 100).toFixed(0) : 0;
-    var bg = i === 0 ? 'var(--gold)' : i === 1 ? 'rgba(184,150,78,0.6)' : 'rgba(184,150,78,0.3)';
-    return '<div class="top-item" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
-      '<span class="top-rank">' + (i + 1) + '</span>' +
-      '<span class="top-ticker">' + r.ticker + '</span>' +
-      '<div class="top-bar-container">' +
-        '<div class="top-bar" style="width:' + pct + '%;background:' + bg + ';"></div>' +
-      '</div>' +
-      '<span class="top-val">' + fmt(r.volume) + '</span>' +
-    '</div>';
-  }).join('');
-
-  var valeursHtml = topValeurs.map(function(r, i) {
-    var pct = topValeurs[0].valeur > 0 ? (r.valeur / topValeurs[0].valeur * 100).toFixed(0) : 0;
-    var bg = i === 0 ? 'var(--gold)' : i === 1 ? 'rgba(184,150,78,0.6)' : 'rgba(184,150,78,0.3)';
-    return '<div class="top-item" onclick="openFiche(\'' + r.ticker + '\')" style="cursor:pointer">' +
-      '<span class="top-rank">' + (i + 1) + '</span>' +
-      '<span class="top-ticker">' + r.ticker + '</span>' +
-      '<div class="top-bar-container">' +
-        '<div class="top-bar" style="width:' + pct + '%;background:' + bg + ';"></div>' +
-      '</div>' +
-      '<span class="top-val">' + fmtM(r.valeur) + '</span>' +
-    '</div>';
-  }).join('');
-
-  container.innerHTML = '<div class="session-grid">' +
-    '<div class="session-card">' +
-      '<div class="session-card-title">Performance de la Séance</div>' +
-      '<div class="session-bars">' + performersHtml + losersHtml + '</div>' +
-    '</div>' +
-    '<div class="session-card">' +
-      '<div class="session-card-title">Tendances</div>' +
-      '<div class="tendance-grid">' +
-        '<div class="tendance-item up" onclick="nav(\'titres\')" style="cursor:pointer">' +
-          '<div class="tendance-icon">▲</div>' +
-          '<div class="tendance-count">' + hausses + '</div>' +
-          '<div class="tendance-label">Titres en hausse</div>' +
-        '</div>' +
-        '<div class="tendance-item neutral" onclick="nav(\'titres\')" style="cursor:pointer">' +
-          '<div class="tendance-icon">=</div>' +
-          '<div class="tendance-count">' + stables + '</div>' +
-          '<div class="tendance-label">Titres stables</div>' +
-        '</div>' +
-        '<div class="tendance-item down" onclick="nav(\'titres\')" style="cursor:pointer">' +
-          '<div class="tendance-icon">▼</div>' +
-          '<div class="tendance-count">' + baisses + '</div>' +
-          '<div class="tendance-label">Titres en baisse</div>' +
-        '</div>' +
-      '</div>' +
-    '</div>' +
-    '<div class="session-card">' +
-      '<div class="session-card-title">Top 5 Volumes Transigés</div>' +
-      '<div class="top-list">' + volumesHtml + '</div>' +
-    '</div>' +
-    '<div class="session-card">' +
-      '<div class="session-card-title">Top 5 Valeurs Transigées</div>' +
-      '<div class="top-list">' + valeursHtml + '</div>' +
-    '</div>' +
-  '</div>';
-}
-
-function renderSectorHeatmap() {
-  const bySector = {};
-  const byTicker = {};
-
-  allCours.forEach(function(c) {
-    if (!c || !c.ticker) return;
-    if (!byTicker[c.ticker]) byTicker[c.ticker] = c;
-  });
-
-  Object.values(byTicker).forEach(function(c) {
-    const sector = getSector(c.ticker) || 'Autre';
-    if (!bySector[sector]) bySector[sector] = { total: 0, count: 0, values: [] };
-    const v = parseFloat(c.variation) || 0;
-    bySector[sector].total += v;
-    bySector[sector].count++;
-    bySector[sector].values.push(v);
-  });
-
-  const container = document.getElementById('sectorHeatmap');
-  if (!container) return;
-
-  const sectors = Object.entries(bySector).map(function(entry) {
-    return { name: entry[0], avg: entry[1].total / entry[1].count, count: entry[1].count };
-  }).sort(function(a, b) { return Math.abs(b.avg) - Math.abs(a.avg); });
-
-  if (!sectors.length) {
-    container.innerHTML = '<div class="heatmap-placeholder">Aucune donnée sectorielle</div>';
-    return;
+  function getIndiceHistory(indiceName, maxDays = 30) {
+    return (window.allIndices || [])
+      .filter(r => r?.indice && String(r.indice).trim() === indiceName && r?.valeur != null)
+      .sort((a, b) => new Date(a.date_seance) - new Date(b.date_seance))
+      .slice(-maxDays);
   }
 
-  container.innerHTML = sectors.map(function(s) {
-    const cls = s.avg > 0 ? 'heatmap-up' : s.avg < 0 ? 'heatmap-down' : 'heatmap-neutral';
-    const color = s.avg > 0 ? 'var(--green)' : s.avg < 0 ? 'var(--red)' : 'var(--dim)';
-    return '<div class="heatmap-cell ' + cls + '" onclick="nav(\'titres\')" style="cursor:pointer">' +
-      '<div class="hm-name">' + s.name + '</div>' +
-      '<div class="hm-val" style="color:' + color + '">' + (s.avg > 0 ? '+' : '') + s.avg.toFixed(2) + '%</div>' +
-      '<div class="hm-count">' + s.count + ' titre' + (s.count > 1 ? 's' : '') + '</div>' +
-    '</div>';
-  }).join('');
-}
+  // ═══════════════════════════════════════
+  // RENDER PRINCIPAL
+  // ═══════════════════════════════════════
+  window.renderOverview = function() {
+    console.log('[OVERVIEW] Rendu...');
 
-function renderNewsFeed() {
-  const container = document.getElementById('newsFeed');
-  if (!container) return;
+    const latest = getLatestIndices();
+    const indiceNames = Object.keys(latest);
+    console.log('[Overview] Indices découverts :', indiceNames, latest);
 
-  const recent = (allAnalyses || []).slice(0, 5);
+    updateMarketStatus();
+    renderIndexCards(latest, indiceNames);
+    renderCompositeChart();
+    renderSectorHeatmap();
+    renderNewsFeed();
+    renderTopMovers();
+    renderPubFeed();
+    renderAlertFeed();
+    renderWatchFeed();
+    renderCoursTable();
+  };
 
-  if (!recent.length) {
-    container.innerHTML = '<div class="feed-placeholder">Aucune analyse disponible</div>';
-    return;
+  // ─── MARKET STATUS ───
+  function updateMarketStatus() {
+    const now = new Date();
+    // Utiliser timezone GMT explicitement
+    const gmtNow = new Date(now.toLocaleString("en-US", { timeZone: "GMT" }));
+    const hour = gmtNow.getHours();
+    const min = gmtNow.getMinutes();
+    const day = gmtNow.getDay();
+
+    // BRVM: 9h30 - 15h30 GMT, lun-vend
+    const isOpen = day >= 1 && day <= 5 &&
+      ((hour === 9 && min >= 30) || (hour > 9 && hour < 15) || (hour === 15 && min <= 30));
+
+    const statusEl = document.getElementById('marketStatus');
+    const timeEl = document.getElementById('marketTime');
+    const nextEl = document.getElementById('marketNext');
+
+    if (statusEl) {
+      statusEl.className = 'market-status ' + (isOpen ? 'open' : 'closed');
+      statusEl.innerHTML = `<span class="status-dot"></span>${isOpen ? 'Marché Ouvert' : 'Marché Fermé'}`;
+    }
+
+    if (timeEl) {
+      timeEl.textContent = gmtNow.toLocaleTimeString('fr-FR', {
+        hour: '2-digit', minute: '2-digit', second: '2-digit'
+      }) + ' GMT';
+    }
+
+    if (nextEl) {
+      if (isOpen) {
+        const closeTime = new Date(gmtNow);
+        closeTime.setHours(15, 30, 0, 0);
+        const diff = Math.max(0, Math.floor((closeTime - gmtNow) / 60000));
+        nextEl.textContent = `Fermeture dans ${diff} min`;
+      } else {
+        // Calculer prochaine ouverture
+        const nextOpen = new Date(gmtNow);
+        nextOpen.setHours(9, 30, 0, 0);
+        if (day === 5 || day === 6) {
+          // Vendredi soir ou samedi → lundi
+          nextOpen.setDate(nextOpen.getDate() + (day === 5 ? 3 : 2));
+        } else if (day === 0 || hour >= 15) {
+          // Dimanche ou après 15h30 → lendemain
+          nextOpen.setDate(nextOpen.getDate() + 1);
+        }
+        const days = ['dim.', 'lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.'];
+        nextEl.textContent = `Prochaine ouverture : ${days[nextOpen.getDay()]} ${nextOpen.getHours()}:${String(nextOpen.getMinutes()).padStart(2,'0')}`;
+      }
+    }
   }
 
-  container.innerHTML = recent.map(function(a) {
-    const badgeClass = (a.recommandation || '').toLowerCase();
-    const badgeText = a.recommandation || 'NEWS';
-    const ticker = a.ticker || '—';
-    return '<div class="feed-item" onclick="openFiche(\'' + ticker + '\')" style="cursor:pointer">' +
-      '<span class="feed-badge ' + badgeClass + '">' + badgeText + '</span>' +
-      '<div class="feed-title">' + (a.titre || 'Analyse ' + ticker) + '</div>' +
-      '<div class="feed-meta">' + ticker + ' • ' + fmtDate(a.date_analyse) + ' • Objectif: ' + (a.objectif || '—') + ' FCFA</div>' +
-    '</div>';
-  }).join('');
-}
+  // ─── INDEX CARDS ───
+  function renderIndexCards(latest, indiceNames) {
+    const findIndice = (candidates) => {
+      for (const c of candidates) {
+        const found = indiceNames.find(n => n.toLowerCase() === c.toLowerCase());
+        if (found) return found;
+      }
+      return null;
+    };
 
-let _moversTab = 'gainers';
+    const mapCard = {
+      composite: {
+        candidates: ['BRVM C', 'BRVM Composite', 'COMPOSITE', 'BRVM_C', 'BRVM COMPOSITE'],
+        id: 'idx-composite', chgId: 'idx-composite-chg', sparkId: 'sparkComposite'
+      },
+      brvm30: {
+        candidates: ['BRVM 30', 'BRVM30', '30', 'BRVM_30'],
+        id: 'idx-30', chgId: 'idx-30-chg', sparkId: 'spark30'
+      },
+      prestige: {
+        candidates: ['BRVM Prestige', 'BRVMPrestige', 'PRESTIGE', 'BRVM PRESTIGE'],
+        id: 'idx-prestige', chgId: 'idx-prestige-chg', sparkId: 'sparkPrestige'
+      }
+    };
 
-function setMoversTab(tab, btn) {
-  document.querySelectorAll('.tm-tab').forEach(function(b) { b.classList.remove('active'); });
-  if (btn) btn.classList.add('active');
-  _moversTab = tab;
-  renderTopMovers();
-}
+    const setIdx = (id, val, chgId, chg) => {
+      const el = document.getElementById(id);
+      const ce = document.getElementById(chgId);
+      if (el) el.textContent = (val != null && !isNaN(+val)) ? fmt(+val, 2) : '—';
+      if (ce) {
+        const n = parseFloat(chg);
+        const cls = isNaN(n) ? 'neutral' : n > 0 ? 'up' : n < 0 ? 'down' : 'neutral';
+        ce.className = `stat-change ${cls}`;
+        ce.innerHTML = isNaN(n) ? '—' : (n > 0 ? '▲' : n < 0 ? '▼' : '=') + ' ' + Math.abs(n).toFixed(2) + ' pts';
+      }
+    };
 
-// ═══════════════════════════════════════════════════════
-// TOP MOVERS — AVEC BARRES + ONGLETS CLIQUABLES + CLIQUE SUR LIGNE
-// ═══════════════════════════════════════════════════════
+    let lastDate = null;
 
-function renderTopMovers() {
-  const container = document.getElementById('topMovers');
-  if (!container) return;
+    Object.values(mapCard).forEach(card => {
+      const realName = findIndice(card.candidates);
+      const data = realName ? latest[realName] : null;
 
-  // AJOUT : onglets en haut
-  var tabsHtml = '<div class="tm-tabs">' +
-    '<button class="tm-tab ' + (_moversTab === 'gainers' ? 'active' : '') + '" onclick="setMoversTab(\'gainers\',this)">▲ Hausses</button>' +
-    '<button class="tm-tab ' + (_moversTab === 'losers' ? 'active' : '') + '" onclick="setMoversTab(\'losers\',this)">▼ Baisses</button>' +
-    '<button class="tm-tab ' + (_moversTab === 'volume' ? 'active' : '') + '" onclick="setMoversTab(\'volume\',this)">⇅ Volumes</button>' +
-  '</div>';
+      if (data) {
+        setIdx(card.id, data.valeur, card.chgId, data.variation);
+        if (data.date_seance) lastDate = data.date_seance;
 
-  if (!Array.isArray(allCours) || allCours.length === 0) {
-    container.innerHTML = tabsHtml + '<div class="feed-placeholder">Aucune donnée</div>';
-    return;
+        // Sparkline
+        const history = getIndiceHistory(realName, 20);
+        if (history.length >= 2) {
+          drawSparkline(card.sparkId, history.map(d => d.valeur));
+        }
+      } else {
+        setIdx(card.id, null, card.chgId, null);
+        // Fallback: afficher message si pas de données
+        const el = document.getElementById(card.id);
+        if (el) el.textContent = '—';
+      }
+    });
+
+    const lastSessionEl = document.getElementById('lastSession');
+    if (lastSessionEl) {
+      lastSessionEl.textContent = lastDate ? 'Séance ' + fmtDate(lastDate) : '—';
+    }
   }
 
-  const byTicker = {};
-  allCours.forEach(function(c) { if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const values = Object.values(byTicker);
+  // ─── COMPOSITE CHART ───
+  window.renderCompositeChart = function() {
+    // Détruire l'ancien chart
+    if (window.compositeChartInst) {
+      window.compositeChartInst.destroy();
+      window.compositeChartInst = null;
+    }
 
-  let sorted = [];
+    const chartTarget = 'BRVM C';
+    const history = getIndiceHistory(chartTarget, _compositePeriod);
 
-  if (_moversTab === 'gainers') {
-    sorted = values.filter(function(c) { return parseFloat(c.variation) > 0; })
-      .sort(function(a, b) { return parseFloat(b.variation) - parseFloat(a.variation); }).slice(0, 8);
-  } else if (_moversTab === 'losers') {
-    sorted = values.filter(function(c) { return parseFloat(c.variation) < 0; })
-      .sort(function(a, b) { return parseFloat(a.variation) - parseFloat(b.variation); }).slice(0, 8);
-  } else {
-    sorted = values.sort(function(a, b) { return (b.volume || 0) - (a.volume || 0); }).slice(0, 8);
+    const labels = history.map(d =>
+      d?.date_seance ? new Date(d.date_seance).toLocaleDateString('fr-FR', {
+        day: '2-digit', month: 'short'
+      }) : '?'
+    );
+    const values = history.map(d => d?.valeur ?? 0);
+
+    const canvas = document.getElementById('chartComposite');
+    if (!canvas) return;
+
+    if (labels.length <= 1 || !values.some(v => v > 0)) {
+      // Pas assez de données
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(245,240,232,0.3)';
+        ctx.font = '14px DM Sans';
+        ctx.textAlign = 'center';
+        ctx.fillText('Données insuffisantes', canvas.width / 2, canvas.height / 2);
+      }
+      return;
+    }
+
+    try {
+      window.compositeChartInst = new Chart(canvas, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            ...mkDataset(values),
+            tension: 0.3,
+            pointRadius: 0,
+            pointHoverRadius: 6
+          }]
+        },
+        options: {
+          ...chartOpts,
+          interaction: { intersect: false, mode: 'index' },
+          plugins: {
+            ...chartOpts.plugins,
+            legend: { display: false }
+          }
+        }
+      });
+    } catch (err) {
+      console.error('[OVERVIEW] Erreur création chart:', err);
+    }
+  };
+
+  window.setCompositePeriod = function(days, btn) {
+    document.querySelectorAll('.chart-tabs .year-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    _compositePeriod = days;
+    renderCompositeChart();
+  };
+
+  // ─── SPARKLINE ───
+  function drawSparkline(canvasId, values) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas || values.length < 2) return;
+
+    const ctx = canvas.getContext('2d');
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+
+    // Fix pour canvas qui se redimensionne mal
+    if (rect.width === 0 || rect.height === 0) return;
+
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+
+    const w = rect.width, h = rect.height;
+    const min = Math.min(...values), max = Math.max(...values);
+    const range = max - min || 1;
+
+    ctx.clearRect(0, 0, w, h);
+    ctx.beginPath();
+    ctx.strokeStyle = values[values.length - 1] >= values[0] ? 'var(--green)' : 'var(--red)';
+    ctx.lineWidth = 2;
+
+    values.forEach((v, i) => {
+      const x = (i / (values.length - 1)) * w;
+      const y = h - ((v - min) / range) * h * 0.8 - h * 0.1;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+
+    ctx.stroke();
   }
 
-  if (!sorted.length) {
-    container.innerHTML = tabsHtml + '<div class="feed-placeholder">Aucune donnée</div>';
-    return;
+  // ─── SECTOR HEATMAP ───
+  function renderSectorHeatmap() {
+    const bySector = {};
+    const byTicker = {};
+
+    (window.allCours || []).forEach(c => {
+      if (!c?.ticker) return;
+      if (!byTicker[c.ticker]) byTicker[c.ticker] = c;
+    });
+
+    Object.values(byTicker).forEach(c => {
+      const sector = getSector(c.ticker) || 'Autre';
+      if (!bySector[sector]) bySector[sector] = { total: 0, count: 0, values: [] };
+      const v = parseFloat(c.variation) || 0;
+      bySector[sector].total += v;
+      bySector[sector].count++;
+      bySector[sector].values.push(v);
+    });
+
+    const container = document.getElementById('sectorHeatmap');
+    if (!container) return;
+
+    const sectors = Object.entries(bySector).map(([name, data]) => ({
+      name,
+      avg: data.total / data.count,
+      count: data.count
+    })).sort((a, b) => Math.abs(b.avg) - Math.abs(a.avg));
+
+    if (!sectors.length) {
+      container.innerHTML = '<div class="empty-state">Aucune donnée sectorielle</div>';
+      return;
+    }
+
+    container.innerHTML = sectors.map(s => {
+      const cls = s.avg > 0 ? 'heatmap-up' : s.avg < 0 ? 'heatmap-down' : 'heatmap-neutral';
+      const color = s.avg > 0 ? 'var(--green)' : s.avg < 0 ? 'var(--red)' : 'var(--dim)';
+      return `
+        <div class="heatmap-cell ${cls}" style="border-left-color:${color}">
+          <div class="hm-name">${escapeHtml(s.name)}</div>
+          <div class="hm-value" style="color:${color}">${s.avg > 0 ? '+' : ''}${s.avg.toFixed(2)}%</div>
+          <div class="hm-count">${s.count} titre${s.count > 1 ? 's' : ''}</div>
+        </div>
+      `;
+    }).join('');
   }
 
-  const maxVal = _moversTab === 'volume'
-    ? Math.max.apply(null, sorted.map(function(c) { return c.volume || 0; }))
-    : Math.max.apply(null, sorted.map(function(c) { return Math.abs(parseFloat(c.variation) || 0); }));
+  // ─── NEWS FEED ───
+  function renderNewsFeed() {
+    const container = document.getElementById('newsFeed');
+    if (!container) return;
 
-  var rowsHtml = sorted.map(function(c) {
-    const v = parseFloat(c.variation) || 0;
-    const vol = _moversTab === 'volume';
-    const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
+    const recent = (window.allAnalyses || []).slice(0, 5);
 
-    const barPct = vol
-      ? ((c.volume || 0) / maxVal * 100).toFixed(1)
-      : (Math.abs(v) / maxVal * 100).toFixed(1);
+    if (!recent.length) {
+      container.innerHTML = '<div class="empty-state">Aucune analyse disponible</div>';
+      return;
+    }
 
-    const rightVal = vol ? fmt(c.volume) : (Math.abs(v).toFixed(2) + '%');
-    const sign = v > 0 ? '+' : '';
-
-    // CLIQUABLE : onclick="openFiche('TICKER')"
-    return '<div class="mover-row ' + cls + '" onclick="openFiche(\'' + c.ticker + '\')" style="cursor:pointer" title="Cliquez pour voir ' + c.ticker + '">' +
-      '<div class="mover-info">' +
-        '<div class="mover-ticker">' + c.ticker + '</div>' +
-        '<div class="mover-price">' + fmt(c.cours) + ' FCFA</div>' +
-      '</div>' +
-      '<div class="mover-bar-wrap">' +
-        '<div class="mover-bar-bg">' +
-          '<div class="mover-bar-fill ' + cls + '" style="width:' + barPct + '%"></div>' +
-        '</div>' +
-      '</div>' +
-      '<div class="mover-var">' + sign + rightVal + '</div>' +
-    '</div>';
-  }).join('');
-
-  container.innerHTML = tabsHtml + rowsHtml;
-}
-
-function renderPubFeed() {
-  const container = document.getElementById('pubFeed');
-  if (!container) return;
-
-  const upcoming = (allFinancials || [])
-    .filter(function(f) { return f.periode === 'annuel' || f.periode === 's1'; })
-    .sort(function(a, b) { return (b.annee || 0) - (a.annee || 0); })
-    .slice(0, 5);
-
-  if (!upcoming.length) {
-    container.innerHTML = '<div class="feed-placeholder">Aucune publication prévue</div>';
-    return;
+    container.innerHTML = recent.map(a => {
+      const badgeClass = (a.recommandation || '').toLowerCase();
+      const badgeText = a.recommandation || 'NEWS';
+      const ticker = a.ticker || '—';
+      return `
+        <div class="news-item">
+          <span class="badge ${escapeHtml(badgeClass)}">${escapeHtml(badgeText)}</span>
+          <div class="news-title">${escapeHtml(a.titre || 'Analyse ' + ticker)}</div>
+          <div class="news-meta">${escapeHtml(ticker)} • ${fmtDate(a.date_analyse)} • Objectif: ${a.objectif || '—'} FCFA</div>
+        </div>
+      `;
+    }).join('');
   }
 
-  container.innerHTML = upcoming.map(function(p) {
-    const ticker = p.ticker || '—';
-    const year = p.annee || new Date().getFullYear();
-    const isPublished = p.resultat_net != null;
-    const month = isPublished ? '03' : '06';
+  // ─── TOP MOVERS ───
+  window.setMoversTab = function(tab, btn) {
+    document.querySelectorAll('.tm-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    _moversTab = tab;
+    renderTopMovers();
+  };
 
-    return '<div class="pub-item" onclick="openFiche(\'' + ticker + '\')" style="cursor:pointer">' +
-      '<div class="pub-date"><div class="pub-day">15</div><div class="pub-month">' + month + '</div></div>' +
-      '<div class="pub-info">' +
-        '<div class="pub-ticker">' + ticker + '</div>' +
-        '<div class="pub-title">' + p.periode + ' ' + year + '</div>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
+  function renderTopMovers() {
+    const container = document.getElementById('topMovers');
+    if (!container) return;
 
-function renderAlertFeed() {
-  const container = document.getElementById('alertFeed');
-  if (!container) return;
+    if (!Array.isArray(window.allCours) || window.allCours.length === 0) {
+      container.innerHTML = '<div class="empty-state">Aucune donnée</div>';
+      return;
+    }
 
-  const alerts = JSON.parse(localStorage.getItem('tc_alerts') || '[]');
-  const active = alerts.filter(function(a) { return !a.triggered; }).slice(0, 5);
+    const byTicker = {};
+    window.allCours.forEach(c => { if (c?.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
+    const values = Object.values(byTicker);
 
-  if (!active.length) {
-    container.innerHTML = '<div class="feed-placeholder">Aucune alerte active</div>';
-    return;
+    let sorted = [];
+
+    if (_moversTab === 'gainers') {
+      sorted = values.filter(c => parseFloat(c.variation) > 0)
+        .sort((a, b) => parseFloat(b.variation) - parseFloat(a.variation)).slice(0, 8);
+    } else if (_moversTab === 'losers') {
+      sorted = values.filter(c => parseFloat(c.variation) < 0)
+        .sort((a, b) => parseFloat(a.variation) - parseFloat(b.variation)).slice(0, 8);
+    } else {
+      sorted = values.sort((a, b) => (b.volume || 0) - (a.volume || 0)).slice(0, 8);
+    }
+
+    if (!sorted.length) {
+      container.innerHTML = '<div class="empty-state">Aucune donnée</div>';
+      return;
+    }
+
+    container.innerHTML = sorted.map(c => {
+      const v = parseFloat(c.variation) || 0;
+      const vol = _moversTab === 'volume';
+      const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
+      const rightVal = vol ? fmt(c.volume) : (Math.abs(v).toFixed(2) + '%');
+      const rightIcon = vol ? '' : (v > 0 ? '▲' : v < 0 ? '▼' : '=');
+
+      return `
+        <div class="mover-row ${cls}">
+          <div class="mover-left">
+            <span class="ticker">${escapeHtml(c.ticker)}</span>
+            <span class="price">${fmt(c.cours)} FCFA</span>
+          </div>
+          <div class="mover-right ${cls}">
+            ${rightIcon} ${rightVal}
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
-  const byTicker = {};
-  allCours.forEach(function(c) { if (c && c.ticker) byTicker[c.ticker] = c; });
+  // ─── PUBLICATIONS FEED ───
+  function renderPubFeed() {
+    const container = document.getElementById('pubFeed');
+    if (!container) return;
 
-  container.innerHTML = active.map(function(a) {
-    const c = byTicker[a.ticker];
-    const current = c && c.cours ? c.cours : 0;
-    const triggered = a.condition === 'above' ? current >= a.price : current <= a.price;
+    const upcoming = (window.allFinancials || [])
+      .filter(f => f.periode === 'annuel' || f.periode === 's1')
+      .sort((a, b) => (b.annee || 0) - (a.annee || 0))
+      .slice(0, 5);
 
-    return '<div class="alert-row ' + (triggered ? 'triggered' : '') + '" onclick="openFiche(\'' + a.ticker + '\')" style="cursor:pointer">' +
-      '<div class="alert-ticker">' + a.ticker + '</div>' +
-      '<div class="alert-cond">' + (a.condition === 'above' ? '>' : '<') + ' ' + a.price + ' FCFA</div>' +
-      '<div class="alert-current">' + fmt(current) + '</div>' +
-    '</div>';
-  }).join('');
-}
+    if (!upcoming.length) {
+      container.innerHTML = '<div class="empty-state">Aucune publication prévue</div>';
+      return;
+    }
 
-function renderWatchFeed() {
-  const container = document.getElementById('watchFeed');
-  if (!container) return;
+    container.innerHTML = upcoming.map(p => {
+      const ticker = p.ticker || '—';
+      const year = p.annee || new Date().getFullYear();
+      const isPublished = p.resultat_net != null;
+      const month = isPublished ? '03' : '06';
 
-  const watchlist = JSON.parse(localStorage.getItem('tc_watchlist') || '[]');
-  const positions = JSON.parse(localStorage.getItem('tc_portfolio') || '[]');
-  const tickers = Array.from(new Set(watchlist.concat(positions.map(function(p) { return p.ticker; }))));
-
-  if (!tickers.length) {
-    container.innerHTML = '<div class="feed-placeholder">Ajoutez des titres à votre watchlist</div>';
-    return;
+      return `
+        <div class="pub-item">
+          <div class="pub-date"><span class="day">15</span><span class="month">${month}</span></div>
+          <div class="pub-info">
+            <span class="ticker">${escapeHtml(ticker)}</span>
+            <span class="period">${escapeHtml(p.periode)} ${year}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
   }
 
-  const byTicker = {};
-  allCours.forEach(function(c) { if (c && c.ticker) byTicker[c.ticker] = c; });
+  // ─── ALERTES FEED ───
+  function renderAlertFeed() {
+    const container = document.getElementById('alertFeed');
+    if (!container) return;
 
-  container.innerHTML = tickers.map(function(t) {
-    const c = byTicker[t];
-    if (!c) return '';
-    const v = parseFloat(c.variation) || 0;
-    const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
-    const ent = entMap[t];
-    return '<div class="watch-row ' + cls + '" onclick="openFiche(\'' + t + '\')" style="cursor:pointer">' +
-      '<div class="watch-ticker">' + t + '</div>' +
-      '<div class="watch-name">' + (ent && ent.nom ? ent.nom : '') + '</div>' +
-      '<div class="watch-price">' + fmt(c.cours) + '</div>' +
-      '<div class="watch-var">' + (v > 0 ? '+' : '') + v.toFixed(2) + '%</div>' +
-    '</div>';
-  }).join('');
-}
+    const alerts = safeJSON(localStorage.getItem('tc_alerts'), []);
+    const active = alerts.filter(a => !a.triggered).slice(0, 5);
 
-function renderCoursTable() {
-  const byTicker = {};
-  allCours.forEach(function(c) { if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const rows = Object.values(byTicker).sort(function(a, b) { return (a && a.ticker || '').localeCompare(b && b.ticker || ''); });
+    if (!active.length) {
+      container.innerHTML = '<div class="empty-state">Aucune alerte active</div>';
+      return;
+    }
 
-  const countEl = document.getElementById('coursCount');
-  if (countEl) countEl.textContent = rows.length + ' titre' + (rows.length > 1 ? 's' : '');
+    const byTicker = {};
+    (window.allCours || []).forEach(c => { if (c?.ticker) byTicker[c.ticker] = c; });
 
-  const tbody = document.getElementById('coursTable');
-  if (!tbody) return;
+    container.innerHTML = active.map(a => {
+      const c = byTicker[a.ticker];
+      const current = c?.cours || 0;
+      const triggered = a.condition === 'above' ? current >= a.price : current <= a.price;
 
-  if (!rows.length) {
-    const isConnected = allCours.length === 0 && allEntreprises.length === 0;
-    const msg = isConnected
-      ? 'Connexion Supabase OK mais aucune donnee dans la table cours_latest.'
-      : 'Aucune donnee de cours disponible.';
-    tbody.innerHTML = emptyState(msg);
-    return;
+      return `
+        <div class="alert-item ${triggered ? 'triggered' : ''}">
+          <span class="ticker">${escapeHtml(a.ticker)}</span>
+          <span class="condition">${a.condition === 'above' ? '>' : '<'} ${a.price} FCFA</span>
+          <span class="current">${fmt(current)}</span>
+        </div>
+      `;
+    }).join('');
   }
 
-  tbody.innerHTML = rows.map(function(c) { return tickerRow(c, { showCapital: true }); }).join('');
-}
+  // ─── WATCHLIST FEED ───
+  function renderWatchFeed() {
+    const container = document.getElementById('watchFeed');
+    if (!container) return;
+
+    const watchlist = safeJSON(localStorage.getItem('tc_watchlist'), []);
+    const positions = safeJSON(localStorage.getItem('tc_portfolio'), []);
+    const tickers = [...new Set([...watchlist, ...positions.map(p => p.ticker)])];
+
+    if (!tickers.length) {
+      container.innerHTML = '<div class="empty-state">Ajoutez des titres à votre watchlist</div>';
+      return;
+    }
+
+    const byTicker = {};
+    (window.allCours || []).forEach(c => { if (c?.ticker) byTicker[c.ticker] = c; });
+
+    container.innerHTML = tickers.map(t => {
+      const c = byTicker[t];
+      if (!c) return '';
+      const v = parseFloat(c.variation) || 0;
+      const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
+      const ent = window.entMap?.[t];
+      return `
+        <div class="watch-item ${cls}" onclick="openFiche('${escapeHtml(t)}')">
+          <span class="ticker">${escapeHtml(t)}</span>
+          <span class="name">${escapeHtml(ent?.nom || '')}</span>
+          <span class="price">${fmt(c.cours)}</span>
+          <span class="change ${cls}">${v > 0 ? '+' : ''}${v.toFixed(2)}%</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  // ─── COURS TABLE ───
+  function renderCoursTable() {
+    const byTicker = {};
+    (window.allCours || []).forEach(c => { if (c?.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c; });
+    const rows = Object.values(byTicker).sort((a, b) => (a?.ticker || '').localeCompare(b?.ticker || ''));
+
+    const countEl = document.getElementById('coursCount');
+    if (countEl) countEl.textContent = rows.length + ' titre' + (rows.length > 1 ? 's' : '');
+
+    const tableEl = document.getElementById('coursTable');
+    if (!tableEl) return;
+
+    if (!rows.length) {
+      const isConnected = window.allCours.length === 0 && window.allEntreprises.length === 0;
+      const message = isConnected
+        ? '⚠️ Connexion OK mais aucune donnée disponible.'
+        : 'Aucune donnée de cours disponible.';
+      tableEl.innerHTML = '<tr><td colspan="6" class="empty-cell">' + message + '</td></tr>';
+      return;
+    }
+
+    tableEl.innerHTML = rows.map(c => `
+      <tr onclick="openFiche('${escapeHtml(c.ticker)}')">
+        <td><strong>${escapeHtml(c.ticker)}</strong></td>
+        <td>${fmt(c.cours)}</td>
+        <td>${changePill(c.variation)}</td>
+        <td>${fmt(c.volume)}</td>
+        <td>${c.capitalisation ? fmtM(c.capitalisation) : '—'}</td>
+        <td>${escapeHtml(getSector(c.ticker))}</td>
+      </tr>
+    `).join('');
+  }
+
+  console.log('[OVERVIEW] Chargé avec succès');
+
+})();
