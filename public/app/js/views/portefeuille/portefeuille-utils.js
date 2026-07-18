@@ -1,27 +1,35 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — UTILITAIRES (CORRIGÉ — pas de redéclaration)
-// ═══════════════════════════════════════════════════════
+// PORTEFEUILLE — UTILITAIRES (v2)
 // NOTE : getSector() et getPays() sont dans utils.js (100% Supabase)
-// On supprime les doublons ici pour éviter les conflits.
+// NOTE : getPortfolioHistory() vit UNIQUEMENT dans portefeuille-history.js
 // ═══════════════════════════════════════════════════════
 
 function getPortfolio() {
   try { return JSON.parse(localStorage.getItem('tc_portfolio') || '[]'); }
   catch { return []; }
 }
-function savePortfolio(data) { localStorage.setItem('tc_portfolio', JSON.stringify(data)); }
+function savePortfolio(data) {
+  try { localStorage.setItem('tc_portfolio', JSON.stringify(data)); return true; }
+  catch (e) { console.error('savePortfolio échec:', e); return false; }
+}
 
 function getCash() {
-  try { return JSON.parse(localStorage.getItem('tc_cash') || '0'); }
+  try { return +JSON.parse(localStorage.getItem('tc_cash') || '0') || 0; }
   catch { return 0; }
 }
-function saveCash(amount) { localStorage.setItem('tc_cash', JSON.stringify(amount)); }
+function saveCash(amount) {
+  try { localStorage.setItem('tc_cash', JSON.stringify(+amount || 0)); return true; }
+  catch (e) { console.error('saveCash échec:', e); return false; }
+}
 
 function getDividends() {
   try { return JSON.parse(localStorage.getItem('tc_dividends') || '[]'); }
   catch { return []; }
 }
-function saveDividends(data) { localStorage.setItem('tc_dividends', JSON.stringify(data)); }
+function saveDividends(data) {
+  try { localStorage.setItem('tc_dividends', JSON.stringify(data)); return true; }
+  catch (e) { console.error('saveDividends échec:', e); return false; }
+}
 
 // — MATHS / STATS —
 function stdDev(arr) {
@@ -49,8 +57,10 @@ function calcMaxDrawdown(values) {
   let peak = values[0], maxDD = 0;
   for (let i = 1; i < values.length; i++) {
     if (values[i] > peak) peak = values[i];
-    const dd = (peak - values[i]) / peak;
-    if (dd > maxDD) maxDD = dd;
+    if (peak > 0) {
+      const dd = (peak - values[i]) / peak;
+      if (dd > maxDD) maxDD = dd;
+    }
   }
   return maxDD * 100;
 }
@@ -97,41 +107,4 @@ function calculateCMP(pf) {
     result[t] = { value: data.totalQty > 0 ? data.totalCost / data.totalQty : 0, positions: data.positions };
   }
   return result;
-}
-
-// — HISTORIQUE PORTEFEUILLE —
-function getPortfolioHistory(days) {
-  const pf = getPortfolio();
-  if (!pf.length) return { dates: [], values: [], pls: [] };
-
-  const now = new Date(), cutoff = new Date(now);
-  cutoff.setDate(cutoff.getDate() - days);
-
-  const allDates = new Set();
-  pf.forEach(p => {
-    const hist = getTickerHistory(p.ticker);
-    hist.forEach(h => {
-      const d = new Date(h.date_seance || 0);
-      if (d >= cutoff && d <= now) allDates.add(d.toISOString().split('T')[0]);
-    });
-  });
-
-  const sortedDates = Array.from(allDates).sort();
-  const dates = [], values = [], pls = [];
-  let totalInvested = 0;
-  pf.forEach(p => { totalInvested += (+p.qty || 0) * (+p.price || 0); });
-
-  sortedDates.forEach(dateStr => {
-    const d = new Date(dateStr);
-    let dayValue = 0, dayInvested = 0;
-    pf.forEach(p => {
-      const price = getPriceAtDate(p.ticker, dateStr);
-      if (price != null && price > 0) {
-        dayValue += (+p.qty || 0) * price;
-        dayInvested += (+p.qty || 0) * (+p.price || 0);
-      }
-    });
-    if (dayValue > 0) { dates.push(d); values.push(dayValue); pls.push(dayValue - dayInvested); }
-  });
-  return { dates, values, pls };
 }
