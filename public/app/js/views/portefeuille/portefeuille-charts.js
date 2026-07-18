@@ -1,59 +1,61 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — GRAPHIQUES & ANALYSES (CORRIGÉ)
+// PORTEFEUILLE — GRAPHIQUES & ANALYSES (v2)
 // ═══════════════════════════════════════════════════════
+
+function _pfDrawPlaceholder(canvas, text) {
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.font = '14px DM Sans';
+  ctx.fillStyle = 'rgba(245,240,232,0.3)';
+  ctx.textAlign = 'center';
+  ctx.fillText(text, canvas.width / 2, canvas.height / 2);
+}
 
 function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
   if (typeof Chart === 'undefined') return;
+  const safeTotal = totalValue > 0 ? totalValue : 1;
 
   const valueCanvas = document.getElementById('chartPortfolioValue');
   if (valueCanvas) {
     if (pfValueChartInst) { pfValueChartInst.destroy(); pfValueChartInst = null; }
     if (!hist.dates.length || !hist.values.length) {
-      const ctx = valueCanvas.getContext('2d');
-      ctx.clearRect(0, 0, valueCanvas.width, valueCanvas.height);
-      ctx.font = '14px DM Sans';
-      ctx.fillStyle = 'rgba(245,240,232,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Données historiques insuffisantes', valueCanvas.width / 2, valueCanvas.height / 2);
-      return;
-    }
-
-    const labels = hist.dates.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
-    const data = hist.values;
-
-    pfValueChartInst = new Chart(valueCanvas, {
-      type: 'line',
-      data: {
-        labels: labels,
-        datasets: [{
-          label: 'Valeur du portefeuille',
-          data: data,
-          borderColor: '#B8964E',
-          backgroundColor: 'rgba(184,150,78,0.1)',
-          borderWidth: 2,
-          pointRadius: 0,
-          pointHoverRadius: 4,
-          fill: true,
-          tension: 0.3
-        }]
-      },
-      options: {
-        ...chartOpts,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            backgroundColor: '#1A1610',
-            borderColor: 'rgba(184,150,78,0.3)',
-            borderWidth: 1,
-            callbacks: { label: ctx => ' ' + (typeof fmtM === 'function' ? fmtM(ctx.parsed.y) : ctx.parsed.y.toFixed(0)) + ' FCFA' }
-          }
+      _pfDrawPlaceholder(valueCanvas, 'Données historiques insuffisantes');
+    } else {
+      const labels = hist.dates.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
+      pfValueChartInst = new Chart(valueCanvas, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Valeur du portefeuille',
+            data: hist.values,
+            borderColor: '#B8964E',
+            backgroundColor: 'rgba(184,150,78,0.1)',
+            borderWidth: 2,
+            pointRadius: 0,
+            pointHoverRadius: 4,
+            fill: true,
+            tension: 0.3
+          }]
         },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, maxTicksLimit: 6 } },
-          y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, callback: v => typeof fmtM === 'function' ? fmtM(v) : v.toFixed(0) } }
+        options: {
+          ...chartOpts,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#1A1610',
+              borderColor: 'rgba(184,150,78,0.3)',
+              borderWidth: 1,
+              callbacks: { label: ctx => ' ' + (typeof fmtM === 'function' ? fmtM(ctx.parsed.y) : ctx.parsed.y.toFixed(0)) + ' FCFA' }
+            }
+          },
+          scales: {
+            x: { grid: { display: false }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, maxTicksLimit: 6 } },
+            y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { color: 'rgba(245,240,232,0.3)', font: { size: 10 }, callback: v => typeof fmtM === 'function' ? fmtM(v) : v.toFixed(0) } }
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   const sectorCanvas = document.getElementById('chartSectorAlloc');
@@ -64,20 +66,14 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     const colors = ['#B8964E', '#4ADE80', '#F87171', '#60A5FA', '#A78BFA', '#FBBF24', '#34D399', '#F472B6', '#818CF8', '#FB923C'];
 
     if (!sectorLabels.length) {
-      const ctx = sectorCanvas.getContext('2d');
-      ctx.clearRect(0, 0, sectorCanvas.width, sectorCanvas.height);
-      ctx.font = '14px DM Sans';
-      ctx.fillStyle = 'rgba(245,240,232,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Aucune donnée', sectorCanvas.width / 2, sectorCanvas.height / 2);
-      return;
+      _pfDrawPlaceholder(sectorCanvas, 'Aucune donnée');
+    } else {
+      pfSectorChartInst = new Chart(sectorCanvas, {
+        type: 'doughnut',
+        data: { labels: sectorLabels, datasets: [{ data: sectorData, backgroundColor: colors, borderColor: '#1A1610', borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${typeof fmt === 'function' ? fmt(ctx.parsed / safeTotal * 100, 1) : (ctx.parsed / safeTotal * 100).toFixed(1)}%` } } }, cutout: '60%' }
+      });
     }
-
-    pfSectorChartInst = new Chart(sectorCanvas, {
-      type: 'doughnut',
-      data: { labels: sectorLabels, datasets: [{ data: sectorData, backgroundColor: colors, borderColor: '#1A1610', borderWidth: 2 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${typeof fmt === 'function' ? fmt(ctx.parsed / totalValue * 100, 1) : (ctx.parsed / totalValue * 100).toFixed(1)}%` } } }, cutout: '60%' }
-    });
   }
 
   const geoCanvas = document.getElementById('chartGeoAlloc');
@@ -88,51 +84,38 @@ function renderPortfolioCharts(rows, totalValue, sectors, pays, hist) {
     const geoColors = ['#B8964E', '#4ADE80', '#60A5FA', '#F87171', '#A78BFA', '#FBBF24'];
 
     if (!geoLabels.length) {
-      const ctx = geoCanvas.getContext('2d');
-      ctx.clearRect(0, 0, geoCanvas.width, geoCanvas.height);
-      ctx.font = '14px DM Sans';
-      ctx.fillStyle = 'rgba(245,240,232,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Aucune donnée', geoCanvas.width / 2, geoCanvas.height / 2);
-      return;
+      _pfDrawPlaceholder(geoCanvas, 'Aucune donnée');
+    } else {
+      pfGeoChartInst = new Chart(geoCanvas, {
+        type: 'doughnut',
+        data: { labels: geoLabels, datasets: [{ data: geoData, backgroundColor: geoColors, borderColor: '#1A1610', borderWidth: 2 }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${typeof fmt === 'function' ? fmt(ctx.parsed / safeTotal * 100, 1) : (ctx.parsed / safeTotal * 100).toFixed(1)}%` } } }, cutout: '60%' }
+      });
     }
-
-    pfGeoChartInst = new Chart(geoCanvas, {
-      type: 'doughnut',
-      data: { labels: geoLabels, datasets: [{ data: geoData, backgroundColor: geoColors, borderColor: '#1A1610', borderWidth: 2 }] },
-      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: 'rgba(245,240,232,0.6)', font: { size: 11 }, boxWidth: 12 } }, tooltip: { callbacks: { label: ctx => ` ${ctx.label}: ${typeof fmt === 'function' ? fmt(ctx.parsed / totalValue * 100, 1) : (ctx.parsed / totalValue * 100).toFixed(1)}%` } } }, cutout: '60%' }
-    });
   }
 
   const plCanvas = document.getElementById('chartPortfolioPL');
   if (plCanvas) {
     if (pfPLChartInst) { pfPLChartInst.destroy(); pfPLChartInst = null; }
     if (!hist.dates.length || !hist.pls.length) {
-      const ctx = plCanvas.getContext('2d');
-      ctx.clearRect(0, 0, plCanvas.width, plCanvas.height);
-      ctx.font = '14px DM Sans';
-      ctx.fillStyle = 'rgba(245,240,232,0.3)';
-      ctx.textAlign = 'center';
-      ctx.fillText('Données insuffisantes', plCanvas.width / 2, plCanvas.height / 2);
-      return;
+      _pfDrawPlaceholder(plCanvas, 'Données insuffisantes');
+    } else {
+      const plLabels = hist.dates.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
+      const plColors = hist.pls.map(v => v >= 0 ? 'rgba(74,222,128,0.7)' : 'rgba(248,113,113,0.7)');
+
+      pfPLChartInst = new Chart(plCanvas, {
+        type: 'bar',
+        data: { labels: plLabels, datasets: [{ data: hist.pls, backgroundColor: plColors, borderRadius: 2 }] },
+        options: { ...chartOpts, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + (ctx.parsed.y >= 0 ? '+' : '') + (typeof fmtM === 'function' ? fmtM(ctx.parsed.y) : ctx.parsed.y.toFixed(0)) + ' FCFA' } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } }, y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { callback: v => typeof fmtM === 'function' ? fmtM(v) : v.toFixed(0) } } } }
+      });
     }
-
-    const plLabels = hist.dates.map(d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
-    const plData = hist.pls;
-    const plColors = plData.map(v => v >= 0 ? 'rgba(74,222,128,0.7)' : 'rgba(248,113,113,0.7)');
-
-    pfPLChartInst = new Chart(plCanvas, {
-      type: 'bar',
-      data: { labels: plLabels, datasets: [{ data: plData, backgroundColor: plColors, borderRadius: 2 }] },
-      options: { ...chartOpts, plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ' ' + (ctx.parsed.y >= 0 ? '+' : '') + (typeof fmtM === 'function' ? fmtM(ctx.parsed.y) : ctx.parsed.y.toFixed(0)) + ' FCFA' } } }, scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 6 } }, y: { position: 'right', grid: { color: 'rgba(184,150,78,0.06)' }, ticks: { callback: v => typeof fmtM === 'function' ? fmtM(v) : v.toFixed(0) } } } }
-    });
   }
 }
 
 function renderConcentration(rows, totalValue) {
   const el = document.getElementById('concentrationStats');
   if (!el) return;
-  if (!rows.length) {
+  if (!rows.length || totalValue <= 0) {
     el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Chargez des positions</div>';
     return;
   }
@@ -150,7 +133,7 @@ function renderConcentration(rows, totalValue) {
         <span style="font-size:14px;font-weight:600;color:var(--gold)">${typeof fmt === 'function' ? fmt(top3Pct, 1) : top3Pct.toFixed(1)}%</span>
       </div>
       <div style="width:100%;height:6px;background:var(--border2);border-radius:3px;margin-bottom:16px;overflow:hidden">
-        <div style="width:${top3Pct}%;height:100%;background:var(--gold);border-radius:3px"></div>
+        <div style="width:${Math.min(top3Pct, 100)}%;height:100%;background:var(--gold);border-radius:3px"></div>
       </div>
       <div style="display:flex;justify-content:space-between;margin-bottom:12px">
         <span style="font-size:12px;color:var(--dim)">Indice HHI</span>
@@ -247,7 +230,7 @@ function renderCorrelationMatrix(pf) {
   });
 
   const minLen = Math.min(...Object.values(returns).map(r => r.length));
-  if (minLen < 5) { el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px">Données insuffisantes</div>'; return; }
+  if (!isFinite(minLen) || minLen < 5) { el.innerHTML = '<div style="text-align:center;color:var(--dim);font-size:13px">Données insuffisantes</div>'; return; }
   tickers.forEach(t => { returns[t] = returns[t].slice(-minLen); });
 
   let html = '<div style="display:grid;gap:2px;padding:8px;overflow:auto">';
