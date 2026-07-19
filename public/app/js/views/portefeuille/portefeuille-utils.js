@@ -1,7 +1,6 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — UTILITAIRES (v2)
-// NOTE : getSector() et getPays() sont dans utils.js (100% Supabase)
-// NOTE : getPortfolioHistory() vit UNIQUEMENT dans portefeuille-history.js
+// PORTEFEUILLE — UTILITAIRES (v3)
+// NOTE : getSector() et getPays() sont dans utils.js
 // ═══════════════════════════════════════════════════════
 
 function getPortfolio() {
@@ -29,6 +28,64 @@ function getDividends() {
 function saveDividends(data) {
   try { localStorage.setItem('tc_dividends', JSON.stringify(data)); return true; }
   catch (e) { console.error('saveDividends échec:', e); return false; }
+}
+
+// — TRANSACTIONS (journal unifié : achats, ventes, dividendes, cash) —
+function getTransactions() {
+  try { return JSON.parse(localStorage.getItem('tc_transactions') || '[]'); }
+  catch { return []; }
+}
+function saveTransactions(data) {
+  try { localStorage.setItem('tc_transactions', JSON.stringify(data)); return true; }
+  catch (e) { console.error('saveTransactions échec:', e); return false; }
+}
+function logTransaction(tx) {
+  const list = getTransactions();
+  list.push({ id: Date.now() + Math.random(), ...tx });
+  saveTransactions(list);
+}
+function getRealizedPL() {
+  return getTransactions().filter(t => t.type === 'sell').reduce((s, t) => s + (+t.realizedPL || 0), 0);
+}
+
+// — WATCHLIST —
+function getWatchlist() {
+  try { return JSON.parse(localStorage.getItem('tc_watchlist') || '[]'); }
+  catch { return []; }
+}
+function saveWatchlist(data) {
+  try { localStorage.setItem('tc_watchlist', JSON.stringify(data)); return true; }
+  catch (e) { console.error('saveWatchlist échec:', e); return false; }
+}
+
+// — ALERTES DE PRIX —
+function getAlerts() {
+  try { return JSON.parse(localStorage.getItem('tc_alerts') || '[]'); }
+  catch { return []; }
+}
+function saveAlerts(data) {
+  try { localStorage.setItem('tc_alerts', JSON.stringify(data)); return true; }
+  catch (e) { console.error('saveAlerts échec:', e); return false; }
+}
+
+// — OBJECTIF DE PORTEFEUILLE —
+function getGoal() {
+  try { return JSON.parse(localStorage.getItem('tc_goal') || 'null'); }
+  catch { return null; }
+}
+function saveGoal(data) {
+  try { localStorage.setItem('tc_goal', JSON.stringify(data)); return true; }
+  catch (e) { console.error('saveGoal échec:', e); return false; }
+}
+
+// — ALLOCATIONS CIBLES (rééquilibrage) —
+function getTargetAllocation() {
+  try { return JSON.parse(localStorage.getItem('tc_target_alloc') || '{}'); }
+  catch { return {}; }
+}
+function saveTargetAllocation(data) {
+  try { localStorage.setItem('tc_target_alloc', JSON.stringify(data)); return true; }
+  catch (e) { console.error('saveTargetAllocation échec:', e); return false; }
 }
 
 // — MATHS / STATS —
@@ -108,3 +165,59 @@ function calculateCMP(pf) {
   }
   return result;
 }
+
+// — TOAST (remplace alert()) —
+function toast(message, type = 'info') {
+  let container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = message;
+  container.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => {
+    el.classList.remove('show');
+    setTimeout(() => el.remove(), 300);
+  }, 3800);
+}
+
+// — EXPORT CSV —
+function downloadCSV(filename, rows) {
+  const csv = rows.map(r => r.map(c => `"${String(c ?? '').replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+window.exportPositionsCSV = function(rows) {
+  if (!rows || !rows.length) { toast('Aucune position à exporter.', 'error'); return; }
+  const header = ['Ticker', 'Pays', 'Secteur', 'Quantité', 'CMP', 'Cours actuel', 'Valeur', 'P&L', 'P&L %', 'Allocation %'];
+  const data = rows.map(r => [
+    r.ticker, r.pays, r.sector, r.qty,
+    (+r.cmp).toFixed(2), (+r.currentPrice).toFixed(2), (+r.value).toFixed(0),
+    (+r.pl).toFixed(0), (+r.plPct).toFixed(2), (+(r.allocation || 0)).toFixed(2)
+  ]);
+  downloadCSV(`portefeuille_positions_${new Date().toISOString().split('T')[0]}.csv`, [header, ...data]);
+  toast('Export des positions généré.', 'success');
+};
+
+window.exportTransactionsCSV = function() {
+  const txs = getTransactions().sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (!txs.length) { toast('Aucune transaction à exporter.', 'error'); return; }
+  const header = ['Date', 'Type', 'Ticker', 'Quantité', 'Prix/Montant', 'P&L Réalisé'];
+  const data = txs.map(t => [
+    t.date, t.type, t.ticker || '-', t.qty || '-',
+    t.price != null ? t.price : (t.amount != null ? t.amount : '-'),
+    t.realizedPL != null ? (+t.realizedPL).toFixed(0) : '-'
+  ]);
+  downloadCSV(`portefeuille_transactions_${new Date().toISOString().split('T')[0]}.csv`, [header, ...data]);
+  toast('Export des transactions généré.', 'success');
+};
