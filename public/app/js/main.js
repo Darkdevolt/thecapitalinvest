@@ -108,10 +108,10 @@
     entMap = {};
     allEntreprises.forEach(e => { if (e?.ticker) entMap[e.ticker] = e; });
 
-    // Render initial view — TOUJOURS afficher l'interface même sans données
+    // Render initial view — TOUJOURS afficher l'interface meme sans donnees
     const initialView = parseHashFromUrl() || 'overview';
 
-    // Forcer le rendu de l'overview si disponible, même avec données vides
+    // Forcer le rendu de l'overview si disponible, meme avec donnees vides
     if (typeof renderOverview === 'function') {
       try {
         renderOverview();
@@ -120,18 +120,14 @@
         // Fallback : afficher un message minimal
         const appEl = document.getElementById('app') || document.getElementById('mainContent') || document.body;
         if (appEl && !appEl.innerHTML.trim()) {
-          appEl.innerHTML = \`
-            <div style="padding:40px;text-align:center;color:#94a3b8;">
-              <h2 style="color:#e2e8f0;margin-bottom:16px;">The Capital</h2>
-              <p>Chargement des données en cours...</p>
-              <p style="font-size:12px;margin-top:16px;opacity:0.6;">
-                Si le chargement persiste, vérifiez votre connexion ou rechargez la page.
-              </p>
-              <button onclick="location.reload()" style="margin-top:20px;padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;">
-                Recharger
-              </button>
-            </div>
-          \`;
+          appEl.innerHTML = '<div style="padding:40px;text-align:center;color:#94a3b8;">' +
+            '<h2 style="color:#e2e8f0;margin-bottom:16px;">The Capital</h2>' +
+            '<p>Chargement des donnees en cours...</p>' +
+            '<p style="font-size:12px;margin-top:16px;opacity:0.6;">' +
+            'Si le chargement persiste, verifiez votre connexion ou rechargez la page.</p>' +
+            '<button onclick="location.reload()" style="margin-top:20px;padding:8px 16px;' +
+            'background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;">' +
+            'Recharger</button></div>';
         }
       }
     }
@@ -157,12 +153,12 @@
         // Essayer de parser l'erreur
         let errBody = '';
         try { errBody = await res.text(); } catch(e) {}
-        throw new Error(`HTTP ${res.status}: ${res.statusText} — ${errBody.slice(0, 200)}`);
+        throw new Error('HTTP ' + res.status + ': ' + res.statusText + ' — ' + errBody.slice(0, 200));
       }
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
         const text = await res.text();
-        throw new Error(`Réponse non-JSON: ${text.slice(0, 200)}`);
+        throw new Error('Reponse non-JSON: ' + text.slice(0, 200));
       }
       const json = await res.json();
       // CORRECTION : certains endpoints retournent { data: [...] }, d'autres directement [...]
@@ -181,8 +177,8 @@
       } catch(e) {}
       return result;
     } catch (err) {
-      console.error(`[API] ${endpoint}:`, err);
-      // Retourner données en cache localStorage si dispo
+      console.error('[API] ' + endpoint + ':', err);
+      // Retourner donnees en cache localStorage si dispo
       const cached = localStorage.getItem('tc_cache_' + endpoint);
       if (cached) {
         try { return JSON.parse(cached); } catch(e) {}
