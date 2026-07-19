@@ -108,10 +108,32 @@
     entMap = {};
     allEntreprises.forEach(e => { if (e?.ticker) entMap[e.ticker] = e; });
 
-    // Render initial view
+    // Render initial view — TOUJOURS afficher l'interface même sans données
     const initialView = parseHashFromUrl() || 'overview';
-    if (initialView === 'overview' && typeof renderOverview === 'function') {
-      renderOverview();
+
+    // Forcer le rendu de l'overview si disponible, même avec données vides
+    if (typeof renderOverview === 'function') {
+      try {
+        renderOverview();
+      } catch (renderErr) {
+        console.error('[MAIN] Erreur renderOverview:', renderErr);
+        // Fallback : afficher un message minimal
+        const appEl = document.getElementById('app') || document.getElementById('mainContent') || document.body;
+        if (appEl && !appEl.innerHTML.trim()) {
+          appEl.innerHTML = \`
+            <div style="padding:40px;text-align:center;color:#94a3b8;">
+              <h2 style="color:#e2e8f0;margin-bottom:16px;">The Capital</h2>
+              <p>Chargement des données en cours...</p>
+              <p style="font-size:12px;margin-top:16px;opacity:0.6;">
+                Si le chargement persiste, vérifiez votre connexion ou rechargez la page.
+              </p>
+              <button onclick="location.reload()" style="margin-top:20px;padding:8px 16px;background:#3b82f6;color:#fff;border:none;border-radius:6px;cursor:pointer;">
+                Recharger
+              </button>
+            </div>
+          \`;
+        }
+      }
     }
 
     console.log('[MAIN] Données chargées:', {
@@ -145,13 +167,19 @@
       const json = await res.json();
       // CORRECTION : certains endpoints retournent { data: [...] }, d'autres directement [...]
       // On normalise pour toujours retourner le tableau
+      let result;
       if (json && Array.isArray(json.data)) {
-        return json.data;
+        result = json.data;
+      } else if (json && json.success && Array.isArray(json.data)) {
+        result = json.data;
+      } else {
+        result = json;
       }
-      if (json && json.success && Array.isArray(json.data)) {
-        return json.data;
-      }
-      return json;
+      // Stocker en cache localStorage pour fallback futur
+      try {
+        localStorage.setItem('tc_cache_' + endpoint, JSON.stringify(result));
+      } catch(e) {}
+      return result;
     } catch (err) {
       console.error(`[API] ${endpoint}:`, err);
       // Retourner données en cache localStorage si dispo
