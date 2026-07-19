@@ -3,8 +3,23 @@ import { extractBearer } from './jwt.js';
 import { unauthorized, tooManyRequests, error } from './response.js';
 import { supabaseAdmin } from './supabase.js';
 
+// Helper : Vercel Functions utilisent req.headers comme objet plain (Node.js)
+// pas comme instance Headers (Web API). Cette fonction gère les deux cas.
+function getHeader(req, name) {
+  // Cas 1 : Web API (Headers instance avec .get())
+  if (req.headers && typeof req.headers.get === 'function') {
+    return req.headers.get(name);
+  }
+  // Cas 2 : Node.js / Vercel (objet plain)
+  const lowerName = name.toLowerCase();
+  return req.headers?.[lowerName] || req.headers?.[name];
+}
+
 export function rateLimit(req) {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'unknown';
+  const forwarded = getHeader(req, 'x-forwarded-for');
+  const ip = typeof forwarded === 'string'
+    ? forwarded.split(',')[0]?.trim()
+    : 'unknown';
   const result = checkRateLimit(ip);
   if (!result.allowed) {
     return tooManyRequests(result.resetTime);
@@ -13,7 +28,7 @@ export function rateLimit(req) {
 }
 
 export async function authenticate(req) {
-  const token = extractBearer(req.headers.get('authorization'));
+  const token = extractBearer(getHeader(req, 'authorization'));
   if (!token) return { response: unauthorized('Token manquant') };
 
   try {
