@@ -31,7 +31,7 @@
   // TITRES DES PAGES
   // ═══════════════════════════════════════
   window.TITLES = {
-    overview: 'Vue d\\'ensemble — BRVM',
+    overview: "Vue d'ensemble — BRVM",
     titres: 'Titres BRVM',
     boc: 'BOC — Bulletin Officiel',
     analyses: 'Recommandations',
