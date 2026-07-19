@@ -28,7 +28,7 @@
       // Afficher sélecteur
       const container = document.getElementById('marcheContent');
       if (container) {
-        container.innerHTML = '<div class="empty-state">Sélectionnez un titre pour l\\'analyse technique</div>';
+        container.innerHTML = "<div class=\"empty-state\">Sélectionnez un titre pour l'analyse technique</div>";
       }
       return;
     }
@@ -222,20 +222,6 @@
   }
 
   function calculateStochastic(history, period = 14) {
-    if (history.length < period) return null;
-
-    const recent = history.slice(-period);
-    const highs = recent.map(d => d.haut || d.cloture || d.cours);
-    const lows = recent.map(d => d.bas || d.cloture || d.cours);
-    const current = recent[recent.length - 1].cloture || recent[recent.length - 1].cours;
-
-    const highestHigh = Math.max(...highs);
-    const lowestLow = Math.min(...lows);
-
-    if (highestHigh === lowestLow) return 50;
-
-    return ((current - lowestLow) / (highestHigh - lowestLow))
-      function calculateStochastic(history, period = 14) {
     if (history.length < period) return null;
 
     const recent = history.slice(-period);
