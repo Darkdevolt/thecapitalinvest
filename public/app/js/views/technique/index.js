@@ -186,7 +186,7 @@ if (window.__atIndexLoaded) {
       channel: 'Cliquez point 1 du canal de tendance', 
       rect: 'Cliquez coin 1 de la zone de prix', 
       fib: 'Cliquez bas puis haut pour les retracements de Fibonacci', 
-      pitch: 'Cliquez 3 points pour le Pitchfork d'Andrews', 
+      pitch: 'Cliquez 3 points pour le Pitchfork d\'Andrews', 
       text: 'Cliquez pour ajouter une annotation texte' 
     };
     document.getElementById('atDrawStatus').textContent = msgs[mode] || '';
