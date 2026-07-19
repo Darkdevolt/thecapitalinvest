@@ -10,10 +10,29 @@ import { validate } from './lib/validate.js';
 import { corsHeaders, handleOptions } from './lib/cors.js';
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// HELPER — Construire une URL absolue depuis req.url relatif (Vercel)
+// ═══════════════════════════════════════════════════════════════════════════════
+function getUrl(req) {
+  // Vercel Functions : req.url est un pathname relatif (/api/...)
+  // On construit l'URL absolue avec le host
+  const host = req.headers?.host || req.headers?.['x-forwarded-host'] || 'localhost';
+  return new URL(req.url, `https://${host}`);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HELPER — Lire un header compatible Node.js/Vercel (objet plain)
+// ═══════════════════════════════════════════════════════════════════════════════
+function getHeader(req, name) {
+  if (req.headers && typeof req.headers.get === 'function') {
+    return req.headers.get(name);
+  }
+  return req.headers?.[name.toLowerCase()] || req.headers?.[name];
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // HELPERS — Cache HTTP pour endpoints publics
 // ═══════════════════════════════════════════════════════════════════════════════
 function withPublicCache(response) {
-  // Clone la réponse pour ajouter les headers de cache
   const newHeaders = new Headers(response.headers);
   newHeaders.set('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600');
   return new Response(response.body, {
@@ -127,8 +146,8 @@ async function handleContact(req) {
         email: sanitized.email,
         objet: sanitized.objet,
         message: sanitized.message,
-        ip: req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || null,
-        user_agent: req.headers.get('user-agent') || null,
+        ip: getHeader(req, 'x-forwarded-for')?.split(',')[0]?.trim() || null,
+        user_agent: getHeader(req, 'user-agent') || null,
       });
     if (dbError) throw dbError;
     return success({}, 'Message envoyé avec succès');
@@ -145,7 +164,7 @@ async function handleFiche(req) {
   if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
-  const url = new URL(req.url);
+  const url = getUrl(req);
   const ticker = url.searchParams.get('ticker')?.toUpperCase();
 
   if (!ticker || !validate({ ticker }, { ticker: { type: 'ticker', required: true } }).valid) {
@@ -201,16 +220,12 @@ async function handleMarche(req) {
   if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
-  const url = new URL(req.url);
+  const url = getUrl(req);
   const type = url.searchParams.get('type');
 
   try {
     switch (type) {
       case 'apercu': {
-        // ═══════════════════════════════════════
-        // ENDPOINT AGRÉGÉ pour la page d'accueil
-        // 1 seul appel = indices + cours + palmarès
-        // ═══════════════════════════════════════
         const [
           { data: indices, error: idxErr },
           { data: cours, error: crsErr },
@@ -223,7 +238,6 @@ async function handleMarche(req) {
         if (idxErr) throw idxErr;
         if (crsErr) throw crsErr;
 
-        // Dédoublonner cours par ticker (prendre le plus récent)
         const seen = new Set();
         const uniqueCours = [];
         for (const c of cours || []) {
@@ -233,7 +247,6 @@ async function handleMarche(req) {
           }
         }
 
-        // Palmarès
         const sorted = [...uniqueCours].sort((a, b) => (b.variation || 0) - (a.variation || 0));
         const topHausses = sorted.filter(c => (c.variation || 0) > 0).slice(0, 5);
         const topBaisses = sorted.filter(c => (c.variation || 0) < 0).slice(0, 5).reverse();
@@ -288,7 +301,6 @@ async function handleMarche(req) {
       }
 
       case 'financials': {
-        // Nouveau endpoint public pour les données financières
         const { data, error: dbError } = await supabase
           .from('financials')
           .select('*')
@@ -318,7 +330,7 @@ async function handlePortefeuille(req) {
   if (auth.response) return auth.response;
   const userId = auth.user.sub;
 
-  const url = new URL(req.url);
+  const url = getUrl(req);
   const mode = url.searchParams.get('mode');
 
   try {
@@ -493,7 +505,7 @@ async function deleteTransaction(userId, url) {
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleScraper(req) {
   const cronSecret = process.env.CRON_SECRET;
-  const authHeader = req.headers.get('authorization');
+  const authHeader = getHeader(req, 'authorization');
 
   if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
     return error('Non autorisé', 401, 'UNAUTHORIZED');
@@ -568,7 +580,7 @@ async function handleAdmin(req) {
     return error('Accès réservé aux administrateurs', 403, 'FORBIDDEN');
   }
 
-  const url = new URL(req.url);
+  const url = getUrl(req);
   const action = url.searchParams.get('action');
 
   try {
@@ -1011,7 +1023,6 @@ async function importBOC(req) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROUTEUR PRINCIPAL — Export unique pour Vercel
-// CORRECTION : Lit le paramètre 'path' de la rewrite Vercel
 // ═══════════════════════════════════════════════════════════════════════════════
 export default async function handler(req) {
   // Preflight CORS global
@@ -1019,16 +1030,13 @@ export default async function handler(req) {
     return handleOptions(corsHeaders('public'));
   }
 
-  // Rate limiting global (une seule fois pour toute la fonction)
+  // Rate limiting global
   const limit = rateLimit(req);
   if (limit) return limit;
 
-  const url = new URL(req.url);
+  const url = getUrl(req);
   
-  // ═══════════════════════════════════════════════════════════════════════════════
-  // CORRECTION CRITIQUE : Vercel rewrite /api/boc → /api/index?path=boc
-  // On lit d'abord le paramètre 'path' de la query string, puis fallback sur pathname
-  // ═══════════════════════════════════════════════════════════════════════════════
+  // Vercel rewrite: /api/boc → /api/index?path=boc
   const path = url.searchParams.get('path') || url.pathname.replace('/api/', '').split('/')[0];
 
   try {
