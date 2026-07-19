@@ -1011,6 +1011,7 @@ async function importBOC(req) {
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // ROUTEUR PRINCIPAL — Export unique pour Vercel
+// CORRECTION : Lit le paramètre 'path' de la rewrite Vercel
 // ═══════════════════════════════════════════════════════════════════════════════
 export default async function handler(req) {
   // Preflight CORS global
@@ -1023,7 +1024,12 @@ export default async function handler(req) {
   if (limit) return limit;
 
   const url = new URL(req.url);
-  const path = url.pathname.replace('/api/', '').split('/')[0];
+  
+  // ═══════════════════════════════════════════════════════════════════════════════
+  // CORRECTION CRITIQUE : Vercel rewrite /api/boc → /api/index?path=boc
+  // On lit d'abord le paramètre 'path' de la query string, puis fallback sur pathname
+  // ═══════════════════════════════════════════════════════════════════════════════
+  const path = url.searchParams.get('path') || url.pathname.replace('/api/', '').split('/')[0];
 
   try {
     switch (path) {
