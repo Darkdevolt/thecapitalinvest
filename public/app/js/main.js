@@ -82,20 +82,29 @@
         .catch(err => { console.warn('[MAIN] analyses non chargées:', err); allAnalyses = []; })
     );
 
-    // Entreprises
+    // Entreprises — CORRECTION : endpoint séparé /entreprises au lieu de /marche?type=entreprises
+    // Car l'API n'a pas de case 'entreprises' dans handleMarche
     promises.push(
       apiGet('/marche?type=entreprises')
         .then(data => {
-          allEntreprises = data || [];
+          if (data && data.data) {
+            allEntreprises = data.data || [];
+          } else {
+            allEntreprises = data || [];
+          }
           entMap = {};
           allEntreprises.forEach(e => { if (e?.ticker) entMap[e.ticker] = e; });
         })
-        .catch(err => { console.warn('[MAIN] entreprises non chargées:', err); allEntreprises = []; entMap = {}; })
+        .catch(err => { 
+          console.warn('[MAIN] entreprises non chargées:', err); 
+          allEntreprises = []; 
+          entMap = {}; 
+        })
     );
 
     await Promise.all(promises);
 
-    // Build entMap
+    // Build entMap (au cas où la promise ci-dessus échoue)
     entMap = {};
     allEntreprises.forEach(e => { if (e?.ticker) entMap[e.ticker] = e; });
 
@@ -133,7 +142,16 @@
         const text = await res.text();
         throw new Error(`Réponse non-JSON: ${text.slice(0, 200)}`);
       }
-      return await res.json();
+      const json = await res.json();
+      // CORRECTION : certains endpoints retournent { data: [...] }, d'autres directement [...]
+      // On normalise pour toujours retourner le tableau
+      if (json && Array.isArray(json.data)) {
+        return json.data;
+      }
+      if (json && json.success && Array.isArray(json.data)) {
+        return json.data;
+      }
+      return json;
     } catch (err) {
       console.error(`[API] ${endpoint}:`, err);
       // Retourner données en cache localStorage si dispo
