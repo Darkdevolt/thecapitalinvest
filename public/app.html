@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital — Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script type="text/javascript" src="https://gc.kes.v2.scr.kaspersky-labs.com/7EA5E9BB-55E1-4C31-9C21-4943DDFED2E4/main.js?attr=zusA04-CRAsgbFx4NEKcNGlGx_NCtKDcH8SBj0ZvvO1IACPkXwL56nz2O-4EihECRjbTAzoMcs4hgcPtYbVXfLjyx2bkrU2V7MdrLohpv3Wzbm-ihp_1CR4dWJ3XWTJG1_PBCBPYA5hq-LZ9ABy8bS1C65prOIjSE9Sl499iWRIzRkgV9QEXOnooBHhd-TUjT0i1Ns_eIbgqpALVUAcKWK3XwRYG36nCTINp_o4AbLdjtaJb0li_j8_tNHRNLlpLBEWIJo4UyXmGvO0gGPXGyIhsYZGks5SxROQGyJudoO4o5Q6f0MzWfSiFQlfHcm0uH0JtBp_D9rx0Z2Vls_eS7syVNmxXhWQpwEsbzDgCGMRdzfloEwd5NSn2sT28D-Kk9-eyYu3b8JVLTqoAPjTPXkMYZhe0LnscNe3j-p3n4sUHhHG7hlHJbE9KeZrcbiJNEsLtcM_TOEtYCF2-_mAxdPwzZE3EhKeoLMNYjEBonzqDHRXZnjStmqA60-c1AJ8vk6LpwQvRecufjLl4BZv77SPwHHAVEIWsIx_J_FOhIPgG-DlrOI_9bmerYYmNIYvwPWC9CS0KbQ_ilhKu-XBsAj-rbg0yUeD8z-SV_pWPEp0k1zNu8K_crWBPTTVGgPjKL9m1hOHq9WA7Yl840R88wg" charset="UTF-8"></script><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <link rel="stylesheet" href="app/css/variables.css">
 <link rel="stylesheet" href="app/css/base.css">
@@ -14,7 +14,6 @@
 <link rel="stylesheet" href="app/css/technique.css">
 <link rel="stylesheet" href="app/css/style.css?v=2">
 <link rel="stylesheet" href="app/css/marche.css">
-<base target="_blank">
 <base target="_blank">
 </head>
 <body class="init-hidden">
@@ -1224,19 +1223,261 @@
       </div>
     </div>
 </div>  <!-- view-formation -->
+<div class="view" id="view-marche">
+<div class="page-content">
+
+  <!-- PAGE HEADER -->
+  <div class="page-header">
+    <h1>Marché <span style="color:var(--gold)">BRVM</span></h1>
+    <p>Bourse Régionale des Valeurs Mobilières · Données en temps réel · Abidjan, Côte d'Ivoire</p>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 1 — INDICES
+  ═══════════════════════════ -->
+  <div class="section" id="indices">
+    <div class="section-title">Cours des Indices</div>
+    <div class="section-sub">Évolution des indices de référence de la BRVM</div>
+
+    <div class="grid-3 mb20">
+      <div class="stat-card">
+        <div class="stat-label">BRVM Composite</div>
+        <div class="stat-value" id="marche-idx-composite">—</div>
+        <div class="stat-change" id="marche-idx-composite-chg">—</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-composite-vol">Volume —</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">BRVM 30</div>
+        <div class="stat-value" id="marche-idx-30">—</div>
+        <div class="stat-change" id="marche-idx-30-chg">—</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-30-vol">—</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">BRVM Prestige</div>
+        <div class="stat-value" id="marche-idx-prestige">—</div>
+        <div class="stat-change" id="marche-idx-prestige-chg">—</div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-prestige-vol">—</div>
+      </div>
+    </div>
+
+    <!-- Index chart -->
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title">BRVM Composite — Historique</div>
+        <div style="display:flex;gap:6px" id="marche-idxPeriodBtns">
+          <button class="filter-btn active" onclick="setIdxPeriod(30,this)">1M</button>
+          <button class="filter-btn" onclick="setIdxPeriod(90,this)">3M</button>
+          <button class="filter-btn" onclick="setIdxPeriod(252,this)">1A</button>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container tall">
+          <canvas id="marche-chartIndices"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 2 — COURS ACTIONS
+  ═══════════════════════════ -->
+  <div class="section" id="cours">
+    <div class="section-title">Cours des Actions</div>
+    <div class="section-sub">Cotations en temps réel de toutes les sociétés listées à la BRVM</div>
+
+    <div class="search-bar">
+      <input class="search-input" id="marche-searchCours" placeholder="🔍  Rechercher un titre..." oninput="filterCours()">
+      <button class="filter-btn active" onclick="setCoursFilter('all',this)">Tous</button>
+      <button class="filter-btn" onclick="setCoursFilter('up',this)">Hausse</button>
+      <button class="filter-btn" onclick="setCoursFilter('down',this)">Baisse</button>
+      <button class="filter-btn" onclick="setCoursFilter('banque',this)">Banque</button>
+      <button class="filter-btn" onclick="setCoursFilter('agro',this)">Agro</button>
+      <button class="filter-btn" onclick="setCoursFilter('industrie',this)">Industrie</button>
+      <button class="filter-btn" onclick="setCoursFilter('telecom',this)">Telecom</button>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Séance du <span id="marche-coursDate">—</span></div>
+        <div style="font-size:12px;color:var(--dim)" id="marche-coursCount">—</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Société</th>
+              <th class="right">Cours (FCFA)</th>
+              <th class="right">Variation</th>
+              <th class="right">+ Haut</th>
+              <th class="right">+ Bas</th>
+              <th class="right">Volume</th>
+              <th class="right">Capitalisation</th>
+              <th>Secteur</th>
+            </tr>
+          </thead>
+          <tbody id="marche-coursTable">
+            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--dim)">Chargement...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 3 — PALMARES
+  ═══════════════════════════ -->
+  <div class="section" id="palmares">
+    <div class="section-title">Palmarès</div>
+    <div class="section-sub">Meilleures et moins bonnes performances de la séance</div>
+
+    <div class="grid-2">
+      <!-- Top hausses -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🟢 Top Hausses</div>
+          <span style="font-size:11px;color:var(--green)">Séance en cours</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
+            <tbody id="marche-topHausses"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Top baisses -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">🔴 Top Baisses</div>
+          <span style="font-size:11px;color:var(--red)">Séance en cours</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
+            <tbody id="marche-topBaisses"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top volumes -->
+    <div class="card mb20">
+      <div class="card-header">
+        <div class="card-title">📊 Top Volumes échangés</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Titre</th><th class="right">Volume</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Valeur échangée</th></tr></thead>
+          <tbody id="marche-topVolumes"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 4 — DIVIDENDES
+  ═══════════════════════════ -->
+  <div class="section" id="dividendes">
+    <div class="section-title">Dividendes</div>
+    <div class="section-sub">Distributions de dividendes des sociétés cotées — dernier exercice</div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Dividendes par titre</div>
+        <div style="font-size:12px;color:var(--dim)">DPA = Dividende Par Action</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Société</th>
+              <th class="right">Cours actuel</th>
+              <th class="right">DPA (FCFA)</th>
+              <th class="right">Rendement</th>
+              <th class="right">BPA</th>
+              <th class="right">Taux distribution</th>
+              <th class="right">Exercice</th>
+            </tr>
+          </thead>
+          <tbody id="marche-dividendesTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 5 — PUBLICATIONS
+  ═══════════════════════════ -->
+  <div class="section" id="publications">
+    <div class="section-title">Publications Officielles</div>
+    <div class="section-sub">Avis et bulletins officiels publiés par la BRVM</div>
+
+    <div class="search-bar">
+      <input class="search-input" id="marche-searchPub" placeholder="🔍  Rechercher une publication..." oninput="filterPub()">
+      <button class="filter-btn active" onclick="setPubFilter('all',this)">Toutes</button>
+      <button class="filter-btn" onclick="setPubFilter('obligation',this)">Obligations</button>
+      <button class="filter-btn" onclick="setPubFilter('action',this)">Actions</button>
+      <button class="filter-btn" onclick="setPubFilter('opcvm',this)">OPCVM</button>
+    </div>
+
+    <div class="boc-grid" id="marche-pubGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 6 — CALENDRIER
+  ═══════════════════════════ -->
+  <div class="section" id="calendrier">
+    <div class="section-title">Calendrier des Évènements</div>
+    <div class="section-sub">Prochaines assemblées générales, détachements de dividendes et cotations</div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Prochains évènements</div></div>
+        <div id="marche-calendrierList" style="padding:8px 0"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-header"><div class="card-title">Statistiques de la séance</div></div>
+        <div class="card-body" id="marche-seanceStats"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════
+       SECTION 7 — CTA CONVERSION
+  ═══════════════════════════ -->
+  <div class="section" style="text-align:center;padding:60px 20px;background:linear-gradient(to right, rgba(184,150,78,0.05), transparent, rgba(184,150,78,0.05));border:1px solid var(--border);border-radius:12px;margin-top:40px;">
+    <div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--cream);margin-bottom:12px;">
+      Vous suivez ces valeurs ?
+    </div>
+    <p style="font-size:14px;color:var(--muted);max-width:500px;margin:0 auto 24px;line-height:1.7;">
+      Créez un compte gratuit pour sauvegarder vos valeurs préférées, recevoir des alertes de prix et accéder à l'analyse technique.
+    </p>
+    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
+      <a href="register.html" class="btn btn-primary">S'inscrire gratuitement</a>
+      <a href="login.html" class="btn btn-outline">J'ai déjà un compte</a>
+    </div>
+  </div>
+
+
+</div>
+
 </main>
 
 
 <!-- ═══════════════════════════════════════
      CORE (d'abord — définit fmt, toast, etc.)
      ═══════════════════════════════════════ -->
-
 <script src="app/js/utils.js?v=3"></script>
 <script src="app/js/components.js?v=3"></script>
 <script src="app/js/state.js?v=3"></script>
 <script src="app/js/api.js?v=3"></script>
 <script src="app/js/ui.js?v=3"></script>
 <script src="app/js/search.js?v=3"></script>
+<script src="app/js/views/marche.js"></script>
 
 <!-- ═══════════════════════════════════════
      VIEWS (ensuite — utilise fmt, toast, etc.)
@@ -1310,5 +1551,6 @@
      ENTRY POINT
      ═══════════════════════════════════════ -->
 <script src="app/js/main.js?v=3"></script>
+
 </body>
 </html>
