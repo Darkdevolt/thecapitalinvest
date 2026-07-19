@@ -278,9 +278,9 @@ async function handleMarche(req) {
       case 'cours': {
         const { data, error: dbError } = await supabase
           .from('cours')
-          .select('*')
+          .select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
           .order('date_seance', { ascending: false })
-          .limit(100);
+          .limit(50);
         if (dbError) throw dbError;
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
@@ -306,6 +306,16 @@ async function handleMarche(req) {
           .select('*')
           .order('annee', { ascending: false })
           .limit(300);
+        if (dbError) throw dbError;
+        const resp = success({ data: data || [] });
+        return withPublicCache(resp);
+      }
+
+      case 'entreprises': {
+        const { data, error: dbError } = await supabase
+          .from('entreprises')
+          .select('*')
+          .order('ticker');
         if (dbError) throw dbError;
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
