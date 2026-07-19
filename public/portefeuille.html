@@ -10,9 +10,92 @@
   <link rel="stylesheet" href="css/portefeuille.css">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <base target="_blank">
+<style>
+  /* ═══ AJOUTS DESIGN — GESTION DE PORTEFEUILLE v3 ═══ */
+
+  .pf-kpi-icon { font-size:18px; opacity:.5; float:right; }
+  .kpi-card { position:relative; transition:transform .15s ease, border-color .15s ease; }
+  .kpi-card:hover { transform:translateY(-2px); border-color:rgba(184,150,78,0.35); }
+  .kpi-card.highlight-good { border-color:rgba(74,222,128,0.3); background:linear-gradient(160deg, rgba(74,222,128,0.06), transparent 60%); }
+  .kpi-card.highlight-bad { border-color:rgba(248,113,113,0.3); background:linear-gradient(160deg, rgba(248,113,113,0.06), transparent 60%); }
+
+  /* Onglets Achat / Vente */
+  .pf-subtabs { display:flex; gap:4px; margin-bottom:14px; }
+  .pf-subtab { padding:8px 18px; border-radius:8px 8px 0 0; background:var(--border2); color:var(--dim); font-size:12px; font-weight:600; letter-spacing:.5px; cursor:pointer; border:1px solid transparent; border-bottom:none; }
+  .pf-subtab.active { background:var(--bg); color:var(--gold); border-color:rgba(184,150,78,0.3); }
+  .pf-subpanel { display:none; }
+  .pf-subpanel.active { display:block; }
+
+  /* Barre de recherche / tri au dessus du tableau */
+  .table-toolbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border2); }
+  .table-toolbar input[type="text"], .table-toolbar select { background:var(--bg); border:1px solid var(--border2); border-radius:6px; color:var(--cream); padding:7px 10px; font-size:12px; }
+  .table-toolbar .toolbar-spacer { flex:1; }
+  .btn-ghost { background:none; border:1px solid var(--border2); color:var(--dim); border-radius:6px; padding:7px 12px; font-size:11px; cursor:pointer; }
+  .btn-ghost:hover { color:var(--gold); border-color:rgba(184,150,78,0.4); }
+
+  /* Badges */
+  .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:10px; font-weight:600; }
+  .badge-green { background:rgba(74,222,128,0.15); color:var(--green); }
+  .badge-red { background:rgba(248,113,113,0.15); color:var(--red); }
+  .badge-gold { background:rgba(184,150,78,0.15); color:var(--gold); }
+
+  /* Boutons d'action ligne */
+  .row-actions { display:flex; gap:4px; justify-content:center; }
+  .row-actions button { padding:4px 8px; border-radius:6px; border:1px solid var(--border2); background:none; color:var(--dim); font-size:11px; cursor:pointer; }
+  .row-actions button:hover { color:var(--gold); border-color:rgba(184,150,78,0.4); }
+  .row-actions button.danger:hover { color:var(--red); border-color:rgba(248,113,113,0.4); }
+
+  /* Objectif de portefeuille */
+  .goal-progress-track { width:100%; height:14px; background:var(--border2); border-radius:7px; overflow:hidden; margin:10px 0; }
+  .goal-progress-fill { height:100%; background:linear-gradient(90deg, #B8964E, #E8C878); border-radius:7px; transition:width .4s ease; }
+
+  /* Watchlist */
+  .watchlist-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; padding:14px; }
+  .watchlist-card { background:var(--border2); border-radius:10px; padding:12px; position:relative; }
+  .watchlist-card .wl-ticker { font-family:var(--mono); color:var(--gold); font-weight:700; font-size:14px; }
+  .watchlist-card .wl-price { font-size:16px; margin:6px 0; }
+  .watchlist-card .wl-remove { position:absolute; top:6px; right:8px; background:none; border:none; color:var(--dim); cursor:pointer; font-size:12px; }
+
+  /* Alertes */
+  .alert-item { display:flex; justify-content:space-between; align-items:center; padding:8px 12px; border-bottom:1px solid var(--border2); font-size:12px; }
+  .alert-item.triggered { background:rgba(184,150,78,0.08); }
+
+  /* Rééquilibrage */
+  .rebal-form-row { display:flex; gap:8px; padding:12px 16px; flex-wrap:wrap; }
+
+  /* Transactions */
+  .tx-item { display:grid; grid-template-columns:90px 70px 1fr auto; gap:10px; align-items:center; padding:8px 12px; border-bottom:1px solid var(--border2); font-size:12px; }
+  .tx-type { font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px; text-align:center; }
+  .tx-buy { background:rgba(96,165,250,0.15); color:#60A5FA; }
+  .tx-sell { background:rgba(248,113,113,0.15); color:var(--red); }
+  .tx-dividend { background:rgba(74,222,128,0.15); color:var(--green); }
+  .tx-deposit { background:rgba(184,150,78,0.15); color:var(--gold); }
+  .tx-withdraw { background:rgba(245,240,232,0.1); color:var(--dim); }
+
+  /* Toasts */
+  .toast-container { position:fixed; bottom:24px; right:24px; display:flex; flex-direction:column; gap:8px; z-index:9999; }
+  .toast { background:#1A1610; border:1px solid rgba(184,150,78,0.3); border-left:3px solid var(--gold); color:var(--cream); padding:12px 18px; border-radius:8px; font-size:13px; box-shadow:0 8px 24px rgba(0,0,0,0.4); opacity:0; transform:translateX(20px); transition:all .3s ease; max-width:320px; }
+  .toast.show { opacity:1; transform:translateX(0); }
+  .toast-success { border-left-color:var(--green); }
+  .toast-error { border-left-color:var(--red); }
+
+  /* Modals */
+  .pf-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center; }
+  .pf-modal-overlay.open { display:flex; }
+  .pf-modal { background:#1A1610; border:1px solid rgba(184,150,78,0.3); border-radius:14px; padding:24px; width:340px; max-width:90vw; }
+  .pf-modal h3 { margin:0 0 16px; color:var(--gold); font-size:15px; }
+  .pf-modal .form-row { flex-direction:column; align-items:stretch; gap:10px; }
+  .pf-modal .form-input, .pf-modal .form-select { width:100%; box-sizing:border-box; }
+  .pf-modal-actions { display:flex; gap:8px; margin-top:16px; }
+  .pf-modal-actions button { flex:1; padding:10px; border-radius:8px; cursor:pointer; font-weight:600; font-size:12px; }
+  .pf-modal-hint { font-size:11px; color:var(--dim); margin-top:-4px; }
+
+  @media (max-width:768px) {
+    .tx-item { grid-template-columns:1fr; text-align:left; }
+  }
+</style>
 </head>
 <body class="init-hidden">
-  <!-- Header & Sidebar (inchangés) -->
   <header class="header">
     <div class="header-brand">THE <span>·</span> CAPITAL</div>
     <nav class="header-nav">
@@ -63,9 +146,13 @@
         <div class="kpi-value" id="pfCash">—</div>
       </div>
       <div class="kpi-card">
-        <div class="kpi-label">P&L NET</div>
+        <div class="kpi-label">P&L NET (LATENT)</div>
         <div class="kpi-value" id="pfPL">—</div>
         <div class="kpi-sub" id="pfPLSub"></div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">P&L RÉALISÉ</div>
+        <div class="kpi-value" id="pfRealizedPL">—</div>
       </div>
       <div class="kpi-card">
         <div class="kpi-label">RENTABILITÉ</div>
@@ -82,6 +169,27 @@
       <div class="kpi-card">
         <div class="kpi-label">MAX DRAWDOWN</div>
         <div class="kpi-value" id="pfDrawdown">—</div>
+      </div>
+      <div class="kpi-card" id="pfBestCard">
+        <div class="kpi-label">MEILLEURE POSITION</div>
+        <div class="kpi-value" id="pfBestPos" style="font-size:16px">—</div>
+      </div>
+      <div class="kpi-card" id="pfWorstCard">
+        <div class="kpi-label">PIRE POSITION</div>
+        <div class="kpi-value" id="pfWorstPos" style="font-size:16px">—</div>
+      </div>
+    </section>
+
+    <!-- Objectif de portefeuille -->
+    <section class="form-card">
+      <div class="form-header">🎯 OBJECTIF DE PORTEFEUILLE</div>
+      <div class="form-row">
+        <input type="number" id="goalTarget" class="form-input" placeholder="Valeur cible (FCFA)" min="0">
+        <input type="date" id="goalDate" class="form-input">
+        <button class="btn-gold" onclick="setPortfolioGoal()">Définir l'objectif</button>
+      </div>
+      <div id="goalSummary" style="padding:0 16px 16px">
+        <div style="text-align:center;color:var(--dim);font-size:13px;padding:12px">Aucun objectif défini pour l'instant.</div>
       </div>
     </section>
 
@@ -130,22 +238,42 @@
       </div>
     </section>
 
-    <!-- Ajouter une position -->
+    <!-- Achat / Vente -->
     <section class="form-card">
-      <div class="form-header">+ AJOUTER UNE POSITION</div>
-      <div class="form-row">
-        <select id="pfTicker" class="form-select">
-          <option value="">Ticker...</option>
-        </select>
-        <select id="pfType" class="form-select">
-          <option value="action">Action</option>
-          <option value="obligation">Obligation</option>
-          <option value="opcvm">OPCVM</option>
-        </select>
-        <input type="number" id="pfQty" class="form-input" placeholder="Quantité" min="1">
-        <input type="number" id="pfPrice" class="form-input" placeholder="Prix d'achat (FCFA)" min="0" step="0.01">
-        <input type="date" id="pfDate" class="form-input">
-        <button class="btn-gold" onclick="addPosition()">Ajouter</button>
+      <div class="form-header" style="border-bottom:none;padding-bottom:0">📌 POSITIONS</div>
+      <div class="pf-subtabs" style="margin:0 16px">
+        <div class="pf-subtab active" id="tabBuy" onclick="switchPfSubtab('buy')">+ ACHETER</div>
+        <div class="pf-subtab" id="tabSell" onclick="switchPfSubtab('sell')">− VENDRE</div>
+      </div>
+
+      <div class="pf-subpanel active" id="panelBuy">
+        <div class="form-row">
+          <select id="pfTicker" class="form-select">
+            <option value="">Ticker...</option>
+          </select>
+          <select id="pfType" class="form-select">
+            <option value="action">Action</option>
+            <option value="obligation">Obligation</option>
+            <option value="opcvm">OPCVM</option>
+          </select>
+          <input type="number" id="pfQty" class="form-input" placeholder="Quantité" min="1">
+          <input type="number" id="pfPrice" class="form-input" placeholder="Prix d'achat (FCFA)" min="0" step="0.01">
+          <input type="date" id="pfDate" class="form-input">
+          <button class="btn-gold" onclick="addPosition()">Ajouter</button>
+        </div>
+      </div>
+
+      <div class="pf-subpanel" id="panelSell">
+        <div class="form-row">
+          <select id="pfSellTicker" class="form-select" onchange="updateSellHint()">
+            <option value="">Ticker à vendre...</option>
+          </select>
+          <input type="number" id="pfSellQty" class="form-input" placeholder="Quantité" min="1">
+          <input type="number" id="pfSellPrice" class="form-input" placeholder="Prix de vente (FCFA)" min="0" step="0.01">
+          <input type="date" id="pfSellDate" class="form-input">
+          <button class="btn-gold" onclick="sellPositionQuick()">Vendre</button>
+        </div>
+        <div id="sellHint" style="padding:0 16px 16px;font-size:12px;color:var(--dim)"></div>
       </div>
     </section>
 
@@ -173,11 +301,66 @@
       <div id="calcResult" style="margin-top:12px"></div>
     </section>
 
+    <!-- Watchlist -->
+    <section class="form-card">
+      <div class="form-header">👁 WATCHLIST</div>
+      <div class="form-row">
+        <select id="watchTicker" class="form-select">
+          <option value="">Ticker à surveiller...</option>
+        </select>
+        <button class="btn-gold" onclick="addToWatchlist()">Ajouter à la watchlist</button>
+      </div>
+      <div class="watchlist-grid" id="watchlistPanel">
+        <div style="grid-column:1/-1;text-align:center;color:var(--dim);font-size:13px;padding:12px">Aucun titre suivi.</div>
+      </div>
+    </section>
+
+    <!-- Alertes de prix -->
+    <section class="form-card">
+      <div class="form-header">🔔 ALERTES DE PRIX</div>
+      <div class="form-row">
+        <input type="text" id="alertTicker" class="form-input" placeholder="Ticker">
+        <select id="alertCondition" class="form-select">
+          <option value="above">Si le cours dépasse</option>
+          <option value="below">Si le cours descend sous</option>
+        </select>
+        <input type="number" id="alertTarget" class="form-input" placeholder="Prix cible (FCFA)" min="0">
+        <button class="btn-gold" onclick="addPriceAlert()">Créer l'alerte</button>
+      </div>
+      <div id="alertsPanel">
+        <div style="text-align:center;color:var(--dim);font-size:13px;padding:12px">Aucune alerte active.</div>
+      </div>
+    </section>
+
+    <!-- Rééquilibrage -->
+    <section class="form-card">
+      <div class="form-header">⚖️ RÉÉQUILIBRAGE — ALLOCATIONS CIBLES</div>
+      <div class="rebal-form-row">
+        <input type="text" id="rebalTicker" class="form-input" placeholder="Ticker" style="max-width:140px">
+        <input type="number" id="rebalPct" class="form-input" placeholder="Allocation cible %" min="0" max="100" style="max-width:160px">
+        <button class="btn-gold" onclick="setTargetAllocation()">Définir</button>
+      </div>
+      <div id="rebalancingPanel">
+        <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Définissez des allocations cibles pour voir les suggestions.</div>
+      </div>
+    </section>
+
     <!-- Positions détaillées -->
     <section class="table-card">
       <div class="table-header">
         <span>📋 POSITIONS DÉTAILLÉES</span>
         <span id="pfPositionCount" style="color:var(--dim);font-size:12px">0 position</span>
+      </div>
+      <div class="table-toolbar">
+        <input type="text" id="pfSearch" placeholder="🔍 Rechercher un ticker, pays, secteur..." oninput="filterPositionsTable()">
+        <select id="pfSortSelect" onchange="sortPositionsTable(this.value)">
+          <option value="value">Trier par valeur</option>
+          <option value="plPct">Trier par rentabilité</option>
+          <option value="pl">Trier par P&L</option>
+          <option value="ticker">Trier par ticker</option>
+        </select>
+        <div class="toolbar-spacer"></div>
+        <button class="btn-ghost" onclick="exportPositionsCSV(window._pfLastRows||[])">⬇ Export positions CSV</button>
       </div>
       <div class="bulk-action-bar" id="bulkActionBar">
         <span class="bulk-action-count" id="bulkActionCount">0 sélectionnée(s)</span>
@@ -200,7 +383,7 @@
               <th style="text-align:right">ALLOCATION</th>
               <th style="text-align:right">52S HAUT</th>
               <th style="text-align:right">52S BAS</th>
-              <th style="text-align:center">🗑</th>
+              <th style="text-align:center">ACTIONS</th>
             </tr>
           </thead>
           <tbody id="pfTable">
@@ -232,7 +415,55 @@
         <div id="correlationMatrix">Ajoutez au moins 2 positions</div>
       </div>
     </section>
+
+    <!-- Historique des transactions -->
+    <section class="table-card">
+      <div class="table-header">
+        <span>🧾 HISTORIQUE DES TRANSACTIONS</span>
+        <button class="btn-ghost" onclick="exportTransactionsCSV()">⬇ Export CSV</button>
+      </div>
+      <div id="transactionHistoryPanel">
+        <div style="text-align:center;color:var(--dim);font-size:13px;padding:20px">Aucune transaction enregistrée.</div>
+      </div>
+    </section>
   </main>
+
+  <!-- Modal Édition -->
+  <div class="pf-modal-overlay" id="editModal">
+    <div class="pf-modal">
+      <h3>✏️ Modifier la position</h3>
+      <input type="hidden" id="editId">
+      <div class="form-row">
+        <input type="number" id="editQty" class="form-input" placeholder="Quantité" min="1">
+        <input type="number" id="editPrice" class="form-input" placeholder="Prix d'achat (FCFA)" min="0" step="0.01">
+        <input type="date" id="editDate" class="form-input">
+      </div>
+      <div class="pf-modal-actions">
+        <button class="btn-ghost" onclick="closeEditModal()">Annuler</button>
+        <button class="btn-gold" onclick="confirmEdit()">Enregistrer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Vente -->
+  <div class="pf-modal-overlay" id="sellModal">
+    <div class="pf-modal">
+      <h3>💹 Vendre une position</h3>
+      <input type="hidden" id="sellTicker">
+      <div class="pf-modal-hint" id="sellQtyHint"></div>
+      <div class="form-row">
+        <input type="number" id="sellQty" class="form-input" placeholder="Quantité à vendre" min="1">
+        <input type="number" id="sellPrice" class="form-input" placeholder="Prix de vente (FCFA)" min="0" step="0.01">
+        <input type="date" id="sellDate" class="form-input">
+      </div>
+      <div class="pf-modal-actions">
+        <button class="btn-ghost" onclick="closeSellModal()">Annuler</button>
+        <button class="btn-gold" onclick="confirmSell()">Confirmer la vente</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast-container" id="toastContainer"></div>
 
   <script src="js/api.js"></script>
   <script src="js/utils.js"></script>
