@@ -78,7 +78,7 @@ function calculerFrais(montant) {
 // ═══════════════════════════════════════════════════════════════════════════════
 function safeSupabase() {
   if (!isSupabaseReady()) {
-    throw new Error('Supabase non configuré. Vérifiez les variables d'environnement.');
+    throw new Error('Supabase non configuré. Vérifiez les variables d\'environnement.');
   }
   return { supabase, supabaseAdmin };
 }
@@ -92,7 +92,7 @@ async function handleAuth(req) {
 
   let body;
   try { body = await req.json(); }
-  catch { return error('Body invalide', 400); }
+  catch (e) { return error('Body invalide', 400); }
 
   const { action, email, password, nom } = body;
   if (!email || !password) return error('Email et mot de passe requis', 400);
