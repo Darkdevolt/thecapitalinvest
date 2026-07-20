@@ -3,18 +3,31 @@
 // Fusionne : auth, boc, contact, fiche, marche, portefeuille, scraper, admin
 // ═══════════════════════════════════════════════════════════════════════════════
 
-import { supabase, supabaseAdmin } from './lib/supabase.js';
+console.log('[API] Module loading started');
+console.log('[API] Node version:', process.version);
+
+import { supabase, supabaseAdmin, isSupabaseReady } from './lib/supabase.js';
+console.log('[API] Supabase imported, ready:', isSupabaseReady());
+
 import { error, success } from './lib/response.js';
+console.log('[API] Response imported');
+
 import { rateLimit, authenticate, parseBody } from './lib/middleware.js';
+console.log('[API] Middleware imported');
+
 import { validate } from './lib/validate.js';
+console.log('[API] Validate imported');
+
 import { corsHeaders, handleOptions } from './lib/cors.js';
+console.log('[API] CORS imported');
+
+import config from './lib/config.js';
+console.log('[API] Config loaded, valid:', config.isValid);
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // HELPER — Construire une URL absolue depuis req.url relatif (Vercel)
 // ═══════════════════════════════════════════════════════════════════════════════
 function getUrl(req) {
-  // Vercel Functions : req.url est un pathname relatif (/api/...)
-  // On construit l'URL absolue avec le host
   const host = req.headers?.host || req.headers?.['x-forwarded-host'] || 'localhost';
   return new URL(req.url, `https://${host}`);
 }
@@ -61,6 +74,16 @@ function calculerFrais(montant) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// SAFE SUPABASE WRAPPER — Évite les crash si client null
+// ═══════════════════════════════════════════════════════════════════════════════
+function safeSupabase() {
+  if (!isSupabaseReady()) {
+    throw new Error('Supabase non configuré. Vérifiez les variables d'environnement.');
+  }
+  return { supabase, supabaseAdmin };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // HANDLER — AUTH (login / signup)
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleAuth(req) {
@@ -75,13 +98,14 @@ async function handleAuth(req) {
   if (!email || !password) return error('Email et mot de passe requis', 400);
 
   try {
+    const { supabase: sb } = safeSupabase();
     if (action === 'login') {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error: authError } = await sb.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
       return success({ session: data.session }, 'Connexion réussie');
     }
     if (action === 'signup') {
-      const { data, error: authError } = await supabase.auth.signUp({
+      const { data, error: authError } = await sb.auth.signUp({
         email, password,
         options: { data: { nom: nom || '' } }
       });
@@ -102,7 +126,8 @@ async function handleBoc(req) {
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
   try {
-    const { data, error: dbError } = await supabase
+    const { supabase: sb } = safeSupabase();
+    const { data, error: dbError } = await sb
       .from('boc')
       .select('*')
       .order('date_seance', { ascending: false })
@@ -138,7 +163,8 @@ async function handleContact(req) {
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
 
   try {
-    const { error: dbError } = await supabaseAdmin
+    const { supabaseAdmin: sba } = safeSupabase();
+    const { error: dbError } = await sba
       .from('contacts')
       .insert({
         prenom: sanitized.prenom,
@@ -172,6 +198,7 @@ async function handleFiche(req) {
   }
 
   try {
+    const { supabase: sb, supabaseAdmin: sba } = safeSupabase();
     const [
       { data: entreprise },
       { data: cours },
@@ -179,11 +206,11 @@ async function handleFiche(req) {
       { data: financials },
       { data: analyses },
     ] = await Promise.all([
-      supabase.from('entreprises').select('*').eq('ticker', ticker).single(),
-      supabase.from('cours').select('*').eq('ticker', ticker).order('date_seance', { ascending: false }).limit(1).single(),
-      supabase.from('historique').select('date_seance, cloture').eq('ticker', ticker).order('date_seance', { ascending: true }).limit(252),
-      supabase.from('financials').select('*').eq('ticker', ticker).order('annee', { ascending: false }).limit(5),
-      supabase.from('analyses').select('*').eq('ticker', ticker).order('date_analyse', { ascending: false }).limit(5),
+      sb.from('entreprises').select('*').eq('ticker', ticker).single(),
+      sb.from('cours').select('*').eq('ticker', ticker).order('date_seance', { ascending: false }).limit(1).single(),
+      sb.from('historique').select('date_seance, cloture').eq('ticker', ticker).order('date_seance', { ascending: true }).limit(252),
+      sb.from('financials').select('*').eq('ticker', ticker).order('annee', { ascending: false }).limit(5),
+      sb.from('analyses').select('*').eq('ticker', ticker).order('date_analyse', { ascending: false }).limit(5),
     ]);
 
     let valuation = null;
@@ -217,21 +244,28 @@ async function handleFiche(req) {
 // HANDLER — MARCHE (public) — AVEC CACHE + ENDPOINT APERCU
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleMarche(req) {
+  console.log('[API] handleMarche called, method:', req.method);
+
   if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
   const url = getUrl(req);
   const type = url.searchParams.get('type');
+  console.log('[API] handleMarche type:', type);
 
   try {
+    const { supabase: sb } = safeSupabase();
+    console.log('[API] Supabase ready, querying...');
+
     switch (type) {
       case 'apercu': {
+        console.log('[API] Querying apercu...');
         const [
           { data: indices, error: idxErr },
           { data: cours, error: crsErr },
         ] = await Promise.all([
-          supabase.from('indices').select('*').order('date_seance', { ascending: false }).limit(20),
-          supabase.from('cours').select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
+          sb.from('indices').select('*').order('date_seance', { ascending: false }).limit(20),
+          sb.from('cours').select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
             .order('date_seance', { ascending: false }).limit(200),
         ]);
 
@@ -265,7 +299,8 @@ async function handleMarche(req) {
       }
 
       case 'indices': {
-        const { data, error: dbError } = await supabase
+        console.log('[API] Querying indices...');
+        const { data, error: dbError } = await sb
           .from('indices')
           .select('*')
           .order('date_seance', { ascending: false })
@@ -276,12 +311,14 @@ async function handleMarche(req) {
       }
 
       case 'cours': {
-        const { data, error: dbError } = await supabase
+        console.log('[API] Querying cours...');
+        const { data, error: dbError } = await sb
           .from('cours')
           .select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
           .order('date_seance', { ascending: false })
           .limit(50);
         if (dbError) throw dbError;
+        console.log('[API] Cours returned:', data?.length || 0, 'rows');
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
       }
@@ -289,7 +326,7 @@ async function handleMarche(req) {
       case 'historique': {
         const ticker = url.searchParams.get('ticker')?.toUpperCase();
         if (!ticker) return error('Ticker requis', 400, 'MISSING_TICKER');
-        const { data, error: dbError } = await supabase
+        const { data, error: dbError } = await sb
           .from('historique')
           .select('*')
           .eq('ticker', ticker)
@@ -301,7 +338,7 @@ async function handleMarche(req) {
       }
 
       case 'financials': {
-        const { data, error: dbError } = await supabase
+        const { data, error: dbError } = await sb
           .from('financials')
           .select('*')
           .order('annee', { ascending: false })
@@ -311,8 +348,19 @@ async function handleMarche(req) {
         return withPublicCache(resp);
       }
 
+      case 'analyses': {
+        const { data, error: dbError } = await sb
+          .from('analyses')
+          .select('*')
+          .order('date_analyse', { ascending: false })
+          .limit(100);
+        if (dbError) throw dbError;
+        const resp = success({ data: data || [] });
+        return withPublicCache(resp);
+      }
+
       case 'entreprises': {
-        const { data, error: dbError } = await supabase
+        const { data, error: dbError } = await sb
           .from('entreprises')
           .select('*')
           .order('ticker');
@@ -326,7 +374,7 @@ async function handleMarche(req) {
     }
   } catch (e) {
     console.error('Marche API error:', e);
-    return error('Erreur serveur', 500, 'SERVER_ERROR');
+    return error(`Erreur serveur: ${e.message}`, 500, 'SERVER_ERROR');
   }
 }
 
@@ -365,7 +413,8 @@ async function handlePortefeuille(req) {
 }
 
 async function getPortefeuille(userId) {
-  const { data: transactions, error: txError } = await supabaseAdmin
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data: transactions, error: txError } = await sba
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
@@ -398,7 +447,7 @@ async function getPortefeuille(userId) {
 
   const coursMap = new Map();
   if (activeTickers.length > 0) {
-    const { data: allCours } = await supabase
+    const { data: allCours } = await sba
       .from('cours')
       .select('ticker, cours, nom, date_seance')
       .in('ticker', activeTickers)
@@ -445,7 +494,8 @@ async function getPortefeuille(userId) {
 }
 
 async function getTransactions(userId) {
-  const { data, error: dbError } = await supabaseAdmin
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data, error: dbError } = await sba
     .from('transactions')
     .select('*')
     .eq('user_id', userId)
@@ -473,7 +523,8 @@ async function addTransaction(userId, req) {
   const montant = sanitized.quantite * sanitized.prix;
   const frais = calculerFrais(montant);
 
-  const { data, error: dbError } = await supabaseAdmin
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data, error: dbError } = await sba
     .from('transactions')
     .insert({
       user_id: userId,
@@ -500,7 +551,8 @@ async function deleteTransaction(userId, url) {
   const id = url.searchParams.get('id');
   if (!id) return error('ID requis', 400, 'MISSING_ID');
 
-  const { error: dbError } = await supabaseAdmin
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba
     .from('transactions')
     .delete()
     .eq('id', id)
@@ -538,9 +590,10 @@ async function handleScraper(req) {
       });
     }
 
+    const { supabaseAdmin: sba } = safeSupabase();
     for (const row of scrapedData) {
       scraped++;
-      const { error: dbError } = await supabaseAdmin
+      const { error: dbError } = await sba
         .from('cours')
         .upsert(
           {
@@ -580,7 +633,8 @@ async function handleAdmin(req) {
   const auth = await authenticate(req);
   if (auth.response) return auth.response;
 
-  const { data: userData } = await supabaseAdmin
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data: userData } = await sba
     .from('users')
     .select('is_admin')
     .eq('id', auth.user.sub)
@@ -636,17 +690,18 @@ async function handleAdmin(req) {
 
 // ─── Admin sub-functions ───
 async function getStats() {
+  const { supabaseAdmin: sba } = safeSupabase();
   const [entreprises, cours, historique, financials, dividendes, users] = await Promise.all([
-    supabaseAdmin.from('entreprises').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('cours').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('historique').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('financials').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('dividendes').select('id', { count: 'exact', head: true }),
-    supabaseAdmin.from('users').select('id', { count: 'exact', head: true }),
+    sba.from('entreprises').select('id', { count: 'exact', head: true }),
+    sba.from('cours').select('id', { count: 'exact', head: true }),
+    sba.from('historique').select('id', { count: 'exact', head: true }),
+    sba.from('financials').select('id', { count: 'exact', head: true }),
+    sba.from('dividendes').select('id', { count: 'exact', head: true }),
+    sba.from('users').select('id', { count: 'exact', head: true }),
   ]);
 
-  const lastSeance = await supabase.from('cours').select('date_seance').order('date_seance', { ascending: false }).limit(1).single();
-  const lastHistorique = await supabase.from('historique').select('date_seance').order('date_seance', { ascending: false }).limit(1).single();
+  const lastSeance = await sba.from('cours').select('date_seance').order('date_seance', { ascending: false }).limit(1).single();
+  const lastHistorique = await sba.from('historique').select('date_seance').order('date_seance', { ascending: false }).limit(1).single();
 
   return success({
     entreprises: entreprises.count || 0,
@@ -662,9 +717,10 @@ async function getStats() {
 }
 
 async function getStatsErrors() {
+  const { supabaseAdmin: sba } = safeSupabase();
   const [coursNulls, coursNeg] = await Promise.all([
-    supabaseAdmin.from('cours').select('ticker, date_seance, cours, variation_pct').or('cours.is.null,cours.lte.0').order('date_seance', { ascending: false }).limit(50),
-    supabaseAdmin.from('cours').select('ticker, date_seance, cours, variation_pct').lt('cours', 0).order('date_seance', { ascending: false }).limit(50),
+    sba.from('cours').select('ticker, date_seance, cours, variation_pct').or('cours.is.null,cours.lte.0').order('date_seance', { ascending: false }).limit(50),
+    sba.from('cours').select('ticker, date_seance, cours, variation_pct').lt('cours', 0).order('date_seance', { ascending: false }).limit(50),
   ]);
   return success({
     cours_invalides: coursNulls.data || [],
@@ -675,7 +731,8 @@ async function getStatsErrors() {
 }
 
 async function getEntreprises() {
-  const { data, error: dbError } = await supabaseAdmin.from('entreprises').select('*').order('ticker');
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data, error: dbError } = await sba.from('entreprises').select('*').order('ticker');
   if (dbError) throw dbError;
   return success({ data: data || [] });
 }
@@ -685,7 +742,8 @@ async function toggleActif(req) {
   if (bodyError) return bodyError;
   const { ticker, actif } = body;
   if (!ticker || typeof actif !== 'boolean') return error('Paramètres invalides', 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('entreprises').update({ actif }).eq('ticker', ticker);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('entreprises').update({ actif }).eq('ticker', ticker);
   if (dbError) throw dbError;
   return success({}, `Société ${actif ? 'activée' : 'désactivée'}`);
 }
@@ -699,7 +757,8 @@ async function updateEntreprise(req) {
   const update = {};
   for (const k of allowed) { if (fields[k] !== undefined) update[k] = fields[k]; }
   if (Object.keys(update).length === 0) return error('Aucun champ à modifier', 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('entreprises').update(update).eq('ticker', ticker);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('entreprises').update(update).eq('ticker', ticker);
   if (dbError) throw dbError;
   return success({}, `Entreprise ${ticker} mise à jour`);
 }
@@ -717,7 +776,8 @@ async function addEntreprise(req) {
   };
   const { valid, errors, sanitized } = validate(body, schema);
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('entreprises').insert({ ...sanitized, actif: true });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('entreprises').insert({ ...sanitized, actif: true });
   if (dbError) {
     if (dbError.code === '23505') return error('Ce ticker existe déjà', 409, 'DUPLICATE');
     throw dbError;
@@ -727,7 +787,8 @@ async function addEntreprise(req) {
 
 async function getCoursLatest(url) {
   const ticker = url.searchParams.get('ticker')?.toUpperCase();
-  let query = supabaseAdmin.from('cours').select('*').order('date_seance', { ascending: false }).limit(ticker ? 100 : 50);
+  const { supabaseAdmin: sba } = safeSupabase();
+  let query = sba.from('cours').select('*').order('date_seance', { ascending: false }).limit(ticker ? 100 : 50);
   if (ticker) query = query.eq('ticker', ticker);
   const { data, error: dbError } = await query;
   if (dbError) throw dbError;
@@ -737,7 +798,8 @@ async function getCoursLatest(url) {
 async function getHistoriqueTicker(url) {
   const ticker = url.searchParams.get('ticker')?.toUpperCase();
   if (!ticker) return error('Ticker requis', 400, 'MISSING_TICKER');
-  const { data, error: dbError } = await supabaseAdmin.from('historique').select('*').eq('ticker', ticker).order('date_seance', { ascending: false }).limit(500);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data, error: dbError } = await sba.from('historique').select('*').eq('ticker', ticker).order('date_seance', { ascending: false }).limit(500);
   if (dbError) throw dbError;
   return success({ data: data || [] });
 }
@@ -758,7 +820,8 @@ async function addCours(req) {
   };
   const { valid, errors, sanitized } = validate(body, schema);
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('cours').upsert(sanitized, { onConflict: ['ticker', 'date_seance'] });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('cours').upsert(sanitized, { onConflict: ['ticker', 'date_seance'] });
   if (dbError) throw dbError;
   return success({}, 'Cours enregistré');
 }
@@ -772,7 +835,8 @@ async function updateCours(req) {
   const update = {};
   for (const k of allowed) { if (fields[k] !== undefined) update[k] = fields[k]; }
   if (Object.keys(update).length === 0) return error('Aucun champ à modifier', 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('cours').update(update).eq('id', id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('cours').update(update).eq('id', id);
   if (dbError) throw dbError;
   return success({}, 'Cours mis à jour');
 }
@@ -780,7 +844,8 @@ async function updateCours(req) {
 async function deleteCours(url) {
   const id = url.searchParams.get('id');
   if (!id) return error('ID requis', 400, 'MISSING_ID');
-  const { error: dbError } = await supabaseAdmin.from('cours').delete().eq('id', id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('cours').delete().eq('id', id);
   if (dbError) throw dbError;
   return success({}, 'Cours supprimé');
 }
@@ -800,7 +865,8 @@ async function addHistorique(req) {
   };
   const { valid, errors, sanitized } = validate(body, schema);
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('historique').upsert(sanitized, { onConflict: ['ticker', 'date_seance'] });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('historique').upsert(sanitized, { onConflict: ['ticker', 'date_seance'] });
   if (dbError) throw dbError;
   return success({}, 'Cours historique enregistré');
 }
@@ -829,7 +895,8 @@ async function addHistoriqueBulk(req) {
     else validated.push(sanitized);
   }
   if (importErrors.length > 0 && validated.length === 0) return error(`Toutes les lignes sont invalides`, 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('historique').upsert(validated, { onConflict: ['ticker', 'date_seance'] });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('historique').upsert(validated, { onConflict: ['ticker', 'date_seance'] });
   if (dbError) throw dbError;
   return success({ inserted: validated.length, skipped: importErrors.length, errors: importErrors }, `${validated.length} lignes importées`);
 }
@@ -837,14 +904,16 @@ async function addHistoriqueBulk(req) {
 async function deleteHistorique(url) {
   const id = url.searchParams.get('id');
   if (!id) return error('ID requis', 400, 'MISSING_ID');
-  const { error: dbError } = await supabaseAdmin.from('historique').delete().eq('id', id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('historique').delete().eq('id', id);
   if (dbError) throw dbError;
   return success({}, 'Entrée historique supprimée');
 }
 
 async function getFinancials(url) {
   const ticker = url.searchParams.get('ticker')?.toUpperCase();
-  let query = supabaseAdmin.from('financials').select('*').order('ticker').order('annee', { ascending: false });
+  const { supabaseAdmin: sba } = safeSupabase();
+  let query = sba.from('financials').select('*').order('ticker').order('annee', { ascending: false });
   if (ticker) query = query.eq('ticker', ticker);
   const { data, error: dbError } = await query;
   if (dbError) throw dbError;
@@ -869,7 +938,8 @@ async function addFinancial(req) {
   };
   const { valid, errors, sanitized } = validate(body, schema);
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('financials').upsert(sanitized, { onConflict: ['ticker', 'annee'] });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('financials').upsert(sanitized, { onConflict: ['ticker', 'annee'] });
   if (dbError) throw dbError;
   return success({}, 'Financial enregistré');
 }
@@ -877,13 +947,15 @@ async function addFinancial(req) {
 async function deleteFinancial(url) {
   const id = url.searchParams.get('id');
   if (!id) return error('ID requis', 400, 'MISSING_ID');
-  const { error: dbError } = await supabaseAdmin.from('financials').delete().eq('id', id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('financials').delete().eq('id', id);
   if (dbError) throw dbError;
   return success({}, 'Financial supprimé');
 }
 
 async function getAnalyses() {
-  const { data, error: dbError } = await supabaseAdmin.from('analyses').select('*').order('date_analyse', { ascending: false });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data, error: dbError } = await sba.from('analyses').select('*').order('date_analyse', { ascending: false });
   if (dbError) throw dbError;
   return success({ data: data || [] });
 }
@@ -902,7 +974,8 @@ async function addAnalyse(req) {
   };
   const { valid, errors, sanitized } = validate(body, schema);
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('analyses').insert({ ...sanitized, date_analyse: new Date().toISOString().split('T')[0] });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('analyses').insert({ ...sanitized, date_analyse: new Date().toISOString().split('T')[0] });
   if (dbError) throw dbError;
   return success({}, 'Recommandation publiée');
 }
@@ -910,13 +983,15 @@ async function addAnalyse(req) {
 async function deleteAnalyse(url) {
   const id = url.searchParams.get('id');
   if (!id) return error('ID requis', 400, 'MISSING_ID');
-  const { error: dbError } = await supabaseAdmin.from('analyses').delete().eq('id', id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('analyses').delete().eq('id', id);
   if (dbError) throw dbError;
   return success({}, 'Recommandation supprimée');
 }
 
 async function getUsers() {
-  const { data, error: dbError } = await supabaseAdmin.from('users').select('id, email, nom, plan, plan_expire_at, is_admin, created_at').order('created_at', { ascending: false });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data, error: dbError } = await sba.from('users').select('id, email, nom, plan, plan_expire_at, is_admin, created_at').order('created_at', { ascending: false });
   if (dbError) throw dbError;
   return success({ data: data || [] });
 }
@@ -928,7 +1003,8 @@ async function setPlan(req) {
   if (!user_id || !['free', 'pro', 'elite'].includes(plan)) return error('Paramètres invalides', 400, 'VALIDATION_ERROR');
   const update = { plan };
   if (expires_at) update.plan_expire_at = expires_at;
-  const { error: dbError } = await supabaseAdmin.from('users').update(update).eq('id', user_id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('users').update(update).eq('id', user_id);
   if (dbError) throw dbError;
   return success({}, `Plan mis à jour : ${plan}`);
 }
@@ -938,14 +1014,16 @@ async function setAdmin(req) {
   if (bodyError) return bodyError;
   const { user_id, is_admin } = body;
   if (!user_id || typeof is_admin !== 'boolean') return error('Paramètres invalides', 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('users').update({ is_admin }).eq('id', user_id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('users').update({ is_admin }).eq('id', user_id);
   if (dbError) throw dbError;
   return success({}, `Droits admin ${is_admin ? 'accordés' : 'retirés'}`);
 }
 
 async function getDividendes(url) {
   const ticker = url.searchParams.get('ticker')?.toUpperCase();
-  let query = supabaseAdmin.from('dividendes').select('*').order('ticker').order('annee', { ascending: false });
+  const { supabaseAdmin: sba } = safeSupabase();
+  let query = sba.from('dividendes').select('*').order('ticker').order('annee', { ascending: false });
   if (ticker) query = query.eq('ticker', ticker);
   const { data, error: dbError } = await query;
   if (dbError) throw dbError;
@@ -965,7 +1043,8 @@ async function addDividende(req) {
   };
   const { valid, errors, sanitized } = validate(body, schema);
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('dividendes').upsert(sanitized, { onConflict: ['ticker', 'annee'] });
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('dividendes').upsert(sanitized, { onConflict: ['ticker', 'annee'] });
   if (dbError) throw dbError;
   return success({}, 'Dividende enregistré');
 }
@@ -973,38 +1052,41 @@ async function addDividende(req) {
 async function deleteDividende(url) {
   const id = url.searchParams.get('id');
   if (!id) return error('ID requis', 400, 'MISSING_ID');
-  const { error: dbError } = await supabaseAdmin.from('dividendes').delete().eq('id', id);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('dividendes').delete().eq('id', id);
   if (dbError) throw dbError;
   return success({}, 'Dividende supprimé');
 }
 
 async function runDiagnostic() {
+  const { supabaseAdmin: sba } = safeSupabase();
   const results = {};
   const tables = ['entreprises', 'cours', 'historique', 'financials', 'dividendes', 'analyses', 'users', 'boc'];
   for (const table of tables) {
     try {
-      const { count, error: e } = await supabaseAdmin.from(table).select('id', { count: 'exact', head: true });
+      const { count, error: e } = await sba.from(table).select('id', { count: 'exact', head: true });
       results[table] = { ok: !e, count: count || 0, error: e ? `${e.code}: ${e.message}` : null };
     } catch (ex) {
       results[table] = { ok: false, count: 0, error: ex.message };
     }
   }
-  const { data: tickers_cours } = await supabaseAdmin.from('cours').select('ticker');
-  const { data: tickers_ent } = await supabaseAdmin.from('entreprises').select('ticker');
+  const { data: tickers_cours } = await sba.from('cours').select('ticker');
+  const { data: tickers_ent } = await sba.from('entreprises').select('ticker');
   const entSet = new Set((tickers_ent || []).map(e => e.ticker));
   const orphelins = [...new Set((tickers_cours || []).map(c => c.ticker))].filter(t => !entSet.has(t));
   return success({ tables: results, tickers_orphelins: orphelins, timestamp: new Date().toISOString() });
 }
 
 async function repairTotaux() {
-  const { data: cours } = await supabaseAdmin.from('cours').select('id, ticker, date_seance, cours, variation_pct').is('variation_pct', null).order('ticker').order('date_seance', { ascending: true }).limit(200);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data: cours } = await sba.from('cours').select('id, ticker, date_seance, cours, variation_pct').is('variation_pct', null).order('ticker').order('date_seance', { ascending: true }).limit(200);
   if (!cours || cours.length === 0) return success({ repaired: 0 }, 'Aucune réparation nécessaire');
   let repaired = 0;
   for (const row of cours) {
-    const { data: prev } = await supabaseAdmin.from('cours').select('cours').eq('ticker', row.ticker).lt('date_seance', row.date_seance).order('date_seance', { ascending: false }).limit(1).single();
+    const { data: prev } = await sba.from('cours').select('cours').eq('ticker', row.ticker).lt('date_seance', row.date_seance).order('date_seance', { ascending: false }).limit(1).single();
     if (prev?.cours && prev.cours > 0) {
       const variation = ((row.cours - prev.cours) / prev.cours) * 100;
-      await supabaseAdmin.from('cours').update({ variation_pct: Math.round(variation * 100) / 100 }).eq('id', row.id);
+      await sba.from('cours').update({ variation_pct: Math.round(variation * 100) / 100 }).eq('id', row.id);
       repaired++;
     }
   }
@@ -1012,7 +1094,8 @@ async function repairTotaux() {
 }
 
 async function runFallback() {
-  const { data: lastCours } = await supabaseAdmin.from('cours').select('ticker, cours, date_seance').order('date_seance', { ascending: false }).limit(1);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { data: lastCours } = await sba.from('cours').select('ticker, cours, date_seance').order('date_seance', { ascending: false }).limit(1);
   return success({ success: true, updated: lastCours?.length || 0, message: 'Recalcul terminé' });
 }
 
@@ -1026,7 +1109,8 @@ async function importBOC(req) {
   };
   const { valid, errors, sanitized } = validate(body, schema);
   if (!valid) return error(errors.join(', '), 400, 'VALIDATION_ERROR');
-  const { error: dbError } = await supabaseAdmin.from('boc').insert(sanitized);
+  const { supabaseAdmin: sba } = safeSupabase();
+  const { error: dbError } = await sba.from('boc').insert(sanitized);
   if (dbError) throw dbError;
   return success({}, 'BOC importé');
 }
@@ -1035,34 +1119,51 @@ async function importBOC(req) {
 // ROUTEUR PRINCIPAL — Export unique pour Vercel
 // ═══════════════════════════════════════════════════════════════════════════════
 export default async function handler(req) {
+  console.log('[API] Handler called:', req.method, req.url);
+
+  // Vérification config
+  if (!config.isValid) {
+    console.error('[API] Config invalide, variables manquantes:', config.missingVars);
+    return error(
+      `Configuration invalide. Variables manquantes: ${config.missingVars.join(', ')}`,
+      500,
+      'CONFIG_ERROR'
+    );
+  }
+
   // Preflight CORS global
   if (req.method === 'OPTIONS') {
+    console.log('[API] OPTIONS preflight');
     return handleOptions(corsHeaders('public'));
   }
 
   // Rate limiting global
   const limit = rateLimit(req);
-  if (limit) return limit;
+  if (limit) {
+    console.log('[API] Rate limited');
+    return limit;
+  }
 
   const url = getUrl(req);
-  
+
   // Vercel rewrite: /api/boc → /api/index?path=boc
   const path = url.searchParams.get('path') || url.pathname.replace('/api/', '').split('/')[0];
+  console.log('[API] Routing to:', path);
 
   try {
     switch (path) {
-      case 'auth':         return await handleAuth(req);
-      case 'boc':          return await handleBoc(req);
-      case 'contact':      return await handleContact(req);
-      case 'fiche':        return await handleFiche(req);
-      case 'marche':       return await handleMarche(req);
-      case 'portefeuille': return await handlePortefeuille(req);
-      case 'scraper':      return await handleScraper(req);
-      case 'admin':        return await handleAdmin(req);
-      default:             return error('Endpoint non trouvé', 404, 'NOT_FOUND');
+      case 'auth':         console.log('[API] → auth'); return await handleAuth(req);
+      case 'boc':          console.log('[API] → boc'); return await handleBoc(req);
+      case 'contact':      console.log('[API] → contact'); return await handleContact(req);
+      case 'fiche':        console.log('[API] → fiche'); return await handleFiche(req);
+      case 'marche':       console.log('[API] → marche'); return await handleMarche(req);
+      case 'portefeuille': console.log('[API] → portefeuille'); return await handlePortefeuille(req);
+      case 'scraper':      console.log('[API] → scraper'); return await handleScraper(req);
+      case 'admin':        console.log('[API] → admin'); return await handleAdmin(req);
+      default:             console.log('[API] → 404'); return error('Endpoint non trouvé', 404, 'NOT_FOUND');
     }
   } catch (e) {
-    console.error('Router Error:', e);
+    console.error('[API] Router Error:', e);
     return error(`Erreur serveur: ${e.message}`, 500, 'SERVER_ERROR');
   }
 }
