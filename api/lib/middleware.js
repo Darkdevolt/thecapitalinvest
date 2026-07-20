@@ -1,7 +1,7 @@
 import { checkRateLimit } from './ratelimit.js';
 import { extractBearer } from './jwt.js';
 import { unauthorized, tooManyRequests, error } from './response.js';
-import { supabaseAdmin } from './supabase.js';
+import { supabaseAdmin, isSupabaseReady } from './supabase.js';
 
 // Helper : Vercel Functions utilisent req.headers comme objet plain (Node.js)
 // pas comme instance Headers (Web API). Cette fonction gère les deux cas.
@@ -28,6 +28,10 @@ export function rateLimit(req) {
 }
 
 export async function authenticate(req) {
+  if (!isSupabaseReady()) {
+    return { response: error('Service temporairement indisponible', 503, 'SERVICE_UNAVAILABLE') };
+  }
+
   const token = extractBearer(getHeader(req, 'authorization'));
   if (!token) return { response: unauthorized('Token manquant') };
 
@@ -38,6 +42,7 @@ export async function authenticate(req) {
     }
     return { user: { ...data.user, sub: data.user.id } };
   } catch (e) {
+    console.error('[AUTH] Erreur:', e.message);
     return { response: unauthorized('Token invalide ou expiré') };
   }
 }
