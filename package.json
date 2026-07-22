@@ -4,7 +4,7 @@
   "description": "The Capital - Plateforme d'investissement BRVM et conseil financier",
   "type": "module",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "vercel dev",
