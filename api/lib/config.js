@@ -8,7 +8,7 @@ const missing = required.filter((k) => !process.env[k]);
 // NE PAS throw ici — ça fait planter tout le module et Vercel retourne 504
 // On log l'erreur et on continue avec des valeurs null
 if (missing.length) {
-  console.error('[CONFIG] Variables d'environnement manquantes :', missing.join(', '));
+  console.error("[CONFIG] Variables d'environnement manquantes :", missing.join(', '));
 }
 
 const config = {
