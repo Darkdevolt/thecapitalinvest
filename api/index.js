@@ -1160,6 +1160,7 @@ export default async function handler(req) {
       case 'portefeuille': console.log('[API] → portefeuille'); return await handlePortefeuille(req);
       case 'scraper':      console.log('[API] → scraper'); return await handleScraper(req);
       case 'admin':        console.log('[API] → admin'); return await handleAdmin(req);
+      case 'ping':          console.log('[API] → ping'); return success({ pong: true, time: new Date().toISOString() });
       default:             console.log('[API] → 404'); return error('Endpoint non trouvé', 404, 'NOT_FOUND');
     }
   } catch (e) {
