@@ -30,17 +30,21 @@ window.entMap = {};
       if (typeof toast === "function") toast("Erreur de chargement des donnees", "error");
     });
 
+    setupGlobalEvents();
+
+    // Gestion propre du hash initial (plus de double appel)
     window.addEventListener("hashchange", function() {
       if (typeof parseHash === "function") parseHash();
     });
-    if (typeof parseHash === "function") parseHash();
 
-    setupGlobalEvents();
-
-    var initialView = parseHashFromUrl() || "overview";
-    if (typeof nav === "function") {
-      nav(initialView, true);
+    if (location.hash && typeof parseHash === "function") {
+      parseHash();                 // hash existant → parseHash appelle nav()
+    } else if (typeof nav === "function") {
+      nav("overview", true);       // pas de hash → overview par défaut
     }
+
+    // ⭐ CORRECTION PRINCIPALE : retirer le voile noir
+    document.body.classList.remove("init-hidden");
 
     console.log("[MAIN] Initialisation terminee");
   }
@@ -95,28 +99,6 @@ window.entMap = {};
       analyses: window.allAnalyses ? window.allAnalyses.length : 0,
       entreprises: window.allEntreprises ? window.allEntreprises.length : 0
     });
-  }
-
-  function parseHashFromUrl() {
-    var h = location.hash;
-    if (h.indexOf("#fiche=") === 0) return "fiche";
-    if (h.indexOf("#analyse=") === 0) return "analyse-detail";
-    var map = {
-      "#titres": "titres",
-      "#boc": "boc",
-      "#analyses": "analyses",
-      "#analyse-detail": "analyse-detail",
-      "#analyse-technique": "analyse-technique",
-      "#analyse-fondamentale": "analyse-fondamentale",
-      "#screener": "screener",
-      "#portefeuille": "portefeuille",
-      "#alertes": "alertes",
-      "#financials": "financials",
-      "#financials-detail": "financials-detail",
-      "#publications": "publications",
-      "#formation": "formation"
-    };
-    return map[h] || "overview";
   }
 
   function setupGlobalEvents() {
