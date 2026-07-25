@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Connexion — The Capital</title>
+<title>Inscription — The Capital</title>
 <meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -111,14 +111,6 @@ border:2px solid rgba(10,8,4,0.3);border-top-color:var(--bg);
 border-radius:50%;animation:spin .7s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg);}}
-.panel{display:none;}
-.panel.active{display:block;}
-.forgot{
-text-align:right;margin-top:4px;
-font-size:11px;color:var(--muted);cursor:pointer;
-text-decoration:underline;text-underline-offset:3px;
-}
-.forgot:hover{color:var(--gold);}
 </style>
 <base target="_blank">
 </head>
@@ -130,47 +122,36 @@ text-decoration:underline;text-underline-offset:3px;
 </div>
 
 <div class="card">
-  <div class="card-title">Acc&egrave;s <em>espace</em></div>
-  <div class="card-sub">Connectez-vous pour acc&eacute;der &agrave; votre espace.</div>
+  <div class="card-title">Cr&eacute;er un <em>compte</em></div>
+  <div class="card-sub">Rejoignez The Capital pour acc&eacute;der aux donn&eacute;es BRVM.</div>
 
   <div class="tabs">
-    <button class="tab active" onclick="location.href='login.html'">Connexion</button>
-    <button class="tab" onclick="location.href='register.html'">Inscription</button>
+    <button class="tab" onclick="location.href='login.html'">Connexion</button>
+    <button class="tab active" onclick="location.href='register.html'">Inscription</button>
   </div>
 
-  <div class="panel active" id="panel-login">
+  <div class="panel active" id="panel-signup">
+    <div class="field">
+      <label>Nom complet</label>
+      <input type="text" id="s-nom" placeholder="Prenom Nom" autocomplete="name">
+    </div>
     <div class="field">
       <label>Adresse email</label>
-      <input type="email" id="l-email" placeholder="vous@exemple.com" autocomplete="email">
+      <input type="email" id="s-email" placeholder="vous@exemple.com" autocomplete="email">
     </div>
     <div class="field">
       <label>Mot de passe</label>
-      <input type="password" id="l-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password">
-      <div class="forgot" onclick="showForgot()">Mot de passe oubli&eacute; ?</div>
+      <input type="password" id="s-password" placeholder="Minimum 6 caracteres" autocomplete="new-password">
     </div>
-    <button class="btn-submit" id="btn-login" onclick="doLogin()">
-      Se connecter
-    </button>
-    <div class="msg" id="login-msg"></div>
-  </div>
-
-  <div class="panel" id="panel-forgot">
-    <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">
-      Entrez votre email pour recevoir un lien de r&eacute;initialisation.
-    </p>
     <div class="field">
-      <label>Adresse email</label>
-      <input type="email" id="f-email" placeholder="vous@exemple.com">
+      <label>Confirmer le mot de passe</label>
+      <input type="password" id="s-password-confirm" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="new-password">
     </div>
-    <button class="btn-submit" id="btn-forgot" onclick="doForgot()">
-      Envoyer le lien
+    <button class="btn-submit" id="btn-signup" onclick="doSignup()">
+      Cr&eacute;er mon compte
     </button>
-    <div class="msg" id="forgot-msg"></div>
-    <div style="margin-top:14px;text-align:center;">
-      <span style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;" onclick="switchTab('login', document.querySelector('.tab'))">&larr; Retour &agrave; la connexion</span>
-    </div>
+    <div class="msg" id="signup-msg"></div>
   </div>
-
 </div>
 
 <div class="back-link">
@@ -190,6 +171,7 @@ function isTokenValid(token) {
   } catch(e) { return false; }
 }
 
+// Nettoyage : supprime les sessions expirées
 (function cleanup() {
   try {
     var raw = localStorage.getItem(SK);
@@ -201,40 +183,8 @@ function isTokenValid(token) {
   } catch(e) { localStorage.removeItem(SK); }
 })();
 
-(function() {
-  var s = localStorage.getItem(SK);
-  if (!s) return;
-  try {
-    var sess = JSON.parse(s);
-    if (sess && sess.access_token && isTokenValid(sess.access_token)) {
-      var dest = new URLSearchParams(location.search).get("redirect") || "app.html";
-      window.location.href = dest;
-    }
-  } catch(e) { localStorage.removeItem(SK); }
-})();
-
-var urlEmail = new URLSearchParams(location.search).get("email");
-if (urlEmail) document.getElementById("l-email").value = urlEmail;
-
-var activeTab = "login";
-
-function switchTab(name, el) {
-  var tabs = document.querySelectorAll(".tab");
-  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
-  var panels = document.querySelectorAll(".panel");
-  for (var i = 0; i < panels.length; i++) panels[i].classList.remove("active");
-  el.classList.add("active");
-  document.getElementById("panel-" + name).classList.add("active");
-  activeTab = name;
-}
-
-function showForgot() {
-  var tabs = document.querySelectorAll(".tab");
-  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
-  var panels = document.querySelectorAll(".panel");
-  for (var i = 0; i < panels.length; i++) panels[i].classList.remove("active");
-  document.getElementById("panel-forgot").classList.add("active");
-}
+// PAS DE REDIRECTION AUTO : on laisse l'utilisateur sur register.html
+// meme s'il a un token (il veut peut-etre creer un autre compte)
 
 function showMsg(id, text, type) {
   var el = document.getElementById(id);
@@ -242,89 +192,64 @@ function showMsg(id, text, type) {
   el.className = "msg " + type + " show";
 }
 
-async function doLogin() {
-  var email = document.getElementById("l-email").value.trim();
-  var password = document.getElementById("l-password").value;
+async function doSignup() {
+  var nom = document.getElementById("s-nom").value.trim();
+  var email = document.getElementById("s-email").value.trim();
+  var password = document.getElementById("s-password").value;
+  var confirm = document.getElementById("s-password-confirm").value;
 
-  if (!email || !password) {
-    showMsg("login-msg", "Veuillez remplir tous les champs.", "err");
+  if (!nom || !email || !password) {
+    showMsg("signup-msg", "Veuillez remplir tous les champs.", "err");
+    return;
+  }
+  if (password.length < 6) {
+    showMsg("signup-msg", "Le mot de passe doit faire au moins 6 caracteres.", "err");
+    return;
+  }
+  if (password !== confirm) {
+    showMsg("signup-msg", "Les mots de passe ne correspondent pas.", "err");
     return;
   }
 
-  var btn = document.getElementById("btn-login");
+  var btn = document.getElementById("btn-signup");
   btn.disabled = true;
-  btn.innerHTML = "<span class=\"spin\"></span> Connexion...";
+  btn.innerHTML = "<span class=\"spin\"></span> Creation...";
 
   try {
-    var r = await fetch(SB_URL + "/auth/v1/token?grant_type=password", {
+    var r = await fetch(SB_URL + "/auth/v1/signup", {
       method: "POST",
       headers: { "Content-Type": "application/json", "apikey": SB_ANON },
-      body: JSON.stringify({ email: email, password: password })
+      body: JSON.stringify({ email: email, password: password, data: { nom: nom } })
     });
     var d = await r.json();
 
     if (d.access_token) {
       localStorage.setItem(SK, JSON.stringify(d));
-      showMsg("login-msg", "Connecte ! Redirection...", "ok");
-      setTimeout(async function() {
-        try {
-          var checkUrl = SB_URL + "/rest/v1/users?select=is_admin&id=eq." + d.user.id;
-          var check = await fetch(checkUrl, {
-            headers: { "apikey": SB_ANON, "Authorization": "Bearer " + d.access_token }
-          });
-          var rows = await check.json();
-          var isAdmin = rows && rows[0] && rows[0].is_admin === true;
-          var dest = new URLSearchParams(location.search).get("redirect");
-          if (dest) window.location.href = dest;
-          else if (isAdmin) window.location.href = "admin.html";
-          else window.location.href = "app.html";
-        } catch(e) { window.location.href = "app.html"; }
-      }, 800);
-    } else {
-      var msg = d.error_description || d.msg || "Email ou mot de passe incorrect.";
-      showMsg("login-msg", msg, "err");
+      showMsg("signup-msg", "Compte cree ! Redirection...", "ok");
+      setTimeout(function() { window.location.href = "app.html"; }, 800);
+    } else if (d.id) {
+      showMsg("signup-msg", "Compte cree ! Un email de confirmation a ete envoye.", "ok");
       btn.disabled = false;
-      btn.innerHTML = "Se connecter";
-    }
-  } catch(e) {
-    showMsg("login-msg", "Erreur : " + e.message, "err");
-    btn.disabled = false;
-    btn.innerHTML = "Se connecter";
-  }
-}
-
-async function doForgot() {
-  var email = document.getElementById("f-email").value.trim();
-  if (!email) { showMsg("forgot-msg", "Entrez votre email.", "err"); return; }
-
-  var btn = document.getElementById("btn-forgot");
-  btn.disabled = true;
-  btn.innerHTML = "<span class=\"spin\"></span> Envoi...";
-
-  try {
-    var r = await fetch(SB_URL + "/auth/v1/recover", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "apikey": SB_ANON },
-      body: JSON.stringify({ email: email })
-    });
-
-    if (r.ok) {
-      showMsg("forgot-msg", "Email envoye ! Verifiez votre boite mail.", "ok");
+      btn.innerHTML = "Creer mon compte";
+      document.getElementById("s-nom").value = "";
+      document.getElementById("s-email").value = "";
+      document.getElementById("s-password").value = "";
+      document.getElementById("s-password-confirm").value = "";
     } else {
-      showMsg("forgot-msg", "Erreur envoi. Verifiez l adresse.", "err");
+      var msg = d.error_description || d.msg || d.message || "Erreur lors de la creation du compte.";
+      showMsg("signup-msg", msg, "err");
+      btn.disabled = false;
+      btn.innerHTML = "Creer mon compte";
     }
   } catch(e) {
-    showMsg("forgot-msg", "Erreur reseau.", "err");
+    showMsg("signup-msg", "Erreur reseau : " + e.message, "err");
+    btn.disabled = false;
+    btn.innerHTML = "Creer mon compte";
   }
-
-  btn.disabled = false;
-  btn.innerHTML = "Envoyer le lien";
 }
 
 document.addEventListener("keydown", function(e) {
-  if (e.key === "Enter") {
-    if (activeTab === "login") doLogin();
-  }
+  if (e.key === "Enter") doSignup();
 });
 </script>
 </body>
