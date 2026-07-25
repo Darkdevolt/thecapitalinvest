@@ -260,7 +260,7 @@
                     type: 'COURS_ZERO',
                     champ: 'cours_cloture',
                     valeur: 0,
-                    message: prefix + 'Cours de clôture = 0 : valeur suspecte. Confirmez que ce n'est pas une donnée manquante.'
+                    message: prefix + "Cours de clôture = 0 : valeur suspecte. Confirmez que ce n'est pas une donnée manquante."
                 });
             }
         }
@@ -688,7 +688,7 @@
                 loadCours();
             } else {
                 if (msg) { 
-                    msg.textContent = '✗ Erreur lors de l'enregistrement'; 
+                    msg.textContent = "✗ Erreur lors de l'enregistrement"; 
                     msg.className = 'msg err'; 
                 }
             }
