@@ -1,13 +1,7 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/:path*", "destination": "/api/index?path=:path*" },
-    { "source": "/style.css", "destination": "/public/style.css" },
-    { "source": "/nav.js", "destination": "/public/nav.js" },
-    { "source": "/login", "destination": "/public/login.html" },
-    { "source": "/admin", "destination": "/public/admin.html" },
-    { "source": "/:path*.html", "destination": "/public/:path*.html" },
-    { "source": "/", "destination": "/public/index.html" }
+    { "source": "/api/:path*", "destination": "/api/index?path=:path*" }
   ],
   "headers": [
     {
