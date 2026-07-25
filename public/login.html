@@ -23,15 +23,11 @@ body{
   display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;
   position:relative;overflow:hidden;
 }
-
-/* Grain */
 body::before{
 content:'';position:fixed;inset:0;
 background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
 pointer-events:none;z-index:0;opacity:0.6;
 }
-
-/* Glow derrière la carte */
 body::after{
 content:'';position:fixed;
 width:600px;height:600px;
@@ -39,8 +35,6 @@ background:radial-gradient(circle, rgba(184,150,78,0.06) 0%, transparent 70%);
 top:50%;left:50%;transform:translate(-50%,-50%);
 pointer-events:none;z-index:0;
 }
-
-/* Logo en haut */
 .logo-wrap{
 position:relative;z-index:1;
 text-align:center;margin-bottom:36px;
@@ -54,8 +48,6 @@ letter-spacing:4px;color:var(--cream);text-decoration:none;display:inline-block;
 font-size:10px;letter-spacing:0.2em;text-transform:uppercase;
 color:var(--muted);margin-top:6px;
 }
-
-/* Carte */
 .card{
 position:relative;z-index:1;
 background:var(--card);border:1px solid var(--border);
@@ -68,21 +60,16 @@ content:'';position:absolute;top:0;left:0;right:0;
 height:2px;border-radius:8px 8px 0 0;
 background:linear-gradient(90deg, transparent, var(--gold), transparent);
 }
-
 .card-title{
 font-family:var(--serif);font-size:22px;font-weight:700;
 color:var(--cream);margin-bottom:4px;
 }
 .card-title em{font-style:italic;color:var(--gold);}
 .card-sub{font-size:12px;color:var(--muted);margin-bottom:28px;}
-
-/* Tabs */
 .tabs{display:flex;gap:0;margin-bottom:24px;border:1px solid var(--border);border-radius:5px;overflow:hidden;}
 .tab{flex:1;padding:9px;background:none;border:none;color:var(--muted);font-family:var(--sans);font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all .2s;}
 .tab.active{background:rgba(184,150,78,0.1);color:var(--gold);}
 .tab:first-child{border-right:1px solid var(--border);}
-
-/* Champs */
 .field{margin-bottom:16px;}
 .field label{
 display:block;font-size:10px;font-weight:500;letter-spacing:0.12em;
@@ -97,8 +84,6 @@ outline:none;transition:border-color .2s;
 .field input:focus{border-color:var(--gold);}
 .field input::placeholder{color:var(--muted);}
 .field input.error{border-color:var(--red);}
-
-/* Bouton */
 .btn-submit{
 width:100%;padding:13px;margin-top:8px;
 background:var(--gold);color:var(--bg);
@@ -110,8 +95,6 @@ display:flex;align-items:center;justify-content:center;gap:8px;
 }
 .btn-submit:hover{background:var(--gold-light);}
 .btn-submit:disabled{opacity:.5;cursor:not-allowed;}
-
-/* Message */
 .msg{
 margin-top:14px;padding:10px 14px;border-radius:4px;
 font-size:12px;display:none;
@@ -119,35 +102,25 @@ font-size:12px;display:none;
 .msg.ok{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);color:var(--green);}
 .msg.err{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:var(--red);}
 .msg.show{display:block;}
-
-/* Divider */
 .divider{
 display:flex;align-items:center;gap:12px;margin:20px 0 16px;
 font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
 }
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
-
-/* Lien retour */
 .back-link{
 position:relative;z-index:1;
 margin-top:24px;font-size:12px;color:var(--muted);text-align:center;
 }
 .back-link a{color:var(--gold);text-decoration:none;}
 .back-link a:hover{color:var(--gold-light);}
-
-/* Spinner */
 .spin{
 display:inline-block;width:14px;height:14px;
 border:2px solid rgba(10,8,4,0.3);border-top-color:var(--bg);
 border-radius:50%;animation:spin .7s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg);}}
-
-/* Panel */
 .panel{display:none;}
 .panel.active{display:block;}
-
-/* Forgot */
 .forgot{
 text-align:right;margin-top:4px;
 font-size:11px;color:var(--muted);cursor:pointer;
@@ -155,7 +128,6 @@ text-decoration:underline;text-underline-offset:3px;
 }
 .forgot:hover{color:var(--gold);}
 </style>
-
 </head>
 <body>
 
@@ -173,8 +145,6 @@ text-decoration:underline;text-underline-offset:3px;
     <button class="tab" onclick="location.href='register.html'">Inscription</button>
   </div>
 
-  <!-- LOGIN -->
-
   <div class="panel active" id="panel-login">
     <div class="field">
       <label>Adresse email</label>
@@ -190,8 +160,6 @@ text-decoration:underline;text-underline-offset:3px;
     </button>
     <div class="msg" id="login-msg"></div>
   </div>
-
-  <!-- FORGOT -->
 
   <div class="panel" id="panel-forgot">
     <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">
@@ -219,33 +187,59 @@ text-decoration:underline;text-underline-offset:3px;
 <script>
 const SK = 'tc_session';
 
-// Nettoyer l'ancienne session si elle est dans un mauvais format
-try {
-  const raw = localStorage.getItem(SK);
-  if (raw) {
+// ═══════════════════════════════════════════════════════════════
+// HELPER — Vérifie si un JWT est encore valide (sans appel réseau)
+// ═══════════════════════════════════════════════════════════════
+function isTokenValid(token) {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    // exp est en secondes, Date.now() en millisecondes
+    return payload.exp * 1000 > Date.now() + 60000; // +1min de marge
+  } catch(e) {
+    return false;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NETTOYAGE — Supprime les sessions expirées ou malformées
+// ═══════════════════════════════════════════════════════════════
+(function cleanupSession() {
+  try {
+    const raw = localStorage.getItem(SK);
+    if (!raw) return;
     const p = JSON.parse(raw);
-    // Ancien format: {success, session} → supprimer pour forcer reconnexion propre
+    // Ancien format sans token → supprimer
     if (p.success !== undefined && !p.access_token) {
       localStorage.removeItem(SK);
+      return;
     }
-  }
-} catch(e) { localStorage.removeItem(SK); }
-
-// Rediriger si déjà connecté
-(function() {
-  const s = localStorage.getItem(SK);
-  if (s) {
-    try {
-      const sess = JSON.parse(s);
-      if (sess?.access_token) {
-        const dest = new URLSearchParams(location.search).get('redirect') || 'app.html';
-        window.location.href = dest;
-      }
-    } catch(e) {}
+    // Token expiré → supprimer
+    if (p.access_token && !isTokenValid(p.access_token)) {
+      localStorage.removeItem(SK);
+      return;
+    }
+  } catch(e) {
+    localStorage.removeItem(SK);
   }
 })();
 
-// Pré-remplir email si venant d'un redirect
+// ═══════════════════════════════════════════════════════════════
+// REDIRECTION — Uniquement si le token est VRAIMENT valide
+// ═══════════════════════════════════════════════════════════════
+(function() {
+  const s = localStorage.getItem(SK);
+  if (!s) return;
+  try {
+    const sess = JSON.parse(s);
+    if (sess?.access_token && isTokenValid(sess.access_token)) {
+      const dest = new URLSearchParams(location.search).get('redirect') || 'app.html';
+      window.location.href = dest;
+    }
+  } catch(e) {
+    localStorage.removeItem(SK);
+  }
+})();
+
 const urlEmail = new URLSearchParams(location.search).get('email');
 if (urlEmail) document.getElementById('l-email').value = urlEmail;
 
@@ -282,11 +276,9 @@ function setLoading(btnId, loading) {
   }
 }
 
-// ── CONFIG SUPABASE DIRECT ───────────────────────────
 const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_ANON = window.SB_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
-// ── CONNEXION ───────────────────────────────────────
 async function doLogin() {
   const email = document.getElementById('l-email').value.trim();
   const password = document.getElementById('l-password').value;
@@ -338,7 +330,6 @@ async function doLogin() {
   }
 }
 
-// ── MOT DE PASSE OUBLIÉ ──────────────────────────────
 async function doForgot() {
   const email = document.getElementById('f-email').value.trim();
   if (!email) { showMsg('forgot-msg', 'Entrez votre email.', 'err'); return; }
@@ -357,7 +348,7 @@ async function doForgot() {
     if (r.ok) {
       showMsg('forgot-msg', '✓ Email envoyé ! Vérifiez votre boîte mail.', 'ok');
     } else {
-      showMsg('forgot-msg', 'Erreur lors de l\'envoi. Vérifiez l\'email.', 'err');
+      showMsg('forgot-msg', 'Erreur lors de l\\'envoi. Vérifiez l\\'email.', 'err');
     }
   } catch(e) {
     showMsg('forgot-msg', 'Erreur réseau.', 'err');
@@ -367,13 +358,11 @@ async function doForgot() {
   btn.innerHTML = 'Envoyer le lien';
 }
 
-// Enter pour valider
 document.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     if (activeTab === 'login') doLogin();
   }
 });
 </script>
-
 </body>
 </html>
