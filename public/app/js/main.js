@@ -9,13 +9,20 @@ window.allEntreprises = [];
 window.entMap = {};
 
 (function() {
-  if (window.__TC_MAIN_LOADED__) {
-    console.log("[MAIN] Deja charge, skip.");
+  // NOUVEAU FLAG pour forcer l'exécution même si l'ancien main.js est en cache
+  if (window.__TC_MAIN_V2__) {
+    console.log("[MAIN] V2 déjà chargée, skip.");
     return;
   }
-  window.__TC_MAIN_LOADED__ = true;
+  window.__TC_MAIN_V2__ = true;
 
   async function initApp() {
+    // ⭐ RETRAIT IMMÉDIAT DU VOILE — avant tout le reste
+    document.body.classList.remove("init-hidden");
+    document.body.style.opacity = "1";
+    document.body.style.visibility = "visible";
+    console.log("[MAIN] Voile retiré");
+
     console.log("[MAIN] Initialisation...");
 
     if (!document.getElementById("toastContainer")) {
@@ -42,9 +49,6 @@ window.entMap = {};
     } else if (typeof nav === "function") {
       nav("overview", true);       // pas de hash → overview par défaut
     }
-
-    // ⭐ CORRECTION PRINCIPALE : retirer le voile noir
-    document.body.classList.remove("init-hidden");
 
     console.log("[MAIN] Initialisation terminee");
   }
