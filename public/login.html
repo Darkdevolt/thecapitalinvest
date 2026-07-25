@@ -14,7 +14,7 @@
   --gold:#B8964E;--gold-light:#D4AF6A;--gold-dim:rgba(184,150,78,0.25);
   --cream:#F5F0E8;--muted:rgba(245,240,232,0.45);
   --green:#4ADE80;--red:#F87171;
-  --serif:'Playfair Display',serif;--sans:'DM Sans',sans-serif;--mono:'DM Mono',monospace;
+  --serif:"Playfair Display",serif;--sans:"DM Sans",sans-serif;--mono:"DM Mono",monospace;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{height:100%;}
@@ -24,21 +24,18 @@ body{
   position:relative;overflow:hidden;
 }
 body::before{
-content:'';position:fixed;inset:0;
+content:"";position:fixed;inset:0;
 background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
 pointer-events:none;z-index:0;opacity:0.6;
 }
 body::after{
-content:'';position:fixed;
+content:"";position:fixed;
 width:600px;height:600px;
 background:radial-gradient(circle, rgba(184,150,78,0.06) 0%, transparent 70%);
 top:50%;left:50%;transform:translate(-50%,-50%);
 pointer-events:none;z-index:0;
 }
-.logo-wrap{
-position:relative;z-index:1;
-text-align:center;margin-bottom:36px;
-}
+.logo-wrap{position:relative;z-index:1;text-align:center;margin-bottom:36px;}
 .logo{
 font-family:var(--serif);font-size:22px;font-weight:700;
 letter-spacing:4px;color:var(--cream);text-decoration:none;display:inline-block;
@@ -56,7 +53,7 @@ padding:36px 36px 32px;
 box-shadow:0 32px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(184,150,78,0.05);
 }
 .card::before{
-content:'';position:absolute;top:0;left:0;right:0;
+content:"";position:absolute;top:0;left:0;right:0;
 height:2px;border-radius:8px 8px 0 0;
 background:linear-gradient(90deg, transparent, var(--gold), transparent);
 }
@@ -102,11 +99,6 @@ font-size:12px;display:none;
 .msg.ok{background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);color:var(--green);}
 .msg.err{background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);color:var(--red);}
 .msg.show{display:block;}
-.divider{
-display:flex;align-items:center;gap:12px;margin:20px 0 16px;
-font-size:10px;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);
-}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
 .back-link{
 position:relative;z-index:1;
 margin-top:24px;font-size:12px;color:var(--muted);text-align:center;
@@ -128,17 +120,18 @@ text-decoration:underline;text-underline-offset:3px;
 }
 .forgot:hover{color:var(--gold);}
 </style>
+<base target="_blank">
 </head>
 <body>
 
 <div class="logo-wrap">
-  <a href="index.html" class="logo">THE <span>·</span> CAPITAL</a>
-  <div class="logo-sub">Bourse Régionale des Valeurs Mobilières</div>
+  <a href="index.html" class="logo">THE <span>&middot;</span> CAPITAL</a>
+  <div class="logo-sub">Bourse R&eacute;gionale des Valeurs Mobili&egrave;res</div>
 </div>
 
 <div class="card">
-  <div class="card-title">Accès <em>espace</em></div>
-  <div class="card-sub">Connectez-vous pour accéder à votre espace.</div>
+  <div class="card-title">Acc&egrave;s <em>espace</em></div>
+  <div class="card-sub">Connectez-vous pour acc&eacute;der &agrave; votre espace.</div>
 
   <div class="tabs">
     <button class="tab active" onclick="location.href='login.html'">Connexion</button>
@@ -152,8 +145,8 @@ text-decoration:underline;text-underline-offset:3px;
     </div>
     <div class="field">
       <label>Mot de passe</label>
-      <input type="password" id="l-password" placeholder="••••••••" autocomplete="current-password">
-      <div class="forgot" onclick="showForgot()">Mot de passe oublié ?</div>
+      <input type="password" id="l-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;" autocomplete="current-password">
+      <div class="forgot" onclick="showForgot()">Mot de passe oubli&eacute; ?</div>
     </div>
     <button class="btn-submit" id="btn-login" onclick="doLogin()">
       Se connecter
@@ -163,7 +156,7 @@ text-decoration:underline;text-underline-offset:3px;
 
   <div class="panel" id="panel-forgot">
     <p style="font-size:13px;color:var(--muted);margin-bottom:18px;">
-      Entrez votre email pour recevoir un lien de réinitialisation.
+      Entrez votre email pour recevoir un lien de r&eacute;initialisation.
     </p>
     <div class="field">
       <label>Adresse email</label>
@@ -174,193 +167,163 @@ text-decoration:underline;text-underline-offset:3px;
     </button>
     <div class="msg" id="forgot-msg"></div>
     <div style="margin-top:14px;text-align:center;">
-      <span style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;" onclick="switchTab('login', document.querySelector('.tab'))">← Retour à la connexion</span>
+      <span style="font-size:12px;color:var(--muted);cursor:pointer;text-decoration:underline;text-underline-offset:3px;" onclick="switchTab('login', document.querySelector('.tab'))">&larr; Retour &agrave; la connexion</span>
     </div>
   </div>
 
 </div>
 
 <div class="back-link">
-  <a href="index.html">← Retour à l'accueil</a>
+  <a href="index.html">&larr; Retour &agrave; l'accueil</a>
 </div>
 
 <script>
-const SK = 'tc_session';
+const SK = "tc_session";
+const SB_URL = "https://otsiwiwlnowxeolbbgvm.supabase.co";
+const SB_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY";
 
-// ═══════════════════════════════════════════════════════════════
-// HELPER — Vérifie si un JWT est encore valide (sans appel réseau)
-// ═══════════════════════════════════════════════════════════════
 function isTokenValid(token) {
   try {
-    const payload = JSON.parse(atob(token.split('.')[1]));
-    // exp est en secondes, Date.now() en millisecondes
-    return payload.exp * 1000 > Date.now() + 60000; // +1min de marge
-  } catch(e) {
-    return false;
-  }
+    var parts = token.split(".");
+    var payload = JSON.parse(atob(parts[1]));
+    return payload.exp * 1000 > Date.now() + 60000;
+  } catch(e) { return false; }
 }
 
-// ═══════════════════════════════════════════════════════════════
-// NETTOYAGE — Supprime les sessions expirées ou malformées
-// ═══════════════════════════════════════════════════════════════
-(function cleanupSession() {
+(function cleanup() {
   try {
-    const raw = localStorage.getItem(SK);
+    var raw = localStorage.getItem(SK);
     if (!raw) return;
-    const p = JSON.parse(raw);
-    // Ancien format sans token → supprimer
-    if (p.success !== undefined && !p.access_token) {
-      localStorage.removeItem(SK);
-      return;
-    }
-    // Token expiré → supprimer
+    var p = JSON.parse(raw);
     if (p.access_token && !isTokenValid(p.access_token)) {
       localStorage.removeItem(SK);
-      return;
     }
-  } catch(e) {
-    localStorage.removeItem(SK);
-  }
+  } catch(e) { localStorage.removeItem(SK); }
 })();
 
-// ═══════════════════════════════════════════════════════════════
-// REDIRECTION — Uniquement si le token est VRAIMENT valide
-// ═══════════════════════════════════════════════════════════════
 (function() {
-  const s = localStorage.getItem(SK);
+  var s = localStorage.getItem(SK);
   if (!s) return;
   try {
-    const sess = JSON.parse(s);
-    if (sess?.access_token && isTokenValid(sess.access_token)) {
-      const dest = new URLSearchParams(location.search).get('redirect') || 'app.html';
+    var sess = JSON.parse(s);
+    if (sess && sess.access_token && isTokenValid(sess.access_token)) {
+      var dest = new URLSearchParams(location.search).get("redirect") || "app.html";
       window.location.href = dest;
     }
-  } catch(e) {
-    localStorage.removeItem(SK);
-  }
+  } catch(e) { localStorage.removeItem(SK); }
 })();
 
-const urlEmail = new URLSearchParams(location.search).get('email');
-if (urlEmail) document.getElementById('l-email').value = urlEmail;
+var urlEmail = new URLSearchParams(location.search).get("email");
+if (urlEmail) document.getElementById("l-email").value = urlEmail;
 
-let activeTab = 'login';
+var activeTab = "login";
 
 function switchTab(name, el) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('panel-' + name).classList.add('active');
+  var tabs = document.querySelectorAll(".tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  var panels = document.querySelectorAll(".panel");
+  for (var i = 0; i < panels.length; i++) panels[i].classList.remove("active");
+  el.classList.add("active");
+  document.getElementById("panel-" + name).classList.add("active");
   activeTab = name;
 }
 
 function showForgot() {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.getElementById('panel-forgot').classList.add('active');
+  var tabs = document.querySelectorAll(".tab");
+  for (var i = 0; i < tabs.length; i++) tabs[i].classList.remove("active");
+  var panels = document.querySelectorAll(".panel");
+  for (var i = 0; i < panels.length; i++) panels[i].classList.remove("active");
+  document.getElementById("panel-forgot").classList.add("active");
 }
 
 function showMsg(id, text, type) {
-  const el = document.getElementById(id);
+  var el = document.getElementById(id);
   el.textContent = text;
-  el.className = `msg ${type} show`;
+  el.className = "msg " + type + " show";
 }
-
-function setLoading(btnId, loading) {
-  const btn = document.getElementById(btnId);
-  if (loading) {
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spin"></span> Chargement...';
-  } else {
-    btn.disabled = false;
-    btn.innerHTML = btn.dataset.label || btn.innerHTML;
-  }
-}
-
-const SB_URL = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
-const SB_ANON = window.SB_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 async function doLogin() {
-  const email = document.getElementById('l-email').value.trim();
-  const password = document.getElementById('l-password').value;
+  var email = document.getElementById("l-email").value.trim();
+  var password = document.getElementById("l-password").value;
 
   if (!email || !password) {
-    showMsg('login-msg', 'Veuillez remplir tous les champs.', 'err');
+    showMsg("login-msg", "Veuillez remplir tous les champs.", "err");
     return;
   }
 
-  const btn = document.getElementById('btn-login');
-  btn.dataset.label = 'Se connecter';
+  var btn = document.getElementById("btn-login");
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Connexion...';
+  btn.innerHTML = "<span class=\"spin\"></span> Connexion...";
 
   try {
-    const r = await fetch(`${SB_URL}/auth/v1/token?grant_type=password`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
-      body: JSON.stringify({ email, password })
+    var r = await fetch(SB_URL + "/auth/v1/token?grant_type=password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SB_ANON },
+      body: JSON.stringify({ email: email, password: password })
     });
-    const d = await r.json();
+    var d = await r.json();
 
     if (d.access_token) {
       localStorage.setItem(SK, JSON.stringify(d));
-      showMsg('login-msg', '\u2713 Connecté ! Redirection...', 'ok');
-      setTimeout(async () => {
+      showMsg("login-msg", "Connecte ! Redirection...", "ok");
+      setTimeout(async function() {
         try {
-          const check = await fetch(`${SB_URL}/rest/v1/users?select=is_admin&id=eq.${d.user.id}`, {
-            headers: { 'apikey': SB_ANON, 'Authorization': `Bearer ${d.access_token}` }
+          var checkUrl = SB_URL + "/rest/v1/users?select=is_admin&id=eq." + d.user.id;
+          var check = await fetch(checkUrl, {
+            headers: { "apikey": SB_ANON, "Authorization": "Bearer " + d.access_token }
           });
-          const rows = await check.json();
-          const isAdmin = rows?.[0]?.is_admin === true;
-          const dest = new URLSearchParams(location.search).get('redirect');
+          var rows = await check.json();
+          var isAdmin = rows && rows[0] && rows[0].is_admin === true;
+          var dest = new URLSearchParams(location.search).get("redirect");
           if (dest) window.location.href = dest;
-          else if (isAdmin) window.location.href = 'admin.html';
-          else window.location.href = 'app.html';
-        } catch(e) { window.location.href = 'app.html'; }
+          else if (isAdmin) window.location.href = "admin.html";
+          else window.location.href = "app.html";
+        } catch(e) { window.location.href = "app.html"; }
       }, 800);
     } else {
-      const msg = d.error_description || d.msg || 'Email ou mot de passe incorrect.';
-      showMsg('login-msg', msg, 'err');
+      var msg = d.error_description || d.msg || "Email ou mot de passe incorrect.";
+      showMsg("login-msg", msg, "err");
       btn.disabled = false;
-      btn.innerHTML = 'Se connecter';
+      btn.innerHTML = "Se connecter";
     }
   } catch(e) {
-    showMsg('login-msg', 'Erreur : ' + e.message, 'err');
+    showMsg("login-msg", "Erreur : " + e.message, "err");
     btn.disabled = false;
-    btn.innerHTML = 'Se connecter';
+    btn.innerHTML = "Se connecter";
   }
 }
 
 async function doForgot() {
-  const email = document.getElementById('f-email').value.trim();
-  if (!email) { showMsg('forgot-msg', 'Entrez votre email.', 'err'); return; }
+  var email = document.getElementById("f-email").value.trim();
+  if (!email) { showMsg("forgot-msg", "Entrez votre email.", "err"); return; }
 
-  const btn = document.getElementById('btn-forgot');
+  var btn = document.getElementById("btn-forgot");
   btn.disabled = true;
-  btn.innerHTML = '<span class="spin"></span> Envoi...';
+  btn.innerHTML = "<span class=\"spin\"></span> Envoi...";
 
   try {
-    const r = await fetch(`${SB_URL}/auth/v1/recover`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'apikey': SB_ANON },
-      body: JSON.stringify({ email })
+    var r = await fetch(SB_URL + "/auth/v1/recover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "apikey": SB_ANON },
+      body: JSON.stringify({ email: email })
     });
 
     if (r.ok) {
-      showMsg('forgot-msg', '✓ Email envoyé ! Vérifiez votre boîte mail.', 'ok');
+      showMsg("forgot-msg", "Email envoye ! Verifiez votre boite mail.", "ok");
     } else {
-      showMsg('forgot-msg', 'Erreur lors de l\\'envoi. Vérifiez l\\'email.', 'err');
+      showMsg("forgot-msg", "Erreur envoi. Verifiez l adresse.", "err");
     }
   } catch(e) {
-    showMsg('forgot-msg', 'Erreur réseau.', 'err');
+    showMsg("forgot-msg", "Erreur reseau.", "err");
   }
 
   btn.disabled = false;
-  btn.innerHTML = 'Envoyer le lien';
+  btn.innerHTML = "Envoyer le lien";
 }
 
-document.addEventListener('keydown', e => {
-  if (e.key === 'Enter') {
-    if (activeTab === 'login') doLogin();
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Enter") {
+    if (activeTab === "login") doLogin();
   }
 });
 </script>
