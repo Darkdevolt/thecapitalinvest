@@ -4,6 +4,28 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital — Intelligence Financière BRVM</title>
+
+<!-- ═══ AUTH GUARD : redirige vers login si non connecté ═══ -->
+<script>
+(function(){
+  var keys = ['tc_token','token','jwt','supabase.auth.token','sb-refresh-token','sb-access-token'];
+  var hasToken = false;
+  for (var i=0;i<keys.length;i++){
+    if (localStorage.getItem(keys[i])){ hasToken = true; break; }
+  }
+  if (!hasToken){
+    window.location.replace('login.html');
+  }
+})();
+</script>
+
+<!-- ═══ SECOURS VISUEL : évite l'écran noir ═══ -->
+<style>
+  body{opacity:1!important;visibility:visible!important;background:#0a0a0a!important}
+  .view.active{display:block!important}
+</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Capital — Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -12,13 +34,9 @@
 <link rel="stylesheet" href="app/css/components.css">
 <link rel="stylesheet" href="app/css/views.css">
 <link rel="stylesheet" href="app/css/technique.css">
-<link rel="stylesheet" href="app/css/style.css?v=4">
+<link rel="stylesheet" href="app/css/style.css?v=5">
 <link rel="stylesheet" href="app/css/marche.css">
 <base target="_blank">
-<style>
-  body{opacity:1!important;visibility:visible!important;background:#0a0a0a!important}
-  .view.active{display:block!important}
-</style>
 <base target="_blank">
 </head>
 <body>
@@ -1476,86 +1494,86 @@
 <!-- ═══════════════════════════════════════
      CORE (d'abord — définit fmt, toast, etc.)
      ═══════════════════════════════════════ -->
-<script src="app/js/utils.js?v=4"></script>
-<script src="app/js/components.js?v=4"></script>
-<script src="app/js/state.js?v=4"></script>
-<script src="app/js/api.js?v=4"></script>
-<script src="app/js/ui.js?v=4"></script>
-<script src="app/js/search.js?v=4"></script>
+<script src="app/js/utils.js?v=5"></script>
+<script src="app/js/components.js?v=5"></script>
+<script src="app/js/state.js?v=5"></script>
+<script src="app/js/api.js?v=5"></script>
+<script src="app/js/ui.js?v=5"></script>
+<script src="app/js/search.js?v=5"></script>
 <script src="app/js/views/marche.js"></script>
 
 <!-- ═══════════════════════════════════════
      VIEWS (ensuite — utilise fmt, toast, etc.)
      ═══════════════════════════════════════ -->
-<script src="app/js/views/overview.js?v=4"></script>
-<script src="app/js/views/titres.js?v=4"></script>
-<script src="app/js/views/fiche.js?v=4"></script>
-<script src="app/js/views/boc.js?v=4"></script>
-<script src="app/js/views/analyses.js?v=4"></script>
-<script src="app/js/views/screener.js?v=4"></script>
+<script src="app/js/views/overview.js?v=5"></script>
+<script src="app/js/views/titres.js?v=5"></script>
+<script src="app/js/views/fiche.js?v=5"></script>
+<script src="app/js/views/boc.js?v=5"></script>
+<script src="app/js/views/analyses.js?v=5"></script>
+<script src="app/js/views/screener.js?v=5"></script>
 <!-- ═══════════════════════════════════════
      PORTEFEUILLE
      ═══════════════════════════════════════ -->
-<script src="app/js/views/portefeuille/portefeuille-utils.js?v=4"></script>
-<script src="app/js/views/portefeuille/portefeuille-prices.js?v=4"></script>
-<script src="app/js/views/portefeuille/portefeuille-history.js?v=4"></script>
-<script src="app/js/views/portefeuille/portefeuille-charts.js?v=4"></script>
-<script src="app/js/views/portefeuille/portefeuille-crud.js?v=4"></script>
-<script src="app/js/views/portefeuille/portefeuille-main.js?v=4"></script>
-<script src="app/js/views/alertes.js?v=4"></script>
-<script src="app/js/views/financials.js?v=4"></script>
-<script src="app/js/views/publications.js?v=4"></script>
-<script src="app/js/views/formation.js?v=4"></script>
-<script src="app/js/views/analyse-fondamentale.js?v=4"></script>
+<script src="app/js/views/portefeuille/portefeuille-utils.js?v=5"></script>
+<script src="app/js/views/portefeuille/portefeuille-prices.js?v=5"></script>
+<script src="app/js/views/portefeuille/portefeuille-history.js?v=5"></script>
+<script src="app/js/views/portefeuille/portefeuille-charts.js?v=5"></script>
+<script src="app/js/views/portefeuille/portefeuille-crud.js?v=5"></script>
+<script src="app/js/views/portefeuille/portefeuille-main.js?v=5"></script>
+<script src="app/js/views/alertes.js?v=5"></script>
+<script src="app/js/views/financials.js?v=5"></script>
+<script src="app/js/views/publications.js?v=5"></script>
+<script src="app/js/views/formation.js?v=5"></script>
+<script src="app/js/views/analyse-fondamentale.js?v=5"></script>
 
 <!-- ═══════════════════════════════════════
      ROUTER (en dernier — appelle les fonctions des views)
      ═══════════════════════════════════════ -->
-<script src="app/js/router.js?v=4"></script>
+<script src="app/js/router.js?v=5"></script>
 
 <!-- ═══════════════════════════════════════
      COMPONENTS
      ═══════════════════════════════════════ -->
-<script src="app/js/components/header.js?v=4"></script>
-<script src="app/js/components/sidebar.js?v=4"></script>
-<script src="app/js/components/cards.js?v=4"></script>
+<script src="app/js/components/header.js?v=5"></script>
+<script src="app/js/components/sidebar.js?v=5"></script>
+<script src="app/js/components/cards.js?v=5"></script>
 
 <!-- ═══════════════════════════════════════
      ANALYSE TECHNIQUE — INDICATORS
      ═══════════════════════════════════════ -->
-<script src="app/js/views/technique/ind/base.js?v=4"></script>
-<script src="app/js/views/technique/ind/sma.js?v=4"></script>
-<script src="app/js/views/technique/ind/ema.js?v=4"></script>
-<script src="app/js/views/technique/ind/bb.js?v=4"></script>
-<script src="app/js/views/technique/ind/rsi.js?v=4"></script>
-<script src="app/js/views/technique/ind/macd.js?v=4"></script>
-<script src="app/js/views/technique/ind/stoch.js?v=4"></script>
-<script src="app/js/views/technique/ind/adx.js?v=4"></script>
-<script src="app/js/views/technique/ind/cci.js?v=4"></script>
-<script src="app/js/views/technique/ind/vwap.js?v=4"></script>
-<script src="app/js/views/technique/ind/obv.js?v=4"></script>
-<script src="app/js/views/technique/ind/ha.js?v=4"></script>
+<script src="app/js/views/technique/ind/base.js?v=5"></script>
+<script src="app/js/views/technique/ind/sma.js?v=5"></script>
+<script src="app/js/views/technique/ind/ema.js?v=5"></script>
+<script src="app/js/views/technique/ind/bb.js?v=5"></script>
+<script src="app/js/views/technique/ind/rsi.js?v=5"></script>
+<script src="app/js/views/technique/ind/macd.js?v=5"></script>
+<script src="app/js/views/technique/ind/stoch.js?v=5"></script>
+<script src="app/js/views/technique/ind/adx.js?v=5"></script>
+<script src="app/js/views/technique/ind/cci.js?v=5"></script>
+<script src="app/js/views/technique/ind/vwap.js?v=5"></script>
+<script src="app/js/views/technique/ind/obv.js?v=5"></script>
+<script src="app/js/views/technique/ind/ha.js?v=5"></script>
 
 <!-- ═══════════════════════════════════════
      ANALYSE TECHNIQUE — ENGINE
      ═══════════════════════════════════════ -->
-<script src="app/js/views/technique/engine.js?v=4"></script>
-<script src="app/js/views/technique/draw.js?v=4"></script>
-<script src="app/js/views/technique/crosshair.js?v=4"></script>
-<script src="app/js/views/technique/zoom.js?v=4"></script>
-<script src="app/js/views/technique/types.js?v=4"></script>
-<script src="app/js/views/technique/indicators.js?v=4"></script>
-<script src="app/js/views/technique/signals.js?v=4"></script>
-<script src="app/js/views/technique/watchlist.js?v=4"></script>
-<script src="app/js/views/technique/compare.js?v=4"></script>
-<script src="app/js/views/technique/export.js?v=4"></script>
-<script src="app/js/views/technique/focus.js?v=4"></script>
-<script src="app/js/views/technique/index.js?v=4"></script>
+<script src="app/js/views/technique/engine.js?v=5"></script>
+<script src="app/js/views/technique/draw.js?v=5"></script>
+<script src="app/js/views/technique/crosshair.js?v=5"></script>
+<script src="app/js/views/technique/zoom.js?v=5"></script>
+<script src="app/js/views/technique/types.js?v=5"></script>
+<script src="app/js/views/technique/indicators.js?v=5"></script>
+<script src="app/js/views/technique/signals.js?v=5"></script>
+<script src="app/js/views/technique/watchlist.js?v=5"></script>
+<script src="app/js/views/technique/compare.js?v=5"></script>
+<script src="app/js/views/technique/export.js?v=5"></script>
+<script src="app/js/views/technique/focus.js?v=5"></script>
+<script src="app/js/views/technique/index.js?v=5"></script>
 
 <!-- ═══════════════════════════════════════
      ENTRY POINT
      ═══════════════════════════════════════ -->
-<script src="app/js/main.js?v=4"></script>
+<script src="app/js/main.js?v=5"></script>
 
 <script>
   document.body.classList.remove('init-hidden');
