@@ -1,7 +1,28 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/ping", "destination": "/api/ping" },
-    { "source": "/api/:path*", "destination": "/api/index?path=:path*" }
-  ]
+    { "source": "/api/:path*", "destination": "/api/index?path=:path*" },
+    { "source": "/style.css", "destination": "/public/style.css" },
+    { "source": "/nav.js", "destination": "/public/nav.js" },
+    { "source": "/login", "destination": "/public/login.html" },
+    { "source": "/admin", "destination": "/public/admin.html" },
+    { "source": "/:path*.html", "destination": "/public/:path*.html" },
+    { "source": "/", "destination": "/public/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,PUT,DELETE,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Authorization,Content-Type,X-Requested-With" },
+        { "key": "Access-Control-Max-Age", "value": "86400" }
+      ]
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  }
 }
