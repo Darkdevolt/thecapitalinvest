@@ -1,156 +1,144 @@
-// ═══════════════════════════════════════
 // MAIN — The Capital BRVM Dashboard
-// ═══════════════════════════════════════
+
+window.allCours = [];
+window.allIndices = [];
+window.allBoc = [];
+window.allFinancials = [];
+window.allAnalyses = [];
+window.allEntreprises = [];
+window.entMap = {};
+
 (function() {
   if (window.__TC_MAIN_LOADED__) {
-    console.log('[MAIN] Déjà chargé, skip.');
+    console.log("[MAIN] Deja charge, skip.");
     return;
   }
   window.__TC_MAIN_LOADED__ = true;
 
-  // ═══════════════════════════════════════
-  // INIT SEQUENCE
-  // ═══════════════════════════════════════
   async function initApp() {
-    console.log('[MAIN] Initialisation...');
+    console.log("[MAIN] Initialisation...");
 
-    // 1. Toast container check
-    if (!document.getElementById('toastContainer')) {
-      const tc = document.createElement('div');
-      tc.id = 'toastContainer';
-      tc.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
+    if (!document.getElementById("toastContainer")) {
+      var tc = document.createElement("div");
+      tc.id = "toastContainer";
+      tc.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;";
       document.body.appendChild(tc);
     }
 
-    // 2. Lancer le chargement des données en arrière-plan
-    // NE PAS await — laisse l'interface s'afficher tout de suite
-    loadAll().catch(err => {
-      console.error('[MAIN] Erreur loadAll:', err);
-      toast('Erreur de chargement des données', 'error');
+    loadAll().catch(function(err) {
+      console.error("[MAIN] Erreur loadAll:", err);
+      if (typeof toast === "function") toast("Erreur de chargement des donnees", "error");
     });
 
-    // 3. Setup router hash
-    window.addEventListener('hashchange', parseHash);
-    parseHash();
+    window.addEventListener("hashchange", function() {
+      if (typeof parseHash === "function") parseHash();
+    });
+    if (typeof parseHash === "function") parseHash();
 
-    // 4. Setup global events
     setupGlobalEvents();
 
-    // 5. Afficher la vue immédiatement, même sans données
-    const initialView = parseHashFromUrl() || 'overview';
-    if (typeof nav === 'function') {
+    var initialView = parseHashFromUrl() || "overview";
+    if (typeof nav === "function") {
       nav(initialView, true);
     }
 
-    console.log('[MAIN] Initialisation terminée');
+    console.log("[MAIN] Initialisation terminee");
   }
 
-  // ═══════════════════════════════════════
-  // DATA LOADING (non bloquant)
-  // ═══════════════════════════════════════
   async function loadAll() {
-    const fetchOrEmpty = (endpoint, setter, emptyVal) => {
-      if (typeof window.apiGet !== 'function') {
-        console.warn('[MAIN] apiGet non disponible');
+    var fetchOrEmpty = function(endpoint, setter, emptyVal) {
+      if (typeof window.apiGet !== "function") {
+        console.warn("[MAIN] apiGet non disponible");
         setter(emptyVal);
         return Promise.resolve();
       }
       return window.apiGet(endpoint)
-        .then(data => { setter(data || emptyVal); })
-        .catch(err => {
-          console.warn('[MAIN] ' + endpoint + ' non chargé:', err.message || err);
+        .then(function(data) { setter(data || emptyVal); })
+        .catch(function(err) {
+          console.warn("[MAIN] " + endpoint + " non charge:", err.message || err);
           setter(emptyVal);
         });
     };
 
-    const promises = [
-      fetchOrEmpty('/marche?type=cours', d => { allCours = d; }, []),
-      fetchOrEmpty('/marche?type=indices', d => { allIndices = d; }, []),
-      fetchOrEmpty('/boc', d => { allBoc = d; }, []),
-      fetchOrEmpty('/marche?type=financials', d => { allFinancials = d; }, []),
-      fetchOrEmpty('/marche?type=analyses', d => { allAnalyses = d; }, []),
-      fetchOrEmpty('/marche?type=entreprises', d => {
-        allEntreprises = d || [];
-        entMap = {};
-        allEntreprises.forEach(e => { if (e?.ticker) entMap[e.ticker] = e; });
+    var promises = [
+      fetchOrEmpty("/marche?type=cours", function(d) { window.allCours = d; }, []),
+      fetchOrEmpty("/marche?type=indices", function(d) { window.allIndices = d; }, []),
+      fetchOrEmpty("/boc", function(d) { window.allBoc = d; }, []),
+      fetchOrEmpty("/marche?type=financials", function(d) { window.allFinancials = d; }, []),
+      fetchOrEmpty("/marche?type=analyses", function(d) { window.allAnalyses = d; }, []),
+      fetchOrEmpty("/marche?type=entreprises", function(d) {
+        window.allEntreprises = d || [];
+        window.entMap = {};
+        for (var i = 0; i < window.allEntreprises.length; i++) {
+          var e = window.allEntreprises[i];
+          if (e && e.ticker) window.entMap[e.ticker] = e;
+        }
       }, [])
     ];
 
     await Promise.all(promises);
 
-    // Re-render la vue active avec les nouvelles données
-    const activeView = document.querySelector('.view.active');
-    const viewId = activeView?.id?.replace('view-', '');
+    var activeView = document.querySelector(".view.active");
+    var viewId = activeView && activeView.id ? activeView.id.replace("view-", "") : "";
     if (viewId) {
-      const fnName = 'render' + viewId.charAt(0).toUpperCase() + viewId.slice(1);
-      if (typeof window[fnName] === 'function') {
+      var fnName = "render" + viewId.charAt(0).toUpperCase() + viewId.slice(1);
+      if (typeof window[fnName] === "function") {
         try { window[fnName](); } catch(e) {}
       }
     }
 
-    console.log('[MAIN] Données chargées:', {
-      cours: allCours?.length || 0,
-      indices: allIndices?.length || 0,
-      boc: allBoc?.length || 0,
-      financials: allFinancials?.length || 0,
-      analyses: allAnalyses?.length || 0,
-      entreprises: allEntreprises?.length || 0
+    console.log("[MAIN] Donnees chargees:", {
+      cours: window.allCours ? window.allCours.length : 0,
+      indices: window.allIndices ? window.allIndices.length : 0,
+      boc: window.allBoc ? window.allBoc.length : 0,
+      financials: window.allFinancials ? window.allFinancials.length : 0,
+      analyses: window.allAnalyses ? window.allAnalyses.length : 0,
+      entreprises: window.allEntreprises ? window.allEntreprises.length : 0
     });
   }
 
-  // ═══════════════════════════════════════
-  // HASH PARSING
-  // ═══════════════════════════════════════
   function parseHashFromUrl() {
-    const h = location.hash;
-    if (h.startsWith('#fiche=')) return 'fiche';
-    if (h.startsWith('#analyse=')) return 'analyse-detail';
-    const map = {
-      '#titres': 'titres',
-      '#boc': 'boc',
-      '#analyses': 'analyses',
-      '#analyse-detail': 'analyse-detail',
-      '#analyse-technique': 'analyse-technique',
-      '#analyse-fondamentale': 'analyse-fondamentale',
-      '#screener': 'screener',
-      '#portefeuille': 'portefeuille',
-      '#alertes': 'alertes',
-      '#financials': 'financials',
-      '#financials-detail': 'financials-detail',
-      '#publications': 'publications',
-      '#formation': 'formation'
+    var h = location.hash;
+    if (h.indexOf("#fiche=") === 0) return "fiche";
+    if (h.indexOf("#analyse=") === 0) return "analyse-detail";
+    var map = {
+      "#titres": "titres",
+      "#boc": "boc",
+      "#analyses": "analyses",
+      "#analyse-detail": "analyse-detail",
+      "#analyse-technique": "analyse-technique",
+      "#analyse-fondamentale": "analyse-fondamentale",
+      "#screener": "screener",
+      "#portefeuille": "portefeuille",
+      "#alertes": "alertes",
+      "#financials": "financials",
+      "#financials-detail": "financials-detail",
+      "#publications": "publications",
+      "#formation": "formation"
     };
-    return map[h] || 'overview';
+    return map[h] || "overview";
   }
 
-  // ═══════════════════════════════════════
-  // GLOBAL EVENTS
-  // ═══════════════════════════════════════
   function setupGlobalEvents() {
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.nav-dropdown') && !e.target.closest('.topnav-logo')) {
-        if (typeof closeDropdowns === 'function') closeDropdowns();
+    document.addEventListener("click", function(e) {
+      if (!e.target.closest(".nav-dropdown") && !e.target.closest(".topnav-logo")) {
+        if (typeof closeDropdowns === "function") closeDropdowns();
       }
     });
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape') {
-        if (typeof closeDropdowns === 'function') closeDropdowns();
-        if (typeof closeSidebar === 'function') closeSidebar();
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Escape") {
+        if (typeof closeDropdowns === "function") closeDropdowns();
+        if (typeof closeSidebar === "function") closeSidebar();
       }
     });
   }
 
-  // ═══════════════════════════════════════
-  // EXPORTS
-  // ═══════════════════════════════════════
   window.loadAll = loadAll;
   window.initApp = initApp;
 
-  // Auto-init quand DOM prêt
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initApp);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initApp);
   } else {
     initApp();
   }
-
 })();
