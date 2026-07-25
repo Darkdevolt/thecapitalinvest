@@ -322,3 +322,146 @@ describe('App initialization', () => {
 ---
 
 **Architecture Document** | Version 1.0 | 2026-07-25
+
+thecapitalinvest/
+├── 📋 Configuration & Setup
+│   ├── package.json                 # Configuration Node.js, dépendances (Supabase, Jose)
+│   ├── .env.example                 # Variables d'environnement (Supabase, JWT, Admin)
+│   ├── .gitignore                   # Fichiers à ignorer
+│   └── vercel.json                  # Configuration Vercel (rewrites API)
+│
+├── 🔌 API Backend (Serverless - Vercel)
+│   └── api/
+│       ├── index.js                 # Route API principale (53.4 KB)
+│       ├── ping.js                  # Health check endpoint
+│       └── lib/                      # Utilitaires API
+│           ├── config.js            # Configuration centralisée
+│           ├── cors.js              # Gestion CORS
+│           ├── jwt.js               # Authentification JWT
+│           ├── middleware.js        # Middleware personnalisés
+│           ├── ratelimit.js         # Rate limiting
+│           ├── response.js          # Formatage réponses
+│           ├── supabase.js          # Client Supabase
+│           └── validate.js          # Validation données
+│
+├── 🎨 Frontend Public (HTML Pages)
+│   └── public/
+│       ├── index.html               # Page d'accueil
+│       ├── login.html               # Page connexion
+│       ├── register.html            # Page inscription
+│       ├── about.html               # À propos
+│       ├── features.html            # Fonctionnalités
+│       ├── pricing.html             # Tarification
+│       ├── contact.html             # Contact
+│       ├── platform.html            # Plateforme générale
+│       ├── markets.html             # Marchés
+│       ├── marche.html              # Marché détaillé
+│       ├── analysis.html            # Analyses
+│       ├── alertes.html             # Alertes
+│       ├── screener.html            # Screener
+│       ├── portefeuille.html        # Portefeuille
+│       ├── app.html                 # Application principale (83 KB)
+│       ├── admin.html               # Interface admin (63.6 KB)
+│       ├── nav.js                   # Navigation globale (28.3 KB)
+│       ├── style.css                # CSS global (20.6 KB)
+│       │
+│       ├── 📁 admin/                # Interface Admin
+│       │   ├── js/                  # Logique admin
+│       │   │   ├── main.js          # Point d'entrée admin
+│       │   │   ├── api.js           # Appels API admin (10.1 KB)
+│       │   │   ├── config.js        # Configuration admin (3.8 KB)
+│       │   │   ├── utils.js         # Utilitaires (11 KB)
+│       │   │   ├── dashboard.js     # Dashboard (4.7 KB)
+│       │   │   ├── diagnostic.js    # Diagnostique (4.8 KB)
+│       │   │   ├── import.js        # Import données (25.7 KB) ⭐
+│       │   │   ├── historique.js    # Historique cours (19 KB)
+│       │   │   ├── cours.js         # Gestion cours (37.1 KB) ⭐
+│       │   │   ├── entreprises.js   # Gestion entreprises (5.2 KB)
+│       │   │   ├── analyses.js      # Gestion analyses (6 KB)
+│       │   │   ├── dividendes.js    # Gestion dividendes (6 KB)
+│       │   │   ├── financials.js    # Financiers (7.8 KB)
+│       │   │   ├── indices.js       # Gestion indices (4.9 KB)
+│       │   │   ├── utilisateurs.js  # Gestion utilisateurs (3.6 KB)
+│       │   │   └── scraper.js       # Web scraper (7.5 KB)
+│       │   └── css/
+│       │       └── admin.css        # Styles admin (15.7 KB)
+│       │
+│       └── 📁 app/                  # Application Utilisateur
+│           ├── js/                  # Logique app
+│           │   ├── main.js          # Point d'entrée app
+│           │   ├── router.js        # Routeur SPA (13.2 KB)
+│           │   ├── api.js           # Appels API app (4.6 KB)
+│           │   ├── components.js    # Composants réutilisables (7.6 KB)
+│           │   ├── state.js         # Gestion état (2.2 KB)
+│           │   ├── ui.js            # Helpers UI (4.1 KB)
+│           │   ├── utils.js         # Utilitaires (8.3 KB)
+│           │   ├── search.js        # Recherche (2.5 KB)
+│           │   │
+│           │   ├── 📁 views/        # Pages de l'application
+│           │   │   ├── overview.js              # Vue d'ensemble (19.5 KB)
+│           │   │   ├── titres.js               # Gestion titres (56.9 KB) ⭐
+│           │   │   ├── recommandation.js       # Recommandations (28 KB) ⭐
+│           │   │   ├── marche.js               # Marché (8.2 KB)
+│           │   │   ├── analyse-fondamentale.js # Analyse fondamentale (10.3 KB)
+│           │   │   ├── analyses.js             # Analyses (5.4 KB)
+│           │   │   ├── financials.js           # Financiers (8.9 KB)
+│           │   │   ├── boc.js                  # BOC (3.8 KB)
+│           │   │   ├── alertes.js              # Alertes (3.2 KB)
+│           │   │   ├── publications.js         # Publications (4.2 KB)
+│           │   │   ├── formation.js            # Formation (860 B)
+│           │   │   ├── screener.js             # Screener (2 KB)
+│           │   │   │
+│           │   │   ├── 📁 portefeuille/       # Gestion Portefeuille
+│           │   │   │   ├── portefeuille-main.js      # Principal (20.9 KB)
+│           │   │   │   ├── portefeuille-crud.js      # CRUD opérations (17.4 KB)
+│           │   │   │   ├── portefeuille-utils.js     # Utilitaires (8.4 KB)
+│           │   │   │   ├── portefeuille-charts.js    # Graphiques (3 KB)
+│           │   │   │   ├── portefeuille-prices.js    # Prix/Cotations (3.8 KB)
+│           │   │   │   └── portefeuille-history.js   # Historique (2.5 KB)
+│           │   │   │
+│           │   │   └── 📁 technique/          # Analyse Technique
+│           │   │       ├── index.js              # Point d'entrée (9.8 KB)
+│           │   │       ├── engine.js            # Moteur principal (31.8 KB) ⭐
+│           │   │       ├── indicators.js        # Gestion indicateurs (6.7 KB)
+│           │   │       ├── signals.js           # Signaux trading (4.9 KB)
+│           │   │       ├── navigation.js        # Navigation charts (3.1 KB)
+│           │   │       ├── zoom.js              # Zoom (2.3 KB)
+│           │   │       ├── focus.js             # Focus (954 B)
+│           │   │       ├── crosshair.js         # Crosshair (2.9 KB)
+│           │   │       ├── draw.js              # Dessin (2.6 KB)
+│           │   │       ├── export.js            # Export (2.4 KB)
+│           │   │       ├── compare.js           # Comparaison (876 B)
+│           │   │       ├── watchlist.js         # Liste de suivi (3.9 KB)
+│           │   │       ├── presets.js           # Présets (2.7 KB)
+│           │   │       ├── types.js             # Définitions types (332 B)
+│           │   │       │
+│           │   │       └── 📁 ind/             # Indicateurs Techniques
+│           │   │           ├── base.js         # Base classe (526 B)
+│           │   │           ├── sma.js          # Moyenne simple (397 B)
+│           │   │           ├── ema.js          # Moyenne exponentielle (425 B)
+│           │   │           ├── rsi.js          # RSI (776 B)
+│           │   │           ├── macd.js         # MACD (486 B)
+│           │   │           ├── bb.js           # Bandes Bollinger (628 B)
+│           │   │           ├── stoch.js        # Stochastique (784 B)
+│           │   │           ├── adx.js          # ADX (951 B)
+│           │   │           ├── cci.js          # CCI (649 B)
+│           │   │           ├── obv.js          # OBV (418 B)
+│           │   │           ├── vwap.js         # VWAP (406 B)
+│           │   │           ├── ha.js           # Heikin Ashi (654 B)
+│           │   │           └── adx.js          # ADX (951 B)
+│           │   │
+│           │   └── 📁 components/   # Composants réutilisables
+│           │       ├── cards.js     # Cartes UI (780 B)
+│           │       ├── header.js    # En-tête (472 B)
+│           │       └── sidebar.js   # Barre latérale (409 B)
+│           │
+│           └── css/                 # Styles app
+│               ├── style.css         # Styles principaux (24 KB)
+│               ├── base.css          # Styles de base (10.6 KB)
+│               ├── components.css    # Composants (5 KB)
+│               ├── variables.css     # Variables CSS (1.6 KB)
+│               ├── views.css         # Styles vues (17.9 KB)
+│               ├── technique.css     # Analyse technique (21.4 KB)
+│               ├── marche.css        # Marché (3.3 KB)
+│               └── Portefeuille.css  # Portefeuille (10.3 KB)
+
