@@ -1,7 +1,6 @@
 {
   "version": 2,
   "rewrites": [
-    { "source": "/api/ping", "destination": "/api/ping" },
     { "source": "/api/:path*", "destination": "/api/index?path=:path*" }
   ]
 }
