@@ -100,7 +100,7 @@ function safeSupabase() {
 // HANDLER — AUTH (login / signup)
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleAuth(req) {
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
+  if (req.method === 'OPTIONS') return handleOptions('public');
   if (req.method !== 'POST') return error('Méthode non autorisée', 405);
 
   let body;
@@ -111,20 +111,71 @@ async function handleAuth(req) {
   if (!email || !password) return error('Email et mot de passe requis', 400);
 
   try {
-    const { supabase: sb } = safeSupabase();
+    const { supabase: sb, supabaseAdmin: sba } = safeSupabase();
+
     if (action === 'login') {
       const { data, error: authError } = await sb.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
-      return success({ session: data.session }, 'Connexion réussie');
+
+      const { data: existingUser } = await sba
+        .from('users')
+        .select('id, nom, is_admin, plan')
+        .eq('id', data.session.user.id)
+        .single();
+
+      if (!existingUser) {
+        await sba.from('users').insert({
+          id: data.session.user.id,
+          email: data.session.user.email,
+          nom: data.session.user.user_metadata?.nom || email.split('@')[0],
+          plan: 'free',
+          is_admin: false,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      return success({
+        session: data.session,
+        user: {
+          id: data.session.user.id,
+          email: data.session.user.email,
+          nom: existingUser?.nom || data.session.user.user_metadata?.nom || email.split('@')[0],
+          is_admin: existingUser?.is_admin || false,
+          plan: existingUser?.plan || 'free',
+        }
+      }, 'Connexion réussie');
     }
+
     if (action === 'signup') {
       const { data, error: authError } = await sb.auth.signUp({
         email, password,
         options: { data: { nom: nom || '' } }
       });
       if (authError) throw authError;
-      return success({ session: data.session }, 'Inscription réussie');
+
+      if (data.user) {
+        await sba.from('users').insert({
+          id: data.user.id,
+          email: data.user.email,
+          nom: nom || email.split('@')[0],
+          plan: 'free',
+          is_admin: false,
+          created_at: new Date().toISOString(),
+        }).catch(() => {});
+      }
+
+      return success({
+        session: data.session,
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          nom: nom || email.split('@')[0],
+          is_admin: false,
+          plan: 'free',
+        }
+      }, 'Inscription réussie');
     }
+
     return error('Action invalide', 400);
   } catch (e) {
     return error(e.message, 400);
@@ -135,7 +186,7 @@ async function handleAuth(req) {
 // HANDLER — BOC (public) — AVEC CACHE
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleBoc(req) {
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
+  if (req.method === 'OPTIONS') return handleOptions('public');
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
   try {
@@ -158,7 +209,7 @@ async function handleBoc(req) {
 // HANDLER — CONTACT (public)
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleContact(req) {
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
+  if (req.method === 'OPTIONS') return handleOptions('public');
   if (req.method !== 'POST') return error('Méthode non autorisée', 405);
 
   const { data: body, response: bodyError } = await parseBody(req);
@@ -200,7 +251,7 @@ async function handleContact(req) {
 // HANDLER — FICHE (public) — AVEC CACHE
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleFiche(req) {
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
+  if (req.method === 'OPTIONS') return handleOptions('public');
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
   const url = getUrl(req);
@@ -259,7 +310,7 @@ async function handleFiche(req) {
 async function handleMarche(req) {
   console.log('[API] handleMarche called, method:', req.method);
 
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders('public'));
+  if (req.method === 'OPTIONS') return handleOptions('public');
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
   const url = getUrl(req);
@@ -395,7 +446,7 @@ async function handleMarche(req) {
 // HANDLER — PORTEFEUILLE (privé)
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handlePortefeuille(req) {
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders('private'));
+  if (req.method === 'OPTIONS') return handleOptions('private');
 
   const auth = await authenticate(req);
   if (auth.response) return auth.response;
@@ -641,7 +692,7 @@ async function handleScraper(req) {
 // HANDLER — ADMIN (privé + rôle admin)
 // ═══════════════════════════════════════════════════════════════════════════════
 async function handleAdmin(req) {
-  if (req.method === 'OPTIONS') return handleOptions(corsHeaders('private'));
+  if (req.method === 'OPTIONS') return handleOptions('private');
 
   const auth = await authenticate(req);
   if (auth.response) return auth.response;
@@ -1147,7 +1198,7 @@ export default async function handler(req) {
   // Preflight CORS global
   if (req.method === 'OPTIONS') {
     console.log('[API] OPTIONS preflight');
-    return handleOptions(corsHeaders('public'));
+    return handleOptions('public');
   }
 
   // Rate limiting global
