@@ -41,6 +41,21 @@
 </head>
 <body>
 
+<!-- ═══ FILET DE SÉCURITÉ ABSOLU CONTRE L'ÉCRAN NOIR ═══
+     Si après 3 secondes la classe init-hidden est toujours
+     présente (ex: un script a planté avant d'atteindre le
+     script final en bas de page), on force l'affichage. ═══ -->
+<script>
+  setTimeout(function() {
+    if (document.body && document.body.classList.contains('init-hidden')) {
+      console.warn('[SÉCURITÉ] init-hidden forcé à disparaître après timeout');
+      document.body.classList.remove('init-hidden');
+      document.body.style.setProperty('visibility', 'visible', 'important');
+      document.body.style.setProperty('opacity', '1', 'important');
+    }
+  }, 3000);
+</script>
+
 <div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
 <div class="toast-container" id="toastContainer"></div>
 
