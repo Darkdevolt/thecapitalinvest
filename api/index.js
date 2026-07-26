@@ -1184,6 +1184,7 @@ async function importBOC(req) {
 // ═══════════════════════════════════════════════════════════════════════════════
 export default async function handler(req) {
   console.log('[API] Handler called:', req.method, req.url);
+  console.log('[API] Node version:', process.version);
 
   // Vérification config
   if (!config.isValid) {
