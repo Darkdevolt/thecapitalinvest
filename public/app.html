@@ -186,6 +186,7 @@
 <!-- BREADCRUMB -->
 <div class="breadcrumb" id="breadcrumb"></div>
 <main class="main">
+
 <!-- ═══ OVERVIEW ═══ -->
 <div class="view active" id="view-overview">
   <div class="page-header">
@@ -495,7 +496,7 @@
           <div class="at-price-tag" id="atPriceTag" style="display:none"></div>
           <div class="at-crosshair-tooltip" id="atTooltip"></div>
           <div id="atAggInfo" style="display:none"></div>
-          <div id="atDrawStatus" style="display:none"></div>
+          <div id="atMainDrawStatus" style="display:none"></div>
         </div>
 
         <!-- PANNEAUX SUB -->
@@ -582,8 +583,7 @@
         <div class="at-ind-modal-title">Ajouter un indicateur</div>
         <button class="at-btn danger" onclick="atCloseIndModal()">✕ Fermer</button>
       </div>
-        <div class="at-ind-modal-body" id="atIndModalBody"></div>
-      </div>
+      <div class="at-ind-modal-body" id="atIndModalBody"></div>
     </div>
   </div>
 </div>
@@ -646,9 +646,7 @@
     <p>Suivi réel de vos positions, analyse de performance et optimisation d'allocation — Actions, Obligations & OPCVM</p>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       KPIs PRINCIPAUX
-  ═══════════════════════════════════════ -->
+  <!-- KPIs PRINCIPAUX -->
   <div class="portf-kpi-grid">
     <div class="portf-kpi">
       <div class="portf-kpi-label">Valeur Totale</div>
@@ -686,17 +684,13 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       RÉPARTITION PAR TYPE D'ACTIF
-  ═══════════════════════════════════════ -->
+  <!-- RÉPARTITION PAR TYPE D'ACTIF -->
   <div class="card mb20" id="pfTypeAllocCard" style="display:none">
     <div class="card-header"><div class="card-title">📊 Répartition par Type d'Actif</div></div>
     <div class="card-body" id="pfTypeAlloc"></div>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       GRAPHIQUES : ÉVOLUTION + ALLOCATION
-  ═══════════════════════════════════════ -->
+  <!-- GRAPHIQUES : ÉVOLUTION + ALLOCATION -->
   <div class="grid-7030 mb20">
     <div class="card">
       <div class="card-header">
@@ -729,9 +723,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       GRAPHIQUES : P&L + CORRÉLATION
-  ═══════════════════════════════════════ -->
+  <!-- GRAPHIQUES : P&L + CORRÉLATION -->
   <div class="grid-7030 mb20">
     <div class="card">
       <div class="card-header"><div class="card-title">📊 P&L Cumulé</div></div>
@@ -749,9 +741,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       AJOUTER UNE POSITION
-  ═══════════════════════════════════════ -->
+  <!-- AJOUTER UNE POSITION -->
   <div class="card mb20">
     <div class="card-header"><div class="card-title">➕ Ajouter une Position</div></div>
     <div class="card-body">
@@ -770,9 +760,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       TABLEAU DES POSITIONS — AVEC SÉLECTION
-  ═══════════════════════════════════════ -->
+  <!-- TABLEAU DES POSITIONS — AVEC SÉLECTION -->
   <div class="card mb20">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
       <div class="card-title">📋 Positions Détaillées</div>
@@ -804,9 +792,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════
-       STATISTIQUES AVANCÉES
-  ═══════════════════════════════════════ -->
+  <!-- STATISTIQUES AVANCÉES -->
   <div class="grid-3">
     <div class="card">
       <div class="card-header"><div class="card-title">⚖️ Concentration du Portefeuille</div></div>
@@ -963,7 +949,7 @@
             </div>
             <div class="lexique-item">
               <div class="lexique-term">RSI — Relative Strength Index</div>
-              <div class="lexique-def">Indicateur de momentum de 0 à 100. >70 = surachat (vente), <30 = survente (achat).</div>
+              <div class="lexique-def">Indicateur de momentum de 0 à 100. &gt;70 = surachat (vente), &lt;30 = survente (achat).</div>
             </div>
             <div class="lexique-item">
               <div class="lexique-term">MACD</div>
@@ -1064,11 +1050,11 @@
           <div class="lexique-list">
             <div class="lexique-item">
               <div class="lexique-term">ROE — Return on Equity</div>
-              <div class="lexique-def">Résultat Net / Fonds Propres. Mesure la rentabilité des capitaux investis par les actionnaires. >15% = excellent.</div>
+              <div class="lexique-def">Résultat Net / Fonds Propres. Mesure la rentabilité des capitaux investis par les actionnaires. &gt;15% = excellent.</div>
             </div>
             <div class="lexique-item">
               <div class="lexique-term">ROA — Return on Assets</div>
-              <div class="lexique-def">Résultat Net / Total Actif. Efficacité de l'utilisation des actifs. >5% est satisfaisant.</div>
+              <div class="lexique-def">Résultat Net / Total Actif. Efficacité de l'utilisation des actifs. &gt;5% est satisfaisant.</div>
             </div>
             <div class="lexique-item">
               <div class="lexique-term">Marge Nette</div>
@@ -1076,7 +1062,7 @@
             </div>
             <div class="lexique-item">
               <div class="lexique-term">Dette / Fonds Propres</div>
-              <div class="lexique-def">Endettement financier relatif. <0.5 = conservateur, >1.5 = risqué.</div>
+              <div class="lexique-def">Endettement financier relatif. &lt;0.5 = conservateur, &gt;1.5 = risqué.</div>
             </div>
             <div class="lexique-item">
               <div class="lexique-term">BPA — Bénéfice par Action</div>
@@ -1152,7 +1138,7 @@
         <div class="card-body">
           <p style="color:var(--muted);margin-bottom:12px">Investir dans les entreprises à dividende croissant. Stratégie patrimoniale adaptée à la BRVM avec ses sociétés cotées à fort rendement.</p>
           <div style="font-size:12px;color:var(--dim)">
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Sélection: DPA croissant 5 ans, PER < 15</div>
+            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Sélection: DPA croissant 5 ans, PER &lt; 15</div>
             <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Secteurs: Banques, Distribution, Agro</div>
             <div><span style="color:var(--green)">✓</span> Objectif: Rendement + croissance du capital</div>
           </div>
@@ -1222,248 +1208,237 @@
         </div>
       </div>
     </div>
+  </div>
 </div>  <!-- view-formation -->
+
+<!-- ═══ MARCHÉ ═══ -->
 <div class="view" id="view-marche">
-<div class="page-content">
+  <div class="page-content">
 
-  <!-- PAGE HEADER -->
-  <div class="page-header">
-    <h1>Marché <span style="color:var(--gold)">BRVM</span></h1>
-    <p>Bourse Régionale des Valeurs Mobilières · Données en temps réel · Abidjan, Côte d'Ivoire</p>
-  </div>
-
-  <!-- ═══════════════════════════
-       SECTION 1 — INDICES
-  ═══════════════════════════ -->
-  <div class="section" id="indices">
-    <div class="section-title">Cours des Indices</div>
-    <div class="section-sub">Évolution des indices de référence de la BRVM</div>
-
-    <div class="grid-3 mb20">
-      <div class="stat-card">
-        <div class="stat-label">BRVM Composite</div>
-        <div class="stat-value" id="marche-idx-composite">—</div>
-        <div class="stat-change" id="marche-idx-composite-chg">—</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-composite-vol">Volume —</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">BRVM 30</div>
-        <div class="stat-value" id="marche-idx-30">—</div>
-        <div class="stat-change" id="marche-idx-30-chg">—</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-30-vol">—</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">BRVM Prestige</div>
-        <div class="stat-value" id="marche-idx-prestige">—</div>
-        <div class="stat-change" id="marche-idx-prestige-chg">—</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-prestige-vol">—</div>
-      </div>
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+      <h1>Marché <span style="color:var(--gold)">BRVM</span></h1>
+      <p>Bourse Régionale des Valeurs Mobilières · Données en temps réel · Abidjan, Côte d'Ivoire</p>
     </div>
 
-    <!-- Index chart -->
-    <div class="card mb20">
-      <div class="card-header">
-        <div class="card-title">BRVM Composite — Historique</div>
-        <div style="display:flex;gap:6px" id="marche-idxPeriodBtns">
-          <button class="filter-btn active" onclick="setIdxPeriod(30,this)">1M</button>
-          <button class="filter-btn" onclick="setIdxPeriod(90,this)">3M</button>
-          <button class="filter-btn" onclick="setIdxPeriod(252,this)">1A</button>
+    <!-- SECTION 1 — INDICES -->
+    <div class="section" id="indices">
+      <div class="section-title">Cours des Indices</div>
+      <div class="section-sub">Évolution des indices de référence de la BRVM</div>
+
+      <div class="grid-3 mb20">
+        <div class="stat-card">
+          <div class="stat-label">BRVM Composite</div>
+          <div class="stat-value" id="marche-idx-composite">—</div>
+          <div class="stat-change" id="marche-idx-composite-chg">—</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-composite-vol">Volume —</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">BRVM 30</div>
+          <div class="stat-value" id="marche-idx-30">—</div>
+          <div class="stat-change" id="marche-idx-30-chg">—</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-30-vol">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">BRVM Prestige</div>
+          <div class="stat-value" id="marche-idx-prestige">—</div>
+          <div class="stat-change" id="marche-idx-prestige-chg">—</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-prestige-vol">—</div>
         </div>
       </div>
-      <div class="card-body">
-        <div class="chart-container tall">
-          <canvas id="marche-chartIndices"></canvas>
+
+      <!-- Index chart -->
+      <div class="card mb20">
+        <div class="card-header">
+          <div class="card-title">BRVM Composite — Historique</div>
+          <div style="display:flex;gap:6px" id="marche-idxPeriodBtns">
+            <button class="filter-btn active" onclick="setIdxPeriod(30,this)">1M</button>
+            <button class="filter-btn" onclick="setIdxPeriod(90,this)">3M</button>
+            <button class="filter-btn" onclick="setIdxPeriod(252,this)">1A</button>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="chart-container tall">
+            <canvas id="marche-chartIndices"></canvas>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════════════════════
-       SECTION 2 — COURS ACTIONS
-  ═══════════════════════════ -->
-  <div class="section" id="cours">
-    <div class="section-title">Cours des Actions</div>
-    <div class="section-sub">Cotations en temps réel de toutes les sociétés listées à la BRVM</div>
+    <!-- SECTION 2 — COURS ACTIONS -->
+    <div class="section" id="cours">
+      <div class="section-title">Cours des Actions</div>
+      <div class="section-sub">Cotations en temps réel de toutes les sociétés listées à la BRVM</div>
 
-    <div class="search-bar">
-      <input class="search-input" id="marche-searchCours" placeholder="🔍  Rechercher un titre..." oninput="filterCours()">
-      <button class="filter-btn active" onclick="setCoursFilter('all',this)">Tous</button>
-      <button class="filter-btn" onclick="setCoursFilter('up',this)">Hausse</button>
-      <button class="filter-btn" onclick="setCoursFilter('down',this)">Baisse</button>
-      <button class="filter-btn" onclick="setCoursFilter('banque',this)">Banque</button>
-      <button class="filter-btn" onclick="setCoursFilter('agro',this)">Agro</button>
-      <button class="filter-btn" onclick="setCoursFilter('industrie',this)">Industrie</button>
-      <button class="filter-btn" onclick="setCoursFilter('telecom',this)">Telecom</button>
-    </div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Séance du <span id="marche-coursDate">—</span></div>
-        <div style="font-size:12px;color:var(--dim)" id="marche-coursCount">—</div>
+      <div class="search-bar">
+        <input class="search-input" id="marche-searchCours" placeholder="🔍  Rechercher un titre..." oninput="filterCours()">
+        <button class="filter-btn active" onclick="setCoursFilter('all',this)">Tous</button>
+        <button class="filter-btn" onclick="setCoursFilter('up',this)">Hausse</button>
+        <button class="filter-btn" onclick="setCoursFilter('down',this)">Baisse</button>
+        <button class="filter-btn" onclick="setCoursFilter('banque',this)">Banque</button>
+        <button class="filter-btn" onclick="setCoursFilter('agro',this)">Agro</button>
+        <button class="filter-btn" onclick="setCoursFilter('industrie',this)">Industrie</button>
+        <button class="filter-btn" onclick="setCoursFilter('telecom',this)">Telecom</button>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Ticker</th>
-              <th>Société</th>
-              <th class="right">Cours (FCFA)</th>
-              <th class="right">Variation</th>
-              <th class="right">+ Haut</th>
-              <th class="right">+ Bas</th>
-              <th class="right">Volume</th>
-              <th class="right">Capitalisation</th>
-              <th>Secteur</th>
-            </tr>
-          </thead>
-          <tbody id="marche-coursTable">
-            <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--dim)">Chargement...</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </div>
 
-  <!-- ═══════════════════════════
-       SECTION 3 — PALMARES
-  ═══════════════════════════ -->
-  <div class="section" id="palmares">
-    <div class="section-title">Palmarès</div>
-    <div class="section-sub">Meilleures et moins bonnes performances de la séance</div>
-
-    <div class="grid-2">
-      <!-- Top hausses -->
       <div class="card">
         <div class="card-header">
-          <div class="card-title">🟢 Top Hausses</div>
-          <span style="font-size:11px;color:var(--green)">Séance en cours</span>
+          <div class="card-title">Séance du <span id="marche-coursDate">—</span></div>
+          <div style="font-size:12px;color:var(--dim)" id="marche-coursCount">—</div>
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
-            <tbody id="marche-topHausses"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Top baisses -->
-      <div class="card">
-        <div class="card-header">
-          <div class="card-title">🔴 Top Baisses</div>
-          <span style="font-size:11px;color:var(--red)">Séance en cours</span>
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
-            <tbody id="marche-topBaisses"></tbody>
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Société</th>
+                <th class="right">Cours (FCFA)</th>
+                <th class="right">Variation</th>
+                <th class="right">+ Haut</th>
+                <th class="right">+ Bas</th>
+                <th class="right">Volume</th>
+                <th class="right">Capitalisation</th>
+                <th>Secteur</th>
+              </tr>
+            </thead>
+            <tbody id="marche-coursTable">
+              <tr><td colspan="9" style="text-align:center;padding:30px;color:var(--dim)">Chargement...</td></tr>
+            </tbody>
           </table>
         </div>
       </div>
     </div>
 
-    <!-- Top volumes -->
-    <div class="card mb20">
-      <div class="card-header">
-        <div class="card-title">📊 Top Volumes échangés</div>
+    <!-- SECTION 3 — PALMARES -->
+    <div class="section" id="palmares">
+      <div class="section-title">Palmarès</div>
+      <div class="section-sub">Meilleures et moins bonnes performances de la séance</div>
+
+      <div class="grid-2">
+        <!-- Top hausses -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🟢 Top Hausses</div>
+            <span style="font-size:11px;color:var(--green)">Séance en cours</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
+              <tbody id="marche-topHausses"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Top baisses -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">🔴 Top Baisses</div>
+            <span style="font-size:11px;color:var(--red)">Séance en cours</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead>
+              <tbody id="marche-topBaisses"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Titre</th><th class="right">Volume</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Valeur échangée</th></tr></thead>
-          <tbody id="marche-topVolumes"></tbody>
-        </table>
+
+      <!-- Top volumes -->
+      <div class="card mb20">
+        <div class="card-header">
+          <div class="card-title">📊 Top Volumes échangés</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Titre</th><th class="right">Volume</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Valeur échangée</th></tr></thead>
+            <tbody id="marche-topVolumes"></tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════════════════════
-       SECTION 4 — DIVIDENDES
-  ═══════════════════════════ -->
-  <div class="section" id="dividendes">
-    <div class="section-title">Dividendes</div>
-    <div class="section-sub">Distributions de dividendes des sociétés cotées — dernier exercice</div>
-
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Dividendes par titre</div>
-        <div style="font-size:12px;color:var(--dim)">DPA = Dividende Par Action</div>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Ticker</th>
-              <th>Société</th>
-              <th class="right">Cours actuel</th>
-              <th class="right">DPA (FCFA)</th>
-              <th class="right">Rendement</th>
-              <th class="right">BPA</th>
-              <th class="right">Taux distribution</th>
-              <th class="right">Exercice</th>
-            </tr>
-          </thead>
-          <tbody id="marche-dividendesTable"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════
-       SECTION 5 — PUBLICATIONS
-  ═══════════════════════════ -->
-  <div class="section" id="publications">
-    <div class="section-title">Publications Officielles</div>
-    <div class="section-sub">Avis et bulletins officiels publiés par la BRVM</div>
-
-    <div class="search-bar">
-      <input class="search-input" id="marche-searchPub" placeholder="🔍  Rechercher une publication..." oninput="filterPub()">
-      <button class="filter-btn active" onclick="setPubFilter('all',this)">Toutes</button>
-      <button class="filter-btn" onclick="setPubFilter('obligation',this)">Obligations</button>
-      <button class="filter-btn" onclick="setPubFilter('action',this)">Actions</button>
-      <button class="filter-btn" onclick="setPubFilter('opcvm',this)">OPCVM</button>
-    </div>
-
-    <div class="boc-grid" id="marche-pubGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
-    </div>
-  </div>
-
-  <!-- ═══════════════════════════
-       SECTION 6 — CALENDRIER
-  ═══════════════════════════ -->
-  <div class="section" id="calendrier">
-    <div class="section-title">Calendrier des Évènements</div>
-    <div class="section-sub">Prochaines assemblées générales, détachements de dividendes et cotations</div>
-
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><div class="card-title">Prochains évènements</div></div>
-        <div id="marche-calendrierList" style="padding:8px 0"></div>
-      </div>
+    <!-- SECTION 4 — DIVIDENDES -->
+    <div class="section" id="dividendes">
+      <div class="section-title">Dividendes</div>
+      <div class="section-sub">Distributions de dividendes des sociétés cotées — dernier exercice</div>
 
       <div class="card">
-        <div class="card-header"><div class="card-title">Statistiques de la séance</div></div>
-        <div class="card-body" id="marche-seanceStats"></div>
+        <div class="card-header">
+          <div class="card-title">Dividendes par titre</div>
+          <div style="font-size:12px;color:var(--dim)">DPA = Dividende Par Action</div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticker</th>
+                <th>Société</th>
+                <th class="right">Cours actuel</th>
+                <th class="right">DPA (FCFA)</th>
+                <th class="right">Rendement</th>
+                <th class="right">BPA</th>
+                <th class="right">Taux distribution</th>
+                <th class="right">Exercice</th>
+              </tr>
+            </thead>
+            <tbody id="marche-dividendesTable"></tbody>
+          </table>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════════════════════
-       SECTION 7 — CTA CONVERSION
-  ═══════════════════════════ -->
-  <div class="section" style="text-align:center;padding:60px 20px;background:linear-gradient(to right, rgba(184,150,78,0.05), transparent, rgba(184,150,78,0.05));border:1px solid var(--border);border-radius:12px;margin-top:40px;">
-    <div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--cream);margin-bottom:12px;">
-      Vous suivez ces valeurs ?
+    <!-- SECTION 5 — PUBLICATIONS -->
+    <div class="section" id="publications">
+      <div class="section-title">Publications Officielles</div>
+      <div class="section-sub">Avis et bulletins officiels publiés par la BRVM</div>
+
+      <div class="search-bar">
+        <input class="search-input" id="marche-searchPub" placeholder="🔍  Rechercher une publication..." oninput="filterPub()">
+        <button class="filter-btn active" onclick="setPubFilter('all',this)">Toutes</button>
+        <button class="filter-btn" onclick="setPubFilter('obligation',this)">Obligations</button>
+        <button class="filter-btn" onclick="setPubFilter('action',this)">Actions</button>
+        <button class="filter-btn" onclick="setPubFilter('opcvm',this)">OPCVM</button>
+      </div>
+
+      <div class="boc-grid" id="marche-pubGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px">
+      </div>
     </div>
-    <p style="font-size:14px;color:var(--muted);max-width:500px;margin:0 auto 24px;line-height:1.7;">
-      Créez un compte gratuit pour sauvegarder vos valeurs préférées, recevoir des alertes de prix et accéder à l'analyse technique.
-    </p>
-    <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
-      <a href="register.html" class="btn btn-primary">S'inscrire gratuitement</a>
-      <a href="login.html" class="btn btn-outline">J'ai déjà un compte</a>
+
+    <!-- SECTION 6 — CALENDRIER -->
+    <div class="section" id="calendrier">
+      <div class="section-title">Calendrier des Évènements</div>
+      <div class="section-sub">Prochaines assemblées générales, détachements de dividendes et cotations</div>
+
+      <div class="grid-2">
+        <div class="card">
+          <div class="card-header"><div class="card-title">Prochains évènements</div></div>
+          <div id="marche-calendrierList" style="padding:8px 0"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="card-title">Statistiques de la séance</div></div>
+          <div class="card-body" id="marche-seanceStats"></div>
+        </div>
+      </div>
     </div>
-  </div>
 
+    <!-- SECTION 7 — CTA CONVERSION -->
+    <div class="section" style="text-align:center;padding:60px 20px;background:linear-gradient(to right, rgba(184,150,78,0.05), transparent, rgba(184,150,78,0.05));border:1px solid var(--border);border-radius:12px;margin-top:40px;">
+      <div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--cream);margin-bottom:12px;">
+        Vous suivez ces valeurs ?
+      </div>
+      <p style="font-size:14px;color:var(--muted);max-width:500px;margin:0 auto 24px;line-height:1.7;">
+        Créez un compte gratuit pour sauvegarder vos valeurs préférées, recevoir des alertes de prix et accéder à l'analyse technique.
+      </p>
+      <div style="display:flex;justify-content:center;gap:16px;flex-wrap:wrap;">
+        <a href="register.html" class="btn btn-primary">S'inscrire gratuitement</a>
+        <a href="login.html" class="btn btn-outline">J'ai déjà un compte</a>
+      </div>
+    </div>
 
-</div>
+  </div> <!-- page-content -->
+</div> <!-- view-marche -->
 
 </main>
 
@@ -1490,7 +1465,7 @@
 <script src="app/js/screener.js"></script>
 <script src="app/js/alerts.js"></script>
 
-<!-- ═══ ANCIENNE APP (commentez api.js, fetch.js le remplace) ═══ -->
+<!-- ═══ ANCIENNE APP ═══ -->
 <script src="app/js/utils.js?v=5"></script>
 <script src="app/js/components.js?v=5"></script>
 <script src="app/js/state.js?v=5"></script>
