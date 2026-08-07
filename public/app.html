@@ -33,15 +33,13 @@
   function redirectToLogin(){
     var redirect = encodeURIComponent(window.location.pathname + window.location.search);
     window.location.replace('login.html?redirect=' + redirect);
-    document.write('');
-    window.stop && window.stop();
-    throw new Error('AUTH_REQUIRED_REDIRECT');
   }
 
   var session = getSession();
   if (!session || !isTokenValid(session.access_token)) {
     localStorage.removeItem(SK);
     redirectToLogin();
+    return; // on n'exécute pas la suite : la navigation vers login.html est en cours
   }
 
   // Expose la session validée pour le reste de l'app (fetch.js, cache.js, etc.)
