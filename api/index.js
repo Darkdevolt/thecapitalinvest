@@ -303,7 +303,6 @@ async function handleFiche(req) {
     return error('Erreur serveur', 500, 'SERVER_ERROR');
   }
 }
-
 // ═══════════════════════════════════════════════════════════════════════════════
 // HANDLER — MARCHE (public) — AVEC CACHE + ENDPOINT APERCU
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -314,7 +313,8 @@ async function handleMarche(req) {
   if (req.method !== 'GET') return error('Méthode non autorisée', 405);
 
   const url = getUrl(req);
-  const type = url.searchParams.get('type');
+  // Fallback vers 'apercu' si aucun type n'est fourni dans l'URL
+  const type = url.searchParams.get('type') || 'apercu';
   console.log('[API] handleMarche type:', type);
 
   try {
@@ -324,14 +324,19 @@ async function handleMarche(req) {
     switch (type) {
       case 'apercu': {
         console.log('[API] Querying apercu...');
+        // Ajout du wrapper avecTimeout (8 secondes max)
         const [
           { data: indices, error: idxErr },
           { data: cours, error: crsErr },
-        ] = await Promise.all([
-          sb.from('indices').select('*').order('date_seance', { ascending: false }).limit(20),
-          sb.from('cours').select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
-            .order('date_seance', { ascending: false }).limit(200),
-        ]);
+        ] = await withTimeout(
+          Promise.all([
+            sb.from('indices').select('*').order('date_seance', { ascending: false }).limit(20),
+            sb.from('cours').select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
+              .order('date_seance', { ascending: false }).limit(200),
+          ]),
+          8000,
+          'apercu'
+        );
 
         if (idxErr) throw idxErr;
         if (crsErr) throw crsErr;
@@ -368,7 +373,7 @@ async function handleMarche(req) {
           .from('indices')
           .select('*')
           .order('date_seance', { ascending: false })
-          .limit(20), 8000, 'indices')
+          .limit(20), 8000, 'indices');
         if (dbError) throw dbError;
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
@@ -380,7 +385,7 @@ async function handleMarche(req) {
           .from('cours')
           .select('ticker, nom, cours, variation, volume, capitalisation, date_seance, plus_haut, plus_bas')
           .order('date_seance', { ascending: false })
-          .limit(50), 8000, 'cours')
+          .limit(50), 8000, 'cours');
         if (dbError) throw dbError;
         console.log('[API] Cours returned:', data?.length || 0, 'rows');
         const resp = success({ data: data || [] });
@@ -395,7 +400,7 @@ async function handleMarche(req) {
           .select('*')
           .eq('ticker', ticker)
           .order('date_seance', { ascending: false })
-          .limit(252), 8000, 'historique')
+          .limit(252), 8000, 'historique');
         if (dbError) throw dbError;
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
@@ -406,7 +411,7 @@ async function handleMarche(req) {
           .from('financials')
           .select('*')
           .order('annee', { ascending: false })
-          .limit(300), 8000, 'financials')
+          .limit(300), 8000, 'financials');
         if (dbError) throw dbError;
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
@@ -417,7 +422,7 @@ async function handleMarche(req) {
           .from('analyses')
           .select('*')
           .order('date_analyse', { ascending: false })
-          .limit(100), 8000, 'analyses')
+          .limit(100), 8000, 'analyses');
         if (dbError) throw dbError;
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
@@ -427,7 +432,7 @@ async function handleMarche(req) {
         const { data, error: dbError } = await withTimeout(sb
           .from('entreprises')
           .select('*')
-          .order('ticker'), 8000, 'entreprises')
+          .order('ticker'), 8000, 'entreprises');
         if (dbError) throw dbError;
         const resp = success({ data: data || [] });
         return withPublicCache(resp);
