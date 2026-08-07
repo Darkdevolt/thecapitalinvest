@@ -5,39 +5,48 @@
 <!-- ═══ AUTH GUARD — DOIT RESTER LE TOUT PREMIER SCRIPT ═══ -->
 <script>
 (function authGuard(){
+  var SK = "tc_session"; // clé écrite par login.html — doit rester identique
+
   function b64urlDecode(str){
     str = str.replace(/-/g,'+').replace(/_/g,'/');
     while(str.length % 4) str += '=';
     return atob(str);
   }
-  function getToken(){
-    var names = ['tc_token','token','jwt','supabase.auth.token','sb-refresh-token','sb-access-token','auth_token','access_token'];
-    for (var i=0;i<names.length;i++){
-      var v = localStorage.getItem(names[i]) || sessionStorage.getItem(names[i]);
-      if (v) return v;
-    }
-    return null;
-  }
-  function isValid(token){
+  function isTokenValid(token){
     try {
       var parts = token.split('.');
       if (parts.length < 2) return false;
       var payload = JSON.parse(b64urlDecode(parts[1]));
-      if (!payload.exp) return true;
+      if (!payload.exp) return false;
       return (payload.exp * 1000) > Date.now();
     } catch(e){ return false; }
   }
-  var token = getToken();
-  if (!token || !isValid(token)) {
+  function getSession(){
+    var raw = localStorage.getItem(SK);
+    if (!raw) return null;
+    try {
+      var sess = JSON.parse(raw);
+      if (sess && sess.access_token) return sess;
+      return null;
+    } catch(e) { return null; }
+  }
+  function redirectToLogin(){
     var redirect = encodeURIComponent(window.location.pathname + window.location.search);
     window.location.replace('login.html?redirect=' + redirect);
     document.write('');
     window.stop && window.stop();
     throw new Error('AUTH_REQUIRED_REDIRECT');
   }
-  if (token !== localStorage.getItem('tc_token')) {
-    try { localStorage.setItem('tc_token', token); } catch(e){}
+
+  var session = getSession();
+  if (!session || !isTokenValid(session.access_token)) {
+    localStorage.removeItem(SK);
+    redirectToLogin();
   }
+
+  // Expose la session validée pour le reste de l'app (fetch.js, cache.js, etc.)
+  window.tcSession = session;
+  window.tcAccessToken = session.access_token;
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1505,20 +1514,6 @@
 
 </main>
 
-<!-- ═══ TOKEN MIGRATION ═══ -->
-<script>
-(function migrateToken(){
-  var names=['token','jwt','supabase.auth.token','sb-refresh-token','sb-access-token','auth_token','access_token'];
-  for(var i=0;i<names.length;i++){
-    var v=localStorage.getItem(names[i])||sessionStorage.getItem(names[i]);
-    if(v&&!localStorage.getItem('tc_token')){
-      try{JSON.parse(atob(v.split('.')[1]));localStorage.setItem('tc_token',v);console.log('[MIGRATION] Token depuis:',names[i]);break;}
-      catch(e){}
-    }
-  }
-})();
-</script>
-
 <!-- ═══ NOUVELLE ARCHITECTURE (ordre strict) ═══ -->
 <script src="app/js/cache.js"></script>
 <script src="app/js/fetch.js"></script>
@@ -1590,6 +1585,13 @@
   document.body.classList.remove('init-hidden');
   document.body.style.opacity='1';
   document.body.style.visibility='visible';
+
+  // Déconnexion fiable — remplace toute implémentation antérieure,
+  // garantit la suppression de la session réelle (tc_session).
+  window.doLogout = function(){
+    try { localStorage.removeItem('tc_session'); } catch(e){}
+    window.location.replace('login.html');
+  };
 </script>
 
 </body>
