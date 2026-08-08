@@ -3,9 +3,25 @@
 (function () {
   'use strict';
 
+  function normalizeDocument() {
+    // L'ancien <base target="_blank"> cassait la navigation interne de la SPA.
+    var base = document.querySelector('base');
+    if (base) base.remove();
+
+    // Les liens internes restent dans l'application.
+    document.querySelectorAll('a[href]').forEach(function (a) {
+      var href = a.getAttribute('href') || '';
+      if (href && href.charAt(0) !== '#' && !/^(https?:|mailto:|tel:|javascript:)/i.test(href)) {
+        a.removeAttribute('target');
+        a.removeAttribute('rel');
+      }
+    });
+  }
+
   function loadScript(src, done) {
     var script = document.createElement('script');
     script.src = src;
+    script.async = false;
     script.onload = done;
     script.onerror = function () {
       console.error('[INIT] Script impossible à charger:', src);
@@ -15,18 +31,18 @@
   }
 
   function loadRuntimeLayers(done) {
-    // router.js est la seule couche de navigation.
-    // Aucun router-patch / ancien adaptateur n'est chargé.
-    loadScript('app/js/router.js?v=4', function () {
-      loadScript('app/js/views/portefeuille/portfolio-store.js?v=4', function () {
-        loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=3', function () {
-          loadScript('app/js/views/user-data-patch.js?v=2', done);
+    // Une seule couche de navigation et les stores Supabase modernes.
+    loadScript('app/js/router.js?v=6', function () {
+      loadScript('app/js/views/portefeuille/portfolio-store.js?v=6', function () {
+        loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=5', function () {
+          loadScript('app/js/views/user-data-patch.js?v=4', done);
         });
       });
     });
   }
 
   function init() {
+    normalizeDocument();
     console.log('[INIT] Démarrage The Capital — architecture unifiée');
 
     if (typeof window.initApp === 'function') {
@@ -52,6 +68,7 @@
   }
 
   function boot() {
+    normalizeDocument();
     loadRuntimeLayers(init);
   }
 
