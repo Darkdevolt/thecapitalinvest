@@ -1,12 +1,16 @@
 (function(){
-  function loadPortfolioStore(next){
-    if (window.portfolioStore || window.__TC_PORTFOLIO_STORE_LOADING__) return next();
-    window.__TC_PORTFOLIO_STORE_LOADING__ = true;
+  function loadScript(src, done){
     var script = document.createElement('script');
-    script.src = 'app/js/views/portefeuille/portfolio-store.js?v=1';
-    script.onload = next;
-    script.onerror = function(){ console.error('[INIT] portfolio-store impossible à charger'); next(); };
+    script.src = src;
+    script.onload = done;
+    script.onerror = function(){ console.error('[INIT] Script impossible à charger:', src); done(); };
     document.head.appendChild(script);
+  }
+
+  function loadRuntimeLayers(done){
+    loadScript('app/js/router-patch.js?v=1', function(){
+      loadScript('app/js/views/portefeuille/portfolio-store.js?v=1', done);
+    });
   }
 
   function init(){
@@ -26,7 +30,7 @@
     }
   }
 
-  function boot(){ loadPortfolioStore(init); }
+  function boot(){ loadRuntimeLayers(init); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 })();
