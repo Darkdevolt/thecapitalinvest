@@ -1,145 +1,143 @@
 // MAIN — The Capital BRVM Dashboard
-
-window.allCours = [];
-window.allIndices = [];
-window.allBoc = [];
-window.allFinancials = [];
-window.allAnalyses = [];
-window.allEntreprises = [];
-window.entMap = {};
-
+// Runtime principal : orchestration des données et du rendu.
 (function() {
+  'use strict';
+
+  // STATE est chargé avant MAIN dans app.html et reste la source unique de l'état global.
+  window.allCours = Array.isArray(window.allCours) ? window.allCours : [];
+  window.allIndices = Array.isArray(window.allIndices) ? window.allIndices : [];
+  window.allBoc = Array.isArray(window.allBoc) ? window.allBoc : [];
+  window.allFinancials = Array.isArray(window.allFinancials) ? window.allFinancials : [];
+  window.allAnalyses = Array.isArray(window.allAnalyses) ? window.allAnalyses : [];
+  window.allEntreprises = Array.isArray(window.allEntreprises) ? window.allEntreprises : [];
+  window.entMap = window.entMap && typeof window.entMap === 'object' ? window.entMap : {};
+
   if (window.__TC_MAIN_LOADED__) {
-    console.log("[MAIN] Deja charge, skip.");
+    console.log('[MAIN] Déjà chargé, skip.');
     return;
   }
   window.__TC_MAIN_LOADED__ = true;
 
   async function initApp() {
-    console.log("[MAIN] Initialisation...");
-    if (!document.getElementById("toastContainer")) {
-      var tc = document.createElement("div");
-      tc.id = "toastContainer";
-      tc.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;";
+    console.log('[MAIN] Initialisation...');
+    if (!document.getElementById('toastContainer')) {
+      var tc = document.createElement('div');
+      tc.id = 'toastContainer';
+      tc.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';
       document.body.appendChild(tc);
     }
+
     loadAll().catch(function(err) {
-      console.error("[MAIN] Erreur loadAll:", err);
-      if (typeof toast === "function") toast("Erreur de chargement des donnees", "error");
+      console.error('[MAIN] Erreur loadAll:', err);
+      if (typeof toast === 'function') toast('Erreur de chargement des données', 'error');
     });
-    window.addEventListener("hashchange", function() {
-      if (typeof parseHash === "function") parseHash();
+
+    window.addEventListener('hashchange', function() {
+      if (typeof parseHash === 'function') parseHash();
     });
-    if (typeof parseHash === "function") parseHash();
+
+    if (typeof parseHash === 'function') parseHash();
     setupGlobalEvents();
-    var initialView = parseHashFromUrl() || "overview";
-    if (typeof nav === "function") nav(initialView, true);
-    console.log("[MAIN] Initialisation terminee");
+
+    var initialView = parseHashFromUrl() || 'overview';
+    if (typeof nav === 'function') nav(initialView, true);
+    console.log('[MAIN] Initialisation terminée');
   }
 
   function fetchOrEmpty(endpoint, setter, emptyVal) {
-    if (typeof window.apiGet !== "function") {
-      console.warn("[MAIN] apiGet non disponible");
+    if (typeof window.apiGet !== 'function') {
+      console.warn('[MAIN] apiGet non disponible:', endpoint);
       setter(emptyVal);
       return Promise.resolve();
     }
     return window.apiGet(endpoint)
       .then(function(res) {
-        var payload = (res && typeof res === "object" && "data" in res) ? res.data : res;
+        var payload = (res && typeof res === 'object' && 'data' in res) ? res.data : res;
         setter(payload || emptyVal);
       })
       .catch(function(err) {
-        console.warn("[MAIN] " + endpoint + " non charge:", err.message || err);
+        console.warn('[MAIN] ' + endpoint + ' non chargé:', err.message || err);
         setter(emptyVal);
       });
   }
 
   async function loadAll() {
+    // Les données financières sont indépendantes : une API lente ne bloque pas le reste.
     await Promise.allSettled([
-      fetchOrEmpty("/marche?type=cours", function(d) {
+      fetchOrEmpty('/marche?type=cours', function(d) {
         window.allCours = Array.isArray(d) ? d : [];
         renderCurrentView();
       }, []),
-      fetchOrEmpty("/marche?type=indices", function(d) {
+      fetchOrEmpty('/marche?type=indices', function(d) {
         window.allIndices = Array.isArray(d) ? d : [];
         renderCurrentView();
       }, [])
     ]);
 
     await Promise.allSettled([
-      fetchOrEmpty("/boc", function(d) {
+      fetchOrEmpty('/boc', function(d) {
         window.allBoc = d && Array.isArray(d.data) ? d.data : (Array.isArray(d) ? d : []);
       }, []),
-      fetchOrEmpty("/marche?type=financials", function(d) {
+      fetchOrEmpty('/marche?type=financials', function(d) {
         window.allFinancials = Array.isArray(d) ? d : [];
       }, []),
-      fetchOrEmpty("/marche?type=analyses", function(d) {
+      fetchOrEmpty('/marche?type=analyses', function(d) {
         window.allAnalyses = Array.isArray(d) ? d : [];
       }, []),
-      fetchOrEmpty("/marche?type=entreprises", function(d) {
+      fetchOrEmpty('/marche?type=entreprises', function(d) {
         window.allEntreprises = Array.isArray(d) ? d : [];
         window.entMap = {};
-        for (var i = 0; i < window.allEntreprises.length; i++) {
-          var e = window.allEntreprises[i];
+        window.allEntreprises.forEach(function(e) {
           if (e && e.ticker) window.entMap[e.ticker] = e;
-        }
+        });
       }, [])
     ]);
 
     renderCurrentView();
-    console.log("[MAIN] Donnees chargees:", {
-      cours: window.allCours ? window.allCours.length : 0,
-      indices: window.allIndices ? window.allIndices.length : 0,
-      boc: window.allBoc ? window.allBoc.length : 0,
-      financials: window.allFinancials ? window.allFinancials.length : 0,
-      analyses: window.allAnalyses ? window.allAnalyses.length : 0,
-      entreprises: window.allEntreprises ? window.allEntreprises.length : 0
+    console.log('[MAIN] Données chargées:', {
+      cours: window.allCours.length,
+      indices: window.allIndices.length,
+      boc: window.allBoc.length,
+      financials: window.allFinancials.length,
+      analyses: window.allAnalyses.length,
+      entreprises: window.allEntreprises.length
     });
   }
 
   function renderCurrentView() {
-    var activeView = document.querySelector(".view.active");
-    var viewId = activeView && activeView.id ? activeView.id.replace("view-", "") : "";
+    var activeView = document.querySelector('.view.active');
+    var viewId = activeView && activeView.id ? activeView.id.replace('view-', '') : '';
     if (!viewId) return;
-    var fnName = "render" + viewId.charAt(0).toUpperCase() + viewId.slice(1);
-    if (typeof window[fnName] === "function") {
-      try { window[fnName](); } catch(e) { console.warn("[MAIN] Render error:", e); }
+    var fnName = 'render' + viewId.charAt(0).toUpperCase() + viewId.slice(1);
+    if (typeof window[fnName] === 'function') {
+      try { window[fnName](); } catch(e) { console.warn('[MAIN] Render error ' + fnName + ':', e); }
     }
   }
 
   function parseHashFromUrl() {
     var h = location.hash;
-    if (h.indexOf("#fiche=") === 0) return "fiche";
-    if (h.indexOf("#analyse=") === 0) return "analyse-detail";
+    if (h.indexOf('#fiche=') === 0) return 'fiche';
+    if (h.indexOf('#analyse=') === 0) return 'analyse-detail';
     var map = {
-      "#titres": "titres",
-      "#marche": "marche",
-      "#boc": "boc",
-      "#analyses": "analyses",
-      "#analyse-detail": "analyse-detail",
-      "#analyse-technique": "analyse-technique",
-      "#analyse-fondamentale": "analyse-fondamentale",
-      "#screener": "screener",
-      "#portefeuille": "portefeuille",
-      "#alertes": "alertes",
-      "#financials": "financials",
-      "#financials-detail": "financials-detail",
-      "#publications": "publications",
-      "#formation": "formation"
+      '#titres': 'titres', '#marche': 'marche', '#boc': 'boc', '#analyses': 'analyses',
+      '#analyse-detail': 'analyse-detail', '#analyse-technique': 'analyse-technique',
+      '#analyse-fondamentale': 'analyse-fondamentale', '#screener': 'screener',
+      '#portefeuille': 'portefeuille', '#alertes': 'alertes', '#financials': 'financials',
+      '#financials-detail': 'financials-detail', '#publications': 'publications', '#formation': 'formation'
     };
-    return map[h] || "overview";
+    return map[h] || 'overview';
   }
 
   function setupGlobalEvents() {
-    document.addEventListener("click", function(e) {
-      if (!e.target.closest(".nav-dropdown") && !e.target.closest(".topnav-logo")) {
-        if (typeof closeDropdowns === "function") closeDropdowns();
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.nav-dropdown') && !e.target.closest('.topnav-logo')) {
+        if (typeof closeDropdowns === 'function') closeDropdowns();
       }
     });
-    document.addEventListener("keydown", function(e) {
-      if (e.key === "Escape") {
-        if (typeof closeDropdowns === "function") closeDropdowns();
-        if (typeof closeSidebar === "function") closeSidebar();
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        if (typeof closeDropdowns === 'function') closeDropdowns();
+        if (typeof closeSidebar === 'function') closeSidebar();
       }
     });
   }
