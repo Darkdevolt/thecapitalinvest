@@ -8,8 +8,10 @@
   }
 
   function loadRuntimeLayers(done){
-    loadScript('app/js/router-patch.js?v=1', function(){
-      loadScript('app/js/views/portefeuille/portfolio-store.js?v=1', done);
+    loadScript('app/js/router-patch.js?v=2', function(){
+      loadScript('app/js/views/portefeuille/portfolio-store.js?v=2', function(){
+        loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=1', done);
+      });
     });
   }
 
