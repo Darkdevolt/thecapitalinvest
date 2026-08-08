@@ -1063,192 +1063,7 @@
                   <p>Figure de retournement baissier. Trois sommets avec le central plus haut. Objectif = hauteur de la tête projetée sous le neckline.</p>
                 </div>
                 <div class="figure-card">
-                  <div class="figure-name">Double Fond</div>
-                  <div class="figure-signal signal-buy">Signal: Achat</div>
-                  <p>Deux creux au même niveau. Confirmation par rupture de la ligne de cou. Figure de retournement haussier.</p>
-                </div>
-                <div class="figure-card">
-                  <div class="figure-name">Drapeau</div>
-                  <div class="figure-signal signal-buy">Signal: Continuation</div>
-                  <p>Pause dans une tendance forte. Rectangle incliné contre la tendance. Reprise dans le sens initial après cassure.</p>
-                </div>
-              </div>
-              
-              <h3>4. Gestion des Risques</h3>
-              <p>Ne risquez jamais plus de 2% de votre capital par trade. Placez toujours un stop-loss sous le support le plus proche. Le ratio gain/perte minimum recommandé est de 2:1.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div class="card mb20">
-          <div class="card-header"><div class="card-title">Checklist Trade</div></div>
-          <div class="card-body">
-            <div class="checklist">
-              <label class="checklist-item"><input type="checkbox"><span>Tendance identifiée (H4/Daily)</span></label>
-              <label class="checklist-item"><input type="checkbox"><span>Support/Résistance marqués</span></label>
-              <label class="checklist-item"><input type="checkbox"><span>Signal confirmé par 2+ indicateurs</span></label>
-              <label class="checklist-item"><input type="checkbox"><span>Volume en hausse sur le signal</span></label>
-              <label class="checklist-item"><input type="checkbox"><span>Stop-loss défini</span></label>
-              <label class="checklist-item"><input type="checkbox"><span>Objectif de profit clair</span></label>
-              <label class="checklist-item"><input type="checkbox"><span>Ratio R:R ≥ 2:1</span></label>
-              <label class="checklist-item"><input type="checkbox"><span>News économiques vérifiées</span></label>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- ANALYSE FONDAMENTALE -->
-  <div id="tab-analyse-fond" class="formation-tab">
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><div class="card-title">Ratios Fondamentaux Clés</div></div>
-        <div class="card-body">
-          <div class="lexique-list">
-            <div class="lexique-item">
-              <div class="lexique-term">ROE — Return on Equity</div>
-              <div class="lexique-def">Résultat Net / Fonds Propres. Mesure la rentabilité des capitaux investis par les actionnaires. >15% = excellent.</div>
-            </div>
-            <div class="lexique-item">
-              <div class="lexique-term">ROA — Return on Assets</div>
-              <div class="lexique-def">Résultat Net / Total Actif. Efficacité de l'utilisation des actifs. >5% est satisfaisant.</div>
-            </div>
-            <div class="lexique-item">
-              <div class="lexique-term">Marge Nette</div>
-              <div class="lexique-def">Résultat Net / Chiffre d'Affaires. Part des ventes transformée en profit. Varie fortement selon le secteur.</div>
-            </div>
-            <div class="lexique-item">
-              <div class="lexique-term">Dette / Fonds Propres</div>
-              <div class="lexique-def">Endettement financier relatif. <0.5 = conservateur, >1.5 = risqué.</div>
-            </div>
-            <div class="lexique-item">
-              <div class="lexique-term">BPA — Bénéfice par Action</div>
-              <div class="lexique-def">Résultat Net / Nombre d'actions. Permet de calculer le PER et de suivre la croissance.</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">Méthode DCF Simplifiée</div></div>
-        <div class="card-body">
-          <div class="formation-content">
-            <h3>Étapes du Discounted Cash Flow</h3>
-            <ol style="margin-left:20px;color:var(--muted);line-height:2">
-              <li>Projeter les Free Cash Flows sur 5 ans</li>
-              <li>Déterminer le WACC (coût du capital)</li>
-              <li>Actualiser les FCF futurs</li>
-              <li>Calculer la Valeur Terminale</li>
-              <li>Sommer = Valeur d'Entreprise</li>
-              <li>Déduire la dette nette = Valeur des capitaux propres</li>
-              <li>Diviser par le nombre d'actions = Valeur intrinsèque par action</li>
-            </ol>
-            <div style="margin-top:16px;padding:12px;background:rgba(184,150,78,0.05);border-radius:8px;border:1px solid var(--border)">
-              <div style="font-size:11px;color:var(--gold);margin-bottom:4px">💡 Formule clé</div>
-              <div style="font-family:var(--mono);font-size:12px;color:var(--cream)">
-                Valeur = Σ(FCFₜ / (1+WACC)ᵗ) + VT/(1+WACC)ⁿ
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- STRATÉGIES -->
-  <div id="tab-strategies" class="formation-tab">
-    <div class="boc-grid">
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><div class="card-title">🎯 Swing Trading</div></div>
-        <div class="card-body">
-          <p style="color:var(--muted);margin-bottom:12px">Positions de quelques jours à quelques semaines. Capture les mouvements intermédiaires entre les swings du marché.</p>
-          <div style="font-size:12px;color:var(--dim)">
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: Daily/H4</div>
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: EMA 20/50, RSI, Volume</div>
-            <div><span style="color:var(--green)">✓</span> Objectif: 5-15% par trade</div>
-          </div>
-        </div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><div class="card-title">📈 Trend Following</div></div>
-        <div class="card-body">
-          <p style="color:var(--muted);margin-bottom:12px">Suivre la tendance dominante sans essayer de prédire les retournements. "La tendance est votre amie jusqu'à ce qu'elle se termine."</p>
-          <div style="font-size:12px;color:var(--dim)">
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: Weekly/Daily</div>
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: SMA 50/200, ADX, MACD</div>
-            <div><span style="color:var(--green)">✓</span> Objectif: Capturer 60-80% du mouvement</div>
-          </div>
-        </div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><div class="card-title">⚡ Scalping BRVM</div></div>
-        <div class="card-body">
-          <p style="color:var(--muted);margin-bottom:12px">Trades intraday rapides. La BRVM étant moins liquide, cette stratégie est réservée aux titres à fort volume (SGBC, ETIT, etc.).</p>
-          <div style="font-size:12px;color:var(--dim)">
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Timeframe: M15/H1</div>
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Indicateurs: VWAP, Bollinger, Volume Profile</div>
-            <div><span style="color:var(--red)">⚠</span> Risque élevé — réservé aux experts</div>
-          </div>
-        </div>
-      </div>
-      <div class="card" style="margin-bottom:16px">
-        <div class="card-header"><div class="card-title">🏦 Dividend Growth</div></div>
-        <div class="card-body">
-          <p style="color:var(--muted);margin-bottom:12px">Investir dans les entreprises à dividende croissant. Stratégie patrimoniale adaptée à la BRVM avec ses sociétés cotées à fort rendement.</p>
-          <div style="font-size:12px;color:var(--dim)">
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Sélection: DPA croissant 5 ans, PER < 15</div>
-            <div style="margin-bottom:4px"><span style="color:var(--green)">✓</span> Secteurs: Banques, Distribution, Agro</div>
-            <div><span style="color:var(--green)">✓</span> Objectif: Rendement + croissance du capital</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- GUIDE BRVM -->
-  <div id="tab-brvm" class="formation-tab">
-    <div class="grid-2">
-      <div class="card">
-        <div class="card-header"><div class="card-title">Fonctionnement de la BRVM</div></div>
-        <div class="card-body">
-          <div class="formation-content">
-            <h3>Les Marchés BRVM</h3>
-            <p><strong>Marché Primaire:</strong> Émissions d'actions et obligations (IPO, augmentations de capital). Nécessite un DSN (Distributeur de Services Numériques).</p>
-            <p><strong>Marché Secondaire:</strong> Cotation continue des titres. Sessions de 9h30 à 15h30 GMT, du lundi au vendredi.</p>
-            
-            <h3>Les Indices</h3>
-            <ul style="margin-left:20px;color:var(--muted);line-height:2">
-              <li><strong>BRVM Composite:</strong> Tous les titres cotés</li>
-              <li><strong>BRVM 30:</strong> Les 30 valeurs les plus liquides</li>
-              <li><strong>BRVM Prestige:</strong> Sélection de qualité</li>
-              <li><strong>BRVM 10:</strong> Top 10 par capitalisation</li>
-            </ul>
-            
-            <h3>Fiscalité</h3>
-            <p>Impôt sur les revenus de capitaux mobiliers (IRCM): 15% sur les dividendes. Exonération possible après 3 ans de détention pour les résidents UEMOA.</p>
-          </div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">Comment Investir</div></div>
-        <div class="card-body">
-          <div class="formation-content">
-            <h3>Étapes pour Débuter</h3>
-            <ol style="margin-left:20px;color:var(--muted);line-height:2.2">
-              <li>Choisir un Intermédiaire Financier (SGB, NSIA, CORIS, etc.)</li>
-              <li>Ouvrir un compte-titres et un compte espèces</li>
-              <li>Déposer vos fonds en FCFA</li>
-              <li>Passer vos ordres via le SGO (Système de Gestion d'Ordres)</li>
-              <li>Suivre votre portefeuille via The Capital 😉</li>
-            </ol>
-            
-            <div style="margin-top:20px;padding:16px;background:rgba(74,222,128,0.05);border-radius:10px;border:1px solid rgba(74,222,128,0.2)">
-              <div style="font-size:12px;color:var(--green);font-weight:600;margin-bottom:8px">💡 Conseil Pro</div>
-              <p style="font-size:13px;color:var(--muted);margin:0">Commencez par un portefeuille fictif (comme celui de The Capital) pour tester vos stratégies sans risquer de capital réel.</p>
-            </div>
-            
-            <h3 style="margin-top:20px">Types d'Ordres</h3>
+                              <h3 style="margin-top:20px">Types d'Ordres</h3>
             <div class="lexique-list">
               <div class="lexique-item">
                 <div class="lexique-term">Ordre au Marché</div>
@@ -1517,9 +1332,6 @@
 <script src="app/js/fetch.js"></script>
 <script src="app/js/loader.js"></script>
 <script src="app/js/table-sort.js"></script>
-<script src="app/js/markets.js"></script>
-<script src="app/js/screener.js"></script>
-<script src="app/js/alerts.js"></script>
 
 <!-- ═══ ANCIENNE APP (commentez api.js, fetch.js le remplace) ═══ -->
 <script src="app/js/utils.js?v=5"></script>
@@ -1575,7 +1387,7 @@
 <script src="app/js/views/technique/export.js?v=5"></script>
 <script src="app/js/views/technique/engine.js?v=5"></script>
 <script src="app/js/views/technique/index.js?v=5"></script>
-<script src="app/js/main.js?v=5"></script>
+<script src="app/js/main.js?v=6"></script>
 
 <!-- ═══ INIT TOUJOURS DERNIER ═══ -->
 <script src="app/js/init.js"></script>
