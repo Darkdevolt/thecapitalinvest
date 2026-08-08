@@ -1,14 +1,11 @@
 // THE CAPITAL — Application bootstrap
-// Runtime unique : router + Supabase portfolio + authenticated user data.
+// Runtime unique : API + router déjà chargés par app.html + données utilisateur Supabase.
 (function () {
   'use strict';
 
   function normalizeDocument() {
-    // L'ancien <base target="_blank"> cassait la navigation interne de la SPA.
     var base = document.querySelector('base');
     if (base) base.remove();
-
-    // Les liens internes restent dans l'application.
     document.querySelectorAll('a[href]').forEach(function (a) {
       var href = a.getAttribute('href') || '';
       if (href && href.charAt(0) !== '#' && !/^(https?:|mailto:|tel:|javascript:)/i.test(href)) {
@@ -31,12 +28,11 @@
   }
 
   function loadRuntimeLayers(done) {
-    // Une seule couche de navigation et les stores Supabase modernes.
-    loadScript('app/js/router.js?v=6', function () {
-      loadScript('app/js/views/portefeuille/portfolio-store.js?v=6', function () {
-        loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=5', function () {
-          loadScript('app/js/views/user-data-patch.js?v=4', done);
-        });
+    // app.html charge déjà router.js. Ne jamais le recharger ici :
+    // un second router écraserait l'état et les handlers du premier.
+    loadScript('app/js/views/portefeuille/portfolio-store.js?v=7', function () {
+      loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=6', function () {
+        loadScript('app/js/views/user-data-patch.js?v=5', done);
       });
     });
   }
@@ -51,7 +47,9 @@
         console.log('[INIT] initApp lancé');
 
         if (typeof window.initUserDataLayer === 'function') {
-          window.initUserDataLayer();
+          try { window.initUserDataLayer(); } catch (e) {
+            console.warn('[INIT] user data:', e);
+          }
         }
 
         if (window.marketsModule && typeof window.marketsModule.loadData === 'function') {
@@ -63,7 +61,7 @@
         console.error('[INIT] initApp:', e);
       }
     } else {
-      console.error('[INIT] initApp manquant');
+      console.error('[INIT] initApp manquant — main.js doit être chargé avant init.js');
     }
   }
 
