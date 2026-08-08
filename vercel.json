@@ -15,10 +15,6 @@
       "destination": "/api/portfolio"
     },
     {
-      "source": "/api/sync-brvm",
-      "destination": "/api/sync-brvm.js"
-    },
-    {
       "source": "/api/:path*",
       "destination": "/api/vercel"
     }
@@ -26,9 +22,6 @@
 
   "functions": {
     "api/vercel.js": {
-      "maxDuration": 30
-    },
-    "api/sync-brvm.js": {
       "maxDuration": 30
     },
     "api/portfolio.js": {
