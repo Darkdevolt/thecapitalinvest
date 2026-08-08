@@ -5,7 +5,7 @@
 function getEnv(keys) {
   for (const key of keys) {
     const value = process.env[key];
-    if (value && String(value).trim()) {
+    if (value !== undefined && String(value).trim()) {
       return String(value).trim();
     }
   }
@@ -13,28 +13,65 @@ function getEnv(keys) {
   return '';
 }
 
+function normalizeSupabaseUrl(value) {
+  if (!value) return '';
+
+  try {
+    const url = new URL(String(value).trim());
+
+    // SUPABASE_URL must always be the project origin only.
+    // This deliberately removes /rest/v1, /auth/v1, /storage/v1,
+    // /realtime/v1, /functions/v1 and any other accidental path/query.
+    return url.origin.replace(/\/$/, '');
+  } catch {
+    // Keep an invalid value visible to validation rather than silently
+    // inventing a URL.
+    return String(value).trim().replace(/\/$/, '');
+  }
+}
+
 const config = {
   // ─────────────────────────────────────────────────────────────────────────────
   // Supabase public
+  // Canonical: SUPABASE_URL + SUPABASE_PUBLISHABLE_KEY
+  // Legacy aliases are retained only for backward compatibility.
   // ─────────────────────────────────────────────────────────────────────────────
-  supabaseUrl: getEnv([
-    'SUPABASE_URL',
-    'NEXT_PUBLIC_SUPABASE_URL',
+  supabaseUrl: normalizeSupabaseUrl(
+    getEnv([
+      'SUPABASE_URL',
+      'NEXT_PUBLIC_SUPABASE_URL',
+    ])
+  ),
+
+  supabasePublishableKey: getEnv([
+    'SUPABASE_PUBLISHABLE_KEY',
+    'SUPABASE_ANON_KEY',
+    'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   ]),
 
+  // Backward-compatible property used by existing application code.
   supabaseAnonKey: getEnv([
-    'SUPABASE_ANON_KEY',
     'SUPABASE_PUBLISHABLE_KEY',
-    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'SUPABASE_ANON_KEY',
     'NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY',
+    'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   ]),
 
   // ─────────────────────────────────────────────────────────────────────────────
   // Supabase privileged / server-side
+  // Canonical: SUPABASE_SECRET_KEY
+  // Legacy service-role alias remains supported during migration.
   // ─────────────────────────────────────────────────────────────────────────────
-  supabaseServiceKey: getEnv([
-    'SUPABASE_SERVICE_ROLE_KEY',
+  supabaseSecretKey: getEnv([
     'SUPABASE_SECRET_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
+  ]),
+
+  // Backward-compatible property used by existing application code.
+  supabaseServiceKey: getEnv([
+    'SUPABASE_SECRET_KEY',
+    'SUPABASE_SERVICE_ROLE_KEY',
   ]),
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -73,14 +110,14 @@ if (!config.supabaseUrl) {
   missingPublicVars.push('SUPABASE_URL');
 }
 
-if (!config.supabaseAnonKey) {
-  missingPublicVars.push('SUPABASE_ANON_KEY');
+if (!config.supabasePublishableKey) {
+  missingPublicVars.push('SUPABASE_PUBLISHABLE_KEY');
 }
 
 const missingAdminVars = [];
 
-if (!config.supabaseServiceKey) {
-  missingAdminVars.push('SUPABASE_SERVICE_ROLE_KEY');
+if (!config.supabaseSecretKey) {
+  missingAdminVars.push('SUPABASE_SECRET_KEY');
 }
 
 // Public API
@@ -96,14 +133,13 @@ config.isValid = config.isPublicValid;
 
 config.missingPublicVars = missingPublicVars;
 config.missingAdminVars = missingAdminVars;
-
 config.missingVars = [
   ...missingPublicVars,
   ...missingAdminVars,
 ];
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Logs
+// Logs — never log secret values.
 // ─────────────────────────────────────────────────────────────────────────────
 
 if (missingPublicVars.length > 0) {
@@ -115,8 +151,7 @@ if (missingPublicVars.length > 0) {
 
 if (missingAdminVars.length > 0) {
   console.warn(
-    '[CONFIG] Supabase service-role key missing. ' +
-    'Privileged routes will be unavailable.'
+    '[CONFIG] Supabase secret key missing. Privileged routes will be unavailable.'
   );
 }
 
