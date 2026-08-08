@@ -3,7 +3,6 @@
 (function () {
   const KEY = 'tc_portfolio_runtime_cache';
   let transactions = [];
-  let hydrated = false;
   let hydrating = null;
 
   function token() {
@@ -17,9 +16,7 @@
     const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
     const t = token();
     if (t) headers.Authorization = `Bearer ${t}`;
-    const response = await fetch(`/api/portfolio-transactions${query}`, {
-      method, headers, body: body ? JSON.stringify(body) : undefined
-    });
+    const response = await fetch(`/api/portfolio-transactions${query}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     return payload;
@@ -51,7 +48,6 @@
     if (hydrating && !force) return hydrating;
     hydrating = request('GET').then(payload => {
       transactions = Array.isArray(payload.data) ? payload.data : [];
-      hydrated = true;
       try { localStorage.setItem(KEY, JSON.stringify(transactions)); } catch (_) {}
       return transactions;
     }).catch(error => {
@@ -59,15 +55,13 @@
       if (!transactions.length) {
         try { transactions = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { transactions = []; }
       }
-      hydrated = true;
       return transactions;
     }).finally(() => { hydrating = null; });
     return hydrating;
   }
 
-  function getPortfolio() {
-    return rebuildLots(transactions);
-  }
+  function getPortfolio() { return rebuildLots(transactions); }
+  function getTransactions() { return transactions.slice(); }
 
   async function addTransaction(input) {
     const payload = await request('POST', input);
@@ -86,9 +80,11 @@
         continue;
       }
       const old = currentById.get(String(lot.id));
-      if (old && (old.qty !== Number(lot.qty) || old.price !== Number(lot.price) || old.date !== lot.date)) {
-        const delta = Number(old.qty) - Number(lot.qty);
-        if (delta > 0) await addTransaction({ type: 'VENTE', ticker: lot.ticker, quantity: delta, price: Number(old.price), date: lot.date });
+      if (old && (old.price !== Number(lot.price) || old.date !== lot.date)) {
+        await request('DELETE', null, `?id=${encodeURIComponent(old.serverId || old.id)}`);
+        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: Number(lot.qty), price: Number(lot.price), date: lot.date });
+      } else if (old && old.qty > Number(lot.qty)) {
+        await addTransaction({ type: 'VENTE', ticker: lot.ticker, quantity: old.qty - Number(lot.qty), price: Number(old.price), date: lot.date });
       }
     }
 
@@ -102,10 +98,9 @@
     return true;
   }
 
-  window.portfolioStore = { hydrate: hydratePortfolio, sync: syncPortfolio, addTransaction, getTransactions: () => transactions };
+  window.portfolioStore = { hydrate: hydratePortfolio, sync: syncPortfolio, addTransaction, getTransactions };
   window.getPortfolio = getPortfolio;
   window.savePortfolio = function (data) {
-    // Compatibility layer for the existing UI: server write is asynchronous.
     syncPortfolio(data).then(() => {
       if (typeof window.renderPortfolio === 'function') window.renderPortfolio();
     }).catch(error => {
@@ -114,6 +109,6 @@
     });
     return true;
   };
-
+  window.getTransactions = getTransactions;
   hydratePortfolio();
 })();
