@@ -25,6 +25,8 @@ window.entMap = {};
       document.body.appendChild(tc);
     }
 
+    // L'interface est initialisée immédiatement, mais les données sont chargées
+    // progressivement pour éviter de bloquer le dashboard sur une requête lente.
     loadAll().catch(function(err) {
       console.error("[MAIN] Erreur loadAll:", err);
       if (typeof toast === "function") toast("Erreur de chargement des donnees", "error");
@@ -38,41 +40,57 @@ window.entMap = {};
     setupGlobalEvents();
 
     var initialView = parseHashFromUrl() || "overview";
-    if (typeof nav === "function") {
-      nav(initialView, true);
-    }
+    if (typeof nav === "function") nav(initialView, true);
 
     console.log("[MAIN] Initialisation terminee");
   }
 
-  async function loadAll() {
-    // CORRECTION: utilise le bon chemin /api/index?path=... au lieu de /marche?type=...
-    // et lit correctement le champ .data de l'enveloppe { success, data, message }
-    var fetchOrEmpty = function(endpoint, setter, emptyVal) {
-      if (typeof window.apiGet !== "function") {
-        console.warn("[MAIN] apiGet non disponible");
+  function fetchOrEmpty(endpoint, setter, emptyVal) {
+    if (typeof window.apiGet !== "function") {
+      console.warn("[MAIN] apiGet non disponible");
+      setter(emptyVal);
+      return Promise.resolve();
+    }
+    return window.apiGet(endpoint)
+      .then(function(res) {
+        var payload = (res && typeof res === "object" && "data" in res) ? res.data : res;
+        setter(payload || emptyVal);
+      })
+      .catch(function(err) {
+        console.warn("[MAIN] " + endpoint + " non charge:", err.message || err);
         setter(emptyVal);
-        return Promise.resolve();
-      }
-      return window.apiGet(endpoint)
-        .then(function(res) {
-          // res = { success, data, message } → on veut res.data
-          var payload = (res && typeof res === "object" && "data" in res) ? res.data : res;
-          setter(payload || emptyVal);
-        })
-        .catch(function(err) {
-          console.warn("[MAIN] " + endpoint + " non charge:", err.message || err);
-          setter(emptyVal);
-        });
-    };
+      });
+  }
 
-    var promises = [
-      fetchOrEmpty("/api/index?path=marche&type=cours", function(d) { window.allCours = d; }, []),
-      fetchOrEmpty("/api/index?path=marche&type=indices", function(d) { window.allIndices = d; }, []),
-      fetchOrEmpty("/api/index?path=boc", function(d) { window.allBoc = d; }, []),
-      fetchOrEmpty("/api/index?path=marche&type=financials", function(d) { window.allFinancials = d; }, []),
-      fetchOrEmpty("/api/index?path=marche&type=analyses", function(d) { window.allAnalyses = d; }, []),
-      fetchOrEmpty("/api/index?path=marche&type=entreprises", function(d) {
+  async function loadAll() {
+    // IMPORTANT : apiGet ajoute déjà /api. Les endpoints doivent donc être
+    // relatifs à /api et non commencer par /api/index.
+    // On charge d'abord les données essentielles, puis le reste sans bloquer l'UI.
+
+    await Promise.all([
+      fetchOrEmpty("/marche?type=cours", function(d) {
+        window.allCours = d;
+      }, []),
+      fetchOrEmpty("/marche?type=indices", function(d) {
+        window.allIndices = d;
+      }, [])
+    ]);
+
+    renderCurrentView();
+
+    // Données secondaires : elles ne doivent jamais empêcher les cours/indices
+    // d'être affichés.
+    await Promise.all([
+      fetchOrEmpty("/boc", function(d) {
+        window.allBoc = d && Array.isArray(d.data) ? d.data : (Array.isArray(d) ? d : []);
+      }, []),
+      fetchOrEmpty("/marche?type=financials", function(d) {
+        window.allFinancials = d;
+      }, []),
+      fetchOrEmpty("/marche?type=analyses", function(d) {
+        window.allAnalyses = d;
+      }, []),
+      fetchOrEmpty("/marche?type=entreprises", function(d) {
         window.allEntreprises = d || [];
         window.entMap = {};
         for (var i = 0; i < window.allEntreprises.length; i++) {
@@ -80,18 +98,9 @@ window.entMap = {};
           if (e && e.ticker) window.entMap[e.ticker] = e;
         }
       }, [])
-    ];
+    ]);
 
-    await Promise.all(promises);
-
-    var activeView = document.querySelector(".view.active");
-    var viewId = activeView && activeView.id ? activeView.id.replace("view-", "") : "";
-    if (viewId) {
-      var fnName = "render" + viewId.charAt(0).toUpperCase() + viewId.slice(1);
-      if (typeof window[fnName] === "function") {
-        try { window[fnName](); } catch(e) {}
-      }
-    }
+    renderCurrentView();
 
     console.log("[MAIN] Donnees chargees:", {
       cours: window.allCours ? window.allCours.length : 0,
@@ -101,6 +110,16 @@ window.entMap = {};
       analyses: window.allAnalyses ? window.allAnalyses.length : 0,
       entreprises: window.allEntreprises ? window.allEntreprises.length : 0
     });
+  }
+
+  function renderCurrentView() {
+    var activeView = document.querySelector(".view.active");
+    var viewId = activeView && activeView.id ? activeView.id.replace("view-", "") : "";
+    if (!viewId) return;
+    var fnName = "render" + viewId.charAt(0).toUpperCase() + viewId.slice(1);
+    if (typeof window[fnName] === "function") {
+      try { window[fnName](); } catch(e) { console.warn("[MAIN] Render error:", e); }
+    }
   }
 
   function parseHashFromUrl() {
@@ -141,7 +160,4 @@ window.entMap = {};
 
   window.loadAll = loadAll;
   window.initApp = initApp;
-
-  // CORRECTION: on ne s'auto-demarre plus ici — init.js est le seul declencheur
-  // (suppression du bloc document.readyState / DOMContentLoaded qui causait le double appel)
 })();
