@@ -1,6 +1,30 @@
 {
   "version": 2,
   "rewrites": [
+    { "source": "/api/health", "destination": "/api/health" },
+    { "source": "/api/ping", "destination": "/api/ping" },
     { "source": "/api/:path*", "destination": "/api/index?path=:path*" }
-  ]
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With" },
+        { "key": "Access-Control-Max-Age", "value": "86400" }
+      ]
+    }
+  ],
+  "functions": {
+    "api/index.js": {
+      "runtime": "edge"
+    },
+    "api/ping.js": {
+      "runtime": "edge"
+    },
+    "api/health.js": {
+      "runtime": "edge"
+    }
+  }
 }
