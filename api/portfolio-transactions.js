@@ -1,7 +1,9 @@
 import { supabaseAdmin, isSupabaseReady } from './lib/supabase.js';
-import { authenticate, parseBody } from './lib/middleware.js';
+import { authenticate } from './lib/middleware.js';
 
 const FRAIS = { courtage: 0.012, tva: 0.18, brvm: 0.0007, dcbr: 0.0005 };
+const TRADE_TYPES = new Set(['ACHAT', 'VENTE']);
+const CASH_TYPES = new Set(['DEPOT', 'RETRAIT', 'DIVIDENDE']);
 
 function fees(amount) {
   const commission = amount * FRAIS.courtage;
@@ -21,9 +23,9 @@ function json(res, status, payload) {
   return res.end(JSON.stringify(payload));
 }
 
-function body(req) {
+async function body(req) {
+  if (req.body && typeof req.body === 'object') return req.body;
   return new Promise((resolve, reject) => {
-    if (req.body && typeof req.body === 'object') return resolve(req.body);
     let raw = '';
     req.on('data', chunk => { raw += chunk; });
     req.on('end', () => { try { resolve(JSON.parse(raw || '{}')); } catch (e) { reject(e); } });
@@ -54,13 +56,29 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const input = await body(req);
       const type = String(input.type || '').toUpperCase();
-      const ticker = String(input.ticker || '').toUpperCase().trim();
-      const quantity = Number(input.quantity ?? input.quantite);
-      const price = Number(input.price ?? input.cours ?? input.prix_unitaire);
-      const date = String(input.date || input.date_transaction || new Date().toISOString().slice(0, 10));
+      if (!TRADE_TYPES.has(type) && !CASH_TYPES.has(type)) {
+        return json(res, 400, { success: false, error: 'Type de transaction invalide' });
+      }
 
-      if (!['ACHAT', 'VENTE'].includes(type)) return json(res, 400, { success: false, error: 'Type de transaction invalide' });
-      if (!ticker || !Number.isInteger(quantity) || quantity <= 0 || !Number.isFinite(price) || price <= 0) {
+      const isTrade = TRADE_TYPES.has(type);
+      const ticker = String(input.ticker || (type === 'DEPOT' || type === 'RETRAIT' ? 'CASH' : '')).toUpperCase().trim();
+      const date = String(input.date || input.date_transaction || new Date().toISOString().slice(0, 10));
+      const amountInput = Number(input.amount ?? input.montant ?? 0);
+      const quantityInput = Number(input.quantity ?? input.quantite ?? (isTrade ? 0 : 1));
+      const priceInput = Number(input.price ?? input.cours ?? input.prix_unitaire ?? (isTrade ? 0 : amountInput));
+
+      if (!ticker) return json(res, 400, { success: false, error: 'Ticker obligatoire' });
+
+      let quantity = quantityInput;
+      let price = priceInput;
+      let amount = quantity * price;
+
+      if (!isTrade) {
+        if (!Number.isFinite(amountInput) || amountInput <= 0) return json(res, 400, { success: false, error: 'Montant obligatoire' });
+        quantity = 1;
+        price = amountInput;
+        amount = amountInput;
+      } else if (!Number.isInteger(quantity) || quantity <= 0 || !Number.isFinite(price) || price <= 0) {
         return json(res, 400, { success: false, error: 'Ticker, quantité et prix sont obligatoires' });
       }
 
@@ -68,12 +86,13 @@ export default async function handler(req, res) {
         const { data: existing, error: existingError } = await supabaseAdmin
           .from('transactions').select('type,quantite').eq('user_id', userId).eq('ticker', ticker);
         if (existingError) throw existingError;
-        const held = (existing || []).reduce((sum, tx) => sum + (tx.type === 'ACHAT' ? Number(tx.quantite) : -Number(tx.quantite)), 0);
+        const held = (existing || []).reduce((sum, tx) => sum + (tx.type === 'ACHAT' ? Number(tx.quantite) : tx.type === 'VENTE' ? -Number(tx.quantite) : 0), 0);
         if (quantity > held) return json(res, 400, { success: false, error: `Quantité détenue insuffisante (${held})` });
       }
 
-      const amount = quantity * price;
-      const f = fees(amount);
+      const f = isTrade ? fees(amount) : { commission: 0, tva: 0, brvm: 0, dcbr: 0, total: 0 };
+      const montantNet = type === 'ACHAT' ? amount + f.total : type === 'VENTE' ? amount - f.total : type === 'RETRAIT' ? -amount : amount;
+
       const row = {
         user_id: userId,
         ticker,
@@ -89,10 +108,11 @@ export default async function handler(req, res) {
         total_frais: f.total,
         montant_brut: amount,
         frais_total: f.total,
-        montant_net: type === 'ACHAT' ? amount + f.total : amount - f.total,
-        cout_net_unitaire: type === 'ACHAT' ? (amount + f.total) / quantity : (amount - f.total) / quantity,
+        montant_net: montantNet,
+        cout_net_unitaire: isTrade ? montantNet / quantity : montantNet,
         societe: input.societe || null,
         remarque: input.note || input.remarque || null,
+        note: input.note || null,
       };
 
       const { data, error } = await supabaseAdmin.from('transactions').insert(row).select('*').single();
