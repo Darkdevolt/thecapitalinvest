@@ -5,15 +5,19 @@
 import { createClient } from '@supabase/supabase-js';
 import config from './config.js';
 
+// SUPABASE_URL is normalized by config.js to the project origin only.
+// The Supabase SDK itself appends /rest/v1, /auth/v1, etc. as required.
+const supabaseUrl = config.supabaseUrl;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Public client
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const supabase =
-  config.supabaseUrl && config.supabaseAnonKey
+  supabaseUrl && config.supabasePublishableKey
     ? createClient(
-        config.supabaseUrl,
-        config.supabaseAnonKey,
+        supabaseUrl,
+        config.supabasePublishableKey,
         {
           auth: {
             persistSession: false,
@@ -25,14 +29,14 @@ export const supabase =
     : null;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Admin / service-role client
+// Admin / secret client
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const supabaseAdmin =
-  config.supabaseUrl && config.supabaseServiceKey
+  supabaseUrl && config.supabaseSecretKey
     ? createClient(
-        config.supabaseUrl,
-        config.supabaseServiceKey,
+        supabaseUrl,
+        config.supabaseSecretKey,
         {
           auth: {
             persistSession: false,
@@ -61,9 +65,7 @@ export function isSupabaseAdminReady() {
 
 export function requireSupabase() {
   if (!supabase) {
-    throw new Error(
-      'Supabase public client is not configured.'
-    );
+    throw new Error('Supabase public client is not configured.');
   }
 
   return supabase;
@@ -71,9 +73,7 @@ export function requireSupabase() {
 
 export function requireSupabaseAdmin() {
   if (!supabaseAdmin) {
-    throw new Error(
-      'Supabase admin client is not configured.'
-    );
+    throw new Error('Supabase admin client is not configured.');
   }
 
   return supabaseAdmin;
