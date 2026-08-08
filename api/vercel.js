@@ -47,17 +47,16 @@ async function handlePublicDataset(requestUrl){
     if(!db)return jsonResponse({success:false,error:'Supabase non configuré',code:'SUPABASE_NOT_CONFIGURED'},503,'no-store');
     if(type==='cours'||type==='apercu'){
       const [{data:rows,error},{data:companies,error:companyError}]=await Promise.all([
-        db.from('cours').select('ticker,cours,variation,volume,capitalisation,date_seance,plus_haut,plus_bas').order('date_seance',{ascending:false}).limit(type==='cours'?limit:500),
+        db.from('cours_latest').select('ticker,cours,variation,variation_pct,volume,valeur_transigee,transactions,capitalisation,date_seance,ouverture,plus_haut,plus_bas,cloture').order('date_seance',{ascending:false}).limit(type==='cours'?limit:500),
         db.from('entreprises').select('ticker,nom,nom_court'),
       ]);
       if(error)throw error;if(companyError)throw companyError;
       const names=new Map((companies||[]).map(c=>[String(c.ticker).toUpperCase(),c.nom||c.nom_court||c.ticker]));
-      const seen=new Set();const data=[];
-      for(const row of rows||[]){const t=String(row.ticker||'').toUpperCase();if(!t||seen.has(t))continue;seen.add(t);data.push({...row,ticker:t,nom:names.get(t)||t});}
-      if(type==='cours')return jsonResponse({success:true,data,count:data.length});
-      const sorted=[...data].sort((a,b)=>Number(b.variation||0)-Number(a.variation||0));
+      const data=(rows||[]).map(row=>{const t=String(row.ticker||'').toUpperCase();return {...row,ticker:t,nom:names.get(t)||t};});
+      if(type==='cours')return jsonResponse({success:true,data,count:data.length,dateSeance:data[0]?.date_seance||null});
+      const sorted=[...data].sort((a,b)=>Number(b.variation_pct??b.variation??0)-Number(a.variation_pct??a.variation??0));
       const {data:indices,error:indexError}=await db.from('indices').select('*').order('date_seance',{ascending:false}).limit(20);if(indexError)throw indexError;
-      return jsonResponse({success:true,data:{indices:(indices||[]).slice(0,3),cours:data.slice(0,15),topHausses:sorted.filter(r=>Number(r.variation||0)>0).slice(0,5),topBaisses:sorted.filter(r=>Number(r.variation||0)<0).slice(-5).reverse(),topVolumes:[...data].sort((a,b)=>Number(b.volume||0)-Number(a.volume||0)).slice(0,5),dateSeance:data[0]?.date_seance||null,totalValeurs:data.length}});
+      return jsonResponse({success:true,data:{indices:(indices||[]).slice(0,3),cours:data.slice(0,15),topHausses:sorted.filter(r=>Number(r.variation_pct??r.variation??0)>0).slice(0,5),topBaisses:sorted.filter(r=>Number(r.variation_pct??r.variation??0)<0).slice(-5).reverse(),topVolumes:[...data].sort((a,b)=>Number(b.volume||0)-Number(a.volume||0)).slice(0,5),dateSeance:data[0]?.date_seance||null,totalValeurs:data.length}});
     }
     if(type==='historique'||type==='historique_cours'){
       if(!ticker)return jsonResponse({success:false,error:'Ticker requis',code:'MISSING_TICKER'},400,'no-store');
