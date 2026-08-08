@@ -4,14 +4,19 @@
 
   "rewrites": [
     {
-      "source": "/api/health",
-      "destination": "/api/health"
-    },
-    {
       "source": "/api/:path*",
       "destination": "/api/vercel"
     }
   ],
+
+  "functions": {
+    "api/vercel.js": {
+      "maxDuration": 30
+    },
+    "api/health.js": {
+      "maxDuration": 10
+    }
+  },
 
   "headers": [
     {
