@@ -1,7 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════════════════
 // THE CAPITAL — Vercel Node.js Adapter
-// Bridges Vercel req/res to the Web Request/Response router and provides a
-// schema-safe public data layer for BRVM market and financial datasets.
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import router from './index.js';
@@ -23,6 +21,23 @@ function normalizeDate(value){const m=String(value).match(/(\d{2})\/(\d{2})\/(\d
 async function fetchOfficialBoc(limit=100){const response=await withTimeout(fetch(BRVM_BOC_PAGE,{headers:{'User-Agent':'TheCapital/1.0 BOC reader'}}),7000,'BRVM BOC');if(!response.ok)throw new Error(`BRVM BOC HTTP ${response.status}`);const html=await response.text();const dates=[];const seen=new Set();for(const m of html.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)){const d=normalizeDate(m[1]);if(!d||seen.has(d))continue;seen.add(d);dates.push(d);if(dates.length>=limit)break;}if(!dates.length)for(const m of html.matchAll(/BOC[_-](\d{8})\.pdf/gi)){const raw=m[1],d=`${raw.slice(0,4)}-${raw.slice(4,6)}-${raw.slice(6,8)}`;if(seen.has(d))continue;seen.add(d);dates.push(d);if(dates.length>=limit)break;}return dates.map((date,index)=>({id:`brvm-${date}`,date_seance:date,annee:Number(date.slice(0,4)),numero_seance:null,fichier_nom:`BOC_${date.replaceAll('-','')}.pdf`,fichier_url:bocPdfUrl(date),pdf_url:bocPdfUrl(date),source:'BRVM',source_url:BRVM_BOC_PAGE,rang:index+1}));}
 async function readBocDatabase(){try{const result=await withTimeout(db.from('boc').select('id,date_seance,fichier_nom,fichier_url,created_at').order('date_seance',{ascending:false}).limit(100),5000,'Supabase BOC');if(result.error)throw result.error;return(result.data||[]).map(row=>({...row,annee:row.date_seance?Number(String(row.date_seance).slice(0,4)):null,numero_seance:null,pdf_url:row.fichier_url,source:'database'}));}catch(error){console.warn('[VERCEL ADAPTER] BOC database unavailable:',error.message);return[];}}
 async function handleBoc(requestUrl){if(requestUrl.pathname!=='/api/boc')return null;try{let data=await readBocDatabase();let source='database';if(!data.length){data=await fetchOfficialBoc(100);source='brvm';}return jsonResponse({success:true,data:{data,count:data.length,source,source_url:BRVM_BOC_PAGE}});}catch(error){console.error('[VERCEL ADAPTER] BOC error:',error);return jsonResponse({success:false,error:'Impossible de récupérer les Bulletins Officiels de la Cote',code:'BOC_SOURCE_ERROR'},502,'no-store');}}
+
+async function handleBrvmSync(requestUrl, req){
+  if(requestUrl.pathname!=='/api/sync-brvm')return null;
+  if(req.method!=='GET'&&req.method!=='POST')return jsonResponse({success:false,error:'Method not allowed'},405,'no-store');
+  const cronHeader=getHeaderValue(req,'x-vercel-cron')||getHeaderValue(req,'x-vercel-cron-schedule');
+  const providedSecret=getHeaderValue(req,'x-cron-secret')||requestUrl.searchParams.get('secret')||'';
+  const cronSecret=process.env.CRON_SECRET||'';
+  if(!cronHeader&&(!cronSecret||providedSecret!==cronSecret))return jsonResponse({success:false,error:'Unauthorized'},401,'no-store');
+  const supabaseUrl=process.env.SUPABASE_URL||'';
+  const supabaseKey=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
+  if(!supabaseUrl||!supabaseKey)return jsonResponse({success:false,error:'Supabase URL/key not configured'},503,'no-store');
+  try{
+    const response=await fetch(`${supabaseUrl}/functions/v1/scrape-brvm`,{method:'POST',headers:{Authorization:`Bearer ${supabaseKey}`,apikey:supabaseKey,'Content-Type':'application/json'},signal:AbortSignal.timeout(25000)});
+    const text=await response.text();let data;try{data=JSON.parse(text);}catch{data={raw:text};}
+    return jsonResponse(data,response.status,'no-store');
+  }catch(error){console.error('[CRON] BRVM sync failed:',error);return jsonResponse({success:false,error:error.message||'BRVM sync failed'},502,'no-store');}
+}
 
 const PUBLIC_TABLES={
   indices:['indices','*','date_seance'],
@@ -76,4 +91,4 @@ async function handlePublicDataset(requestUrl){
 
 async function sendWebResponse(res,response){if(!(response instanceof Response)){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({success:false,error:'Invalid API response'}));}res.statusCode=response.status;response.headers.forEach((value,key)=>res.setHeader(key,value));return res.end(Buffer.from(await response.arrayBuffer()));}
 
-export default async function handler(req,res){try{console.log('[VERCEL ADAPTER] Request:',req.method,req.url);const requestUrl=new URL(buildAbsoluteUrl(req));if(req.method==='OPTIONS')return await sendWebResponse(res,jsonResponse({success:true},204));const bocResponse=await handleBoc(requestUrl);if(bocResponse)return await sendWebResponse(res,bocResponse);if(requestUrl.pathname==='/api/marche'){const dataResponse=await handlePublicDataset(requestUrl);if(dataResponse)return await sendWebResponse(res,dataResponse);}const webRequest=await createWebRequest(req);const webResponse=await router(webRequest);return await sendWebResponse(res,webResponse);}catch(error){console.error('[VERCEL ADAPTER] Fatal error:',error);if(!res.headersSent){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');}return res.end(JSON.stringify({success:false,error:'Internal server error'}));}}
+export default async function handler(req,res){try{console.log('[VERCEL ADAPTER] Request:',req.method,req.url);const requestUrl=new URL(buildAbsoluteUrl(req));if(req.method==='OPTIONS')return await sendWebResponse(res,jsonResponse({success:true},204));const syncResponse=await handleBrvmSync(requestUrl,req);if(syncResponse)return await sendWebResponse(res,syncResponse);const bocResponse=await handleBoc(requestUrl);if(bocResponse)return await sendWebResponse(res,bocResponse);if(requestUrl.pathname==='/api/marche'){const dataResponse=await handlePublicDataset(requestUrl);if(dataResponse)return await sendWebResponse(res,dataResponse);}const webRequest=await createWebRequest(req);const webResponse=await router(webRequest);return await sendWebResponse(res,webResponse);}catch(error){console.error('[VERCEL ADAPTER] Fatal error:',error);if(!res.headersSent){res.statusCode=500;res.setHeader('Content-Type','application/json; charset=utf-8');}return res.end(JSON.stringify({success:false,error:'Internal server error'}));}}
