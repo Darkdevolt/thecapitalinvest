@@ -17,29 +17,23 @@ window.entMap = {};
 
   async function initApp() {
     console.log("[MAIN] Initialisation...");
-
     if (!document.getElementById("toastContainer")) {
       var tc = document.createElement("div");
       tc.id = "toastContainer";
       tc.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;";
       document.body.appendChild(tc);
     }
-
     loadAll().catch(function(err) {
       console.error("[MAIN] Erreur loadAll:", err);
       if (typeof toast === "function") toast("Erreur de chargement des donnees", "error");
     });
-
     window.addEventListener("hashchange", function() {
       if (typeof parseHash === "function") parseHash();
     });
     if (typeof parseHash === "function") parseHash();
-
     setupGlobalEvents();
-
     var initialView = parseHashFromUrl() || "overview";
     if (typeof nav === "function") nav(initialView, true);
-
     console.log("[MAIN] Initialisation terminee");
   }
 
@@ -61,8 +55,6 @@ window.entMap = {};
   }
 
   async function loadAll() {
-    // Cours et indices sont indépendants : une requête lente ne doit plus
-    // empêcher l'autre de s'afficher.
     await Promise.allSettled([
       fetchOrEmpty("/marche?type=cours", function(d) {
         window.allCours = Array.isArray(d) ? d : [];
@@ -74,7 +66,6 @@ window.entMap = {};
       }, [])
     ]);
 
-    // Données secondaires : elles restent indépendantes des cours.
     await Promise.allSettled([
       fetchOrEmpty("/boc", function(d) {
         window.allBoc = d && Array.isArray(d.data) ? d.data : (Array.isArray(d) ? d : []);
@@ -96,7 +87,6 @@ window.entMap = {};
     ]);
 
     renderCurrentView();
-
     console.log("[MAIN] Donnees chargees:", {
       cours: window.allCours ? window.allCours.length : 0,
       indices: window.allIndices ? window.allIndices.length : 0,
@@ -123,6 +113,7 @@ window.entMap = {};
     if (h.indexOf("#analyse=") === 0) return "analyse-detail";
     var map = {
       "#titres": "titres",
+      "#marche": "marche",
       "#boc": "boc",
       "#analyses": "analyses",
       "#analyse-detail": "analyse-detail",
