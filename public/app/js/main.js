@@ -25,8 +25,6 @@ window.entMap = {};
       document.body.appendChild(tc);
     }
 
-    // L'interface est initialisée immédiatement, mais les données sont chargées
-    // progressivement pour éviter de bloquer le dashboard sur une requête lente.
     loadAll().catch(function(err) {
       console.error("[MAIN] Erreur loadAll:", err);
       if (typeof toast === "function") toast("Erreur de chargement des donnees", "error");
@@ -63,35 +61,32 @@ window.entMap = {};
   }
 
   async function loadAll() {
-    // IMPORTANT : apiGet ajoute déjà /api. Les endpoints doivent donc être
-    // relatifs à /api et non commencer par /api/index.
-    // On charge d'abord les données essentielles, puis le reste sans bloquer l'UI.
-
-    await Promise.all([
+    // Cours et indices sont indépendants : une requête lente ne doit plus
+    // empêcher l'autre de s'afficher.
+    await Promise.allSettled([
       fetchOrEmpty("/marche?type=cours", function(d) {
-        window.allCours = d;
+        window.allCours = Array.isArray(d) ? d : [];
+        renderCurrentView();
       }, []),
       fetchOrEmpty("/marche?type=indices", function(d) {
-        window.allIndices = d;
+        window.allIndices = Array.isArray(d) ? d : [];
+        renderCurrentView();
       }, [])
     ]);
 
-    renderCurrentView();
-
-    // Données secondaires : elles ne doivent jamais empêcher les cours/indices
-    // d'être affichés.
-    await Promise.all([
+    // Données secondaires : elles restent indépendantes des cours.
+    await Promise.allSettled([
       fetchOrEmpty("/boc", function(d) {
         window.allBoc = d && Array.isArray(d.data) ? d.data : (Array.isArray(d) ? d : []);
       }, []),
       fetchOrEmpty("/marche?type=financials", function(d) {
-        window.allFinancials = d;
+        window.allFinancials = Array.isArray(d) ? d : [];
       }, []),
       fetchOrEmpty("/marche?type=analyses", function(d) {
-        window.allAnalyses = d;
+        window.allAnalyses = Array.isArray(d) ? d : [];
       }, []),
       fetchOrEmpty("/marche?type=entreprises", function(d) {
-        window.allEntreprises = d || [];
+        window.allEntreprises = Array.isArray(d) ? d : [];
         window.entMap = {};
         for (var i = 0; i < window.allEntreprises.length; i++) {
           var e = window.allEntreprises[i];
