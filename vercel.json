@@ -8,6 +8,10 @@
       "destination": "/api/portfolio"
     },
     {
+      "source": "/api/boc",
+      "destination": "/api/boc.js"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/vercel"
     }
@@ -19,6 +23,9 @@
     },
     "api/portfolio.js": {
       "maxDuration": 15
+    },
+    "api/boc.js": {
+      "maxDuration": 10
     },
     "api/health.js": {
       "maxDuration": 10
