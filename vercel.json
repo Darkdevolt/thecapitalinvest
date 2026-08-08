@@ -20,12 +20,6 @@
         {"key": "Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, X-Cron-Secret"},
         {"key": "Access-Control-Max-Age", "value": "86400"}
       ]
-    },
-    {
-      "source": "/app.html",
-      "headers": [
-        {"key": "Cache-Control", "value": "no-store, max-age=0, must-revalidate"}
-      ]
     }
   ]
 }
