@@ -46,6 +46,8 @@ window.entMap = {};
   }
 
   async function loadAll() {
+    // CORRECTION: utilise le bon chemin /api/index?path=... au lieu de /marche?type=...
+    // et lit correctement le champ .data de l'enveloppe { success, data, message }
     var fetchOrEmpty = function(endpoint, setter, emptyVal) {
       if (typeof window.apiGet !== "function") {
         console.warn("[MAIN] apiGet non disponible");
@@ -53,7 +55,11 @@ window.entMap = {};
         return Promise.resolve();
       }
       return window.apiGet(endpoint)
-        .then(function(data) { setter(data || emptyVal); })
+        .then(function(res) {
+          // res = { success, data, message } → on veut res.data
+          var payload = (res && typeof res === "object" && "data" in res) ? res.data : res;
+          setter(payload || emptyVal);
+        })
         .catch(function(err) {
           console.warn("[MAIN] " + endpoint + " non charge:", err.message || err);
           setter(emptyVal);
@@ -61,12 +67,12 @@ window.entMap = {};
     };
 
     var promises = [
-      fetchOrEmpty("/marche?type=cours", function(d) { window.allCours = d; }, []),
-      fetchOrEmpty("/marche?type=indices", function(d) { window.allIndices = d; }, []),
-      fetchOrEmpty("/boc", function(d) { window.allBoc = d; }, []),
-      fetchOrEmpty("/marche?type=financials", function(d) { window.allFinancials = d; }, []),
-      fetchOrEmpty("/marche?type=analyses", function(d) { window.allAnalyses = d; }, []),
-      fetchOrEmpty("/marche?type=entreprises", function(d) {
+      fetchOrEmpty("/api/index?path=marche&type=cours", function(d) { window.allCours = d; }, []),
+      fetchOrEmpty("/api/index?path=marche&type=indices", function(d) { window.allIndices = d; }, []),
+      fetchOrEmpty("/api/index?path=boc", function(d) { window.allBoc = d; }, []),
+      fetchOrEmpty("/api/index?path=marche&type=financials", function(d) { window.allFinancials = d; }, []),
+      fetchOrEmpty("/api/index?path=marche&type=analyses", function(d) { window.allAnalyses = d; }, []),
+      fetchOrEmpty("/api/index?path=marche&type=entreprises", function(d) {
         window.allEntreprises = d || [];
         window.entMap = {};
         for (var i = 0; i < window.allEntreprises.length; i++) {
