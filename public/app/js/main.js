@@ -142,9 +142,6 @@ window.entMap = {};
   window.loadAll = loadAll;
   window.initApp = initApp;
 
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initApp);
-  } else {
-    initApp();
-  }
+  // CORRECTION: on ne s'auto-demarre plus ici — init.js est le seul declencheur
+  // (suppression du bloc document.readyState / DOMContentLoaded qui causait le double appel)
 })();
