@@ -1,35 +1,157 @@
-export default function handler(req) {
-  const url = new URL(req.url);
-  
-  if (req.method === 'OPTIONS') {
-    return new Response(null, {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        'Access-Control-Max-Age': '86400'
-      }
+// ═══════════════════════════════════════════════════════════════════════════════
+// THE CAPITAL — Health Check
+// ═══════════════════════════════════════════════════════════════════════════════
+
+import {
+  supabase,
+  supabaseAdmin,
+  isSupabaseReady,
+  isSupabaseAdminReady,
+} from './lib/supabase.js';
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// RESPONSE
+// ═══════════════════════════════════════════════════════════════════════════════
+
+function sendJson(res, status, body) {
+  res.status(status);
+
+  res.setHeader(
+    'Content-Type',
+    'application/json; charset=utf-8'
+  );
+
+  res.setHeader(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate'
+  );
+
+  return res.json(body);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// HANDLER
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, {
+      ok: false,
+      error: 'Method not allowed',
     });
   }
 
-  return new Response(JSON.stringify({
-    ok: true,
-    runtime: 'edge',
-    method: req.method,
-    path: url.pathname,
-    time: new Date().toISOString(),
-    env_check: {
-      has_supabase_url: !!process.env.SUPABASE_URL,
-      has_anon_key: !!process.env.SUPABASE_ANON_KEY,
-      has_service_key: !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  const result = {
+    ok: false,
+
+    timestamp:
+      new Date().toISOString(),
+
+    service:
+      'thecapital-api',
+
+    supabase: {
+      configured:
+        isSupabaseReady(),
+
+      connected:
+        false,
+    },
+
+    supabaseAdmin: {
+      configured:
+        isSupabaseAdminReady(),
+
+      connected:
+        false,
+    },
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PUBLIC SUPABASE TEST
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (supabase) {
+    try {
+      /*
+       * On utilise une requête minimale.
+       *
+       * IMPORTANT :
+       * Cette table doit exister dans ton projet Supabase.
+       * "indices" est utilisée car elle fait partie des tables de ton projet.
+       */
+
+      const {
+        data,
+        error,
+      } = await supabase
+        .from('indices')
+        .select('*')
+        .limit(1);
+
+      if (error) {
+        result.supabase.error =
+          error.message;
+      } else {
+        result.supabase.connected =
+          true;
+
+        result.supabase.rows =
+          Array.isArray(data)
+            ? data.length
+            : 0;
+      }
+    } catch (error) {
+      result.supabase.error =
+        error?.message ||
+        String(error);
     }
-  }), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
-      'Cache-Control': 'no-cache'
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // ADMIN SUPABASE TEST
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  if (supabaseAdmin) {
+    try {
+      const {
+        data,
+        error,
+      } = await supabaseAdmin
+        .from('indices')
+        .select('*')
+        .limit(1);
+
+      if (error) {
+        result.supabaseAdmin.error =
+          error.message;
+      } else {
+        result.supabaseAdmin.connected =
+          true;
+
+        result.supabaseAdmin.rows =
+          Array.isArray(data)
+            ? data.length
+            : 0;
+      }
+    } catch (error) {
+      result.supabaseAdmin.error =
+        error?.message ||
+        String(error);
     }
-  });
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // GLOBAL STATUS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  result.ok =
+    result.supabase.configured &&
+    result.supabase.connected;
+
+  return sendJson(
+    res,
+    result.ok ? 200 : 503,
+    result
+  );
 }
