@@ -5,12 +5,8 @@
     {"path": "/api/sync-brvm", "schedule": "30 18 * * 1-5"}
   ],
   "rewrites": [
-    {"source": "/api/portefeuille", "destination": "/api/vercel"},
-    {"source": "/api/:path*", "destination": "/api/vercel"}
+    {"source": "/api/:path*", "destination": "/api/index"}
   ],
-  "functions": {
-    "api/vercel.js": {"maxDuration": 30}
-  },
   "headers": [
     {
       "source": "/api/(.*)",
