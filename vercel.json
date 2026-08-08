@@ -19,10 +19,6 @@
       "destination": "/api/boc"
     },
     {
-      "source": "/api/boc",
-      "destination": "/api/boc.js"
-    },
-    {
       "source": "/api/:path*",
       "destination": "/api/vercel"
     }
