@@ -1,9 +1,16 @@
 (function(){
+  function loadPortfolioStore(next){
+    if (window.portfolioStore || window.__TC_PORTFOLIO_STORE_LOADING__) return next();
+    window.__TC_PORTFOLIO_STORE_LOADING__ = true;
+    var script = document.createElement('script');
+    script.src = 'app/js/views/portefeuille/portfolio-store.js?v=1';
+    script.onload = next;
+    script.onerror = function(){ console.error('[INIT] portfolio-store impossible à charger'); next(); };
+    document.head.appendChild(script);
+  }
+
   function init(){
     console.log('[INIT] Démarrage...');
-    // CORRECTION: on appelle directement initApp() (qui gère déjà loadAll() en interne,
-    // + le routing + les events). On n'appelle plus loadAll() séparément ici,
-    // ce qui évite le double chargement (loadAll x2/x3) et les requêtes annulées.
     if (typeof window.initApp === 'function') {
       try {
         window.initApp();
@@ -18,9 +25,8 @@
       console.error('[INIT] initApp manquant');
     }
   }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+
+  function boot(){ loadPortfolioStore(init); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
