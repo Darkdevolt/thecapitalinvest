@@ -20,9 +20,6 @@
     "api/portfolio.js": {
       "maxDuration": 15
     },
-    "api/boc.js": {
-      "maxDuration": 10
-    },
     "api/health.js": {
       "maxDuration": 10
     }
