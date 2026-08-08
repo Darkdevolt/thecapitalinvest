@@ -8,6 +8,17 @@
       "destination": "/api/portfolio"
     },
     {
+      "source": "/api/index",
+      "has": [
+        {
+          "type": "query",
+          "key": "path",
+          "value": "boc"
+        }
+      ],
+      "destination": "/api/boc"
+    },
+    {
       "source": "/api/boc",
       "destination": "/api/boc.js"
     },
