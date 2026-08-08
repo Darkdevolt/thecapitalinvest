@@ -12,8 +12,17 @@
 
   async function fetchAPI(endpoint, options) {
     options = options || {};
-    var url = API_BASE + endpoint;
-    var cacheKey = CACHE_PREFIX + endpoint;
+
+    // BOC has a dedicated server-side adapter that reads the official BRVM source
+    // when the local database is empty. Keep compatibility with the legacy
+    // /api/index?path=boc call used by older views.
+    var normalizedEndpoint = endpoint;
+    if (endpoint === "/api/index?path=boc" || endpoint === "/index?path=boc") {
+      normalizedEndpoint = "/boc";
+    }
+
+    var url = API_BASE + normalizedEndpoint;
+    var cacheKey = CACHE_PREFIX + normalizedEndpoint;
 
     try {
       var controller = new AbortController();
