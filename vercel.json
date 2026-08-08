@@ -1,57 +1,24 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-
   "crons": [
-    {
-      "path": "/api/sync-brvm",
-      "schedule": "30 18 * * 1-5"
-    }
+    {"path": "/api/sync-brvm", "schedule": "30 18 * * 1-5"}
   ],
-
   "rewrites": [
-    {
-      "source": "/api/portefeuille",
-      "destination": "/api/portfolio"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "/api/vercel"
-    }
+    {"source": "/api/portefeuille", "destination": "/api/vercel"},
+    {"source": "/api/:path*", "destination": "/api/vercel"}
   ],
-
   "functions": {
-    "api/vercel.js": {
-      "maxDuration": 30
-    },
-    "api/portfolio.js": {
-      "maxDuration": 15
-    },
-    "api/health.js": {
-      "maxDuration": 10
-    }
+    "api/vercel.js": {"maxDuration": 30}
   },
-
   "headers": [
     {
       "source": "/api/(.*)",
       "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With, X-Cron-Secret"
-        },
-        {
-          "key": "Access-Control-Max-Age",
-          "value": "86400"
-        }
+        {"key": "Access-Control-Allow-Origin", "value": "*"},
+        {"key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS"},
+        {"key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-Cron-Secret"},
+        {"key": "Access-Control-Max-Age", "value": "86400"}
       ]
     }
   ]
