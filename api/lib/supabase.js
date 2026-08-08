@@ -1,35 +1,86 @@
 // ═══════════════════════════════════════════════════════════════════════════════
-// THE CAPITAL — Supabase Clients (avec vérification de config)
+// THE CAPITAL — Supabase clients
 // ═══════════════════════════════════════════════════════════════════════════════
 
 import { createClient } from '@supabase/supabase-js';
 import config from './config.js';
 
-// Vérification explicite — retourne null si config invalide au lieu de planter
-function createSafeClient(url, key, options = {}) {
-  if (!url || !key) {
-    console.error('[SUPABASE] Impossible de créer le client : URL ou clé manquante');
-    return null;
-  }
-  try {
-    return createClient(url, key, options);
-  } catch (e) {
-    console.error('[SUPABASE] Erreur création client:', e.message);
-    return null;
-  }
-}
+// ─────────────────────────────────────────────────────────────────────────────
+// Public client
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Client avec clé anonyme (lecture publique)
-export const supabase = createSafeClient(config.supabaseUrl, config.supabaseAnonKey);
+export const supabase =
+  config.supabaseUrl && config.supabaseAnonKey
+    ? createClient(
+        config.supabaseUrl,
+        config.supabaseAnonKey,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        }
+      )
+    : null;
 
-// Client avec service role (admin uniquement)
-export const supabaseAdmin = createSafeClient(
-  config.supabaseUrl,
-  config.supabaseServiceKey,
-  { auth: { autoRefreshToken: false, persistSession: false } }
-);
+// ─────────────────────────────────────────────────────────────────────────────
+// Admin / service-role client
+// ─────────────────────────────────────────────────────────────────────────────
 
-// Helper pour vérifier si les clients sont prêts
+export const supabaseAdmin =
+  config.supabaseUrl && config.supabaseServiceKey
+    ? createClient(
+        config.supabaseUrl,
+        config.supabaseServiceKey,
+        {
+          auth: {
+            persistSession: false,
+            autoRefreshToken: false,
+            detectSessionInUrl: false,
+          },
+        }
+      )
+    : null;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function isSupabaseReady() {
-  return !!supabase && !!supabaseAdmin;
+  return !!supabase;
 }
+
+export function isSupabaseAdminReady() {
+  return !!supabaseAdmin;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Required clients
+// ─────────────────────────────────────────────────────────────────────────────
+
+export function requireSupabase() {
+  if (!supabase) {
+    throw new Error(
+      'Supabase public client is not configured.'
+    );
+  }
+
+  return supabase;
+}
+
+export function requireSupabaseAdmin() {
+  if (!supabaseAdmin) {
+    throw new Error(
+      'Supabase admin client is not configured.'
+    );
+  }
+
+  return supabaseAdmin;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Backward compatibility
+// ─────────────────────────────────────────────────────────────────────────────
+
+export default supabase;
