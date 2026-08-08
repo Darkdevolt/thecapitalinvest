@@ -8,6 +8,10 @@
       "destination": "/api/portfolio"
     },
     {
+      "source": "/api/boc",
+      "destination": "/api/portfolio"
+    },
+    {
       "source": "/api/:path*",
       "destination": "/api/vercel"
     }
