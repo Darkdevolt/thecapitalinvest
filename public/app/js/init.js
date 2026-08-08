@@ -8,9 +8,11 @@
   }
 
   function loadRuntimeLayers(done){
-    loadScript('app/js/router-patch.js?v=2', function(){
-      loadScript('app/js/views/portefeuille/portfolio-store.js?v=2', function(){
-        loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=1', done);
+    loadScript('app/js/router-patch.js?v=3', function(){
+      loadScript('app/js/views/portefeuille/portfolio-store.js?v=3', function(){
+        loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=2', function(){
+          loadScript('app/js/views/user-data-patch.js?v=1', done);
+        });
       });
     });
   }
@@ -21,6 +23,7 @@
       try {
         window.initApp();
         console.log('[INIT] initApp lancé');
+        if (typeof window.initUserDataLayer === 'function') window.initUserDataLayer();
         if (window.marketsModule && typeof window.marketsModule.loadData === 'function') {
           try { window.marketsModule.loadData(); } catch(e) {}
         }
