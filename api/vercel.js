@@ -30,8 +30,11 @@ async function handleBrvmSync(requestUrl, req){
   const cronSecret=process.env.CRON_SECRET||'';
   if(!cronHeader&&(!cronSecret||providedSecret!==cronSecret))return jsonResponse({success:false,error:'Unauthorized'},401,'no-store');
   const supabaseUrl=process.env.SUPABASE_URL||'';
-  const supabaseKey=process.env.SUPABASE_PUBLISHABLE_KEY||process.env.SUPABASE_ANON_KEY||'';
-  if(!supabaseUrl||!supabaseKey)return jsonResponse({success:false,error:'Supabase URL/key not configured'},503,'no-store');
+  // IMPORTANT: the scrape-brvm Edge Function has JWT verification enabled.
+  // A publishable/anon key is not a user JWT and therefore cannot invoke it.
+  // Use the server-only service-role key from Vercel environment variables.
+  const supabaseKey=process.env.SUPABASE_SERVICE_ROLE_KEY||'';
+  if(!supabaseUrl||!supabaseKey)return jsonResponse({success:false,error:'Supabase URL/service-role key not configured'},503,'no-store');
   try{
     const response=await fetch(`${supabaseUrl}/functions/v1/scrape-brvm`,{method:'POST',headers:{Authorization:`Bearer ${supabaseKey}`,apikey:supabaseKey,'Content-Type':'application/json'},signal:AbortSignal.timeout(25000)});
     const text=await response.text();let data;try{data=JSON.parse(text);}catch{data={raw:text};}
