@@ -2,6 +2,7 @@
 // THE CAPITAL — Health Check
 // ═══════════════════════════════════════════════════════════════════════════════
 
+import config from './lib/config.js';
 import {
   supabase,
   supabaseAdmin,
@@ -9,24 +10,64 @@ import {
   isSupabaseAdminReady,
 } from './lib/supabase.js';
 
-// ═══════════════════════════════════════════════════════════════════════════════
-// RESPONSE
-// ═══════════════════════════════════════════════════════════════════════════════
+const HEALTH_TIMEOUT_MS = 5000;
 
 function sendJson(res, status, body) {
   res.status(status);
-
-  res.setHeader(
-    'Content-Type',
-    'application/json; charset=utf-8'
-  );
-
-  res.setHeader(
-    'Cache-Control',
-    'no-store, no-cache, must-revalidate'
-  );
-
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
   return res.json(body);
+}
+
+async function withTimeout(promise, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(
+        () => reject(new Error(`${label} timeout after ${HEALTH_TIMEOUT_MS}ms`)),
+        HEALTH_TIMEOUT_MS
+      );
+    }),
+  ]);
+}
+
+async function checkClient(client, label) {
+  if (!client) {
+    return {
+      configured: false,
+      connected: false,
+      error: 'Client non configuré',
+    };
+  }
+
+  try {
+    const { data, error } = await withTimeout(
+      client.from('indices').select('id').limit(1),
+      label
+    );
+
+    if (error) {
+      return {
+        configured: true,
+        connected: false,
+        error: error.message,
+        code: error.code || null,
+      };
+    }
+
+    return {
+      configured: true,
+      connected: true,
+      table: 'indices',
+      rows: Array.isArray(data) ? data.length : 0,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      connected: false,
+      error: error?.message || String(error),
+    };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -41,117 +82,37 @@ export default async function handler(req, res) {
     });
   }
 
+  const publicCheck = await checkClient(supabase, 'supabase-public');
+  const adminCheck = await checkClient(supabaseAdmin, 'supabase-admin');
+
   const result = {
-    ok: false,
+    ok:
+      config.isPublicValid &&
+      publicCheck.connected &&
+      config.isAdminValid &&
+      adminCheck.connected,
 
-    timestamp:
-      new Date().toISOString(),
-
-    service:
-      'thecapital-api',
+    timestamp: new Date().toISOString(),
+    service: 'thecapital-api',
 
     supabase: {
-      configured:
-        isSupabaseReady(),
-
-      connected:
-        false,
+      url_configured: Boolean(config.supabaseUrl),
+      url_origin: config.supabaseUrl || null,
+      public_client: publicCheck,
     },
 
     supabaseAdmin: {
-      configured:
-        isSupabaseAdminReady(),
+      secret_configured: Boolean(config.supabaseSecretKey),
+      admin_client: adminCheck,
+    },
 
-      connected:
-        false,
+    configuration: {
+      public_valid: config.isPublicValid,
+      admin_valid: config.isAdminValid,
+      missing_public: config.missingPublicVars,
+      missing_admin: config.missingAdminVars,
     },
   };
 
-  // ═══════════════════════════════════════════════════════════════════════════
-  // PUBLIC SUPABASE TEST
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  if (supabase) {
-    try {
-      /*
-       * On utilise une requête minimale.
-       *
-       * IMPORTANT :
-       * Cette table doit exister dans ton projet Supabase.
-       * "indices" est utilisée car elle fait partie des tables de ton projet.
-       */
-
-      const {
-        data,
-        error,
-      } = await supabase
-        .from('indices')
-        .select('*')
-        .limit(1);
-
-      if (error) {
-        result.supabase.error =
-          error.message;
-      } else {
-        result.supabase.connected =
-          true;
-
-        result.supabase.rows =
-          Array.isArray(data)
-            ? data.length
-            : 0;
-      }
-    } catch (error) {
-      result.supabase.error =
-        error?.message ||
-        String(error);
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // ADMIN SUPABASE TEST
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  if (supabaseAdmin) {
-    try {
-      const {
-        data,
-        error,
-      } = await supabaseAdmin
-        .from('indices')
-        .select('*')
-        .limit(1);
-
-      if (error) {
-        result.supabaseAdmin.error =
-          error.message;
-      } else {
-        result.supabaseAdmin.connected =
-          true;
-
-        result.supabaseAdmin.rows =
-          Array.isArray(data)
-            ? data.length
-            : 0;
-      }
-    } catch (error) {
-      result.supabaseAdmin.error =
-        error?.message ||
-        String(error);
-    }
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // GLOBAL STATUS
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  result.ok =
-    result.supabase.configured &&
-    result.supabase.connected;
-
-  return sendJson(
-    res,
-    result.ok ? 200 : 503,
-    result
-  );
+  return sendJson(res, result.ok ? 200 : 503, result);
 }
