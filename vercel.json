@@ -2,14 +2,21 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
 
+  "crons": [
+    {
+      "path": "/api/sync-brvm",
+      "schedule": "30 18 * * 1-5"
+    }
+  ],
+
   "rewrites": [
     {
       "source": "/api/portefeuille",
       "destination": "/api/portfolio"
     },
     {
-      "source": "/api/boc",
-      "destination": "/api/portfolio"
+      "source": "/api/sync-brvm",
+      "destination": "/api/sync-brvm.js"
     },
     {
       "source": "/api/:path*",
@@ -19,6 +26,9 @@
 
   "functions": {
     "api/vercel.js": {
+      "maxDuration": 30
+    },
+    "api/sync-brvm.js": {
       "maxDuration": 30
     },
     "api/portfolio.js": {
@@ -43,7 +53,7 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization, X-Requested-With"
+          "value": "Content-Type, Authorization, X-Requested-With, X-Cron-Secret"
         },
         {
           "key": "Access-Control-Max-Age",
