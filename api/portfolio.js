@@ -9,6 +9,9 @@ const FRAIS = {
   dcbr: 0.0005,
 };
 
+const BRVM_BOC_PAGE = 'https://bfin.brvm.org/boc.aspx';
+const BRVM_BOC_BASE = 'https://bfin.brvm.org/boc/BOC_JOUR/';
+
 function calculerFrais(montant) {
   const courtage = montant * FRAIS.courtage;
   const tva = courtage * FRAIS.tva;
@@ -29,7 +32,113 @@ function json(res, status, payload) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,DELETE,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Authorization,Content-Type,X-Requested-With');
+  res.setHeader('Cache-Control', status === 200 ? 'public, s-maxage=300, stale-while-revalidate=600' : 'no-store');
   return res.end(JSON.stringify(payload));
+}
+
+function bocPdfUrl(date) {
+  return `${BRVM_BOC_BASE}BOC_${date.replaceAll('-', '')}.pdf`;
+}
+
+function normalizeBocDate(value) {
+  const match = String(value).match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  return match ? `${match[3]}-${match[2]}-${match[1]}` : null;
+}
+
+async function fetchBocFromBrvm(limit = 100) {
+  const response = await fetch(BRVM_BOC_PAGE, {
+    headers: { 'User-Agent': 'TheCapital/1.0 BOC reader' },
+    signal: AbortSignal.timeout(7000),
+  });
+  if (!response.ok) throw new Error(`BRVM BOC HTTP ${response.status}`);
+
+  const html = await response.text();
+  const dates = [];
+  const seen = new Set();
+
+  for (const match of html.matchAll(/\b(\d{2}\/\d{2}\/\d{4})\b/g)) {
+    const date = normalizeBocDate(match[1]);
+    if (!date || seen.has(date)) continue;
+    seen.add(date);
+    dates.push(date);
+    if (dates.length >= limit) break;
+  }
+
+  if (!dates.length) {
+    for (const match of html.matchAll(/BOC[_-](\d{8})\.pdf/gi)) {
+      const raw = match[1];
+      const date = `${raw.slice(0, 4)}-${raw.slice(4, 6)}-${raw.slice(6, 8)}`;
+      if (seen.has(date)) continue;
+      seen.add(date);
+      dates.push(date);
+      if (dates.length >= limit) break;
+    }
+  }
+
+  return dates.map((date, index) => {
+    const pdf = bocPdfUrl(date);
+    return {
+      id: `brvm-${date}`,
+      date_seance: date,
+      annee: Number(date.slice(0, 4)),
+      numero_seance: null,
+      fichier_nom: `BOC_${date.replaceAll('-', '')}.pdf`,
+      fichier_url: pdf,
+      pdf_url: pdf,
+      source: 'BRVM',
+      source_url: BRVM_BOC_PAGE,
+      rang: index + 1,
+    };
+  });
+}
+
+async function getBoc() {
+  let databaseRows = [];
+
+  if (isSupabaseReady() && supabaseAdmin) {
+    try {
+      const { data, error } = await supabaseAdmin
+        .from('boc')
+        .select('id,date_seance,fichier_nom,fichier_url,created_at')
+        .order('date_seance', { ascending: false })
+        .limit(100);
+
+      if (!error) {
+        databaseRows = (data || []).map(row => ({
+          ...row,
+          annee: row.date_seance ? Number(String(row.date_seance).slice(0, 4)) : null,
+          numero_seance: null,
+          pdf_url: row.fichier_url,
+          source: 'database',
+        }));
+      }
+    } catch (error) {
+      console.warn('[PORTFOLIO ADAPTER] BOC database read failed:', error.message);
+    }
+  }
+
+  if (databaseRows.length > 0) {
+    return {
+      success: true,
+      data: {
+        data: databaseRows,
+        count: databaseRows.length,
+        source: 'database',
+        source_url: BRVM_BOC_PAGE,
+      },
+    };
+  }
+
+  const officialRows = await fetchBocFromBrvm(100);
+  return {
+    success: true,
+    data: {
+      data: officialRows,
+      count: officialRows.length,
+      source: 'brvm',
+      source_url: BRVM_BOC_PAGE,
+    },
+  };
 }
 
 async function getPortefeuille(userId) {
@@ -48,9 +157,7 @@ async function getPortefeuille(userId) {
     const ticker = String(tx.ticker || '').toUpperCase();
     if (!ticker) continue;
 
-    if (!positions[ticker]) {
-      positions[ticker] = { quantite: 0, investi: 0, frais: 0 };
-    }
+    if (!positions[ticker]) positions[ticker] = { quantite: 0, investi: 0, frais: 0 };
 
     const qte = Number.parseInt(tx.quantite, 10) || 0;
     const prix = Number.parseFloat(tx.prix_unitaire) || 0;
@@ -75,8 +182,6 @@ async function getPortefeuille(userId) {
   const coursMap = new Map();
 
   if (activeTickers.length > 0) {
-    // The real schema has no cours.nom column. Fetch prices from cours and
-    // company names separately from entreprises, then merge in application code.
     const [{ data: allCours, error: coursError }, { data: companies, error: companyError }] = await Promise.all([
       supabaseAdmin
         .from('cours')
@@ -93,18 +198,12 @@ async function getPortefeuille(userId) {
     if (companyError) throw companyError;
 
     const nameMap = new Map(
-      (companies || []).map(company => [
-        company.ticker,
-        company.nom || company.nom_court || company.ticker,
-      ])
+      (companies || []).map(company => [company.ticker, company.nom || company.nom_court || company.ticker])
     );
 
     for (const row of allCours || []) {
       if (!coursMap.has(row.ticker)) {
-        coursMap.set(row.ticker, {
-          ...row,
-          nom: nameMap.get(row.ticker) || row.ticker,
-        });
+        coursMap.set(row.ticker, { ...row, nom: nameMap.get(row.ticker) || row.ticker });
       }
     }
   }
@@ -167,16 +266,20 @@ async function sendWebResponse(res, response) {
 }
 
 export default async function handler(req, res) {
-  if (req.method === 'OPTIONS') {
-    return json(res, 204, null);
-  }
+  if (req.method === 'OPTIONS') return json(res, 204, null);
 
   try {
     const url = new URL(buildAbsoluteUrl(req));
+
+    // BOC is public and uses the existing portfolio function to avoid adding
+    // another Serverless Function on Vercel Hobby.
+    if (req.method === 'GET' && url.pathname === '/api/boc') {
+      const result = await getBoc();
+      return json(res, 200, result);
+    }
+
     const mode = url.searchParams.get('mode');
 
-    // Only the portfolio valuation path needs the schema compatibility fix.
-    // Other portfolio modes remain on the existing business router.
     if (req.method === 'GET' && mode === 'portefeuille') {
       const auth = await authenticate(req);
       if (auth.response) return sendWebResponse(res, auth.response);
