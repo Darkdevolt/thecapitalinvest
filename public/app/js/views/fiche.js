@@ -15,15 +15,26 @@ async function openFiche(ticker, from, noHash) {
   const fins = allFinancials.filter(f => f.ticker === ticker).sort((a,b) => b.annee - a.annee);
   const ans = allAnalyses.filter(a => a.ticker === ticker);
 
-  // ─── CHARGER L'HISTORIQUE EN PREMIER pour avoir le vrai dernier cours ───
+  // ─── CHARGER L'HISTORIQUE VIA LE PROXY API ───
+  // Le client Supabase direct est volontairement désactivé côté navigateur.
+  // On passe donc par /api/index?path=marche&type=historique.
   let latestCours = null;
   try {
-    const histResult = await sb('historique', { 
-      ticker: `eq.${ticker}`, 
-      order: 'date_seance.desc',
-      limit: 5000
-    });
-    ficheHistorique = Array.isArray(histResult) ? histResult.reverse() : [];
+    if (typeof window.apiGet !== 'function') {
+      throw new Error('API non disponible');
+    }
+
+    const response = await window.apiGet(
+      `/api/index?path=marche&type=historique&ticker=${encodeURIComponent(ticker)}`
+    );
+    const histData = response && typeof response === 'object' && 'data' in response
+      ? response.data
+      : response;
+
+    ficheHistorique = Array.isArray(histData)
+      ? histData.slice().sort((a, b) => new Date(a.date_seance) - new Date(b.date_seance))
+      : [];
+
     if (!ficheHistorique.length) {
       toast('Aucun historique disponible pour ' + ticker, 'warn');
     } else {
