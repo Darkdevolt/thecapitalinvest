@@ -20,7 +20,6 @@
 @media (max-width:600px){
  html,body{max-width:100%;overflow-x:hidden}.header{padding-left:10px;padding-right:10px}.topnav-logo{font-size:16px;letter-spacing:.07em}.logo-title{font-size:17px}.logo-sub{font-size:8px;letter-spacing:.04em}.grid-5,.grid-4,.grid-3{grid-template-columns:1fr}.grid-7030,.grid-2{grid-template-columns:1fr}.card-header{padding:13px 14px}.card-body{padding:14px}.stat-card{padding:15px}.stat-value{font-size:20px}
  .movers-header{align-items:stretch}.movers-header .card-title{width:100%;font-size:12px}.movers-controls{width:100%;margin-left:0}.movers-tabs{width:100%}.mover-filter{flex:1;text-align:center;padding:7px 5px;min-height:40px}.movers-label-row{grid-template-columns:minmax(0,1fr) 82px 68px;gap:8px;font-size:8px}.mover-row{grid-template-columns:24px minmax(0,1fr) auto;grid-template-rows:auto auto;gap:2px 8px;padding:13px 0}.mover-rank{grid-row:1 / span 2;align-self:center}.mover-security{grid-column:2;grid-row:1;min-width:0}.mover-price{grid-column:2;grid-row:2;text-align:left;font-size:11px;color:var(--muted);line-height:1.2}.mover-price span{display:inline!important;font-size:8px}.mover-change{grid-column:3;grid-row:1 / span 2;align-self:center;font-size:11px;padding-left:8px}.mover-symbol{font-size:12px}.mover-name{font-size:9px;margin-top:2px}.movers-empty{padding:28px 10px}
- /* Cours du jour: compact quote cards instead of a broken desktop table. */
  #view-overview .table-wrap{overflow:visible}.tc-table{min-width:0;width:100%}
  #view-overview .table-wrap table{display:block;width:100%;border-collapse:separate;border-spacing:0}
  #view-overview .table-wrap thead{display:none}
@@ -37,7 +36,49 @@
  #view-overview #coursTable td:nth-child(3).positive,#view-overview #coursTable td:nth-child(3).up{color:var(--green)}
  #view-overview #coursTable td:nth-child(3).negative,#view-overview #coursTable td:nth-child(3).down{color:var(--red)}
  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}.search-input{width:100%;min-width:0}.filter-btn,.mover-filter,button{min-height:40px}.chart-container{height:190px}.chart-container.tall{height:240px}.chart-container.xl{height:280px}.session-card{padding:15px}.tendance-grid{gap:8px}
- /* Remove tiny decorative emoji glyphs from navigation while preserving semantic labels. */
  .nav-item .icon,.nav-dropdown-item .icon{font-size:0;width:18px;position:relative}.nav-item .icon::before,.nav-dropdown-item .icon::before{content:'•';font-size:14px;color:var(--gold);font-family:var(--mono)}
 }
 @media (max-width:380px){.topnav-logo{font-size:14px}.logo-title{font-size:15px}.logo-sub{display:none}.stat-value{font-size:18px}.card-title{font-size:9px}.movers-label-row{grid-template-columns:minmax(0,1fr) 70px 60px}.mover-row{grid-template-columns:20px minmax(0,1fr) auto;gap:2px 6px}.mover-price{font-size:10px}.mover-change{font-size:10px}.movers-tabs{border-radius:7px}.mover-filter{font-size:8px;padding-left:4px;padding-right:4px}}
+
+/* FINAL MOBILE MARKET QUOTE POLISH */
+@media (max-width:600px){
+  #view-overview #coursTable{gap:7px;padding:8px 0}
+  #view-overview #coursTable tr{grid-template-columns:minmax(0,1fr) minmax(94px,auto);grid-template-areas:"title quote" "meta change";align-items:center;gap:3px 10px;padding:12px 13px;border-radius:11px;background:linear-gradient(180deg,rgba(255,255,255,.018),rgba(184,150,78,.025));border:1px solid rgba(184,150,78,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.018)}
+  #view-overview #coursTable td:nth-child(1){grid-area:title;align-self:end;font-size:13px;line-height:1.1;color:var(--cream)}
+  #view-overview #coursTable td:nth-child(2){grid-area:quote;align-self:end;font-size:13px;line-height:1.1;color:var(--cream)}
+  #view-overview #coursTable td:nth-child(3){grid-area:change;align-self:start;text-align:left;font-size:10px;font-weight:600;line-height:1.1}
+  #view-overview #coursTable td:nth-child(4){grid-area:meta;text-align:left;border:0;margin:0;padding:0;font-size:9px;line-height:1.1;color:var(--dim)}
+  #view-overview #coursTable td:nth-child(4)::before{content:'Vol. ';letter-spacing:.06em;color:var(--dim)}
+  #view-overview #coursTable td:nth-child(5),#view-overview #coursTable td:nth-child(6){display:none}
+  #view-overview #coursTable tr td:nth-child(2)::after{content:' FCFA';font:400 8px var(--sans);color:var(--dim);margin-left:3px}
+  #view-overview #coursTable tr td:nth-child(3)::before{content:''}
+  #view-overview #coursTable tr td:nth-child(3){color:var(--cream)}
+  #view-overview #coursTable tr td:nth-child(3).positive,#view-overview #coursTable tr td:nth-child(3).up{color:var(--green)}
+  #view-overview #coursTable tr td:nth-child(3).negative,#view-overview #coursTable tr td:nth-child(3).down{color:var(--red)}
+
+  #view-overview .table-wrap{border:0;background:transparent}
+  #view-overview .table-wrap + *{margin-top:0}
+
+  #topMovers{padding:0 13px 5px!important}
+  .movers-header{padding:13px 14px!important;gap:11px}
+  .movers-header .card-title{font-size:12px;letter-spacing:.07em}
+  .movers-controls{width:100%}
+  .movers-tabs{background:rgba(184,150,78,.04);border-color:rgba(184,150,78,.16);padding:3px}
+  .mover-filter{font-size:9px;letter-spacing:.07em;color:var(--muted);border-radius:7px}
+  .mover-filter.active{background:rgba(184,150,78,.13);color:var(--gold);box-shadow:none}
+  .movers-label-row{padding:7px 2px 6px;grid-template-columns:minmax(0,1fr) 82px 68px}
+  .mover-row{padding:12px 2px;grid-template-columns:22px minmax(0,1fr) auto;gap:2px 8px}
+  .mover-rank{font-size:9px;color:var(--gold-dim,var(--dim))}
+  .mover-symbol{font-size:12px;letter-spacing:.04em}
+  .mover-name{font-size:9px;color:var(--dim);max-width:100%}
+  .mover-price{font-size:10px;color:var(--muted)}
+  .mover-price span{font-size:8px;color:var(--dim)}
+  .mover-change{font-size:11px;font-weight:600}
+}
+
+/* Prevent horizontal overflow caused by inline legacy widgets. */
+@media (max-width:600px){
+  #view-overview .page-header,#view-overview .card,#view-overview .stat-card{max-width:100%;min-width:0}
+  #view-overview .card{overflow:hidden}
+  #view-overview canvas{max-width:100%}
+}
