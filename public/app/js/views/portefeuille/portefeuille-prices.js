@@ -6,6 +6,7 @@
 
 if (typeof window._pfHistCache === 'undefined') window._pfHistCache = {};
 let _pfMarketHydration = null;
+let _pfHistoryHydration = null;
 let _pfLastMarketSignature = '';
 
 function _normaliseCours(row) {
@@ -54,6 +55,36 @@ async function hydratePortfolioMarketPrices() {
     })
     .finally(() => { _pfMarketHydration = null; });
   return _pfMarketHydration;
+}
+
+async function hydratePortfolioHistoricalPrices(tickers, limit = 365) {
+  const unique = [...new Set((tickers || []).map(t => String(t || '').toUpperCase().trim()).filter(Boolean))];
+  if (!unique.length) return [];
+  if (_pfHistoryHydration) return _pfHistoryHydration;
+  _pfHistoryHydration = Promise.all(unique.map(async ticker => {
+    try {
+      const response = await fetch(`/api/marche?type=historique&ticker=${encodeURIComponent(ticker)}&limit=${limit}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      const rows = (Array.isArray(payload) ? payload : (payload?.data || [])).filter(r => r && r.date_seance);
+      rows.sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance));
+      window._pfHistCache[ticker] = rows;
+      return rows;
+    } catch (error) {
+      console.error(`[PORTFOLIO PRICES] Historique ${ticker}:`, error.message);
+      return [];
+    }
+  })).then(results => {
+    const merged = {};
+    unique.forEach((ticker, i) => { merged[ticker] = results[i]; });
+    window.allCoursHistorique = unique.flatMap(t => results[unique.indexOf(t)] || []);
+    window.dispatchEvent(new CustomEvent('portfolio:history-ready', { detail: { tickers: unique, rows: results.reduce((n,r) => n + r.length, 0) } }));
+    if (typeof window.renderPortfolio === 'function') {
+      try { window.renderPortfolio(); } catch (error) { console.error('[PORTFOLIO PRICES] Historical render:', error); }
+    }
+    return merged;
+  }).finally(() => { _pfHistoryHydration = null; });
+  return _pfHistoryHydration;
 }
 
 function getLatestPrice(ticker) {
