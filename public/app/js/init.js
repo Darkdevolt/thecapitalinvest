@@ -3,10 +3,48 @@
   'use strict';
 
   var started = false;
+  var SESSION_KEY = 'tc_session';
+
+  function tokenIsValid(token) {
+    try {
+      var parts = String(token || '').split('.');
+      if (parts.length !== 3) return false;
+      var payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+      return !!payload.exp && payload.exp * 1000 > Date.now() + 60000;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function getSession() {
+    try {
+      var raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      var session = JSON.parse(raw);
+      if (!session || !tokenIsValid(session.access_token)) {
+        localStorage.removeItem(SESSION_KEY);
+        return null;
+      }
+      return session;
+    } catch (e) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+  }
+
+  function requireAuth() {
+    var session = getSession();
+    if (session) return true;
+
+    // Never initialise the private dashboard without an authenticated session.
+    // login.html already supports the redirect parameter and sends the user back here.
+    var current = location.pathname.split('/').pop() || 'app.html';
+    var redirect = encodeURIComponent(current + location.search + location.hash);
+    location.replace('login.html?redirect=' + redirect);
+    return false;
+  }
 
   function normalizeDocument() {
-    // app.html used to contain <base target="_blank">. Remove it immediately,
-    // before any application navigation can use it.
     document.querySelectorAll('base').forEach(function (base) { base.remove(); });
     document.querySelectorAll('a[href]').forEach(function (a) {
       var href = a.getAttribute('href') || '';
@@ -33,9 +71,9 @@
   }
 
   function loadRuntimeLayers(done) {
-    loadScript('app/js/views/portefeuille/portfolio-store.js?v=8', function () {
-      loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=7', function () {
-        loadScript('app/js/views/user-data-patch.js?v=6', done);
+    loadScript('app/js/views/portefeuille/portfolio-store.js?v=9', function () {
+      loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8', function () {
+        loadScript('app/js/views/user-data-patch.js?v=7', done);
       });
     });
   }
@@ -52,8 +90,11 @@
   function init() {
     if (started) return;
     started = true;
+
+    if (!requireAuth()) return;
+
     normalizeDocument();
-    console.log('[INIT] Démarrage The Capital — architecture unifiée');
+    console.log('[INIT] Session authentifiée — démarrage The Capital');
 
     if (typeof window.initApp !== 'function') {
       console.error('[INIT] initApp manquant — main.js doit être chargé avant init.js');
@@ -76,13 +117,13 @@
       try { window.marketsModule.loadData(); } catch (e) { console.warn('[INIT] marketsModule:', e); }
     }
 
-    // The shell must become visible even if a secondary module fails.
     document.body.classList.remove('init-hidden');
     renderAfterData();
   }
 
   function boot() {
     normalizeDocument();
+    if (!requireAuth()) return;
     loadRuntimeLayers(init);
   }
 
