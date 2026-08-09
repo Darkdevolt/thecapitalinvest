@@ -4,6 +4,7 @@
   'use strict';
 
   const SETTLEMENT_BUSINESS_DAYS = 2;
+  let pendingBuyCash = 0;
 
   function num(v) {
     const n = Number(v);
@@ -31,8 +32,7 @@
     return day !== 0 && day !== 6;
   }
 
-  // J+2 means two following business days, excluding Saturday/Sunday.
-  // Example: Friday -> Tuesday, Monday -> Wednesday.
+  // J+2 = two following business days, excluding Saturday/Sunday.
   function settlementDate(value) {
     const d = parseDate(value);
     if (!d || !isBusinessDay(value)) return null;
@@ -80,8 +80,9 @@
     return true;
   }
 
-  // Cash available for a new purchase. Sale proceeds remain unavailable until J+2.
-  // Purchases reserve cash immediately; deposits/withdrawals/dividends are immediate.
+  // Cash available for a new purchase.
+  // Deposits/dividends are immediate. Purchases consume cash immediately.
+  // Sale proceeds only become usable after J+2.
   function cashBalance(asOf) {
     const target = isoDate(asOf);
     let cash = 0;
@@ -93,17 +94,23 @@
 
       const qty = num(tx.quantite ?? tx.quantity ?? tx.qty);
       const price = num(tx.prix_unitaire ?? tx.cours ?? tx.price);
-      const amount = num(tx.montant ?? tx.amount ?? (qty * price));
+      const amount = Math.abs(num(
+        tx.montant_net ??
+        tx.montant_brut ??
+        tx.montant ??
+        tx.amount ??
+        (qty * price)
+      ));
 
       if (type === 'DEPOT' || type === 'DEPOSIT') {
         cash += amount;
       } else if (type === 'RETRAIT' || type === 'WITHDRAW') {
         cash -= amount;
       } else if (type === 'ACHAT' || type === 'BUY') {
-        cash -= qty * price;
+        // Never use a possibly missing/incorrect amount field to create cash.
+        cash -= amount > 0 ? amount : qty * price;
       } else if (type === 'VENTE' || type === 'SELL') {
-        // Sale proceeds are only usable after J+2 settlement.
-        if (isSettled(date, target)) cash += qty * price;
+        if (isSettled(date, target)) cash += amount > 0 ? amount : qty * price;
       } else if (type === 'DIVIDENDE' || type === 'DIVIDEND') {
         cash += amount;
       }
@@ -112,8 +119,6 @@
     return cash;
   }
 
-  // Quantity actually available for sale after applying J+2 settlement.
-  // Unsettled purchases are deliberately excluded from sellable inventory.
   function settledHeldQty(ticker, asOf) {
     const target = isoDate(asOf);
     const wanted = String(ticker || '').toUpperCase().trim();
@@ -137,7 +142,6 @@
       const date = isoDate(tx.date_transaction || tx.date);
 
       if (type === 'ACHAT' || type === 'BUY') {
-        // Only settled lots are sellable.
         if (isSettled(date, target)) lots.push({ qty });
       } else if (type === 'VENTE' || type === 'SELL') {
         let remaining = qty;
@@ -156,6 +160,7 @@
   function amountForBuy() {
     const qty = num(document.getElementById('pfQty')?.value);
     const price = num(document.getElementById('pfPrice')?.value);
+    if (qty <= 0 || price <= 0) return 0;
     return qty * price;
   }
 
@@ -163,15 +168,31 @@
     const date = tradeDateFromElement('pfDate');
     if (!guardBusinessDay(date)) return false;
 
+    const qty = num(document.getElementById('pfQty')?.value);
+    const price = num(document.getElementById('pfPrice')?.value);
     const amount = amountForBuy();
-    if (amount <= 0) return true;
 
-    const cash = cashBalance(date);
-    if (cash + 1e-9 < amount) {
-      toast(`Achat refusé : liquidités disponibles insuffisantes. Disponible : ${cash.toFixed(0)} FCFA · Nécessaire : ${amount.toFixed(0)} FCFA.`, 'error');
+    if (qty <= 0 || price <= 0 || amount <= 0) {
+      toast('Achat refusé : quantité et prix doivent être strictement positifs.', 'error');
       return false;
     }
 
+    const cash = cashBalance(date);
+    const available = cash - pendingBuyCash;
+
+    if (available < 0) {
+      toast(`Achat refusé : le portefeuille présente déjà un solde disponible négatif de ${Math.abs(cash).toFixed(0)} FCFA.`, 'error');
+      return false;
+    }
+
+    if (amount > available + 1e-9) {
+      toast(`Achat refusé : liquidités disponibles insuffisantes. Disponible : ${available.toFixed(0)} FCFA · Nécessaire : ${amount.toFixed(0)} FCFA.`, 'error');
+      return false;
+    }
+
+    // Reserve the cash locally until the portfolio store confirms the mutation.
+    // This prevents several rapid clicks from spending the same cash multiple times.
+    pendingBuyCash += amount;
     return true;
   }
 
@@ -195,32 +216,44 @@
 
   function wrapHandlers() {
     if (window.__tcTradeGuardsInstalled) return true;
-    if (typeof window.addPosition !== 'function' || typeof window.sellPositionQuick !== 'function' || typeof window.confirmSell !== 'function') return false;
+
+    // The buy guard must not depend on the presence of sell handlers.
+    // Previously, requiring all three handlers meant that a missing sell handler
+    // disabled the buy cash protection entirely.
+    if (typeof window.addPosition !== 'function') return false;
 
     const originalAdd = window.addPosition;
-    const originalQuickSell = window.sellPositionQuick;
-    const originalConfirmSell = window.confirmSell;
-
     window.addPosition = function () {
-      if (!guardBuy()) return;
-      return originalAdd.apply(this, arguments);
+      if (!guardBuy()) return false;
+      try {
+        return originalAdd.apply(this, arguments);
+      } catch (error) {
+        pendingBuyCash = Math.max(0, pendingBuyCash - amountForBuy());
+        throw error;
+      }
     };
 
-    window.sellPositionQuick = function () {
-      const ticker = document.getElementById('pfSellTicker')?.value;
-      const qty = num(document.getElementById('pfSellQty')?.value);
-      const date = tradeDateFromElement('pfSellDate');
-      if (!guardSell(ticker, qty, date)) return;
-      return originalQuickSell.apply(this, arguments);
-    };
+    if (typeof window.sellPositionQuick === 'function') {
+      const originalQuickSell = window.sellPositionQuick;
+      window.sellPositionQuick = function () {
+        const ticker = document.getElementById('pfSellTicker')?.value;
+        const qty = num(document.getElementById('pfSellQty')?.value);
+        const date = tradeDateFromElement('pfSellDate');
+        if (!guardSell(ticker, qty, date)) return false;
+        return originalQuickSell.apply(this, arguments);
+      };
+    }
 
-    window.confirmSell = function () {
-      const ticker = document.getElementById('sellTicker')?.value;
-      const qty = num(document.getElementById('sellQty')?.value);
-      const date = tradeDateFromElement('sellDate');
-      if (!guardSell(ticker, qty, date)) return;
-      return originalConfirmSell.apply(this, arguments);
-    };
+    if (typeof window.confirmSell === 'function') {
+      const originalConfirmSell = window.confirmSell;
+      window.confirmSell = function () {
+        const ticker = document.getElementById('sellTicker')?.value;
+        const qty = num(document.getElementById('sellQty')?.value);
+        const date = tradeDateFromElement('sellDate');
+        if (!guardSell(ticker, qty, date)) return false;
+        return originalConfirmSell.apply(this, arguments);
+      };
+    }
 
     window.getPortfolioCashBalance = cashBalance;
     window.getPortfolioSettlementDate = settlementDate;
@@ -229,6 +262,9 @@
     window.__tcTradeGuardsInstalled = true;
     return true;
   }
+
+  // Release local reservations whenever the Store has refreshed its transaction list.
+  window.addEventListener('portfolio:updated', () => { pendingBuyCash = 0; });
 
   let attempts = 0;
   const timer = setInterval(() => {
