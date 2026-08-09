@@ -29,27 +29,22 @@
 
   window.renderPortfolioCharts = function (rows, totalValue, sectors, pays, hist) {
     const labels = (hist?.dates || []).map(d => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
-
-    // IDs alignés sur les canvas réellement présents dans app.html.
     makeChart('chartPortfolioValue', {
       type: 'line',
       data: { labels, datasets: [{ label: 'Valeur du portefeuille', data: hist?.values || [], tension: .25, pointRadius: 0, borderWidth: 2, fill: false }] },
       options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => money(v) } } } }
     });
-
     makeChart('chartPortfolioPL', {
       type: 'line',
       data: { labels, datasets: [{ label: 'P&L cumulé', data: hist?.pls || [], tension: .25, pointRadius: 0, borderWidth: 2, fill: false }] },
       options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => money(v) } } } }
     });
-
     const sectorLabels = Object.keys(sectors || {});
     makeChart('chartSectorAlloc', {
       type: 'doughnut',
       data: { labels: sectorLabels, datasets: [{ data: sectorLabels.map(k => sectors[k]) }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
-
     const geoLabels = Object.keys(pays || {});
     makeChart('chartGeoAlloc', {
       type: 'doughnut',
@@ -135,6 +130,52 @@
     html += '</tbody></table></div>';
     el.innerHTML = html;
   };
+
+  // Le moteur de positions existe déjà dans portefeuille-main.js. On le laisse
+  // calculer les KPI/tableau et on ajoute ici le branchement analytics qui manquait.
+  const originalRenderPortfolio = window.renderPortfolio;
+  if (typeof originalRenderPortfolio === 'function') {
+    window.renderPortfolio = function () {
+      originalRenderPortfolio();
+      try {
+        const lots = typeof window.getPortfolio === 'function' ? window.getPortfolio() : [];
+        const rows = Array.isArray(window._pfLastRows) ? window._pfLastRows : [];
+        if (!rows.length) return;
+        const totalValue = rows.reduce((sum, r) => sum + Number(r.value || 0), 0);
+        const sectors = {}, pays = {};
+        rows.forEach(r => {
+          const value = Number(r.value || 0);
+          const sector = r.sector || (typeof window.getSector === 'function' ? window.getSector(r.ticker) : 'Autre');
+          const country = r.pays || (typeof window.getPays === 'function' ? window.getPays(r.ticker) : '—');
+          sectors[sector] = (sectors[sector] || 0) + value;
+          pays[country] = (pays[country] || 0) + value;
+        });
+        const hist = typeof window.getPortfolioHistory === 'function' ? window.getPortfolioHistory(window._pfPeriod || 99999) : { dates: [], values: [], pls: [] };
+        window.renderPortfolioCharts(rows, totalValue, sectors, pays, hist);
+        window.renderConcentration(rows, totalValue);
+        window.renderDividends(rows);
+        window.renderBenchmark(rows, hist);
+        window.renderCorrelationMatrix(rows);
+
+        const tickers = [...new Set(rows.map(r => String(r.ticker || '').toUpperCase().trim()).filter(Boolean))];
+        if (typeof window.hydratePortfolioHistoricalPrices === 'function') {
+          const missing = tickers.some(t => !Array.isArray(window._pfHistCache?.[t]) || window._pfHistCache[t].length === 0);
+          if (missing && !window.__TC_PF_HISTORY_LOADING__) {
+            window.__TC_PF_HISTORY_LOADING__ = true;
+            window.hydratePortfolioHistoricalPrices(tickers, 365)
+              .catch(e => console.warn('[PORTFOLIO] Historique:', e))
+              .finally(() => { window.__TC_PF_HISTORY_LOADING__ = false; });
+          }
+        }
+      } catch (error) {
+        console.warn('[PORTFOLIO CHARTS] Analytics render:', error);
+      }
+    };
+  }
+
+  window.addEventListener('portfolio:history-ready', () => {
+    if (typeof window.renderPortfolio === 'function') window.renderPortfolio();
+  });
 
   function wirePositionActions(root = document) {
     root.querySelectorAll('.pf-action-btn').forEach(btn => {
