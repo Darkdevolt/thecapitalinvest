@@ -6,6 +6,8 @@
   let transactions = [];
   let hydrating = null;
   let mutationQueue = Promise.resolve();
+  let authRetryTimer = null;
+  let lastToken = '';
 
   function token() {
     try {
@@ -26,7 +28,11 @@
       cache: 'no-store'
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
+    if (!response.ok) {
+      const error = new Error(payload.error || `HTTP ${response.status}`);
+      error.status = response.status;
+      throw error;
+    }
     return payload;
   }
 
@@ -44,12 +50,12 @@
       const ticker = String(tx.ticker || '').toUpperCase().trim();
       const qty = Number(tx.quantite ?? tx.quantity ?? tx.qty ?? 0);
       const price = Number(tx.prix_unitaire ?? tx.cours ?? tx.price ?? 0);
-      const type = String(tx.type || '').toUpperCase();
+      const type = String(tx.type || '').toUpperCase().trim();
       if (!ticker || qty <= 0) continue;
 
-      if (type === 'ACHAT') {
+      if (type === 'ACHAT' || type === 'BUY') {
         lots.push({ id: tx.id, ticker, type: 'action', qty, price, date: tx.date_transaction || tx.date, serverId: tx.id });
-      } else if (type === 'VENTE') {
+      } else if (type === 'VENTE' || type === 'SELL') {
         let remaining = qty;
         for (const lot of lots.filter(x => x.ticker === ticker && x.qty > 0)) {
           if (remaining <= 0) break;
@@ -57,29 +63,74 @@
           lot.qty -= take;
           remaining -= take;
         }
-        // Une vente supérieure à la quantité détenue est notée mais ne crée jamais
-        // une position négative. Le serveur reste la source de vérité de la transaction.
       }
     }
     return lots.filter(l => l.qty > 0);
   }
 
+  function normalizeTransactions(payload) {
+    const raw = Array.isArray(payload) ? payload
+      : Array.isArray(payload?.data) ? payload.data
+      : Array.isArray(payload?.transactions) ? payload.transactions
+      : Array.isArray(payload?.data?.transactions) ? payload.data.transactions
+      : [];
+    return raw.filter(Boolean);
+  }
+
   async function hydratePortfolio(force = false) {
     if (hydrating && !force) return hydrating;
+    const currentToken = token();
+    if (!currentToken) {
+      scheduleAuthRetry();
+      return transactions;
+    }
+
     hydrating = request('GET').then(payload => {
-      transactions = Array.isArray(payload.data) ? payload.data : [];
-      window.dispatchEvent(new CustomEvent('portfolio:updated'));
+      transactions = normalizeTransactions(payload);
+      lastToken = currentToken;
+      window.dispatchEvent(new CustomEvent('portfolio:updated', {
+        detail: { transactions: transactions.length, positions: rebuildLots(transactions).length }
+      }));
+      if (typeof window.renderPortfolio === 'function') {
+        try { window.renderPortfolio(); } catch (error) { console.error('[PORTFOLIO] Render après hydratation:', error); }
+      }
       return transactions;
     }).catch(error => {
-      console.error('[PORTFOLIO] Supabase indisponible:', error.message);
-      // Ne pas effacer des données déjà chargées simplement parce qu'une
-      // requête de rafraîchissement échoue temporairement.
+      console.error('[PORTFOLIO] Chargement Supabase échoué:', error.message);
+      if (error.status === 401 || error.status === 403) scheduleAuthRetry();
       if (!transactions.length && typeof window.toast === 'function') {
         window.toast('Impossible de charger le portefeuille', 'error');
       }
       return transactions;
     }).finally(() => { hydrating = null; });
     return hydrating;
+  }
+
+  function scheduleAuthRetry() {
+    if (authRetryTimer || !token()) return;
+    const retry = async () => {
+      authRetryTimer = null;
+      if (!token()) return;
+      if (token() !== lastToken || !transactions.length) await hydratePortfolio(true);
+    };
+    authRetryTimer = setTimeout(retry, 800);
+  }
+
+  function startAuthWatcher() {
+    const check = () => {
+      const current = token();
+      if (current && current !== lastToken) hydratePortfolio(true);
+      if (!current && lastToken) {
+        transactions = [];
+        lastToken = '';
+        window.dispatchEvent(new CustomEvent('portfolio:updated', { detail: { transactions: 0, positions: 0 } }));
+      }
+    };
+    setInterval(check, 1000);
+    window.addEventListener('storage', check);
+    window.addEventListener('auth:changed', check);
+    window.addEventListener('auth:login', check);
+    window.addEventListener('auth:logout', check);
   }
 
   function getPortfolio() { return rebuildLots(transactions); }
@@ -94,9 +145,10 @@
   function addTransaction(input) {
     return enqueueMutation(async () => {
       const payload = await request('POST', input);
-      if (payload.data) transactions.push(payload.data);
-      window.dispatchEvent(new CustomEvent('portfolio:updated'));
-      return payload.data;
+      const created = payload?.data || payload?.transaction || payload;
+      if (created && typeof created === 'object') transactions.push(created);
+      await hydratePortfolio(true);
+      return created;
     });
   }
 
@@ -136,7 +188,6 @@
       }
 
       await hydratePortfolio(true);
-      window.dispatchEvent(new CustomEvent('portfolio:updated'));
       return true;
     });
   }
@@ -153,5 +204,7 @@
     return true;
   };
   window.getTransactions = getTransactions;
+
+  startAuthWatcher();
   hydratePortfolio();
 })();
