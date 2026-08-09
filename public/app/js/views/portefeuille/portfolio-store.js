@@ -207,4 +207,15 @@
 
   startAuthWatcher();
   hydratePortfolio();
+
+  // Load the sale/financial-flow correction after the store exists.
+  // It only overrides frontend handlers; it does not alter Supabase or APIs.
+  try {
+    const script = document.createElement('script');
+    script.src = 'app/js/views/portefeuille/portfolio-trade-flows-patch.js?v=1';
+    script.async = false;
+    document.head.appendChild(script);
+  } catch (e) {
+    console.error('[PORTFOLIO] Trade patch:', e);
+  }
 })();
