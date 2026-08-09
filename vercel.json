@@ -4,6 +4,19 @@
   "crons": [
     {"path": "/api/sync-brvm", "schedule": "30 18 * * 1-5"}
   ],
+  "redirects": [
+    {
+      "source": "/app/app.html",
+      "destination": "/app.html",
+      "permanent": true
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/app.html",
+      "destination": "/app/app.html"
+    }
+  ],
   "headers": [
     {
       "source": "/api/(.*)",
