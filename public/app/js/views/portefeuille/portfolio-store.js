@@ -5,6 +5,7 @@
 
   let transactions = [];
   let hydrating = null;
+  let mutationQueue = Promise.resolve();
 
   function token() {
     try {
@@ -36,8 +37,6 @@
     return String(a?.id || '').localeCompare(String(b?.id || ''));
   }
 
-  // Les lots doivent toujours être reconstruits dans l'ordre chronologique.
-  // Cela garantit que le FIFO achat/vente ne dépend pas de l'ordre renvoyé par l'API.
   function rebuildLots(rows) {
     const lots = [];
     const ordered = [...(rows || [])].sort(transactionOrder);
@@ -58,6 +57,8 @@
           lot.qty -= take;
           remaining -= take;
         }
+        // Une vente supérieure à la quantité détenue est notée mais ne crée jamais
+        // une position négative. Le serveur reste la source de vérité de la transaction.
       }
     }
     return lots.filter(l => l.qty > 0);
@@ -67,11 +68,15 @@
     if (hydrating && !force) return hydrating;
     hydrating = request('GET').then(payload => {
       transactions = Array.isArray(payload.data) ? payload.data : [];
+      window.dispatchEvent(new CustomEvent('portfolio:updated'));
       return transactions;
     }).catch(error => {
       console.error('[PORTFOLIO] Supabase indisponible:', error.message);
-      transactions = [];
-      if (typeof window.toast === 'function') window.toast('Impossible de charger le portefeuille', 'error');
+      // Ne pas effacer des données déjà chargées simplement parce qu'une
+      // requête de rafraîchissement échoue temporairement.
+      if (!transactions.length && typeof window.toast === 'function') {
+        window.toast('Impossible de charger le portefeuille', 'error');
+      }
       return transactions;
     }).finally(() => { hydrating = null; });
     return hydrating;
@@ -80,48 +85,60 @@
   function getPortfolio() { return rebuildLots(transactions); }
   function getTransactions() { return transactions.slice(); }
 
-  async function addTransaction(input) {
-    const payload = await request('POST', input);
-    if (payload.data) transactions.push(payload.data);
-    return payload.data;
+  function enqueueMutation(operation) {
+    const run = mutationQueue.then(operation, operation);
+    mutationQueue = run.catch(() => undefined);
+    return run;
+  }
+
+  function addTransaction(input) {
+    return enqueueMutation(async () => {
+      const payload = await request('POST', input);
+      if (payload.data) transactions.push(payload.data);
+      window.dispatchEvent(new CustomEvent('portfolio:updated'));
+      return payload.data;
+    });
   }
 
   async function syncPortfolio(nextLots) {
-    const currentLots = rebuildLots(transactions);
-    const currentById = new Map(currentLots.map(l => [String(l.id), l]));
-    const nextById = new Map((nextLots || []).map(l => [String(l.id), l]));
+    return enqueueMutation(async () => {
+      const currentLots = rebuildLots(transactions);
+      const currentById = new Map(currentLots.map(l => [String(l.id), l]));
+      const nextById = new Map((nextLots || []).map(l => [String(l.id), l]));
 
-    for (const lot of nextLots || []) {
-      const old = currentById.get(String(lot.id));
-      const nextQty = Number(lot.qty || 0);
-      const oldQty = old ? Number(old.qty || 0) : 0;
+      for (const lot of nextLots || []) {
+        const old = currentById.get(String(lot.id));
+        const nextQty = Number(lot.qty || 0);
+        const oldQty = old ? Number(old.qty || 0) : 0;
 
-      if (!lot.serverId && !old) {
-        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
-        continue;
+        if (!lot.serverId && !old) {
+          await request('POST', { type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
+          continue;
+        }
+
+        if (old && (old.price !== Number(lot.price) || old.date !== lot.date)) {
+          await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
+          await request('POST', { type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
+          continue;
+        }
+
+        if (old && oldQty > nextQty) {
+          await request('POST', { type: 'VENTE', ticker: lot.ticker, quantity: oldQty - nextQty, price: Number(old.price), date: lot.date });
+        } else if (old && nextQty > oldQty) {
+          await request('POST', { type: 'ACHAT', ticker: lot.ticker, quantity: nextQty - oldQty, price: Number(old.price), date: lot.date });
+        }
       }
 
-      if (old && (old.price !== Number(lot.price) || old.date !== lot.date)) {
-        await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
-        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
-        continue;
+      for (const old of currentLots) {
+        if (!nextById.has(String(old.id)) && !nextById.has(String(old.serverId))) {
+          await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
+        }
       }
 
-      if (old && oldQty > nextQty) {
-        await addTransaction({ type: 'VENTE', ticker: lot.ticker, quantity: oldQty - nextQty, price: Number(old.price), date: lot.date });
-      } else if (old && nextQty > oldQty) {
-        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: nextQty - oldQty, price: Number(old.price), date: lot.date });
-      }
-    }
-
-    for (const old of currentLots) {
-      if (!nextById.has(String(old.id)) && !nextById.has(String(old.serverId))) {
-        await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
-      }
-    }
-
-    await hydratePortfolio(true);
-    return true;
+      await hydratePortfolio(true);
+      window.dispatchEvent(new CustomEvent('portfolio:updated'));
+      return true;
+    });
   }
 
   window.portfolioStore = { hydrate: hydratePortfolio, sync: syncPortfolio, addTransaction, getTransactions };
