@@ -31,3 +31,48 @@
 body { background: var(--bg); font-family: var(--sans); color: var(--cream); min-height: 100vh; font-weight: 300; line-height: 1.6; overflow-x: hidden; }
 body.init-hidden { visibility: hidden; }
 body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.5; }
+
+/* ═══════════════════════════════════════
+   THE CAPITAL — BRAND LOGO
+   Logo uploaded to /public/assets/the-capital-logo.png
+   ═══════════════════════════════════════ */
+.logo-title,
+.topnav-logo {
+  font-size: 0 !important;
+  line-height: 0 !important;
+  color: transparent !important;
+  background-image: url('/assets/the-capital-logo.png');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  flex-shrink: 0;
+}
+
+/* Sidebar branding */
+.logo-title {
+  width: 176px;
+  height: 44px;
+  min-height: 44px;
+}
+
+/* Horizontal header branding */
+.topnav-logo {
+  width: 148px;
+  height: 38px;
+  min-height: 38px;
+  cursor: pointer;
+}
+
+/* Keep the logo crisp and correctly aligned on narrow screens */
+@media (max-width: 900px) {
+  .logo-title {
+    width: 150px;
+    height: 38px;
+    min-height: 38px;
+  }
+  .topnav-logo {
+    width: 124px;
+    height: 32px;
+    min-height: 32px;
+  }
+}
