@@ -66,8 +66,8 @@
     const top3 = sorted.slice(0,3).reduce((s,r) => s + r.value, 0) / totalValue * 100;
     el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px">
       <div><div style="font-size:11px;color:var(--dim)">Plus grosse ligne</div><strong style="font-size:18px;color:var(--gold)">${esc(top1.ticker)}</strong><div style="font-size:12px;color:var(--dim)">${number(top1.allocation,2)}%</div></div>
-      <div><div style="font-size:11px;color:var(--dim)">Top 3</div><strong style="font-size:18px">${number(top3,2)}%</strong><div style="font-size:12px;color:var(--dim)">du portefeuille</div></div>
-      <div><div style="font-size:11px;color:var(--dim)">HHI</div><strong style="font-size:18px">${number(hhi,0)}</strong><div style="font-size:12px;color:var(--dim)">concentration</div></div>
+      <div><div style="font-size:11px;color:var(--dim)">Top 3</div><strong style="font-size:18px">${number(top3,2)}%</strong><div style="font-size:12px;color:var(--dim)">du portefeuille investi</div></div>
+      <div><div style="font-size:11px;color:var(--dim)">HHI</div><strong style="font-size:18px">${number(hhi,0)}</strong><div style="font-size:12px;color:var(--dim)">0–10 000 · plus élevé = plus concentré</div></div>
     </div>`;
   };
 
@@ -77,24 +77,27 @@
     const divs = typeof window.getDividends === 'function' ? window.getDividends() : [];
     const total = divs.reduce((s,d) => s + Number(d.amount || 0), 0);
     const invested = (rows || []).reduce((s,r) => s + Number(r.invested || 0), 0);
-    const yieldPct = invested > 0 ? total / invested * 100 : 0;
+    const netContributions = (() => {
+      const txs = typeof window.getTransactions === 'function' ? window.getTransactions() : [];
+      return txs.reduce((s,t) => {
+        const type = String(t.type || '').toUpperCase();
+        const amount = Math.abs(Number(t.montant_net ?? t.montant_brut ?? t.amount ?? 0));
+        return type === 'DEPOT' || type === 'DEPOSIT' ? s + amount : type === 'RETRAIT' || type === 'WITHDRAW' ? s - amount : s;
+      }, 0);
+    })();
+    const base = netContributions > 0 ? netContributions : invested;
+    const yieldPct = base > 0 ? total / base * 100 : 0;
     el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px">
       <div><div style="font-size:11px;color:var(--dim)">Dividendes perçus</div><strong style="font-size:18px;color:var(--green)">+${money(total)} FCFA</strong></div>
-      <div><div style="font-size:11px;color:var(--dim)">Rendement sur coût</div><strong style="font-size:18px">${number(yieldPct,2)}%</strong></div>
-      <div><div style="font-size:11px;color:var(--dim)">Opérations</div><strong style="font-size:18px">${divs.length}</strong></div>
+      <div><div style="font-size:11px;color:var(--dim)">Rendement sur capital</div><strong style="font-size:18px">${number(yieldPct,2)}%</strong></div>
+      <div><div style="font-size:11px;color:var(--dim)">Versements de dividendes</div><strong style="font-size:18px">${divs.length}</strong></div>
     </div>`;
   };
 
-  window.renderBenchmark = function (rows, hist) {
+  window.renderBenchmark = function () {
     const el = document.getElementById('benchmarkStats');
     if (!el) return;
-    const values = hist?.values || [];
-    if (values.length < 2) {
-      el.innerHTML = '<div style="text-align:center;color:var(--dim);padding:20px">Pas assez d’historique pour calculer la performance.</div>';
-      return;
-    }
-    const portfolioReturn = values[0] > 0 ? (values[values.length - 1] / values[0] - 1) * 100 : 0;
-    el.innerHTML = `<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance portefeuille sur la période</div><strong style="font-size:24px;color:${portfolioReturn >= 0 ? 'var(--green)' : 'var(--red)'}">${portfolioReturn >= 0 ? '+' : ''}${number(portfolioReturn,2)}%</strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Le benchmark BRVM sera affiché dès qu’une série d’indice correspondante est disponible.</div></div>`;
+    el.innerHTML = `<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM</div><strong style="font-size:20px;color:var(--dim)">—</strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Comparaison non calculée : aucune série d'indice BRVM compatible n'est exposée au moteur portefeuille actuel. Aucune valeur n'est inventée.</div></div>`;
   };
 
   window.renderCorrelationMatrix = function (rows) {
@@ -113,7 +116,7 @@
       returns[t] = [];
       for (let i=1;i<series[t].length;i++) {
         const a=Number(series[t][i-1]), b=Number(series[t][i]);
-        returns[t].push(a>0&&b>0 ? b/a-1 : 0);
+        returns[t].push(a>0&&b>0 ? b/a-1 : null);
       }
     });
     let html = '<div style="overflow:auto;padding:12px"><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="padding:8px;text-align:left">Ticker</th>';
@@ -122,7 +125,11 @@
     tickers.forEach(a => {
       html += `<tr><th style="padding:8px;text-align:left;color:var(--gold)">${esc(a)}</th>`;
       tickers.forEach(b => {
-        const c = a === b ? 1 : (typeof window.calcCorrelation === 'function' ? window.calcCorrelation(returns[a], returns[b]) : 0);
+        const pairedA = [], pairedB = [];
+        const aa = returns[a] || [], bb = returns[b] || [];
+        const n = Math.min(aa.length, bb.length);
+        for (let i=0;i<n;i++) if (Number.isFinite(aa[i]) && Number.isFinite(bb[i])) { pairedA.push(aa[i]); pairedB.push(bb[i]); }
+        const c = a === b ? 1 : (typeof window.calcCorrelation === 'function' ? window.calcCorrelation(pairedA, pairedB) : 0);
         html += `<td style="padding:8px;text-align:right;font-family:var(--mono)">${number(c,2)}</td>`;
       });
       html += '</tr>';
@@ -131,14 +138,11 @@
     el.innerHTML = html;
   };
 
-  // Le moteur de positions existe déjà dans portefeuille-main.js. On le laisse
-  // calculer les KPI/tableau et on ajoute ici le branchement analytics qui manquait.
   const originalRenderPortfolio = window.renderPortfolio;
   if (typeof originalRenderPortfolio === 'function') {
     window.renderPortfolio = function () {
       originalRenderPortfolio();
       try {
-        const lots = typeof window.getPortfolio === 'function' ? window.getPortfolio() : [];
         const rows = Array.isArray(window._pfLastRows) ? window._pfLastRows : [];
         if (!rows.length) return;
         const totalValue = rows.reduce((sum, r) => sum + Number(r.value || 0), 0);
@@ -150,19 +154,51 @@
           sectors[sector] = (sectors[sector] || 0) + value;
           pays[country] = (pays[country] || 0) + value;
         });
-        const hist = typeof window.getPortfolioHistory === 'function' ? window.getPortfolioHistory(window._pfPeriod || 99999) : { dates: [], values: [], pls: [] };
+        const hist = typeof window.getPortfolioHistory === 'function' ? window.getPortfolioHistory(window._pfPeriod || 99999) : { dates: [], values: [], pls: [], returns: [] };
         window.renderPortfolioCharts(rows, totalValue, sectors, pays, hist);
         window.renderConcentration(rows, totalValue);
         window.renderDividends(rows);
-        window.renderBenchmark(rows, hist);
+        window.renderBenchmark();
         window.renderCorrelationMatrix(rows);
+
+        // Les indicateurs de risque utilisent désormais les rendements neutralisés
+        // des dépôts/retraits, jamais une simple variation de valeur brute.
+        const returns = Array.isArray(hist.returns) ? hist.returns.filter(Number.isFinite) : [];
+        const vol = typeof window.calcVolatility === 'function' ? window.calcVolatility(returns) : 0;
+        const sharpe = typeof window.calcSharpe === 'function' ? window.calcSharpe(returns) : 0;
+        const maxDD = typeof window.calcMaxDrawdown === 'function' ? window.calcMaxDrawdown((hist.values || []).filter(Number.isFinite)) : 0;
+        const latestPL = hist.pls?.length ? Number(hist.pls[hist.pls.length - 1]) : 0;
+        const txs = typeof window.getTransactions === 'function' ? window.getTransactions() : [];
+        const netContributions = txs.reduce((s,t) => {
+          const type = String(t.type || '').toUpperCase();
+          const amount = Math.abs(Number(t.montant_net ?? t.montant_brut ?? t.amount ?? 0));
+          return type === 'DEPOT' || type === 'DEPOSIT' ? s + amount : type === 'RETRAIT' || type === 'WITHDRAW' ? s - amount : s;
+        }, 0);
+        const costBasis = rows.reduce((s,r) => s + Number(r.invested || 0), 0);
+        const returnBase = netContributions > 0 ? netContributions : costBasis;
+        const globalReturn = returnBase > 0 ? latestPL / returnBase * 100 : 0;
+
+        const pfPL = document.getElementById('pfPL');
+        const pfPLSub = document.getElementById('pfPLSub');
+        const pfReturn = document.getElementById('pfReturn');
+        const pfVol = document.getElementById('pfVolatility');
+        const pfSharpe = document.getElementById('pfSharpe');
+        const pfDD = document.getElementById('pfDrawdown');
+        if (pfPL) { pfPL.textContent = `${latestPL >= 0 ? '+' : ''}${money(latestPL)} FCFA`; pfPL.style.color = latestPL >= 0 ? 'var(--green)' : 'var(--red)'; }
+        if (pfPLSub) { pfPLSub.textContent = `${globalReturn >= 0 ? '+' : ''}${number(globalReturn,2)}% de performance globale`; pfPLSub.style.color = globalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
+        if (pfReturn) { pfReturn.textContent = `${number(globalReturn,2)}%`; pfReturn.style.color = globalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
+        if (pfVol) pfVol.textContent = returns.length >= 2 ? `${number(vol * 100,2)}%` : '—';
+        if (pfSharpe) pfSharpe.textContent = returns.length >= 2 ? number(sharpe,2) : '—';
+        if (pfDD) pfDD.textContent = (hist.values || []).length >= 2 ? `-${number(maxDD,2)}%` : '—';
 
         const tickers = [...new Set(rows.map(r => String(r.ticker || '').toUpperCase().trim()).filter(Boolean))];
         if (typeof window.hydratePortfolioHistoricalPrices === 'function') {
           const missing = tickers.some(t => !Array.isArray(window._pfHistCache?.[t]) || window._pfHistCache[t].length === 0);
           if (missing && !window.__TC_PF_HISTORY_LOADING__) {
             window.__TC_PF_HISTORY_LOADING__ = true;
-            window.hydratePortfolioHistoricalPrices(tickers, 365)
+            // Sans limite forcée : la fonction détermine la profondeur depuis
+            // la transaction la plus ancienne du portefeuille.
+            window.hydratePortfolioHistoricalPrices(tickers)
               .catch(e => console.warn('[PORTFOLIO] Historique:', e))
               .finally(() => { window.__TC_PF_HISTORY_LOADING__ = false; });
           }
