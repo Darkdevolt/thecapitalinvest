@@ -9,6 +9,11 @@
       "source": "/app/app.html",
       "destination": "/app.html",
       "permanent": true
+    },
+    {
+      "source": "/markets.html",
+      "destination": "/app.html#marche",
+      "permanent": true
     }
   ],
   "rewrites": [
