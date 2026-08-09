@@ -71,16 +71,17 @@ export default async function handler(req, res) {
 
       let quantity = quantityInput;
       let price = priceInput;
-      let amount = quantity * price;
+      const amount = quantity * price;
 
       if (!isTrade) {
         if (!Number.isFinite(amountInput) || amountInput <= 0) return json(res, 400, { success: false, error: 'Montant obligatoire' });
         quantity = 1;
         price = amountInput;
-        amount = amountInput;
       } else if (!Number.isInteger(quantity) || quantity <= 0 || !Number.isFinite(price) || price <= 0) {
         return json(res, 400, { success: false, error: 'Ticker, quantité et prix sont obligatoires' });
       }
+
+      const grossAmount = quantity * price;
 
       if (type === 'VENTE') {
         const { data: existing, error: existingError } = await supabaseAdmin
@@ -90,24 +91,23 @@ export default async function handler(req, res) {
         if (quantity > held) return json(res, 400, { success: false, error: `Quantité détenue insuffisante (${held})` });
       }
 
-      const f = isTrade ? fees(amount) : { commission: 0, tva: 0, brvm: 0, dcbr: 0, total: 0 };
-      const montantNet = type === 'ACHAT' ? amount + f.total : type === 'VENTE' ? amount - f.total : type === 'RETRAIT' ? -amount : amount;
+      const f = isTrade ? fees(grossAmount) : { commission: 0, tva: 0, brvm: 0, dcbr: 0, total: 0 };
+      const montantNet = type === 'ACHAT' ? grossAmount + f.total : type === 'VENTE' ? grossAmount - f.total : type === 'RETRAIT' ? -grossAmount : grossAmount;
 
+      // prix_unitaire et montant_brut sont des colonnes GENERATED dans Supabase.
+      // Elles ne doivent donc jamais être incluses dans INSERT.
       const row = {
         user_id: userId,
         ticker,
         type,
         quantite: quantity,
         cours: price,
-        prix_unitaire: price,
         date_transaction: date,
         commission: f.commission,
         tva_commission: f.tva,
         redevance_brvm: f.brvm,
         redevance_dcbr: f.dcbr,
         total_frais: f.total,
-        montant_brut: amount,
-        frais_total: f.total,
         montant_net: montantNet,
         cout_net_unitaire: isTrade ? montantNet / quantity : montantNet,
         societe: input.societe || null,
