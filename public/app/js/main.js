@@ -27,6 +27,11 @@
     link.rel = 'stylesheet';
     link.href = 'app/css/mobile-polish.css?v=1';
     document.head.appendChild(link);
+    var finalLink = document.createElement('link');
+    finalLink.id = 'tc-mobile-polish-v2';
+    finalLink.rel = 'stylesheet';
+    finalLink.href = 'app/css/mobile-polish-v2.css?v=1';
+    document.head.appendChild(finalLink);
     console.log('[MAIN] Mobile UI polish chargé');
   }
 
