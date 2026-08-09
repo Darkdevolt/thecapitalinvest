@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — PRIX & HISTORIQUES (v5)
+// PORTEFEUILLE — PRIX & HISTORIQUES
 // Source de cours : pipeline marché existant (/api/marche).
 // Le portefeuille ne crée aucune source de prix parallèle.
 // ═══════════════════════════════════════════════════════
@@ -57,7 +57,20 @@ async function hydratePortfolioMarketPrices() {
   return _pfMarketHydration;
 }
 
-async function hydratePortfolioHistoricalPrices(tickers, limit = 365) {
+function _historicalLimitForPortfolio(tickers) {
+  const transactions = typeof window.getTransactions === 'function' ? window.getTransactions() : [];
+  const wanted = new Set((tickers || []).map(t => String(t || '').toUpperCase().trim()));
+  const dates = transactions
+    .filter(tx => wanted.has(String(tx.ticker || '').toUpperCase().trim()))
+    .map(tx => new Date(tx.date_transaction || tx.date))
+    .filter(d => !Number.isNaN(d.getTime()));
+  if (!dates.length) return 365;
+  const oldest = Math.min(...dates.map(d => d.getTime()));
+  const days = Math.ceil((Date.now() - oldest) / 86400000) + 10;
+  return Math.max(365, Math.min(days, 20000));
+}
+
+async function hydratePortfolioHistoricalPrices(tickers, limit = null) {
   const unique = [...new Set((tickers || []).map(t => String(t || '').toUpperCase().trim()).filter(Boolean))];
   if (!unique.length) return {};
 
@@ -65,9 +78,11 @@ async function hydratePortfolioHistoricalPrices(tickers, limit = 365) {
   if (!missing.length) return Object.fromEntries(unique.map(t => [t, window._pfHistCache[t]]));
   if (_pfHistoryHydration) return _pfHistoryHydration;
 
+  const effectiveLimit = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : _historicalLimitForPortfolio(unique);
+
   _pfHistoryHydration = Promise.all(missing.map(async ticker => {
     try {
-      const response = await fetch(`/api/marche?type=historique&ticker=${encodeURIComponent(ticker)}&limit=${limit}`, { cache: 'no-store' });
+      const response = await fetch(`/api/marche?type=historique&ticker=${encodeURIComponent(ticker)}&limit=${effectiveLimit}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
       const rows = (Array.isArray(payload) ? payload : (payload?.data || [])).filter(r => r && r.date_seance);
@@ -165,13 +180,10 @@ function _portfolioTickers() {
 async function hydratePortfolioHistoryForCurrentPositions() {
   const tickers = _portfolioTickers();
   if (!tickers.length) return;
-  try { await hydratePortfolioHistoricalPrices(tickers, 365); }
+  try { await hydratePortfolioHistoricalPrices(tickers); }
   catch (error) { console.warn('[PORTFOLIO PRICES] Hydratation historique:', error); }
 }
 
-// Important : le store portefeuille est asynchrone. On ne dépend donc pas
-// de l'ordre de chargement des scripts : dès que les positions arrivent,
-// leurs historiques sont demandés puis le portefeuille est rerendu.
 window.addEventListener('portfolio:updated', hydratePortfolioHistoryForCurrentPositions);
 window.addEventListener('portfolio:store-ready', hydratePortfolioHistoryForCurrentPositions);
 window.addEventListener('portfolio:prices-ready', hydratePortfolioHistoryForCurrentPositions);
