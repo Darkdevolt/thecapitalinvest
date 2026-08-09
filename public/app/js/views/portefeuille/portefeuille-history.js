@@ -52,6 +52,7 @@ function _pfHistoryLotsAtDate(transactions, dateStr) {
 function _pfCashAndExternalFlowAtDate(transactions, dateStr) {
   let cash = 0;
   let externalFlow = 0;
+  let dailyExternalFlow = 0;
   const ordered = [...(transactions || [])]
     .filter(tx => _pfTxDate(tx) && _pfTxDate(tx) <= dateStr)
     .sort((a, b) => {
@@ -65,12 +66,15 @@ function _pfCashAndExternalFlowAtDate(transactions, dateStr) {
     const qty = Number(tx.quantite ?? tx.quantity ?? tx.qty ?? 0);
     const price = Number(tx.prix_unitaire ?? tx.cours ?? tx.price ?? 0);
     const amount = _pfTxAmount(tx, qty, price);
+    const txDate = _pfTxDate(tx);
     if (type === 'DEPOT' || type === 'DEPOSIT') {
       cash += amount;
       externalFlow += amount;
+      if (txDate === dateStr) dailyExternalFlow += amount;
     } else if (type === 'RETRAIT' || type === 'WITHDRAW') {
       cash -= amount;
       externalFlow -= amount;
+      if (txDate === dateStr) dailyExternalFlow -= amount;
     } else if (type === 'ACHAT' || type === 'BUY') {
       cash -= amount;
     } else if (type === 'VENTE' || type === 'SELL') {
@@ -79,7 +83,7 @@ function _pfCashAndExternalFlowAtDate(transactions, dateStr) {
       cash += amount;
     }
   }
-  return { cash, externalFlow };
+  return { cash, externalFlow, dailyExternalFlow };
 }
 
 function getPortfolioHistory(periodDays = 99999) {
@@ -119,11 +123,9 @@ function getPortfolioHistory(periodDays = 99999) {
   const returns = [];
   const externalFlows = [];
   const cashSeries = [];
-  const priceAvailability = {};
 
   function priceAtOrBefore(ticker, dateStr) {
     const t = String(ticker || '').toUpperCase().trim();
-    if (!t) return null;
     const cache = window._pfHistCache?.[t] || [];
     if (!cache.length) return null;
     let lo = 0, hi = cache.length - 1, idx = -1;
@@ -138,10 +140,10 @@ function getPortfolioHistory(periodDays = 99999) {
     return price > 0 ? price : null;
   }
 
-  dates.forEach((date, index) => {
+  dates.forEach(date => {
     const ds = date.toISOString().slice(0, 10);
     const lots = _pfHistoryLotsAtDate(transactions, ds);
-    const { cash, externalFlow } = _pfCashAndExternalFlowAtDate(transactions, ds);
+    const { cash, externalFlow, dailyExternalFlow } = _pfCashAndExternalFlowAtDate(transactions, ds);
     let securitiesValue = 0;
     let complete = true;
 
@@ -154,12 +156,7 @@ function getPortfolioHistory(periodDays = 99999) {
       securitiesValue += lot.qty * price;
     }
 
-    // Une valeur incomplète n'est jamais remplacée par le cours actuel.
-    // On ne crée donc pas de faux mouvement de marché.
-    const accountValue = complete ? securitiesValue + cash : null;
-    const previousValue = values.length ? values[values.length - 1] : null;
-
-    if (accountValue == null) {
+    if (!complete) {
       values.push(null);
       pls.push(null);
       externalFlows.push(externalFlow);
@@ -167,21 +164,21 @@ function getPortfolioHistory(periodDays = 99999) {
       return;
     }
 
+    const accountValue = securitiesValue + cash;
+    const previousValue = values.length ? values[values.length - 1] : null;
     values.push(accountValue);
     pls.push(accountValue - externalFlow);
     externalFlows.push(externalFlow);
     cashSeries.push(cash);
 
     if (previousValue != null && previousValue > 0) {
-      // Les dépôts/retraits sont neutralisés pour mesurer la performance du marché.
-      const adjustedStart = previousValue;
-      const adjustedEnd = accountValue - externalFlow;
-      returns.push(adjustedEnd / adjustedStart - 1);
+      const adjustedEnd = accountValue - dailyExternalFlow;
+      returns.push(adjustedEnd / previousValue - 1);
     }
   });
 
-  // Conserve uniquement les points réellement valorisables pour les graphiques.
-  const valid = dates.map((date, i) => ({ date, value: values[i], pl: pls[i], flow: externalFlows[i], cash: cashSeries[i] })).filter(x => Number.isFinite(x.value));
+  const valid = dates.map((date, i) => ({ date, value: values[i], pl: pls[i], flow: externalFlows[i], cash: cashSeries[i] }))
+    .filter(x => Number.isFinite(x.value));
   const result = {
     dates: valid.map(x => x.date),
     values: valid.map(x => x.value),
