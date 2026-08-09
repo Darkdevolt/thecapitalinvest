@@ -66,6 +66,9 @@
     await Promise.allSettled([
       fetchOrEmpty('/marche?type=cours', function(d) {
         window.allCours = Array.isArray(d) ? d : [];
+        // Les sélecteurs du portefeuille dépendent des cours. Ils doivent être
+        // reconstruits après leur arrivée, et pas uniquement lors du premier rendu.
+        if (typeof window.populateTickerSelect === 'function') window.populateTickerSelect();
         renderCurrentView();
       }, []),
       fetchOrEmpty('/marche?type=indices', function(d) {
