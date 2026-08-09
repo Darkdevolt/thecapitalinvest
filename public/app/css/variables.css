@@ -47,18 +47,18 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
   flex-shrink: 0;
 }
 
-/* Logo principal : grande présence visuelle dans la navigation */
+/* Logo principal : présence visuelle renforcée */
 .logo-title {
-  width: 300px;
-  height: 90px;
-  min-height: 90px;
+  width: 340px;
+  height: 108px;
+  min-height: 108px;
 }
 
 /* Logo de la barre supérieure */
 .topnav-logo {
-  width: 240px;
-  height: 66px;
-  min-height: 66px;
+  width: 270px;
+  height: 76px;
+  min-height: 76px;
   cursor: pointer;
   padding-right: 0 !important;
   border-right: 0 !important;
@@ -96,13 +96,13 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 @media (max-width: 1100px) {
   .main .view#view-financials .fin-detail-grid,
   .main .view#view-financials-detail .fin-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  .logo-title { width: 260px; height: 78px; min-height: 78px; }
-  .topnav-logo { width: 210px; height: 60px; min-height: 60px; }
+  .logo-title { width: 300px; height: 96px; min-height: 96px; }
+  .topnav-logo { width: 240px; height: 70px; min-height: 70px; }
 }
 
 @media (max-width: 700px) {
   .main .view#view-financials .fin-detail-grid,
   .main .view#view-financials-detail .fin-detail-grid { grid-template-columns: 1fr !important; }
-  .logo-title { width: 210px; height: 64px; min-height: 64px; }
-  .topnav-logo { width: 175px; height: 52px; min-height: 52px; }
+  .logo-title { width: 240px; height: 76px; min-height: 76px; }
+  .topnav-logo { width: 200px; height: 60px; min-height: 60px; }
 }
