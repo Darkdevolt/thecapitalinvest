@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — PRIX & HISTORIQUES (v3)
+// PORTEFEUILLE — PRIX & HISTORIQUES (v4)
 // Source de cours : pipeline marché existant (/api/marche).
 // Le portefeuille ne crée aucune source de prix parallèle.
 // ═══════════════════════════════════════════════════════
@@ -59,9 +59,13 @@ async function hydratePortfolioMarketPrices() {
 
 async function hydratePortfolioHistoricalPrices(tickers, limit = 365) {
   const unique = [...new Set((tickers || []).map(t => String(t || '').toUpperCase().trim()).filter(Boolean))];
-  if (!unique.length) return [];
+  if (!unique.length) return {};
+
+  const missing = unique.filter(t => !Array.isArray(window._pfHistCache[t]) || window._pfHistCache[t].length === 0);
+  if (!missing.length) return Object.fromEntries(unique.map(t => [t, window._pfHistCache[t]]));
   if (_pfHistoryHydration) return _pfHistoryHydration;
-  _pfHistoryHydration = Promise.all(unique.map(async ticker => {
+
+  _pfHistoryHydration = Promise.all(missing.map(async ticker => {
     try {
       const response = await fetch(`/api/marche?type=historique&ticker=${encodeURIComponent(ticker)}&limit=${limit}`, { cache: 'no-store' });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -69,16 +73,17 @@ async function hydratePortfolioHistoricalPrices(tickers, limit = 365) {
       const rows = (Array.isArray(payload) ? payload : (payload?.data || [])).filter(r => r && r.date_seance);
       rows.sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance));
       window._pfHistCache[ticker] = rows;
-      return rows;
+      return [ticker, rows];
     } catch (error) {
       console.error(`[PORTFOLIO PRICES] Historique ${ticker}:`, error.message);
-      return [];
+      window._pfHistCache[ticker] = [];
+      return [ticker, []];
     }
-  })).then(results => {
+  })).then(entries => {
     const merged = {};
-    unique.forEach((ticker, i) => { merged[ticker] = results[i]; });
-    window.allCoursHistorique = unique.flatMap(t => results[unique.indexOf(t)] || []);
-    window.dispatchEvent(new CustomEvent('portfolio:history-ready', { detail: { tickers: unique, rows: results.reduce((n,r) => n + r.length, 0) } }));
+    unique.forEach(t => { merged[t] = window._pfHistCache[t] || []; });
+    window.allCoursHistorique = unique.flatMap(t => merged[t] || []);
+    window.dispatchEvent(new CustomEvent('portfolio:history-ready', { detail: { tickers: unique, rows: unique.reduce((n,t) => n + (merged[t]?.length || 0), 0) } }));
     if (typeof window.renderPortfolio === 'function') {
       try { window.renderPortfolio(); } catch (error) { console.error('[PORTFOLIO PRICES] Historical render:', error); }
     }
@@ -181,6 +186,4 @@ function get52WeekLow(ticker) {
   return vals.length ? Math.min(...vals) : null;
 }
 
-// Si le pipeline marché n'a pas encore rempli allCours, le portefeuille
-// demande la même API marché puis se rerend lorsque les cours arrivent.
 hydratePortfolioMarketPrices();
