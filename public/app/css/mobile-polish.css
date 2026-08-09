@@ -1,36 +1,24 @@
 /* THE CAPITAL — mobile UI hardening
    Loaded after the dashboard styles so mobile rules are deterministic. */
 
-/* ─────────────────────────────────────────────────────────────
-   NAVIGATION SYSTEM — DESIGN CLEANUP
-   The navigation is intentionally typographic: no mixed emoji,
-   pictograms or decorative symbols. Functionality is unchanged.
-   ───────────────────────────────────────────────────────────── */
-
-/* Remove inconsistent icon glyphs from navigation without touching
-   the existing navigation handlers or HTML structure. */
+/* NAVIGATION SYSTEM — premium typographic treatment.
+   Functional handlers and HTML structure are intentionally preserved. */
 .nav-item .icon,
 .nav-dropdown-item .icon,
-.nav-dropdown-btn > span:first-child {
+.nav-dropdown-btn > span:first-child,
+#adminLink a > span {
   display: none !important;
 }
 
-.nav-item {
-  gap: 0;
-}
-
-.nav-dropdown-btn {
-  gap: 7px;
-}
-
-/* Keep only the functional dropdown caret. */
+.nav-item { gap: 0; }
+.nav-dropdown-btn { gap: 7px; }
 .nav-dropdown-btn .caret {
   display: inline-block;
   font-size: 7px;
   line-height: 1;
 }
 
-/* Search: replace the emoji magnifier with a CSS-drawn mark. */
+/* Search: CSS magnifier instead of an emoji. */
 .global-search::before {
   content: '' !important;
   width: 10px;
@@ -57,12 +45,7 @@
   pointer-events: none;
 }
 
-/* Administration and logout stay fully functional, but use text-only
-   controls consistent with the rest of the product. */
-#adminLink a > span {
-  display: none !important;
-}
-
+/* Text-only logout: same action, cleaner visual language. */
 .topnav-logout {
   font-size: 0 !important;
   min-width: 86px;
@@ -74,8 +57,7 @@
   letter-spacing: .04em;
 }
 
-/* Sidebar is currently hidden on desktop, but keep its design coherent
-   if it is enabled by a responsive rule. */
+/* Sidebar remains coherent if enabled by an existing responsive rule. */
 .nav-item,
 .nav-dropdown-item {
   padding-left: 12px;
@@ -90,7 +72,6 @@
     padding: 0 12px;
     gap: 8px;
   }
-
   .topnav { min-width: 0; overflow: hidden; }
   .topnav-logo {
     font-size: 14px;
@@ -103,12 +84,16 @@
   .nav-dropdown-btn { padding: 7px 8px; font-size: 11px; }
   .nav-dropdown-btn > span:first-child,
   .nav-dropdown-btn .caret { display: none; }
-  .nav-dropdown-menu { position: fixed; top: calc(var(--header-h) + 6px); left: 10px; right: 10px; width: auto; min-width: 0; }
-
-  .topnav-right {
-    gap: 6px;
-    padding-left: 8px;
+  .nav-dropdown-menu {
+    position: fixed;
+    top: calc(var(--header-h) + 6px);
+    left: 10px;
+    right: 10px;
+    width: auto;
+    min-width: 0;
   }
+
+  .topnav-right { gap: 6px; padding-left: 8px; }
   .global-search { display: none; }
   .header-badge { padding: 4px 8px; font-size: 10px; }
   .header-time { display: none; }
@@ -166,7 +151,6 @@
   .search-bar { gap: 8px; padding-bottom: 14px; }
   .search-input { min-width: 0; width: 100%; }
   .filter-btn { min-height: 40px; flex: 1; }
-
   .screener-filters { grid-template-columns: 1fr; gap: 10px; }
   .screener-filters input, .screener-filters select,
   .portf-form input, .portf-form select { min-height: 42px; width: 100%; }
@@ -177,28 +161,20 @@
   .fiche-company { font-size: 20px; }
   .fiche-price { font-size: 28px; }
   .ratios-grid { grid-template-columns: repeat(2, 1fr); }
-
   .boc-grid { grid-template-columns: 1fr; }
   .boc-header { padding: 13px 14px 10px; }
   .boc-body { padding: 10px 14px 12px; }
-
   .analyse-header { gap: 10px; flex-wrap: wrap; }
   .analyse-title { font-size: 14px; }
   .rec { font-size: 10px; padding: 4px 9px; }
-
   .alert-card { padding: 13px 14px; align-items: flex-start; }
   .alert-actions { width: 100%; }
   .alert-actions button { min-height: 38px; flex: 1; }
-
   .alloc-label { width: 82px; font-size: 10px; }
   .alloc-pct { width: 42px; font-size: 10px; }
-
   .empty-state { padding: 42px 14px; }
 
-  /* Hide decorative cursor effects on touch devices. */
   .cursor, .cursor-ring { display: none !important; }
-
-  /* Prevent inline charts/components from creating a second horizontal scroll. */
   .card, .card-body, .view, .page-header { min-width: 0; }
   img, svg, canvas { max-width: 100%; }
 }
