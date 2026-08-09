@@ -38,7 +38,17 @@ export default async function handler(req, res) {
         break;
       case 'historique':
         if (!ticker) return json(res, 400, { error: 'ticker requis' });
-        result = await query('cours', q => q.eq('ticker', ticker).order('date_seance', { ascending: false }).limit(limit));
+
+        // Les historiques de marché sont stockés dans `historique`.
+        // `cours` ne contient que les données de cours récentes et ne doit
+        // pas être utilisé pour alimenter les graphiques historiques.
+        result = await query('historique', q => q
+          .eq('ticker', ticker)
+          .order('date_seance', { ascending: false })
+          .limit(limit)
+        );
+
+        // Le graphique attend une série chronologique dans l'ordre ancien -> récent.
         if (!result.error && Array.isArray(result.data)) result.data.reverse();
         break;
       case 'entreprises':
