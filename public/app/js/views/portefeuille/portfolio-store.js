@@ -1,22 +1,29 @@
 // THE CAPITAL — Portfolio Store
-// Supabase is the single source of truth. localStorage is only a short-lived UI cache.
+// Source de vérité unique : Supabase via /api/portfolio-transactions.
 (function () {
-  const KEY = 'tc_portfolio_runtime_cache';
+  'use strict';
+
   let transactions = [];
   let hydrating = null;
 
   function token() {
     try {
       const s = JSON.parse(localStorage.getItem('tc_session') || 'null');
-      return s?.access_token || localStorage.getItem('tc_token') || localStorage.getItem('token') || '';
-    } catch (_) { return localStorage.getItem('tc_token') || localStorage.getItem('token') || ''; }
+      return s?.access_token || '';
+    } catch (_) { return ''; }
   }
 
   async function request(method, body, query = '') {
-    const headers = { Accept: 'application/json', 'Content-Type': 'application/json' };
+    const headers = { Accept: 'application/json' };
     const t = token();
     if (t) headers.Authorization = `Bearer ${t}`;
-    const response = await fetch(`/api/portfolio-transactions${query}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    if (body !== undefined && body !== null) headers['Content-Type'] = 'application/json';
+    const response = await fetch(`/api/portfolio-transactions${query}`, {
+      method,
+      headers,
+      body: body !== undefined && body !== null ? JSON.stringify(body) : undefined,
+      cache: 'no-store'
+    });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) throw new Error(payload.error || `HTTP ${response.status}`);
     return payload;
@@ -48,13 +55,11 @@
     if (hydrating && !force) return hydrating;
     hydrating = request('GET').then(payload => {
       transactions = Array.isArray(payload.data) ? payload.data : [];
-      try { localStorage.setItem(KEY, JSON.stringify(transactions)); } catch (_) {}
       return transactions;
     }).catch(error => {
-      console.warn('[PORTFOLIO] Supabase unavailable:', error.message);
-      if (!transactions.length) {
-        try { transactions = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (_) { transactions = []; }
-      }
+      console.error('[PORTFOLIO] Supabase indisponible:', error.message);
+      transactions = [];
+      if (typeof window.toast === 'function') window.toast('Impossible de charger le portefeuille', 'error');
       return transactions;
     }).finally(() => { hydrating = null; });
     return hydrating;
@@ -75,13 +80,13 @@
     const nextById = new Map((nextLots || []).map(l => [String(l.id), l]));
 
     for (const lot of nextLots || []) {
-      if (!lot.serverId && !currentById.has(String(lot.id))) {
+      const old = currentById.get(String(lot.id));
+      if (!lot.serverId && !old) {
         await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: Number(lot.qty), price: Number(lot.price), date: lot.date });
         continue;
       }
-      const old = currentById.get(String(lot.id));
       if (old && (old.price !== Number(lot.price) || old.date !== lot.date)) {
-        await request('DELETE', null, `?id=${encodeURIComponent(old.serverId || old.id)}`);
+        await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
         await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: Number(lot.qty), price: Number(lot.price), date: lot.date });
       } else if (old && old.qty > Number(lot.qty)) {
         await addTransaction({ type: 'VENTE', ticker: lot.ticker, quantity: old.qty - Number(lot.qty), price: Number(old.price), date: lot.date });
@@ -90,7 +95,7 @@
 
     for (const old of currentLots) {
       if (!nextById.has(String(old.id)) && !nextById.has(String(old.serverId))) {
-        await request('DELETE', null, `?id=${encodeURIComponent(old.serverId || old.id)}`);
+        await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
       }
     }
 
