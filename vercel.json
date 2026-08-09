@@ -7,6 +7,11 @@
   ],
   "redirects": [
     {
+      "source": "/",
+      "destination": "/landing-v2.html",
+      "permanent": false
+    },
+    {
       "source": "/app/app.html",
       "destination": "/app.html",
       "permanent": true
@@ -18,10 +23,6 @@
     }
   ],
   "rewrites": [
-    {
-      "source": "/",
-      "destination": "/landing-v2.html"
-    },
     {
       "source": "/app.html",
       "destination": "/app/app.html"
