@@ -29,16 +29,28 @@
     return payload;
   }
 
+  function transactionOrder(a, b) {
+    const da = new Date(a?.date_transaction || a?.date || 0).getTime();
+    const db = new Date(b?.date_transaction || b?.date || 0).getTime();
+    if (da !== db) return da - db;
+    return String(a?.id || '').localeCompare(String(b?.id || ''));
+  }
+
+  // Les lots doivent toujours être reconstruits dans l'ordre chronologique.
+  // Cela garantit que le FIFO achat/vente ne dépend pas de l'ordre renvoyé par l'API.
   function rebuildLots(rows) {
     const lots = [];
-    for (const tx of rows || []) {
-      const ticker = String(tx.ticker || '').toUpperCase();
-      const qty = Number(tx.quantite || 0);
-      const price = Number(tx.prix_unitaire ?? tx.cours ?? 0);
+    const ordered = [...(rows || [])].sort(transactionOrder);
+    for (const tx of ordered) {
+      const ticker = String(tx.ticker || '').toUpperCase().trim();
+      const qty = Number(tx.quantite ?? tx.quantity ?? tx.qty ?? 0);
+      const price = Number(tx.prix_unitaire ?? tx.cours ?? tx.price ?? 0);
+      const type = String(tx.type || '').toUpperCase();
       if (!ticker || qty <= 0) continue;
-      if (String(tx.type).toUpperCase() === 'ACHAT') {
-        lots.push({ id: tx.id, ticker, type: 'action', qty, price, date: tx.date_transaction, serverId: tx.id });
-      } else if (String(tx.type).toUpperCase() === 'VENTE') {
+
+      if (type === 'ACHAT') {
+        lots.push({ id: tx.id, ticker, type: 'action', qty, price, date: tx.date_transaction || tx.date, serverId: tx.id });
+      } else if (type === 'VENTE') {
         let remaining = qty;
         for (const lot of lots.filter(x => x.ticker === ticker && x.qty > 0)) {
           if (remaining <= 0) break;
@@ -81,15 +93,24 @@
 
     for (const lot of nextLots || []) {
       const old = currentById.get(String(lot.id));
+      const nextQty = Number(lot.qty || 0);
+      const oldQty = old ? Number(old.qty || 0) : 0;
+
       if (!lot.serverId && !old) {
-        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: Number(lot.qty), price: Number(lot.price), date: lot.date });
+        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
         continue;
       }
+
       if (old && (old.price !== Number(lot.price) || old.date !== lot.date)) {
         await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
-        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: Number(lot.qty), price: Number(lot.price), date: lot.date });
-      } else if (old && old.qty > Number(lot.qty)) {
-        await addTransaction({ type: 'VENTE', ticker: lot.ticker, quantity: old.qty - Number(lot.qty), price: Number(old.price), date: lot.date });
+        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
+        continue;
+      }
+
+      if (old && oldQty > nextQty) {
+        await addTransaction({ type: 'VENTE', ticker: lot.ticker, quantity: oldQty - nextQty, price: Number(old.price), date: lot.date });
+      } else if (old && nextQty > oldQty) {
+        await addTransaction({ type: 'ACHAT', ticker: lot.ticker, quantity: nextQty - oldQty, price: Number(old.price), date: lot.date });
       }
     }
 
