@@ -66,8 +66,6 @@
     await Promise.allSettled([
       fetchOrEmpty('/marche?type=cours', function(d) {
         window.allCours = Array.isArray(d) ? d : [];
-        // Les sélecteurs du portefeuille dépendent des cours. Ils doivent être
-        // reconstruits après leur arrivée, et pas uniquement lors du premier rendu.
         if (typeof window.populateTickerSelect === 'function') window.populateTickerSelect();
         renderCurrentView();
       }, []),
@@ -113,7 +111,33 @@
     if (!viewId) return;
     var fnName = 'render' + viewId.charAt(0).toUpperCase() + viewId.slice(1);
     if (typeof window[fnName] === 'function') {
-      try { window[fnName](); } catch(e) { console.warn('[MAIN] Render error ' + fnName + ':', e); }
+      try {
+        window[fnName]();
+
+        // Analyse fondamentale : si le premier rendu TCAM n'a pas produit
+        // la vue complète, relance automatiquement le mode Régression.
+        // Cela évite de devoir cliquer manuellement sur « Régression » après
+        // l'ouverture de la page, notamment lorsque certaines séries rendent
+        // le TCAM mathématiquement non calculable (valeurs négatives/nulles).
+        if (viewId === 'analyse-fondamentale') {
+          setTimeout(function() {
+            var content = document.getElementById('fundContent');
+            var rendered = content && content.querySelector('.fund-hero');
+            if (!rendered && typeof window.setFundMethod === 'function') {
+              var regressionBtn = document.querySelector('#view-analyse-fondamentale .fund-method-switch .filter-btn:last-child') ||
+                                  document.querySelector('#view-analyse-fondamentale .filter-btn:last-child');
+              window.setFundMethod('regression', regressionBtn || null);
+            }
+          }, 120);
+        }
+      } catch(e) {
+        console.warn('[MAIN] Render error ' + fnName + ':', e);
+        if (viewId === 'analyse-fondamentale' && typeof window.setFundMethod === 'function') {
+          var regressionBtn = document.querySelector('#view-analyse-fondamentale .fund-method-switch .filter-btn:last-child') ||
+                              document.querySelector('#view-analyse-fondamentale .filter-btn:last-child');
+          try { window.setFundMethod('regression', regressionBtn || null); } catch (_) {}
+        }
+      }
     }
   }
 
