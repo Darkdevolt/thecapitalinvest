@@ -1,0 +1,11 @@
+/* Final mobile overrides — compact navigation + accessible search */
+@media (max-width: 760px) {
+  .global-search { display:block; width:92px; max-width:92px; flex:0 0 92px; }
+  .global-search::before { display:none; }
+  .global-search input { padding:7px 8px; font-size:10px; height:34px; }
+  .global-search-results { left:auto; right:0; width:min(300px,calc(100vw - 20px)); }
+}
+@media (max-width: 430px) {
+  .global-search { width:72px; max-width:72px; flex-basis:72px; }
+  .global-search input { padding:6px 7px; font-size:9px; }
+}
