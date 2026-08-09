@@ -10,212 +10,49 @@
   let lastToken = '';
 
   function token() {
-    try {
-      const s = JSON.parse(localStorage.getItem('tc_session') || 'null');
-      return s?.access_token || '';
-    } catch (_) { return ''; }
+    try { const s = JSON.parse(localStorage.getItem('tc_session') || 'null'); return s?.access_token || ''; }
+    catch (_) { return ''; }
   }
 
   async function request(method, body, query = '') {
-    const headers = { Accept: 'application/json' };
-    const t = token();
+    const headers = { Accept: 'application/json' }; const t = token();
     if (t) headers.Authorization = `Bearer ${t}`;
     if (body !== undefined && body !== null) headers['Content-Type'] = 'application/json';
-    const response = await fetch(`/api/portfolio-transactions${query}`, {
-      method,
-      headers,
-      body: body !== undefined && body !== null ? JSON.stringify(body) : undefined,
-      cache: 'no-store'
-    });
+    const response = await fetch(`/api/portfolio-transactions${query}`, { method, headers, body: body !== undefined && body !== null ? JSON.stringify(body) : undefined, cache: 'no-store' });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      const error = new Error(payload.error || `HTTP ${response.status}`);
-      error.status = response.status;
-      throw error;
-    }
+    if (!response.ok) { const error = new Error(payload.error || `HTTP ${response.status}`); error.status = response.status; throw error; }
     return payload;
   }
 
   function transactionOrder(a, b) {
-    const da = new Date(a?.date_transaction || a?.date || 0).getTime();
-    const db = new Date(b?.date_transaction || b?.date || 0).getTime();
-    if (da !== db) return da - db;
-    return String(a?.id || '').localeCompare(String(b?.id || ''));
+    const da = new Date(a?.date_transaction || a?.date || 0).getTime(), db = new Date(b?.date_transaction || b?.date || 0).getTime();
+    if (da !== db) return da - db; return String(a?.id || '').localeCompare(String(b?.id || ''));
   }
-
   function rebuildLots(rows) {
-    const lots = [];
-    const ordered = [...(rows || [])].sort(transactionOrder);
-    for (const tx of ordered) {
-      const ticker = String(tx.ticker || '').toUpperCase().trim();
-      const qty = Number(tx.quantite ?? tx.quantity ?? tx.qty ?? 0);
-      const price = Number(tx.prix_unitaire ?? tx.cours ?? tx.price ?? 0);
-      const type = String(tx.type || '').toUpperCase().trim();
-      if (!ticker || qty <= 0) continue;
-
-      if (type === 'ACHAT' || type === 'BUY') {
-        lots.push({ id: tx.id, ticker, type: 'action', qty, price, date: tx.date_transaction || tx.date, serverId: tx.id });
-      } else if (type === 'VENTE' || type === 'SELL') {
-        let remaining = qty;
-        for (const lot of lots.filter(x => x.ticker === ticker && x.qty > 0)) {
-          if (remaining <= 0) break;
-          const take = Math.min(lot.qty, remaining);
-          lot.qty -= take;
-          remaining -= take;
-        }
-      }
+    const lots=[];
+    for (const tx of [...(rows||[])].sort(transactionOrder)) {
+      const ticker=String(tx.ticker||'').toUpperCase().trim(), qty=Number(tx.quantite??tx.quantity??tx.qty??0), price=Number(tx.prix_unitaire??tx.cours??tx.price??0), type=String(tx.type||'').toUpperCase().trim();
+      if(!ticker||qty<=0) continue;
+      if(type==='ACHAT'||type==='BUY') lots.push({id:tx.id,ticker,type:'action',qty,price,date:tx.date_transaction||tx.date,serverId:tx.id});
+      else if(type==='VENTE'||type==='SELL'){ let remaining=qty; for(const lot of lots.filter(x=>x.ticker===ticker&&x.qty>0)){if(remaining<=0)break;const take=Math.min(lot.qty,remaining);lot.qty-=take;remaining-=take;} }
     }
-    return lots.filter(l => l.qty > 0);
+    return lots.filter(l=>l.qty>0);
   }
-
-  function normalizeTransactions(payload) {
-    const raw = Array.isArray(payload) ? payload
-      : Array.isArray(payload?.data) ? payload.data
-      : Array.isArray(payload?.transactions) ? payload.transactions
-      : Array.isArray(payload?.data?.transactions) ? payload.data.transactions
-      : [];
-    return raw.filter(Boolean);
-  }
-
-  async function hydratePortfolio(force = false) {
-    if (hydrating && !force) return hydrating;
-    const currentToken = token();
-    if (!currentToken) {
-      scheduleAuthRetry();
-      return transactions;
-    }
-
-    hydrating = request('GET').then(payload => {
-      transactions = normalizeTransactions(payload);
-      lastToken = currentToken;
-      window.dispatchEvent(new CustomEvent('portfolio:updated', {
-        detail: { transactions: transactions.length, positions: rebuildLots(transactions).length }
-      }));
-      if (typeof window.renderPortfolio === 'function') {
-        try { window.renderPortfolio(); } catch (error) { console.error('[PORTFOLIO] Render après hydratation:', error); }
-      }
-      return transactions;
-    }).catch(error => {
-      console.error('[PORTFOLIO] Chargement Supabase échoué:', error.message);
-      if (error.status === 401 || error.status === 403) scheduleAuthRetry();
-      if (!transactions.length && typeof window.toast === 'function') {
-        window.toast('Impossible de charger le portefeuille', 'error');
-      }
-      return transactions;
-    }).finally(() => { hydrating = null; });
+  function normalizeTransactions(payload){ return (Array.isArray(payload)?payload:Array.isArray(payload?.data)?payload.data:Array.isArray(payload?.transactions)?payload.transactions:Array.isArray(payload?.data?.transactions)?payload.data.transactions:[]).filter(Boolean); }
+  async function hydratePortfolio(force=false){
+    if(hydrating&&!force)return hydrating; const currentToken=token(); if(!currentToken){scheduleAuthRetry();return transactions;}
+    hydrating=request('GET').then(payload=>{transactions=normalizeTransactions(payload);lastToken=currentToken;window.dispatchEvent(new CustomEvent('portfolio:updated',{detail:{transactions:transactions.length,positions:rebuildLots(transactions).length}}));if(typeof window.renderPortfolio==='function'){try{window.renderPortfolio();}catch(error){console.error('[PORTFOLIO] Render après hydratation:',error);}}return transactions;}).catch(error=>{console.error('[PORTFOLIO] Chargement Supabase échoué:',error.message);if(error.status===401||error.status===403)scheduleAuthRetry();if(!transactions.length&&typeof window.toast==='function')window.toast('Impossible de charger le portefeuille','error');return transactions;}).finally(()=>{hydrating=null;});
     return hydrating;
   }
-
-  function scheduleAuthRetry() {
-    if (authRetryTimer || !token()) return;
-    const retry = async () => {
-      authRetryTimer = null;
-      if (!token()) return;
-      if (token() !== lastToken || !transactions.length) await hydratePortfolio(true);
-    };
-    authRetryTimer = setTimeout(retry, 800);
-  }
-
-  function startAuthWatcher() {
-    const check = () => {
-      const current = token();
-      if (current && current !== lastToken) hydratePortfolio(true);
-      if (!current && lastToken) {
-        transactions = [];
-        lastToken = '';
-        window.dispatchEvent(new CustomEvent('portfolio:updated', { detail: { transactions: 0, positions: 0 } }));
-      }
-    };
-    setInterval(check, 1000);
-    window.addEventListener('storage', check);
-    window.addEventListener('auth:changed', check);
-    window.addEventListener('auth:login', check);
-    window.addEventListener('auth:logout', check);
-  }
-
-  function getPortfolio() { return rebuildLots(transactions); }
-  function getTransactions() { return transactions.slice(); }
-
-  function enqueueMutation(operation) {
-    const run = mutationQueue.then(operation, operation);
-    mutationQueue = run.catch(() => undefined);
-    return run;
-  }
-
-  function addTransaction(input) {
-    return enqueueMutation(async () => {
-      const payload = await request('POST', input);
-      const created = payload?.data || payload?.transaction || payload;
-      if (created && typeof created === 'object') transactions.push(created);
-      await hydratePortfolio(true);
-      return created;
-    });
-  }
-
-  async function syncPortfolio(nextLots) {
-    return enqueueMutation(async () => {
-      const currentLots = rebuildLots(transactions);
-      const currentById = new Map(currentLots.map(l => [String(l.id), l]));
-      const nextById = new Map((nextLots || []).map(l => [String(l.id), l]));
-
-      for (const lot of nextLots || []) {
-        const old = currentById.get(String(lot.id));
-        const nextQty = Number(lot.qty || 0);
-        const oldQty = old ? Number(old.qty || 0) : 0;
-
-        if (!lot.serverId && !old) {
-          await request('POST', { type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
-          continue;
-        }
-
-        if (old && (old.price !== Number(lot.price) || old.date !== lot.date)) {
-          await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
-          await request('POST', { type: 'ACHAT', ticker: lot.ticker, quantity: nextQty, price: Number(lot.price), date: lot.date });
-          continue;
-        }
-
-        if (old && oldQty > nextQty) {
-          await request('POST', { type: 'VENTE', ticker: lot.ticker, quantity: oldQty - nextQty, price: Number(old.price), date: lot.date });
-        } else if (old && nextQty > oldQty) {
-          await request('POST', { type: 'ACHAT', ticker: lot.ticker, quantity: nextQty - oldQty, price: Number(old.price), date: lot.date });
-        }
-      }
-
-      for (const old of currentLots) {
-        if (!nextById.has(String(old.id)) && !nextById.has(String(old.serverId))) {
-          await request('DELETE', undefined, `?id=${encodeURIComponent(old.serverId || old.id)}`);
-        }
-      }
-
-      await hydratePortfolio(true);
-      return true;
-    });
-  }
-
-  window.portfolioStore = { hydrate: hydratePortfolio, sync: syncPortfolio, addTransaction, getTransactions };
-  window.getPortfolio = getPortfolio;
-  window.savePortfolio = function (data) {
-    syncPortfolio(data).then(() => {
-      if (typeof window.renderPortfolio === 'function') window.renderPortfolio();
-    }).catch(error => {
-      console.error('[PORTFOLIO] Synchronisation échouée:', error);
-      if (typeof window.toast === 'function') window.toast(error.message, 'error');
-    });
-    return true;
-  };
-  window.getTransactions = getTransactions;
-
-  startAuthWatcher();
-  hydratePortfolio();
-
-  // Load the sale/financial-flow correction after the store exists.
-  // It only overrides frontend handlers; it does not alter Supabase or APIs.
-  try {
-    const script = document.createElement('script');
-    script.src = 'app/js/views/portefeuille/portfolio-trade-flows-patch.js?v=1';
-    script.async = false;
-    document.head.appendChild(script);
-  } catch (e) {
-    console.error('[PORTFOLIO] Trade patch:', e);
-  }
+  function scheduleAuthRetry(){if(authRetryTimer||!token())return;authRetryTimer=setTimeout(async()=>{authRetryTimer=null;if(token()&&(token()!==lastToken||!transactions.length))await hydratePortfolio(true);},800);}
+  function startAuthWatcher(){const check=()=>{const current=token();if(current&&current!==lastToken)hydratePortfolio(true);if(!current&&lastToken){transactions=[];lastToken='';window.dispatchEvent(new CustomEvent('portfolio:updated',{detail:{transactions:0,positions:0}}));}};setInterval(check,1000);window.addEventListener('storage',check);window.addEventListener('auth:changed',check);window.addEventListener('auth:login',check);window.addEventListener('auth:logout',check);}
+  function getPortfolio(){return rebuildLots(transactions);} function getTransactions(){return transactions.slice();}
+  function enqueueMutation(operation){const run=mutationQueue.then(operation,operation);mutationQueue=run.catch(()=>undefined);return run;}
+  function addTransaction(input){return enqueueMutation(async()=>{const payload=await request('POST',input);const created=payload?.data||payload?.transaction||payload;if(created&&typeof created==='object')transactions.push(created);await hydratePortfolio(true);return created;});}
+  async function syncPortfolio(nextLots){return enqueueMutation(async()=>{const currentLots=rebuildLots(transactions),currentById=new Map(currentLots.map(l=>[String(l.id),l])),nextById=new Map((nextLots||[]).map(l=>[String(l.id),l]));for(const lot of nextLots||[]){const old=currentById.get(String(lot.id)),nextQty=Number(lot.qty||0),oldQty=old?Number(old.qty||0):0;if(!lot.serverId&&!old){await request('POST',{type:'ACHAT',ticker:lot.ticker,quantity:nextQty,price:Number(lot.price),date:lot.date});continue;}if(old&&(old.price!==Number(lot.price)||old.date!==lot.date)){await request('DELETE',undefined,`?id=${encodeURIComponent(old.serverId||old.id)}`);await request('POST',{type:'ACHAT',ticker:lot.ticker,quantity:nextQty,price:Number(lot.price),date:lot.date});continue;}if(old&&oldQty>nextQty)await request('POST',{type:'VENTE',ticker:lot.ticker,quantity:oldQty-nextQty,price:Number(old.price),date:lot.date});else if(old&&nextQty>oldQty)await request('POST',{type:'ACHAT',ticker:lot.ticker,quantity:nextQty-oldQty,price:Number(old.price),date:lot.date});}for(const old of currentLots){if(!nextById.has(String(old.id))&&!nextById.has(String(old.serverId)))await request('DELETE',undefined,`?id=${encodeURIComponent(old.serverId||old.id)}`);}await hydratePortfolio(true);return true;});}
+  window.portfolioStore={hydrate:hydratePortfolio,sync:syncPortfolio,addTransaction,getTransactions}; window.getPortfolio=getPortfolio;
+  window.savePortfolio=function(data){syncPortfolio(data).then(()=>{if(typeof window.renderPortfolio==='function')window.renderPortfolio();}).catch(error=>{console.error('[PORTFOLIO] Synchronisation échouée:',error);if(typeof window.toast==='function')window.toast(error.message,'error');});return true;};
+  window.getTransactions=getTransactions; startAuthWatcher(); hydratePortfolio();
+  try{const script=document.createElement('script');script.src='app/js/views/portefeuille/portfolio-trade-flows-patch.js?v=2';script.async=false;document.head.appendChild(script);}catch(e){console.error('[PORTFOLIO] Trade patch:',e);}
+  try{const script=document.createElement('script');script.src='app/js/views/portefeuille/portfolio-benchmark-flows-patch.js?v=1';script.async=false;document.head.appendChild(script);}catch(e){console.error('[PORTFOLIO] Benchmark/flows patch:',e);}
 })();
