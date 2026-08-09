@@ -1,7 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
-  "buildCommand": "node scripts/patch-public-ui.mjs",
   "crons": [
     {"path": "/api/sync-brvm", "schedule": "30 18 * * 1-5"}
   ],
