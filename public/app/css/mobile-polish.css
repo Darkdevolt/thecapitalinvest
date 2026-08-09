@@ -1,6 +1,87 @@
 /* THE CAPITAL — mobile UI hardening
    Loaded after the dashboard styles so mobile rules are deterministic. */
 
+/* ─────────────────────────────────────────────────────────────
+   NAVIGATION SYSTEM — DESIGN CLEANUP
+   The navigation is intentionally typographic: no mixed emoji,
+   pictograms or decorative symbols. Functionality is unchanged.
+   ───────────────────────────────────────────────────────────── */
+
+/* Remove inconsistent icon glyphs from navigation without touching
+   the existing navigation handlers or HTML structure. */
+.nav-item .icon,
+.nav-dropdown-item .icon,
+.nav-dropdown-btn > span:first-child {
+  display: none !important;
+}
+
+.nav-item {
+  gap: 0;
+}
+
+.nav-dropdown-btn {
+  gap: 7px;
+}
+
+/* Keep only the functional dropdown caret. */
+.nav-dropdown-btn .caret {
+  display: inline-block;
+  font-size: 7px;
+  line-height: 1;
+}
+
+/* Search: replace the emoji magnifier with a CSS-drawn mark. */
+.global-search::before {
+  content: '' !important;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--dim);
+  border-radius: 50%;
+  left: 11px;
+  top: 50%;
+  transform: translateY(-58%);
+  opacity: .8;
+  box-sizing: border-box;
+}
+.global-search::after {
+  content: '';
+  position: absolute;
+  width: 5px;
+  height: 1px;
+  background: var(--dim);
+  left: 20px;
+  top: calc(50% + 4px);
+  transform: rotate(45deg);
+  transform-origin: left center;
+  opacity: .8;
+  pointer-events: none;
+}
+
+/* Administration and logout stay fully functional, but use text-only
+   controls consistent with the rest of the product. */
+#adminLink a > span {
+  display: none !important;
+}
+
+.topnav-logout {
+  font-size: 0 !important;
+  min-width: 86px;
+}
+.topnav-logout::after {
+  content: 'Déconnexion';
+  font-family: var(--sans);
+  font-size: 11px;
+  letter-spacing: .04em;
+}
+
+/* Sidebar is currently hidden on desktop, but keep its design coherent
+   if it is enabled by a responsive rule. */
+.nav-item,
+.nav-dropdown-item {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
 @media (max-width: 760px) {
   :root { --header-h: 58px; }
 
@@ -33,7 +114,8 @@
   .header-time { display: none; }
   .topnav-username { display: none; }
   .topnav-user { padding: 3px; }
-  .topnav-logout { padding: 6px 8px; font-size: 12px; }
+  .topnav-logout { min-width: 0; width: 34px; padding: 6px 8px; }
+  .topnav-logout::after { content: 'Sortir'; font-size: 10px; }
 
   .main { margin-top: var(--header-h); }
   .view { padding: 18px 12px 28px; }
