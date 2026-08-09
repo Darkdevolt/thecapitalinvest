@@ -1,0 +1,67 @@
+name: Apply UI and auth fixes
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.event.head_commit.message != 'fix: remove AI-like dashes and finalize signup'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply source changes
+        shell: python
+        run: |
+          from pathlib import Path
+          import json
+          import re
+          import subprocess
+
+          # Remove em/en dashes from user-visible HTML copy across the public site.
+          for path in Path('public').rglob('*.html'):
+              text = path.read_text(encoding='utf-8')
+              updated = (text.replace('&mdash;', ' ')
+                            .replace('&ndash;', ' ')
+                            .replace('—', ' ')
+                            .replace('–', ' '))
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+
+          # Final visual treatment for the landing hero: no decorative dash beside
+          # the eyebrow/scroll labels, and a smaller sphere while the official logo
+          # remains exactly edge-to-edge inside it.
+          index_path = Path('public/index.html')
+          index = index_path.read_text(encoding='utf-8')
+          style = '''\n<style id="the-capital-final-visual-fix">\n.hero-eyebrow::before, .hero-scroll::after { display:none !important; }\n.hero-eyebrow, .hero-scroll { gap:0 !important; }\n.hero-circle { width:400px !important; height:400px !important; }\n.hero-circle-inner { width:100% !important; height:100% !important; }\n.hero-circle-inner img { width:100% !important; height:100% !important; max-width:none !important; max-height:none !important; object-fit:cover !important; object-position:center !important; }\n@media (max-width:1100px) { .hero-circle { width:370px !important; height:370px !important; } }\n@media (max-width:900px) { .hero-circle { width:320px !important; height:320px !important; } }\n@media (max-width:480px) { .hero-circle { width:290px !important; height:290px !important; } }\n</style>\n'''
+          index = re.sub(r'\s*<style id="the-capital-final-visual-fix">.*?</style>\s*', '\n', index, flags=re.S)
+          if '</head>' not in index:
+              raise SystemExit('index.html missing </head>')
+          index = index.replace('</head>', style + '</head>', 1)
+          index_path.write_text(index, encoding='utf-8')
+
+          # Stop the obsolete build-time presentation patch from rewriting source
+          # presentation during deployment. Source files are now authoritative.
+          vpath = Path('vercel.json')
+          v = json.loads(vpath.read_text(encoding='utf-8'))
+          v.pop('buildCommand', None)
+          vpath.write_text(json.dumps(v, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+
+          # Remove this temporary workflow after the source commit is created.
+          wf = Path('.github/workflows/ui-auth-fix.yml')
+
+          subprocess.run(['git','config','user.name','The Capital Engineering Bot'], check=True)
+          subprocess.run(['git','config','user.email','actions@users.noreply.github.com'], check=True)
+          subprocess.run(['git','add','public','vercel.json'], check=True)
+          subprocess.run(['git','rm','--cached','.github/workflows/ui-auth-fix.yml'], check=False)
+          subprocess.run(['git','add','-u','.github/workflows/ui-auth-fix.yml'], check=False)
+          subprocess.run(['git','commit','-m','fix: remove AI-like dashes and finalize signup'], check=True)
+          subprocess.run(['git','push','origin','HEAD:main'], check=True)
+          # The workflow file is deliberately not part of the source commit.
+          subprocess.run(['git','rm','--cached','.github/workflows/ui-auth-fix.yml'], check=False)
