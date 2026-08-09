@@ -53,6 +53,7 @@ for (const name of fs.readdirSync(publicDir).filter((n) => n.endsWith('.html')))
 }
 if (!touched.length) fail('No secondary public page with the expected mobile menu markup was found.');
 
+console.log('[The Capital UI patch] complete-source build patch: OK');
 console.log('[The Capital UI patch] official hero logo sizing: OK');
 console.log(`[The Capital UI patch] mobile navigation pages: ${touched.join(', ')}`);
 console.log('[The Capital UI patch] ticker API unchanged: OK');
