@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "vercel dev",
-    "build": "echo 'Build complete'",
+    "build": "echo 'Build complete - landing refresh'",
     "start": "vercel dev"
   },
   "dependencies": {
