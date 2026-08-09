@@ -37,6 +37,7 @@
     window.addEventListener('hashchange', function() {
       if (typeof parseHash === 'function') parseHash();
       scheduleFundamentalRender(true);
+      ensureFundamentalReady();
     });
 
     if (typeof parseHash === 'function') parseHash();
@@ -45,6 +46,7 @@
     var initialView = parseHashFromUrl() || 'overview';
     if (typeof nav === 'function') nav(initialView, true);
     scheduleFundamentalRender(true);
+    ensureFundamentalReady();
     console.log('[MAIN] Initialisation terminée');
   }
 
@@ -70,7 +72,9 @@
       fetchOrEmpty('/marche?type=cours', function(d) {
         window.allCours = Array.isArray(d) ? d : [];
         if (typeof window.populateTickerSelect === 'function') window.populateTickerSelect();
+        if (typeof window.populateTickerSelects === 'function') window.populateTickerSelects();
         renderCurrentView();
+        ensureFundamentalReady();
       }, []),
       fetchOrEmpty('/marche?type=indices', function(d) {
         window.allIndices = Array.isArray(d) ? d : [];
@@ -84,7 +88,9 @@
       }, []),
       fetchOrEmpty('/marche?type=financials', function(d) {
         window.allFinancials = Array.isArray(d) ? d : [];
+        if (typeof window.populateTickerSelects === 'function') window.populateTickerSelects();
         renderCurrentView();
+        ensureFundamentalReady();
       }, []),
       fetchOrEmpty('/marche?type=analyses', function(d) {
         window.allAnalyses = Array.isArray(d) ? d : [];
@@ -101,6 +107,7 @@
     ]);
 
     renderCurrentView();
+    ensureFundamentalReady();
     console.log('[MAIN] Données chargées:', {
       cours: window.allCours.length,
       indices: window.allIndices.length,
@@ -109,6 +116,41 @@
       analyses: window.allAnalyses.length,
       entreprises: window.allEntreprises.length
     });
+  }
+
+  function ensureFundamentalReady() {
+    if (parseHashFromUrl() !== 'analyse-fondamentale') return;
+
+    var select = document.getElementById('fundTickerSelect');
+    if (!select) return;
+
+    // La liste est alimentée par les cours, puis complétée par les états financiers
+    // si un ticker financier n'est pas encore présent dans les cours.
+    if (typeof window.populateTickerSelects === 'function') {
+      window.populateTickerSelects();
+    }
+
+    if (select.options.length <= 1 && Array.isArray(window.allFinancials) && window.allFinancials.length) {
+      var seen = {};
+      var tickers = window.allFinancials
+        .map(function(f) { return f && f.ticker ? String(f.ticker).toUpperCase() : ''; })
+        .filter(function(t) { return t && !seen[t] && (seen[t] = true); })
+        .sort();
+      if (tickers.length) {
+        select.innerHTML = '<option value="">Choisir un ticker...</option>' +
+          tickers.map(function(t) { return '<option value="' + t + '">' + t + '</option>'; }).join('');
+      }
+    }
+
+    // Un ticker doit être sélectionné automatiquement à l'ouverture.
+    // TCAM reste la méthode par défaut : aucun basculement vers Régression.
+    if (select.options.length > 1 && !select.value) {
+      select.selectedIndex = 1;
+    }
+
+    if (select.value && typeof window.loadFundAnalysis === 'function') {
+      window.loadFundAnalysis();
+    }
   }
 
   function scheduleFundamentalRender(reset) {
@@ -126,6 +168,7 @@
         }
         return;
       }
+      ensureFundamentalReady();
       renderCurrentView();
       fundamentalRetryCount++;
       if (fundamentalRetryCount < 20 && (!Array.isArray(window.allFinancials) || window.allFinancials.length === 0)) {
@@ -146,7 +189,6 @@
         console.warn('[MAIN] Render error ' + fnName + ':', e);
         if (viewId === 'analyse-fondamentale') {
           // Ne change jamais la méthode sélectionnée automatiquement.
-          // On laisse TCAM rester le défaut et on relance après le chargement des données.
           scheduleFundamentalRender(false);
         }
       }
