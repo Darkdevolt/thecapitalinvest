@@ -19,6 +19,10 @@
   ],
   "rewrites": [
     {
+      "source": "/",
+      "destination": "/landing-v2.html"
+    },
+    {
       "source": "/app.html",
       "destination": "/app/app.html"
     }
