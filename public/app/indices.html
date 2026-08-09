@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Indices BRVM — The Capital</title>
+<style>
+:root{--bg:#0c0b09;--card:#171512;--text:#f5f0e8;--dim:#9d988f;--gold:#b8964e;--line:rgba(255,255,255,.08);--green:#4ade80;--red:#f87171}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}a{color:inherit;text-decoration:none}.wrap{max-width:1180px;margin:auto;padding:28px 20px 60px}.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:30px}.brand{font-weight:800;letter-spacing:.08em}.brand span{color:var(--gold)}.back{border:1px solid var(--line);padding:9px 14px;border-radius:9px;color:var(--dim)}.back:hover{border-color:var(--gold);color:var(--gold)}.kicker{font-size:11px;letter-spacing:.18em;color:var(--gold);font-weight:700}.title{font-size:34px;margin:8px 0}.sub{color:var(--dim);margin-bottom:28px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;min-height:180px;cursor:pointer;transition:.18s}.card:hover{transform:translateY(-2px);border-color:rgba(184,150,78,.5)}.label{font-size:12px;color:var(--dim)}.value{font-size:32px;font-weight:700;margin:20px 0 8px}.change{font-weight:700}.up{color:var(--green)}.down{color:var(--red)}.neutral{color:var(--dim)}.date{font-size:11px;color:var(--dim);margin-top:16px}.panel{margin-top:20px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}.panel h2{margin-top:0}.table{width:100%;border-collapse:collapse}.table th,.table td{text-align:left;padding:12px;border-bottom:1px solid var(--line)}.table th{font-size:11px;color:var(--dim);text-transform:uppercase}.table td:nth-child(2),.table th:nth-child(2){text-align:right}.empty{color:var(--dim);padding:20px 0}@media(max-width:760px){.grid{grid-template-columns:1fr}.title{font-size:28px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top"><div class="brand">THE <span>CAPITAL</span></div><a class="back" href="app.html">← Tableau de bord</a></header>
+<main>
+<div class="kicker">MARCHÉ BRVM</div><h1 class="title">Indices</h1><div class="sub">Suivi des principaux indices de la BRVM, avec les dernières données disponibles.</div>
+<div id="cards" class="grid"><div class="empty">Chargement des indices…</div></div>
+<section class="panel"><h2>Historique de l'indice</h2><div id="history" class="empty">Sélectionnez un indice.</div></section>
+</main>
+</div>
+<script>
+(function(){
+ const API='/api/marche?type=indices';let rows=[];let selected='BRVM C';
+ const esc=s=>{const d=document.createElement('div');d.textContent=s??'';return d.innerHTML};
+ const num=v=>Number.isFinite(Number(v))?Number(v):null;
+ const fmt=v=>{const n=num(v);return n==null?'—':n.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})};
+ function latest(name){return rows.filter(r=>String(r.indice||'').trim().toLowerCase()===name.toLowerCase()).sort((a,b)=>new Date(b.date_seance)-new Date(a.date_seance))[0]||null}
+ function candidates(){const map=[['BRVM Composite',['BRVM C','BRVM Composite','COMPOSITE','BRVM_C','BRVM COMPOSITE']],['BRVM 30',['BRVM 30','BRVM30','30','BRVM_30']],['BRVM Prestige',['BRVM Prestige','BRVMPrestige','PRESTIGE','BRVM PRESTIGE']]];return map.map(([label,names])=>{for(const n of names){const r=latest(n);if(r)return [label,n,r]}return [label,names[0],null]})}
+ function render(){const c=document.getElementById('cards');c.innerHTML=candidates().map(([label,name,r])=>{const v=r?num(r.valeur):null,chg=r?num(r.variation):null;const cls=chg>0?'up':chg<0?'down':'neutral';return `<article class="card" data-index="${esc(name)}"><div class="label">${esc(label)}</div><div class="value">${fmt(v)}</div><div class="change ${cls}">${chg==null?'—':(chg>0?'+':'')+chg.toFixed(2)+' %'}</div><div class="date">${r?.date_seance?'Séance '+new Date(r.date_seance).toLocaleDateString('fr-FR'):'Aucune donnée'}</div></article>`}).join('')}
+ function showHistory(name){selected=name;const h=document.getElementById('history');const data=rows.filter(r=>String(r.indice||'').trim().toLowerCase()===name.toLowerCase()).sort((a,b)=>new Date(b.date_seance)-new Date(a.date_seance)).slice(0,30);if(!data.length){h.innerHTML='<div class="empty">Aucune donnée historique pour cet indice.</div>';return}h.innerHTML=`<table class="table"><thead><tr><th>Date</th><th>Valeur</th><th>Variation</th></tr></thead><tbody>${data.map(r=>{const ch=num(r.variation);const cls=ch>0?'up':ch<0?'down':'neutral';return `<tr><td>${r.date_seance?new Date(r.date_seance).toLocaleDateString('fr-FR'):'—'}</td><td>${fmt(r.valeur)}</td><td class="${cls}">${ch==null?'—':(ch>0?'+':'')+ch.toFixed(2)+' %'}</td></tr>`}).join('')}</tbody></table>`}
+ async function init(){try{const res=await fetch(API,{cache:'no-store'});if(!res.ok)throw new Error('HTTP '+res.status);const json=await res.json();rows=Array.isArray(json)?json:(json.data||json.indices||[]);render();document.querySelectorAll('[data-index]').forEach(x=>x.addEventListener('click',()=>showHistory(x.dataset.index)));showHistory(candidates()[0][1])}catch(e){console.error('[INDICES]',e);document.getElementById('cards').innerHTML='<div class="empty">Impossible de charger les indices.</div>'}}
+ init();
+})();
+</script>
+</body>
+</html>
