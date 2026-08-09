@@ -1,5 +1,20 @@
 // THE CAPITAL — Portefeuille utilities
 // Supabase is the source of truth for positions, cash, dividends, watchlist and alerts.
+(function ensurePortfolioStoreLoaded(){
+  if (window.portfolioStore) return;
+  if (window.__TC_PORTFOLIO_STORE_LOADING__) return;
+  window.__TC_PORTFOLIO_STORE_LOADING__ = true;
+  const script = document.createElement('script');
+  script.src = 'app/js/views/portefeuille/portfolio-store.js?v=5';
+  script.onload = () => {
+    window.__TC_PORTFOLIO_STORE_LOADING__ = false;
+    try { if (window.portfolioStore?.hydrate) window.portfolioStore.hydrate(true); } catch (e) { console.error('[PORTFOLIO] Store:', e); }
+    window.dispatchEvent(new CustomEvent('portfolio:store-ready'));
+    if (typeof window.renderPortfolio === 'function') { try { window.renderPortfolio(); } catch (e) { console.error('[PORTFOLIO] Render:', e); } }
+  };
+  script.onerror = () => { window.__TC_PORTFOLIO_STORE_LOADING__ = false; console.error('[PORTFOLIO] Impossible de charger portfolio-store.js'); };
+  document.head.appendChild(script);
+})();
 function getPortfolio(){return window.portfolioStore&&typeof window.portfolioStore.getTransactions==='function'?rebuildPortfolioFromTransactions(window.portfolioStore.getTransactions()):[];}
 function rebuildPortfolioFromTransactions(rows){const lots=[];const ordered=[...(rows||[])].sort((a,b)=>{const da=new Date(a?.date_transaction||a?.date||0).getTime(),db=new Date(b?.date_transaction||b?.date||0).getTime();return da!==db?da-db:String(a?.id||'').localeCompare(String(b?.id||''));});for(const tx of ordered){const ticker=String(tx.ticker||'').toUpperCase().trim(),qty=Number(tx.quantite??tx.quantity??tx.qty??0),price=Number(tx.prix_unitaire??tx.cours??tx.price??0),type=String(tx.type||'').toUpperCase();if(!ticker||qty<=0)continue;if(type==='ACHAT')lots.push({id:tx.id,serverId:tx.id,ticker,type:'action',qty,price,date:tx.date_transaction||tx.date});else if(type==='VENTE'){let remaining=qty;for(const lot of lots.filter(x=>x.ticker===ticker&&x.qty>0)){if(remaining<=0)break;const take=Math.min(lot.qty,remaining);lot.qty-=take;remaining-=take;}}}return lots.filter(l=>l.qty>0);}
 function aggregatePortfolioPositions(lots){const map={};for(const lot of lots||[]){const t=String(lot.ticker||'').toUpperCase().trim();if(!t||Number(lot.qty)<=0)continue;if(!map[t])map[t]={id:lot.id,ticker:t,type:'action',qty:0,totalCost:0,cmpPositions:[]};const q=Number(lot.qty)||0,p=Number(lot.price)||0;map[t].qty+=q;map[t].totalCost+=q*p;map[t].cmpPositions.push({...lot,qty:q});}return Object.values(map).map(p=>({...p,price:p.qty>0?p.totalCost/p.qty:0,date:p.cmpPositions[0]?.date||null,lotIds:p.cmpPositions.map(x=>x.id)}));}
@@ -31,3 +46,4 @@ function toast(message,type='info'){let container=document.getElementById('toast
 function downloadCSV(filename,rows){const csv=rows.map(r=>r.map(c=>`"${String(c??'').replace(/"/g,'""')}"`).join(',')).join('\n'),blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url);}
 window.exportPositionsCSV=function(rows){if(!rows||!rows.length){toast('Aucune position à exporter.','error');return;}const header=['Ticker','Pays','Secteur','Quantité','CMP','Cours actuel','Valeur','P&L','P&L %','Allocation %'],data=rows.map(r=>[r.ticker,r.pays,r.sector,r.qty,(+r.cmp).toFixed(2),(+r.currentPrice).toFixed(2),(+r.value).toFixed(0),(+r.pl).toFixed(0),(+r.plPct).toFixed(2),(+(r.allocation||0)).toFixed(2)]);downloadCSV(`portefeuille_positions_${new Date().toISOString().split('T')[0]}.csv`,[header,...data]);toast('Export des positions généré.','success');};
 window.exportTransactionsCSV=function(){const txs=getTransactions().sort((a,b)=>new Date(b.date_transaction||b.date)-new Date(a.date_transaction||a.date));if(!txs.length){toast('Aucune transaction à exporter.','error');return;}const header=['Date','Type','Ticker','Quantité','Prix/Montant','P&L Réalisé'],data=txs.map(t=>[t.date_transaction||t.date,t.type,t.ticker||'-',t.quantite||t.qty||'-',t.prix_unitaire??t.price??t.montant_net??'-',t.realizedPL??'-']);downloadCSV(`portefeuille_transactions_${new Date().toISOString().split('T')[0]}.csv`,[header,...data]);toast('Export des transactions généré.','success');};
+window.addEventListener('portfolio:store-ready',()=>{if(typeof window.renderPortfolio==='function'){try{window.renderPortfolio();}catch(e){console.error('[PORTFOLIO] Render store-ready:',e);}}});
