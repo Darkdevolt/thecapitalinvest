@@ -3,7 +3,6 @@
 (function() {
   'use strict';
 
-  // STATE est chargé avant MAIN dans app.html et reste la source unique de l'état global.
   window.allCours = Array.isArray(window.allCours) ? window.allCours : [];
   window.allIndices = Array.isArray(window.allIndices) ? window.allIndices : [];
   window.allBoc = Array.isArray(window.allBoc) ? window.allBoc : [];
@@ -17,6 +16,9 @@
     return;
   }
   window.__TC_MAIN_LOADED__ = true;
+
+  var fundamentalRetryTimer = null;
+  var fundamentalRetryCount = 0;
 
   async function initApp() {
     console.log('[MAIN] Initialisation...');
@@ -34,6 +36,7 @@
 
     window.addEventListener('hashchange', function() {
       if (typeof parseHash === 'function') parseHash();
+      scheduleFundamentalRender(true);
     });
 
     if (typeof parseHash === 'function') parseHash();
@@ -41,6 +44,7 @@
 
     var initialView = parseHashFromUrl() || 'overview';
     if (typeof nav === 'function') nav(initialView, true);
+    scheduleFundamentalRender(true);
     console.log('[MAIN] Initialisation terminée');
   }
 
@@ -62,7 +66,6 @@
   }
 
   async function loadAll() {
-    // Les données financières sont indépendantes : une API lente ne bloque pas le reste.
     await Promise.allSettled([
       fetchOrEmpty('/marche?type=cours', function(d) {
         window.allCours = Array.isArray(d) ? d : [];
@@ -81,9 +84,11 @@
       }, []),
       fetchOrEmpty('/marche?type=financials', function(d) {
         window.allFinancials = Array.isArray(d) ? d : [];
+        renderCurrentView();
       }, []),
       fetchOrEmpty('/marche?type=analyses', function(d) {
         window.allAnalyses = Array.isArray(d) ? d : [];
+        renderCurrentView();
       }, []),
       fetchOrEmpty('/marche?type=entreprises', function(d) {
         window.allEntreprises = Array.isArray(d) ? d : [];
@@ -91,6 +96,7 @@
         window.allEntreprises.forEach(function(e) {
           if (e && e.ticker) window.entMap[e.ticker] = e;
         });
+        renderCurrentView();
       }, [])
     ]);
 
@@ -105,6 +111,29 @@
     });
   }
 
+  function scheduleFundamentalRender(reset) {
+    if (reset) fundamentalRetryCount = 0;
+    if (fundamentalRetryTimer) clearTimeout(fundamentalRetryTimer);
+    if (parseHashFromUrl() !== 'analyse-fondamentale') return;
+
+    fundamentalRetryTimer = setTimeout(function retryFundamental() {
+      if (parseHashFromUrl() !== 'analyse-fondamentale') return;
+      var activeView = document.querySelector('.view.active');
+      if (!activeView || activeView.id !== 'view-analyse-fondamentale') {
+        if (fundamentalRetryCount < 20) {
+          fundamentalRetryCount++;
+          scheduleFundamentalRender(false);
+        }
+        return;
+      }
+      renderCurrentView();
+      fundamentalRetryCount++;
+      if (fundamentalRetryCount < 20 && (!Array.isArray(window.allFinancials) || window.allFinancials.length === 0)) {
+        scheduleFundamentalRender(false);
+      }
+    }, 250);
+  }
+
   function renderCurrentView() {
     var activeView = document.querySelector('.view.active');
     var viewId = activeView && activeView.id ? activeView.id.replace('view-', '') : '';
@@ -113,29 +142,12 @@
     if (typeof window[fnName] === 'function') {
       try {
         window[fnName]();
-
-        // Analyse fondamentale : si le premier rendu TCAM n'a pas produit
-        // la vue complète, relance automatiquement le mode Régression.
-        // Cela évite de devoir cliquer manuellement sur « Régression » après
-        // l'ouverture de la page, notamment lorsque certaines séries rendent
-        // le TCAM mathématiquement non calculable (valeurs négatives/nulles).
-        if (viewId === 'analyse-fondamentale') {
-          setTimeout(function() {
-            var content = document.getElementById('fundContent');
-            var rendered = content && content.querySelector('.fund-hero');
-            if (!rendered && typeof window.setFundMethod === 'function') {
-              var regressionBtn = document.querySelector('#view-analyse-fondamentale .fund-method-switch .filter-btn:last-child') ||
-                                  document.querySelector('#view-analyse-fondamentale .filter-btn:last-child');
-              window.setFundMethod('regression', regressionBtn || null);
-            }
-          }, 120);
-        }
       } catch(e) {
         console.warn('[MAIN] Render error ' + fnName + ':', e);
-        if (viewId === 'analyse-fondamentale' && typeof window.setFundMethod === 'function') {
-          var regressionBtn = document.querySelector('#view-analyse-fondamentale .fund-method-switch .filter-btn:last-child') ||
-                              document.querySelector('#view-analyse-fondamentale .filter-btn:last-child');
-          try { window.setFundMethod('regression', regressionBtn || null); } catch (_) {}
+        if (viewId === 'analyse-fondamentale') {
+          // Ne change jamais la méthode sélectionnée automatiquement.
+          // On laisse TCAM rester le défaut et on relance après le chargement des données.
+          scheduleFundamentalRender(false);
         }
       }
     }
