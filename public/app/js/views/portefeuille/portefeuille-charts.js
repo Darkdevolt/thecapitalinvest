@@ -29,24 +29,29 @@
 
   window.renderPortfolioCharts = function (rows, totalValue, sectors, pays, hist) {
     const labels = (hist?.dates || []).map(d => new Date(d).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }));
-    makeChart('pfValueChart', {
+
+    // IDs alignés sur les canvas réellement présents dans app.html.
+    makeChart('chartPortfolioValue', {
       type: 'line',
       data: { labels, datasets: [{ label: 'Valeur du portefeuille', data: hist?.values || [], tension: .25, pointRadius: 0, borderWidth: 2, fill: false }] },
       options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => money(v) } } } }
     });
-    makeChart('pfPLChart', {
+
+    makeChart('chartPortfolioPL', {
       type: 'line',
       data: { labels, datasets: [{ label: 'P&L cumulé', data: hist?.pls || [], tension: .25, pointRadius: 0, borderWidth: 2, fill: false }] },
       options: { responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, plugins: { legend: { display: false } }, scales: { y: { ticks: { callback: v => money(v) } } } }
     });
+
     const sectorLabels = Object.keys(sectors || {});
-    makeChart('pfSectorChart', {
+    makeChart('chartSectorAlloc', {
       type: 'doughnut',
       data: { labels: sectorLabels, datasets: [{ data: sectorLabels.map(k => sectors[k]) }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
     });
+
     const geoLabels = Object.keys(pays || {});
-    makeChart('pfGeoChart', {
+    makeChart('chartGeoAlloc', {
       type: 'doughnut',
       data: { labels: geoLabels, datasets: [{ data: geoLabels.map(k => pays[k]) }] },
       options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
@@ -131,8 +136,6 @@
     el.innerHTML = html;
   };
 
-  // Les positions agrégées utilisent des UUID Supabase. Les anciens onclick
-  // injectés dans le HTML les interprétaient comme du JavaScript invalide.
   function wirePositionActions(root = document) {
     root.querySelectorAll('.pf-action-btn').forEach(btn => {
       if (btn.dataset.bound === 'true') return;
