@@ -3,8 +3,8 @@ import { supabase, supabaseAdmin } from './lib/supabase.js';
 const db = supabaseAdmin || supabase;
 
 function json(res, status, payload) {
-  res.status(status).setHeader('Content-Type', 'application/json');
   res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json');
   res.end(JSON.stringify(payload));
 }
 
@@ -30,32 +30,23 @@ export default async function handler(req, res) {
       case 'cours':
         result = await query('cours_latest', q => q.order('ticker', { ascending: true }));
         break;
-
       case 'indices':
         result = await query('indices', q => q.order('date_seance', { ascending: false }).limit(1000));
         break;
-
       case 'historique':
         if (!ticker) return json(res, 400, { error: 'ticker requis' });
-        result = await query('cours', q => q
-          .eq('ticker', ticker)
-          .order('date_seance', { ascending: false })
-          .limit(limit));
+        result = await query('cours', q => q.eq('ticker', ticker).order('date_seance', { ascending: false }).limit(limit));
         if (!result.error && Array.isArray(result.data)) result.data.reverse();
         break;
-
       case 'entreprises':
         result = await query('entreprises', q => q.eq('actif', true).order('ticker', { ascending: true }));
         break;
-
       case 'financials':
         result = await query('financials', q => q.order('annee', { ascending: false }).limit(2000));
         break;
-
       case 'analyses':
         result = await query('analyses', q => q.order('date_analyse', { ascending: false }).limit(500));
         break;
-
       case 'apercu': {
         const [cours, indices] = await Promise.all([
           query('cours_latest', q => q.order('ticker', { ascending: true })),
@@ -65,7 +56,6 @@ export default async function handler(req, res) {
         if (indices.error) throw indices.error;
         return json(res, 200, { success: true, cours: cours.data || [], indices: indices.data || [] });
       }
-
       default:
         return json(res, 400, { error: `Type de données inconnu: ${type}` });
     }
