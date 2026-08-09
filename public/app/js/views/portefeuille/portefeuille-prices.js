@@ -73,13 +73,11 @@ function _historicalLimitForPortfolio(tickers) {
 async function hydratePortfolioHistoricalPrices(tickers, limit = null) {
   const unique = [...new Set((tickers || []).map(t => String(t || '').toUpperCase().trim()).filter(Boolean))];
   if (!unique.length) return {};
-
   const missing = unique.filter(t => !Array.isArray(window._pfHistCache[t]) || window._pfHistCache[t].length === 0);
   if (!missing.length) return Object.fromEntries(unique.map(t => [t, window._pfHistCache[t]]));
   if (_pfHistoryHydration) return _pfHistoryHydration;
 
   const effectiveLimit = Number.isFinite(Number(limit)) && Number(limit) > 0 ? Number(limit) : _historicalLimitForPortfolio(unique);
-
   _pfHistoryHydration = Promise.all(missing.map(async ticker => {
     try {
       const response = await fetch(`/api/marche?type=historique&ticker=${encodeURIComponent(ticker)}&limit=${effectiveLimit}`, { cache: 'no-store' });
@@ -94,7 +92,7 @@ async function hydratePortfolioHistoricalPrices(tickers, limit = null) {
       window._pfHistCache[ticker] = [];
       return [ticker, []];
     }
-  })).then(entries => {
+  })).then(() => {
     const merged = {};
     unique.forEach(t => { merged[t] = window._pfHistCache[t] || []; });
     window.allCoursHistorique = unique.flatMap(t => merged[t] || []);
@@ -167,8 +165,23 @@ function getPriceAtDate(ticker, dateStr) {
   return prix > 0 ? prix : null;
 }
 
-function get52WeekHigh(ticker) { const hist = getTickerHistory(ticker); if (!hist.length) return null; const vals = hist.map(c => +(c.cours_cloture ?? c.cours_normal ?? c.cours ?? c.haut ?? 0)).filter(v => v > 0); return vals.length ? Math.max(...vals) : null; }
-function get52WeekLow(ticker) { const hist = getTickerHistory(ticker); if (!hist.length) return null; const vals = hist.map(c => +(c.cours_cloture ?? c.cours_normal ?? c.cours ?? c.bas ?? 0)).filter(v => v > 0); return vals.length ? Math.min(...vals) : null; }
+function _weekRange(ticker) {
+  const hist = getTickerHistory(ticker);
+  if (!hist.length) return [];
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 365);
+  return hist.filter(row => new Date(row.date_seance || 0) >= cutoff);
+}
+
+function get52WeekHigh(ticker) {
+  const vals = _weekRange(ticker).map(c => +(c.cours_cloture ?? c.cours_normal ?? c.cours ?? c.haut ?? 0)).filter(v => v > 0);
+  return vals.length ? Math.max(...vals) : null;
+}
+
+function get52WeekLow(ticker) {
+  const vals = _weekRange(ticker).map(c => +(c.cours_cloture ?? c.cours_normal ?? c.cours ?? c.bas ?? 0)).filter(v => v > 0);
+  return vals.length ? Math.min(...vals) : null;
+}
 
 function _portfolioTickers() {
   try {
