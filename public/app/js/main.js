@@ -20,8 +20,19 @@
   var fundamentalRetryTimer = null;
   var fundamentalRetryCount = 0;
 
+  function loadMobilePolish() {
+    if (document.getElementById('tc-mobile-polish')) return;
+    var link = document.createElement('link');
+    link.id = 'tc-mobile-polish';
+    link.rel = 'stylesheet';
+    link.href = 'app/css/mobile-polish.css?v=1';
+    document.head.appendChild(link);
+    console.log('[MAIN] Mobile UI polish chargé');
+  }
+
   async function initApp() {
     console.log('[MAIN] Initialisation...');
+    loadMobilePolish();
     if (!document.getElementById('toastContainer')) {
       var tc = document.createElement('div');
       tc.id = 'toastContainer';
@@ -124,8 +135,6 @@
     var select = document.getElementById('fundTickerSelect');
     if (!select) return;
 
-    // La liste est alimentée par les cours, puis complétée par les états financiers
-    // si un ticker financier n'est pas encore présent dans les cours.
     if (typeof window.populateTickerSelects === 'function') {
       window.populateTickerSelects();
     }
@@ -142,8 +151,6 @@
       }
     }
 
-    // Un ticker doit être sélectionné automatiquement à l'ouverture.
-    // TCAM reste la méthode par défaut : aucun basculement vers Régression.
     if (select.options.length > 1 && !select.value) {
       select.selectedIndex = 1;
     }
@@ -188,7 +195,6 @@
       } catch(e) {
         console.warn('[MAIN] Render error ' + fnName + ':', e);
         if (viewId === 'analyse-fondamentale') {
-          // Ne change jamais la méthode sélectionnée automatiquement.
           scheduleFundamentalRender(false);
         }
       }
