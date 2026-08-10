@@ -19,6 +19,7 @@
 
   var fundamentalRetryTimer = null;
   var fundamentalRetryCount = 0;
+  var technicalInitialized = false;
 
   function loadMobilePolish() {
     if (document.getElementById('tc-mobile-polish')) return;
@@ -33,6 +34,24 @@
     finalLink.href = 'app/css/mobile-polish-v2.css?v=1';
     document.head.appendChild(finalLink);
     console.log('[MAIN] Mobile UI polish chargé');
+  }
+
+  function ensureTechnicalReady() {
+    if (technicalInitialized) return true;
+    if (typeof window.atInit !== 'function') {
+      console.warn('[MAIN] Analyse technique non initialisée : atInit indisponible.');
+      return false;
+    }
+    try {
+      window.atInit();
+      technicalInitialized = true;
+      console.log('[MAIN] Analyse technique initialisée');
+      return true;
+    } catch (err) {
+      console.error('[MAIN] Erreur initialisation analyse technique:', err);
+      if (typeof window.toast === 'function') window.toast('Analyse technique indisponible : ' + (err.message || err), 'error');
+      return false;
+    }
   }
 
   async function initApp() {
@@ -52,6 +71,7 @@
 
     window.addEventListener('hashchange', function() {
       if (typeof parseHash === 'function') parseHash();
+      if (parseHashFromUrl() === 'analyse-technique') ensureTechnicalReady();
       scheduleFundamentalRender(true);
       ensureFundamentalReady();
     });
@@ -63,6 +83,7 @@
     if (typeof nav === 'function') nav(initialView, true);
     scheduleFundamentalRender(true);
     ensureFundamentalReady();
+    if (initialView === 'analyse-technique') ensureTechnicalReady();
     console.log('[MAIN] Initialisation terminée');
   }
 
@@ -121,6 +142,11 @@
         renderCurrentView();
       }, [])
     ]);
+
+    // IMPORTANT : main.js remplace l'ancien loadAll de ui.js.
+    // L'ancien bootstrap appelait atInit(); ce chemin doit aussi initialiser
+    // l'analyse technique après le chargement des cours.
+    ensureTechnicalReady();
 
     renderCurrentView();
     ensureFundamentalReady();
@@ -193,6 +219,7 @@
     var activeView = document.querySelector('.view.active');
     var viewId = activeView && activeView.id ? activeView.id.replace('view-', '') : '';
     if (!viewId) return;
+    if (viewId === 'analyse-technique') ensureTechnicalReady();
     var fnName = 'render' + viewId.charAt(0).toUpperCase() + viewId.slice(1);
     if (typeof window[fnName] === 'function') {
       try {
