@@ -1,92 +1,161 @@
-/* ══════════════════════════════════════════════════════
-   DASHBOARD — ALERTES PRÉCISES (remplace loadDashboardAlerts)
-══════════════════════════════════════════════════════ */
+/* THE CAPITAL ADMIN — DASHBOARD DE PILOTAGE DATA */
 
-async function loadDashboardAlerts() {
-    const panel = document.getElementById('dash-alerts');
-    if(!panel) return;
+function dashEsc(value) {
+    return String(value == null ? '' : value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+}
+function dashNum(value) { return Number(value || 0).toLocaleString('fr-FR'); }
+function dashDate(value) {
+    if (!value) return '—';
+    var d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value).slice(0, 10);
+    return d.toLocaleDateString('fr-FR');
+}
+function dashAgeLabel(value) {
+    if (!value) return { text: 'Aucune donnée', cls: 'bad' };
+    var d = new Date(value);
+    if (Number.isNaN(d.getTime())) return { text: 'Date invalide', cls: 'bad' };
+    var age = Math.floor((Date.now() - d.getTime()) / 86400000);
+    if (age <= 1) return { text: 'À jour', cls: 'good' };
+    if (age <= 7) return { text: age + ' j', cls: 'warn' };
+    return { text: age + ' j', cls: 'bad' };
+}
 
-    // Appel RPC Supabase (POST /rest/v1/rpc/get_aberrations)
-    let aberrations = [];
+async function dashLatest(table, dateField) {
     try {
-        const resp = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_aberrations`, {
-            method: 'POST',
-            headers: {
-                'apikey': SUPABASE_KEY,
-                'Authorization': `Bearer ${SUPABASE_KEY}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ limit_per_type: 10 })
+        var rows = await sbGet(table, 'select=' + encodeURIComponent(dateField) + '&' + encodeURIComponent(dateField) + '=not.is.null&order=' + encodeURIComponent(dateField) + '.desc&limit=1');
+        return rows && rows[0] ? rows[0][dateField] : null;
+    } catch (e) { return null; }
+}
+
+async function loadDashboard() {
+    var info = document.getElementById('dash-info');
+    if (!info) return;
+    info.innerHTML = '<div class="dash-loading"><div class="spinner"></div><span>Analyse de la base…</span></div>';
+
+    var started = Date.now();
+    var tables = ['entreprises', 'cours', 'historique', 'financials', 'dividendes_calendrier', 'users'];
+    var counts = await Promise.all(tables.map(function(t) { return sbCount(t); }));
+    var c = { entreprises: counts[0], cours: counts[1], historique: counts[2], financials: counts[3], dividendes: counts[4], users: counts[5] };
+
+    var latest = await Promise.all([
+        dashLatest('cours', 'date_seance'),
+        dashLatest('historique', 'date_seance'),
+        dashLatest('financials', 'updated_at'),
+        dashLatest('dividendes_calendrier', 'updated_at')
+    ]);
+
+    var ids = { 'k-entreprises': c.entreprises, 'k-cours': c.cours, 'k-historique': c.historique, 'k-financials': c.financials, 'k-dividendes': c.dividendes, 'k-users': c.users };
+    Object.keys(ids).forEach(function(id) { var el = document.getElementById(id); if (el) el.textContent = dashNum(ids[id]); });
+    var kc = document.getElementById('ks-cours'); if (kc) kc.textContent = latest[0] ? 'Dernier cours : ' + dashDate(latest[0]) : 'Aucune date disponible';
+    var ku = document.getElementById('ks-users'); if (ku) ku.textContent = 'Comptes enregistrés';
+
+    var aberrations = [];
+    var diagAvailable = false;
+    try {
+        var resp = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_aberrations', {
+            method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ limit_per_type: 50 })
         });
-        if (resp.ok) aberrations = await resp.json();
-    } catch(e) {
-        console.error('Erreur RPC get_aberrations:', e);
-    }
+        if (resp.ok) { aberrations = await resp.json(); diagAvailable = true; }
+    } catch (e) { console.warn('[dashboard] diagnostic RPC:', e); }
 
-    if (!aberrations || aberrations.length === 0) {
-        panel.innerHTML = '<div style="color:var(--green);font-size:13px;padding:12px 0;">✓ Aucune anomalie détectée. Base propre.</div>';
-        return;
-    }
+    var critical = aberrations.filter(function(a) { return a.severity === 'err'; }).length;
+    var warnings = aberrations.filter(function(a) { return a.severity !== 'err'; }).length;
+    var quality = diagAvailable ? Math.max(0, Math.min(100, 100 - critical * 5 - warnings)) : null;
+    var healthClass = quality === null ? 'neutral' : quality >= 95 ? 'good' : quality >= 80 ? 'warn' : 'bad';
+    var healthText = quality === null ? 'Contrôle indisponible' : quality + '/100';
 
-    // Compteurs globaux
-    const errs = aberrations.filter(a => a.severity === 'err').length;
-    const warns = aberrations.filter(a => a.severity === 'warn').length;
+    var freshness = [
+        { name: 'Cours', date: latest[0], panel: 'cours' },
+        { name: 'Historique', date: latest[1], panel: 'historique' },
+        { name: 'Financials', date: latest[2], panel: 'financials' },
+        { name: 'Dividendes', date: latest[3], panel: 'dividendes' }
+    ];
 
-    let html = `<div style="display:flex;gap:20px;margin-bottom:16px;font-size:12px;font-weight:600;">
-        <span style="color:var(--red);">● ${errs} CRITIQUES</span>
-        <span style="color:var(--orange);">● ${warns} AVERTISSEMENTS</span>
-        <span style="color:var(--muted);margin-left:auto;">${aberrations.length} lignes concernées</span>
-    </div>`;
-
-    // Groupe par type d'anomalie
-    const byType = {};
-    aberrations.forEach(a => {
-        if (!byType[a.anomalie_type]) byType[a.anomalie_type] = [];
-        byType[a.anomalie_type].push(a);
+    var actions = [];
+    if (critical) actions.push({ level: 'critical', title: critical + ' anomalie(s) critique(s)', detail: 'À corriger avant de considérer la base fiable.', panel: 'diagnostic' });
+    if (warnings) actions.push({ level: 'warning', title: warnings + ' avertissement(s)', detail: 'Données à vérifier ou à compléter.', panel: 'diagnostic' });
+    if (!c.entreprises) actions.push({ level: 'critical', title: 'Aucune entreprise référencée', detail: 'Le référentiel titres doit être créé avant les financials.', panel: 'entreprises' });
+    if (!c.financials) actions.push({ level: 'warning', title: 'Aucun financial enregistré', detail: 'La Financial Database est encore vide.', panel: 'financials' });
+    freshness.forEach(function(x) {
+        if (x.date && dashAgeLabel(x.date).cls === 'bad') actions.push({ level: 'warning', title: x.name + ' non récent', detail: 'Dernière donnée : ' + dashDate(x.date), panel: x.panel });
     });
 
-    for (const [type, items] of Object.entries(byType)) {
-        const isErr = items[0].severity === 'err';
-        const color = isErr ? 'var(--red)' : 'var(--orange)';
-        const bg = isErr ? 'rgba(239,68,68,0.08)' : 'rgba(249,115,22,0.08)';
+    var html = '<div class="dash-health-grid">';
+    html += '<div class="dash-health-card ' + healthClass + '"><div class="dash-mini-label">QUALITÉ DE LA BASE</div><div class="dash-score">' + healthText + '</div><div class="dash-muted">' + (diagAvailable ? (critical + ' critique(s) · ' + warnings + ' avertissement(s)') : 'Diagnostic non disponible') + '</div></div>';
+    html += '<div class="dash-health-card"><div class="dash-mini-label">DERNIÈRE ACTIVITÉ</div><div class="dash-score small">' + dashDate(latest[0] || latest[1] || latest[2] || latest[3]) + '</div><div class="dash-muted">Cours / données de marché</div></div>';
+    html += '<div class="dash-health-card"><div class="dash-mini-label">PERFORMANCE</div><div class="dash-score small">' + (Date.now() - started) + ' ms</div><div class="dash-muted">Temps de lecture du dashboard</div></div></div>';
 
-        html += `<div style="margin-bottom:20px;border:1px solid var(--border-s);border-radius:8px;overflow:hidden;">
-            <div style="background:${bg};padding:10px 14px;font-weight:600;font-size:13px;color:${color};display:flex;justify-content:space-between;align-items:center;">
-                <span>${type}</span>
-                <span style="font-size:11px;opacity:0.8;background:rgba(0,0,0,0.2);padding:2px 8px;border-radius:4px;">${items.length} ligne(s)</span>
-            </div>
-            <div style="padding:8px 14px;">`;
+    html += '<div class="dash-section-title">Fraîcheur des données</div><div class="dash-fresh-grid">';
+    freshness.forEach(function(x) {
+        var st = dashAgeLabel(x.date);
+        html += '<div class="dash-fresh-row"><div><strong>' + dashEsc(x.name) + '</strong><span>' + (x.date ? dashDate(x.date) : 'Aucune donnée') + '</span></div><span class="dash-status ' + st.cls + '">' + dashEsc(st.text) + '</span></div>';
+    });
+    html += '</div>';
 
-        // Header tableau
-        html += `<div style="display:grid;grid-template-columns:70px 90px 110px 1fr 90px;gap:10px;font-size:10px;text-transform:uppercase;letter-spacing:0.5px;color:var(--muted);border-bottom:1px solid var(--border-s);padding:4px 0;font-weight:600;">
-            <div>Ticker</div>
-            <div>Date</div>
-            <div>Valeur actuelle</div>
-            <div>Détail / Attendu</div>
-            <div>Source</div>
-        </div>`;
-
-        // Lignes
-        items.forEach(item => {
-            html += `<div style="display:grid;grid-template-columns:70px 90px 110px 1fr 90px;gap:10px;font-size:12px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.03);align-items:center;">
-                <div><strong style="color:${color};">${item.ticker}</strong></div>
-                <div style="font-family:monospace;font-size:11px;">${item.date_seance}</div>
-                <div style="font-family:monospace;color:${color};">${item.valeur_actuelle}</div>
-                <div style="color:var(--muted);font-size:11px;">${item.valeur_attendue}</div>
-                <div><span style="background:rgba(255,255,255,0.05);padding:3px 8px;border-radius:4px;font-size:10px;text-transform:uppercase;">${item.source_table}</span></div>
-            </div>`;
+    html += '<div class="dash-section-title">File d’actions</div>';
+    if (!actions.length) {
+        html += '<div class="dash-empty good">✓ Aucun point prioritaire détecté. La base est prête pour la vérification manuelle.</div>';
+    } else {
+        html += '<div class="dash-actions">';
+        actions.slice(0, 8).forEach(function(a) {
+            html += '<div class="dash-action ' + a.level + '"><div><strong>' + dashEsc(a.title) + '</strong><span>' + dashEsc(a.detail) + '</span></div><button onclick="switchTab(\'' + dashEsc(a.panel) + '\')">Voir →</button></div>';
         });
-
-        // Lien vers correction
-        const targetPanel = items[0].source_table === 'historique' ? 'historique' : 'cours';
-        html += `<div style="padding-top:8px;font-size:11px;">
-            <a href="#" onclick="showPanel('${targetPanel}');return false;" style="color:var(--accent);text-decoration:none;">
-                → Voir toutes les lignes dans le panel ${targetPanel}
-            </a>
-        </div>`;
-
-        html += `</div></div>`;
+        html += '</div>';
     }
 
+    html += '<div class="dash-section-title">Modules de gestion</div><div class="dash-module-grid">';
+    [
+        ['Entreprises', c.entreprises, 'Référentiel des émetteurs', 'entreprises'],
+        ['Cours', c.cours, 'Données de marché', 'cours'],
+        ['Historique', c.historique, 'Séries historiques', 'historique'],
+        ['Financials', c.financials, 'États financiers', 'financials'],
+        ['Dividendes', c.dividendes, 'Calendrier et historique', 'dividendes'],
+        ['Diagnostic', critical + warnings, 'Contrôles qualité', 'diagnostic']
+    ].forEach(function(m) {
+        html += '<button class="dash-module" onclick="switchTab(\'' + m[3] + '\')"><div><strong>' + dashEsc(m[0]) + '</strong><span>' + dashEsc(m[2]) + '</span></div><b>' + dashNum(m[1]) + '</b></button>';
+    });
+    html += '</div>';
+    info.innerHTML = html;
+
+    var ts = document.getElementById('dash-ts');
+    if (ts) ts.textContent = 'Actualisé à ' + new Date().toLocaleTimeString('fr-FR');
+    await loadDashboardAlerts(aberrations, diagAvailable);
+}
+
+async function loadDashboardAlerts(prefetched, prefetchedAvailable) {
+    var panel = document.getElementById('dash-alerts');
+    if (!panel) return;
+    var aberrations = Array.isArray(prefetched) ? prefetched : [];
+    var available = !!prefetchedAvailable;
+
+    if (!available) {
+        try {
+            var resp = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_aberrations', {
+                method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ limit_per_type: 10 })
+            });
+            if (resp.ok) { aberrations = await resp.json(); available = true; }
+        } catch(e) { console.error('Erreur RPC get_aberrations:', e); }
+    }
+    if (!available) { panel.innerHTML = '<div class="dash-empty neutral">⚠ Le contrôle automatique des anomalies est indisponible. Ouvrez <strong>Diagnostic</strong> pour vérifier la configuration.</div>'; return; }
+    if (!aberrations || aberrations.length === 0) { panel.innerHTML = '<div class="dash-empty good">✓ Aucune anomalie détectée par le contrôle automatique.</div>'; return; }
+
+    var errs = aberrations.filter(function(a){ return a.severity === 'err'; }).length;
+    var warns = aberrations.length - errs;
+    var html = '<div class="dash-alert-summary"><span class="critical">● ' + errs + ' CRITIQUE(S)</span><span class="warning">● ' + warns + ' AVERTISSEMENT(S)</span><span>' + aberrations.length + ' ligne(s) concernée(s)</span></div>';
+    var byType = {};
+    aberrations.forEach(function(a){ var type = a.anomalie_type || 'Anomalie'; if (!byType[type]) byType[type] = []; byType[type].push(a); });
+
+    Object.keys(byType).forEach(function(type){
+        var items = byType[type];
+        var isErr = items.some(function(i){ return i.severity === 'err'; });
+        html += '<div class="dash-anomaly-group ' + (isErr ? 'critical' : 'warning') + '"><div class="dash-anomaly-head"><strong>' + dashEsc(type) + '</strong><span>' + items.length + '</span></div>';
+        items.slice(0, 10).forEach(function(item){
+            html += '<div class="dash-anomaly-row"><div><strong>' + dashEsc(item.ticker || '—') + '</strong><span>' + dashEsc(item.date_seance || '—') + '</span></div><div><span>' + dashEsc(item.valeur_actuelle || '—') + '</span><small>' + dashEsc(item.valeur_attendue || '—') + '</small></div><em>' + dashEsc(item.source_table || '—') + '</em></div>';
+        });
+        var target = items[0].source_table === 'historique' ? 'historique' : 'cours';
+        html += '<button class="dash-anomaly-link" onclick="switchTab(\'' + target + '\')">→ Ouvrir ' + dashEsc(target) + '</button></div>';
+    });
     panel.innerHTML = html;
 }
