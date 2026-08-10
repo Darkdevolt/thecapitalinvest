@@ -39,10 +39,8 @@ if (window.__atIndexLoaded) {
   window.fmtVol=fmtVol;
   function fmtDateFull(d){if(!d)return '—';const date=new Date(d);return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});}
   window.fmtDateFull=fmtDateFull;
-
   function toastSafe(msg,type){if(typeof window.toast==='function')window.toast(msg,type||'info');else console[type==='error'?'error':'log']('[AT]',msg);}
 
-  // Rebuildit le sélecteur à partir des cours déjà chargés par l'application.
   function atPopulateTickerSelect(preserve=true){
     const sel=document.getElementById('atTicker'); if(!sel)return [];
     const rows=Array.isArray(window.allCours)?window.allCours:[];
@@ -68,7 +66,7 @@ if (window.__atIndexLoaded) {
       const q=search.value.trim().toUpperCase();
       const rows=Array.isArray(window.allCours)?window.allCours:[];
       const seen=new Set();
-      const list=rows.filter(c=>{const t=String(c&&c.ticker||'').toUpperCase(),name=String(c&& (c.nom||c.libelle||c.entreprise||'')||'').toUpperCase();return t&&(!q||t.includes(q)||name.includes(q));}).filter(c=>{const t=String(c.ticker).toUpperCase();if(seen.has(t))return false;seen.add(t);return true;}).sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker)));
+      const list=rows.filter(c=>{const t=String(c&&c.ticker||'').toUpperCase(),name=String(c&&(c.nom||c.libelle||c.entreprise||'')||'').toUpperCase();return t&&(!q||t.includes(q)||name.includes(q));}).filter(c=>{const t=String(c.ticker).toUpperCase();if(seen.has(t))return false;seen.add(t);return true;}).sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker)));
       const current=sel.value;
       sel.innerHTML='<option value="">Choisir un titre…</option>'+list.map(c=>{const t=String(c.ticker).toUpperCase();const n=String(c.nom||c.libelle||'');return `<option value="${t}">${t}${n?' — '+n:''}</option>`;}).join('');
       if(current&&list.some(c=>String(c.ticker).toUpperCase()===current))sel.value=current;
@@ -111,7 +109,6 @@ if (window.__atIndexLoaded) {
   window.atSetPeriod=atSetPeriod;
   function atSetInterval(v,btn){AT.interval=v;document.querySelectorAll('.at-interval-btn').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');if(AT.hist.length)atRender();}
   window.atSetInterval=atSetInterval;
-
   function atSetDraw(mode){AT.drawMode=mode;AT.trendPts=[];AT.channelPts=[];AT.rectPts=[];document.querySelectorAll('[id^="atTool"],[id^="dBtn"]').forEach(el=>el.classList.remove('on'));const map={cursor:['atToolCursor','dBtnCursor'],hline:['atToolHline','dBtnHLine'],trend:['atToolTrend','dBtnTrend'],channel:['atToolChannel','dBtnChannel'],rect:['atToolRect','dBtnRect'],fib:['atToolFib','dBtnFib'],pitch:['atToolPitch','dBtnPitch'],text:['atToolText','dBtnText']};(map[mode]||[]).forEach(id=>document.getElementById(id)?.classList.add('on'));const status=document.getElementById('atDrawStatus');if(status)status.textContent=({cursor:'',hline:'Support / résistance : cliquez sur le graphique',trend:'Ligne de tendance : cliquez deux points',channel:'Canal : cliquez les points de construction',rect:'Zone de prix : cliquez deux coins',fib:'Fibonacci : cliquez bas puis haut',pitch:'Pitchfork : cliquez trois points',text:'Annotation : cliquez sur le graphique'})[mode]||'';}
   window.atSetDraw=atSetDraw;
   function atClearDrawings(){AT.draws=[];if(AT.hist.length)atRender();toastSafe('Dessins effacés','success');}
@@ -124,7 +121,9 @@ if (window.__atIndexLoaded) {
     atPopulateTickerSelect(true); atInstallTickerSearch();
     document.getElementById('atBtnLine')?.classList.add('on');
     if(typeof atInitCrosshair==='function')atInitCrosshair();
-    if(typeof atInitNav==='function')atInitNav();
+    // Un seul point d'entrée pour la navigation technique : évite le double bootstrap.
+    if(typeof atInitNavigation==='function')atInitNavigation();
+    else if(typeof atInitNav==='function')atInitNav();
     if(typeof atUpdateWatchlist==='function')atUpdateWatchlist();
     if(!AT._resizeObserver){const wrap=document.getElementById('atWrap');if(wrap&&typeof ResizeObserver!=='undefined'){AT._resizeObserver=new ResizeObserver(()=>{if(AT.hist.length&&typeof atRender==='function')atRender();});AT._resizeObserver.observe(wrap);}}
     AT.initialized=true;
