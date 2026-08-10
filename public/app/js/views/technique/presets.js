@@ -10,7 +10,7 @@ const AT_PRESETS = {
     period: 252,
     inds: { sma20: true, vol: true },
     signals: ['trend', 'rsi'],
-    edu: true // active les infobulles pédagogiques
+    edu: true
   },
   swing: {
     name: '📈 Swing Trading',
@@ -23,10 +23,12 @@ const AT_PRESETS = {
   },
   pro: {
     name: '🎯 Pro',
-    desc: 'Ichimoku, ADX, Stochastique, OBV',
+    desc: 'Historique complet + outils avancés + indicateurs complets',
     type: 'candle',
-    period: 504,
-    inds: { ichimoku: true, adx: true, stoch: true, obv: true, bb: true },
+    // 99999 = tout l'historique disponible. atVisibleData utilise cette
+    // valeur explicitement pour ne pas tronquer les données.
+    period: 99999,
+    inds: { ichimoku: true, adx: true, stoch: true, obv: true, bb: true, sma20: true, sma50: true, sma200: true, ema12: true, ema26: true, vol: true, rsi: true, macd: true, cci: true, vwap: true },
     signals: ['all'],
     edu: false
   }
@@ -34,54 +36,39 @@ const AT_PRESETS = {
 
 function atApplyPreset(key) {
   const p = AT_PRESETS[key];
-  if (!p) return;
-  
-  // Reset
+  if (!p || !window.AT) return;
+
   Object.keys(AT.activeInds).forEach(k => AT.activeInds[k].on = false);
-  
-  // Appliquer
   AT.type = p.type;
   AT.period = p.period;
   Object.entries(p.inds).forEach(([k, v]) => {
     if (AT.activeInds[k]) AT.activeInds[k].on = v;
   });
-  
-  // Activer sous-graphiques visibles
+
   Object.values(AT.activeInds).forEach(ind => {
-    if (ind.sub) document.getElementById(ind.sub).style.display = ind.on ? '' : 'none';
+    if (ind.sub) {
+      const el = document.getElementById(ind.sub);
+      if (el) el.style.display = ind.on ? '' : 'none';
+    }
   });
-  
-  // Activer mode éducatif
+
   AT.eduMode = p.edu;
-  atRender();
-  atShowToast(`Preset "${p.name}" appliqué`, 'success');
+  if (typeof atRender === 'function') atRender();
+  if (typeof atShowToast === 'function') atShowToast(`Preset "${p.name}" appliqué`, 'success');
 }
 
-// ── Onboarding tooltip flottant ──
 function atShowEduTip(targetId, text, position = 'bottom') {
   if (!AT.eduMode) return;
   const target = document.getElementById(targetId);
   if (!target || target._eduShown) return;
-  
+
   const tip = document.createElement('div');
   tip.className = 'at-edu-tip';
-  tip.innerHTML = `
-    <div class="at-edu-text">${text}</div>
-    <button onclick="this.parentElement.remove()">J'ai compris ✓</button>
-  `;
-  tip.style.cssText = `
-    position:absolute; z-index:1000; background:rgba(10,8,4,0.95);
-    border:1px solid var(--gold); border-radius:8px; padding:12px;
-    color:var(--cream); font-size:12px; max-width:220px;
-    box-shadow:0 8px 32px rgba(0,0,0,0.4);
-  `;
-  
+  tip.innerHTML = `<div class="at-edu-text">${text}</div><button onclick="this.parentElement.remove()">J'ai compris ✓</button>`;
+  tip.style.cssText = `position:absolute;z-index:1000;background:rgba(10,8,4,0.95);border:1px solid var(--gold);border-radius:8px;padding:12px;color:var(--cream);font-size:12px;max-width:220px;box-shadow:0 8px 32px rgba(0,0,0,0.4);`;
   target.style.position = 'relative';
   target.appendChild(tip);
   target._eduShown = true;
-  
-  // Positionnement
-  const rect = target.getBoundingClientRect();
   if (position === 'bottom') tip.style.top = 'calc(100% + 8px)';
   if (position === 'top') tip.style.bottom = 'calc(100% + 8px)';
   tip.style.left = '0';
