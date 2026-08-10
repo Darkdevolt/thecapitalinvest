@@ -1,121 +1,17 @@
 <!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tarifs — The Capital</title>
-<meta name="description" content="Choisissez votre niveau d'accès à The Capital : Free, Investor, Pro ou Elite.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
-<style>
-.pricing-intro{text-align:center;max-width:760px;margin:0 auto 28px;color:var(--muted);line-height:1.8}
-.billing-switch{display:flex;justify-content:center;gap:6px;margin:28px auto 54px;flex-wrap:wrap}
-.billing-switch button{border:1px solid var(--border);background:transparent;color:var(--muted);padding:11px 18px;font:inherit;cursor:pointer;border-radius:2px}
-.billing-switch button.active{background:var(--gold);border-color:var(--gold);color:var(--black);font-weight:500}
-.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:0 0 80px}
-.pricing-card{background:var(--deep);padding:42px 30px;position:relative;display:flex;flex-direction:column;min-width:0}
-.pricing-card:hover{background:var(--surface)}
-.pricing-card.featured{background:var(--surface);border:1px solid var(--gold)}
-.pricing-card.elite{background:linear-gradient(180deg,var(--surface),var(--deep))}
-.pricing-card.featured::before{content:'Recommandé';position:absolute;top:16px;right:16px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:5px 10px;background:var(--gold);color:var(--black);font-weight:500;border-radius:2px}
-.plan-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}
-.plan-name{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--cream);margin-bottom:20px}
-.plan-price{font-family:var(--mono);font-size:36px;color:var(--gold);line-height:1;margin-bottom:6px;white-space:nowrap}
-.plan-price span{font-size:13px;color:var(--muted);font-family:var(--sans);font-weight:400}
-.plan-saving{height:20px;font-size:11px;color:var(--gold);margin-bottom:16px}
-.plan-desc{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.7;min-height:68px}
-.plan-features{list-style:none;margin-bottom:28px;flex:1;padding:0}
-.plan-features li{font-size:13px;color:var(--muted);padding:9px 0;border-bottom:1px solid rgba(184,150,78,.07);display:flex;align-items:flex-start;gap:9px}
-.plan-features li::before{content:'✓';color:var(--gold);flex-shrink:0}
-.plan-cta{display:block;text-align:center}
-.wave-note{text-align:center;color:var(--muted);font-size:12px;margin:-52px auto 70px;max-width:700px;line-height:1.7}
-.compare-section,.faq{margin:80px 0}.compare-section h2,.faq h2{font-family:var(--serif);font-size:36px;font-weight:700;color:var(--cream);margin-bottom:40px}
-.compare-table th:first-child{width:38%}.compare-table th{background:var(--deep)}.compare-table tr:last-child td{border-bottom:none}
-.faq-item{border-bottom:1px solid var(--border);padding:28px 0}.faq-item h4{font-size:16px;color:var(--cream);font-weight:400;margin-bottom:12px}.faq-item p{font-size:14px;color:var(--muted);line-height:1.8}
-@media(max-width:1100px){.pricing-grid{grid-template-columns:repeat(2,1fr)}}
-@media(max-width:600px){.pricing-grid{grid-template-columns:1fr}.plan-desc{min-height:0}.plan-price{font-size:34px}.billing-switch{margin-bottom:36px}}
-</style>
-</head>
-<body>
-<div class="cursor" id="cursor"></div><div class="cursor-ring" id="cursorRing"></div><div class="scroll-line" id="scrollLine"></div>
-<header>
-<a href="index.html" class="logo">THE <span class="dot">·</span> CAPITAL</a>
-<nav><a href="index.html">Accueil</a><a href="platform.html">Plateforme</a><a href="features.html">Fonctionnalités</a><a href="markets.html">Marchés</a><a href="pricing.html" class="active">Tarifs</a><a href="about.html">À propos</a><a href="contact.html">Contact</a><a href="app.html" class="nav-cta">Dashboard</a></nav>
-<button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button>
-</header>
-<div class="mobile-menu" id="mobile-menu"><a href="index.html">Accueil</a><a href="platform.html">Plateforme</a><a href="features.html">Fonctionnalités</a><a href="markets.html">Marchés</a><a href="pricing.html" class="active">Tarifs</a><a href="about.html">À propos</a><a href="contact.html">Contact</a><a href="app.html" class="nav-cta">Dashboard</a></div>
-
-<div class="page-hero"><h1 class="anim">Offres <em>& Tarifs</em></h1><p class="anim anim-delay-1">Commencez gratuitement. Montez en puissance selon votre niveau d'analyse.</p></div>
-<div class="container">
-<p class="pricing-intro">The Capital évolue d'un accès découverte vers une véritable plateforme d'intelligence financière BRVM/UEMOA. Les abonnements longue durée bénéficient d'un tarif préférentiel.</p>
-<div class="billing-switch" role="tablist" aria-label="Période de facturation">
-<button class="active" data-period="monthly">Mensuel</button><button data-period="quarterly">3 mois</button><button data-period="semiannual">6 mois</button><button data-period="annual">Annuel</button>
-</div>
-
-<div class="pricing-grid">
-<section class="pricing-card anim">
-<div class="plan-label">Découverte</div><div class="plan-name">Free</div><div class="plan-price">0 <span>FCFA</span></div><div class="plan-saving">Accès gratuit</div>
-<p class="plan-desc">Pour découvrir la BRVM et les fondamentaux de The Capital.</p>
-<ul class="plan-features"><li>Cours et marché simplifiés</li><li>Watchlist limitée</li><li>Fiches entreprises essentielles</li><li>Accès découverte au dashboard</li><li>Contenu public The Capital</li></ul>
-<a href="app.html" class="btn btn-outline plan-cta">Commencer gratuitement</a>
-</section>
-
-<section class="pricing-card anim anim-delay-1">
-<div class="plan-label">Investisseur</div><div class="plan-name">Investor</div><div class="plan-price" data-plan="investor">5 900 <span>FCFA / mois</span></div><div class="plan-saving" data-saving="investor"></div>
-<p class="plan-desc">Pour l'investisseur individuel qui veut structurer son suivi et ses décisions.</p>
-<ul class="plan-features"><li>Cours BRVM</li><li>Portefeuille</li><li>Financials essentiels</li><li>Dividendes et ratios essentiels</li><li>Screening limité</li><li>Alertes basiques</li></ul>
-<a class="btn btn-outline plan-cta payment-link" data-plan="Investor" href="https://pay.wave.com/m/M_sn_DP533wZ-yIia/c/sn/" target="_blank" rel="noopener">Payer avec Wave</a>
-</section>
-
-<section class="pricing-card featured anim anim-delay-2">
-<div class="plan-label">Investisseur actif</div><div class="plan-name">Pro</div><div class="plan-price" data-plan="pro">9 900 <span>FCFA / mois</span></div><div class="plan-saving" data-saving="pro">Recommandé pour la majorité des investisseurs actifs</div>
-<p class="plan-desc">Pour analyser le marché avec des données enrichies, des historiques et des outils de décision.</p>
-<ul class="plan-features"><li>Données BRVM avancées</li><li>Financial Intelligence</li><li>Historique complet</li><li>Screening avancé</li><li>Portefeuille et alertes</li><li>Analyses fondamentales enrichies</li><li>Outils quantitatifs</li></ul>
-<a class="btn btn-primary btn-arrow plan-cta payment-link" data-plan="Pro" href="https://pay.wave.com/m/M_sn_DP533wZ-yIia/c/sn/" target="_blank" rel="noopener">Payer avec Wave</a>
-</section>
-
-<section class="pricing-card elite anim anim-delay-3">
-<div class="plan-label">Intelligence avancée</div><div class="plan-name">Elite</div><div class="plan-price" data-plan="elite">24 900 <span>FCFA / mois</span></div><div class="plan-saving" data-saving="elite">Pour les utilisateurs les plus avancés</div>
-<p class="plan-desc">L'offre complète pour transformer les données financières en intelligence exploitable.</p>
-<ul class="plan-features"><li>Tout le Pro</li><li>Forecasts et scénarios</li><li>Anomaly Center</li><li>Early Warning</li><li>Data Quality</li><li>Analyses avancées et IA financière</li><li>Fonctionnalités premium futures</li></ul>
-<a class="btn btn-primary btn-arrow plan-cta payment-link" data-plan="Elite" href="https://pay.wave.com/m/M_sn_DP533wZ-yIia/c/sn/" target="_blank" rel="noopener">Payer avec Wave</a>
-</section>
-</div>
-<p class="wave-note"><strong>Wave</strong> est disponible pour le paiement. Le lien Wave actuel est un lien de paiement partagé : tant que l'automatisation API/webhook n'est pas branchée, le paiement ne doit pas être considéré comme une activation automatique d'abonnement.</p>
-
-<div class="compare-section anim"><h2>Comparatif <em style="font-style:italic;color:var(--gold)">détaillé</em></h2>
-<table class="compare-table"><thead><tr><th>Fonctionnalité</th><th>Free</th><th>Investor</th><th class="gold">Pro</th><th>Elite</th></tr></thead><tbody>
-<tr><td>Données de marché</td><td>Essentielles</td><td class="check">✓</td><td class="check">Avancées</td><td class="check">Avancées</td></tr>
-<tr><td>Portefeuille</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr>
-<tr><td>Financial Intelligence</td><td class="cross">—</td><td>Essentielle</td><td class="check">Complète</td><td class="check">Avancée</td></tr>
-<tr><td>Historique</td><td>Limité</td><td class="check">✓</td><td class="check">Complet</td><td class="check">Complet</td></tr>
-<tr><td>Screening</td><td class="cross">—</td><td>Limité</td><td class="check">Avancé</td><td class="check">Avancé</td></tr>
-<tr><td>Forecasts</td><td class="cross">—</td><td class="cross">—</td><td>Standard</td><td class="check">Avancé</td></tr>
-<tr><td>Anomaly Center</td><td class="cross">—</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr>
-<tr><td>Early Warning</td><td class="cross">—</td><td class="cross">—</td><td>Basique</td><td class="check">Avancé</td></tr>
-<tr><td>Data Quality</td><td class="cross">—</td><td class="cross">—</td><td>Score</td><td class="check">Complet</td></tr>
-<tr><td>IA financière</td><td class="cross">—</td><td class="cross">—</td><td>Standard</td><td class="check">Avancée</td></tr>
-</tbody></table></div>
-
-<div class="faq anim"><h2>Questions <em style="font-style:italic;color:var(--gold)">fréquentes</em></h2>
-<div class="faq-item"><h4>Quels moyens de paiement sont disponibles ?</h4><p>Wave est le premier moyen de paiement intégré. D'autres moyens pourront être ajoutés ensuite sans modifier l'architecture des abonnements.</p></div>
-<div class="faq-item"><h4>Puis-je changer de période ?</h4><p>Oui. Les périodes mensuelle, trimestrielle, semestrielle et annuelle sont prévues dans le catalogue tarifaire.</p></div>
-<div class="faq-item"><h4>L'abonnement est-il activé automatiquement après Wave ?</h4><p>Pas encore avec le lien Wave partagé actuel. L'activation automatique sera ajoutée avec la confirmation serveur/API du paiement afin d'éviter toute activation sur simple clic.</p></div>
-<div class="faq-item"><h4>Y aura-t-il une offre professionnelle ?</h4><p>Oui. Les offres B2B, API, licences multi-utilisateurs et institutionnelles seront proposées séparément sur devis.</p></div>
-</div>
-</div>
-<footer><span class="logo-sm">THE <span>·</span> CAPITAL</span><span>Dakar, Sénégal — Intelligence financière africaine</span><span>© 2026 The Capital</span></footer>
+<html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Tarifs — The Capital</title><meta name="description" content="Choisissez votre niveau d'accès à The Capital : Free, Investor, Pro ou Elite."><link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,400;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"><link rel="stylesheet" href="style.css"><style>
+.pricing-intro{text-align:center;max-width:760px;margin:0 auto 28px;color:var(--muted);line-height:1.8}.billing-switch{display:flex;justify-content:center;gap:6px;margin:28px auto 54px;flex-wrap:wrap}.billing-switch button{border:1px solid var(--border);background:transparent;color:var(--muted);padding:11px 18px;font:inherit;cursor:pointer;border-radius:2px}.billing-switch button.active{background:var(--gold);border-color:var(--gold);color:var(--black);font-weight:500}.pricing-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--border);border:1px solid var(--border);margin:0 0 80px}.pricing-card{background:var(--deep);padding:42px 30px;position:relative;display:flex;flex-direction:column;min-width:0}.pricing-card:hover{background:var(--surface)}.pricing-card.featured{background:var(--surface);border:1px solid var(--gold)}.pricing-card.elite{background:linear-gradient(180deg,var(--surface),var(--deep))}.pricing-card.featured::before{content:'Recommandé';position:absolute;top:16px;right:16px;font-size:9px;letter-spacing:.15em;text-transform:uppercase;padding:5px 10px;background:var(--gold);color:var(--black);font-weight:500;border-radius:2px}.plan-label{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:10px}.plan-name{font-family:var(--serif);font-size:30px;font-weight:700;color:var(--cream);margin-bottom:20px}.plan-price{font-family:var(--mono);font-size:36px;color:var(--gold);line-height:1;margin-bottom:6px;white-space:nowrap}.plan-price span{font-size:13px;color:var(--muted);font-family:var(--sans);font-weight:400}.plan-saving{height:20px;font-size:11px;color:var(--gold);margin-bottom:16px}.plan-desc{font-size:13px;color:var(--muted);margin-bottom:28px;line-height:1.7;min-height:68px}.plan-features{list-style:none;margin-bottom:28px;flex:1;padding:0}.plan-features li{font-size:13px;color:var(--muted);padding:9px 0;border-bottom:1px solid rgba(184,150,78,.07);display:flex;align-items:flex-start;gap:9px}.plan-features li::before{content:'✓';color:var(--gold);flex-shrink:0}.plan-cta{display:block;text-align:center}.wave-note{text-align:center;color:var(--muted);font-size:12px;margin:-52px auto 70px;max-width:700px;line-height:1.7}.compare-section,.faq{margin:80px 0}.compare-section h2,.faq h2{font-family:var(--serif);font-size:36px;font-weight:700;color:var(--cream);margin-bottom:40px}.compare-table th:first-child{width:38%}.compare-table th{background:var(--deep)}.compare-table tr:last-child td{border-bottom:none}.faq-item{border-bottom:1px solid var(--border);padding:28px 0}.faq-item h4{font-size:16px;color:var(--cream);font-weight:400;margin-bottom:12px}.faq-item p{font-size:14px;color:var(--muted);line-height:1.8}@media(max-width:1100px){.pricing-grid{grid-template-columns:repeat(2,1fr)}}@media(max-width:600px){.pricing-grid{grid-template-columns:1fr}.plan-desc{min-height:0}.plan-price{font-size:34px}.billing-switch{margin-bottom:36px}}
+</style></head><body><div class="cursor" id="cursor"></div><div class="cursor-ring" id="cursorRing"></div><div class="scroll-line" id="scrollLine"></div><header><a href="index.html" class="logo">THE <span class="dot">·</span> CAPITAL</a><nav><a href="index.html">Accueil</a><a href="platform.html">Plateforme</a><a href="features.html">Fonctionnalités</a><a href="markets.html">Marchés</a><a href="pricing.html" class="active">Tarifs</a><a href="about.html">À propos</a><a href="contact.html">Contact</a><a href="app.html" class="nav-cta">Dashboard</a></nav><button class="hamburger" id="hamburger" aria-label="Menu"><span></span><span></span><span></span></button></header><div class="mobile-menu" id="mobile-menu"><a href="index.html">Accueil</a><a href="platform.html">Plateforme</a><a href="features.html">Fonctionnalités</a><a href="markets.html">Marchés</a><a href="pricing.html" class="active">Tarifs</a><a href="about.html">À propos</a><a href="contact.html">Contact</a><a href="app.html" class="nav-cta">Dashboard</a></div>
+<div class="page-hero"><h1 class="anim">Offres <em>& Tarifs</em></h1><p class="anim anim-delay-1">Commencez gratuitement. Montez en puissance selon votre niveau d'analyse.</p></div><div class="container"><p class="pricing-intro">The Capital évolue d'un accès découverte vers une véritable plateforme d'intelligence financière BRVM/UEMOA. Les abonnements longue durée bénéficient d'un tarif préférentiel.</p><div class="billing-switch" role="tablist" aria-label="Période de facturation"><button class="active" data-period="monthly">Mensuel</button><button data-period="quarterly">3 mois</button><button data-period="semiannual">6 mois</button><button data-period="annual">Annuel</button></div>
+<div class="pricing-grid"><section class="pricing-card anim"><div class="plan-label">Découverte</div><div class="plan-name">Free</div><div class="plan-price">0 <span>FCFA</span></div><div class="plan-saving">Accès gratuit</div><p class="plan-desc">Pour découvrir la BRVM et les fondamentaux de The Capital.</p><ul class="plan-features"><li>Cours et marché simplifiés</li><li>Watchlist limitée</li><li>Fiches entreprises essentielles</li><li>Accès découverte au dashboard</li><li>Contenu public The Capital</li></ul><a href="app.html" class="btn btn-outline plan-cta">Commencer gratuitement</a></section>
+<section class="pricing-card anim anim-delay-1"><div class="plan-label">Investisseur</div><div class="plan-name">Investor</div><div class="plan-price" data-plan="investor">5 900 <span>FCFA / mois</span></div><div class="plan-saving" data-saving="investor"></div><p class="plan-desc">Pour l'investisseur individuel qui veut structurer son suivi et ses décisions.</p><ul class="plan-features"><li>Cours BRVM</li><li>Portefeuille</li><li>Financials essentiels</li><li>Dividendes et ratios essentiels</li><li>Screening limité</li><li>Alertes basiques</li></ul><a class="btn btn-outline plan-cta payment-link" data-plan="investor" href="payment.html?plan=investor&period=monthly">Payer avec Wave</a></section>
+<section class="pricing-card featured anim anim-delay-2"><div class="plan-label">Investisseur actif</div><div class="plan-name">Pro</div><div class="plan-price" data-plan="pro">9 900 <span>FCFA / mois</span></div><div class="plan-saving" data-saving="pro">Recommandé pour la majorité des investisseurs actifs</div><p class="plan-desc">Pour analyser le marché avec des données enrichies, des historiques et des outils de décision.</p><ul class="plan-features"><li>Données BRVM avancées</li><li>Financial Intelligence</li><li>Historique complet</li><li>Screening avancé</li><li>Portefeuille et alertes</li><li>Analyses fondamentales enrichies</li><li>Outils quantitatifs</li></ul><a class="btn btn-primary btn-arrow plan-cta payment-link" data-plan="pro" href="payment.html?plan=pro&period=monthly">Payer avec Wave</a></section>
+<section class="pricing-card elite anim anim-delay-3"><div class="plan-label">Intelligence avancée</div><div class="plan-name">Elite</div><div class="plan-price" data-plan="elite">24 900 <span>FCFA / mois</span></div><div class="plan-saving" data-saving="elite">Pour les utilisateurs les plus avancés</div><p class="plan-desc">L'offre complète pour transformer les données financières en intelligence exploitable.</p><ul class="plan-features"><li>Tout le Pro</li><li>Forecasts et scénarios</li><li>Anomaly Center</li><li>Early Warning</li><li>Data Quality</li><li>Analyses avancées et IA financière</li><li>Fonctionnalités premium futures</li></ul><a class="btn btn-primary btn-arrow plan-cta payment-link" data-plan="elite" href="payment.html?plan=elite&period=monthly">Payer avec Wave</a></section></div>
+<p class="wave-note"><strong>Wave</strong> est disponible via notre parcours de paiement sécurisé. Après paiement, le reçu peut être transmis pour validation manuelle si la confirmation automatique n'est pas disponible.</p>
+<div class="compare-section anim"><h2>Comparatif <em style="font-style:italic;color:var(--gold)">détaillé</em></h2><table class="compare-table"><thead><tr><th>Fonctionnalité</th><th>Free</th><th>Investor</th><th class="gold">Pro</th><th>Elite</th></tr></thead><tbody><tr><td>Données de marché</td><td>Essentielles</td><td class="check">✓</td><td class="check">Avancées</td><td class="check">Avancées</td></tr><tr><td>Portefeuille</td><td class="cross">—</td><td class="check">✓</td><td class="check">✓</td><td class="check">✓</td></tr><tr><td>Financial Intelligence</td><td class="cross">—</td><td>Essentielle</td><td class="check">Complète</td><td class="check">Avancée</td></tr><tr><td>Historique</td><td>Limité</td><td class="check">✓</td><td class="check">Complet</td><td class="check">Complet</td></tr><tr><td>Screening</td><td class="cross">—</td><td>Limité</td><td class="check">Avancé</td><td class="check">Avancé</td></tr><tr><td>Forecasts</td><td class="cross">—</td><td class="cross">—</td><td>Standard</td><td class="check">Avancé</td></tr><tr><td>Anomaly Center</td><td class="cross">—</td><td class="cross">—</td><td class="cross">—</td><td class="check">✓</td></tr><tr><td>Early Warning</td><td class="cross">—</td><td class="cross">—</td><td>Basique</td><td class="check">Avancé</td></tr><tr><td>Data Quality</td><td class="cross">—</td><td class="cross">—</td><td>Score</td><td class="check">Complet</td></tr><tr><td>IA financière</td><td class="cross">—</td><td class="cross">—</td><td>Standard</td><td class="check">Avancée</td></tr></tbody></table></div>
+<div class="faq anim"><h2>Questions <em style="font-style:italic;color:var(--gold)">fréquentes</em></h2><div class="faq-item"><h4>Quels moyens de paiement sont disponibles ?</h4><p>Wave est le premier moyen de paiement. Le parcours prévoit aussi une validation manuelle par reçu comme solution de continuité.</p></div><div class="faq-item"><h4>Puis-je changer de période ?</h4><p>Oui. Les périodes mensuelle, trimestrielle, semestrielle et annuelle sont prévues dans le catalogue tarifaire.</p></div><div class="faq-item"><h4>Quand mon abonnement est-il activé ?</h4><p>Après confirmation automatique du paiement ou validation manuelle du reçu par l'administration. Un simple clic sur le bouton Wave n'active jamais un abonnement.</p></div><div class="faq-item"><h4>Y aura-t-il une offre professionnelle ?</h4><p>Oui. Les offres B2B, API, licences multi-utilisateurs et institutionnelles seront proposées séparément sur devis.</p></div></div></div><footer><span class="logo-sm">THE <span>·</span> CAPITAL</span><span>Dakar, Sénégal — Intelligence financière africaine</span><span>© 2026 The Capital</span></footer>
 <script>
-const prices={investor:{monthly:5900,quarterly:15900,semiannual:30000,annual:59000},pro:{monthly:9900,quarterly:27000,semiannual:50000,annual:90000},elite:{monthly:24900,quarterly:67500,semiannual:125000,annual:225000}};
-const labels={monthly:'FCFA / mois',quarterly:'FCFA / 3 mois',semiannual:'FCFA / 6 mois',annual:'FCFA / an'};
-const format=n=>new Intl.NumberFormat('fr-FR').format(n);
-function renderPeriod(period){document.querySelectorAll('[data-plan]').forEach(el=>{const key=el.dataset.plan.toLowerCase();if(prices[key]) el.innerHTML=`${format(prices[key][period])} <span>${labels[period]}</span>`;});document.querySelectorAll('.billing-switch button').forEach(b=>b.classList.toggle('active',b.dataset.period===period));const savings={quarterly:'Tarif réduit par rapport au mensuel',semiannual:'Économie sur engagement 6 mois',annual:'Meilleur tarif — engagement annuel'};document.querySelectorAll('[data-saving]').forEach(el=>{if(el.dataset.saving==='investor'||el.dataset.saving==='pro'||el.dataset.saving==='elite') el.textContent=savings[period]||'';});}
-document.querySelectorAll('.billing-switch button').forEach(b=>b.addEventListener('click',()=>renderPeriod(b.dataset.period)));
-const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');let mx=0,my=0,rx=0,ry=0;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;cursor.style.left=mx+'px';cursor.style.top=my+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop)})();
-const header=document.querySelector('header'),scrollLine=document.getElementById('scrollLine');window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60);scrollLine.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%'});
-const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.1});document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
-const hamburger=document.getElementById('hamburger'),mobile=document.getElementById('mobile-menu');if(hamburger)hamburger.addEventListener('click',()=>mobile.classList.toggle('open'));
-</script>
-</body>
-</html>
+const prices={investor:{monthly:5900,quarterly:15900,semiannual:30000,annual:59000},pro:{monthly:9900,quarterly:27000,semiannual:50000,annual:90000},elite:{monthly:24900,quarterly:67500,semiannual:125000,annual:225000}};const labels={monthly:'FCFA / mois',quarterly:'FCFA / 3 mois',semiannual:'FCFA / 6 mois',annual:'FCFA / an'};const format=n=>new Intl.NumberFormat('fr-FR').format(n);let currentPeriod='monthly';
+function renderPeriod(period){currentPeriod=period;document.querySelectorAll('[data-plan]').forEach(el=>{const key=el.dataset.plan;if(prices[key])el.innerHTML=`${format(prices[key][period])} <span>${labels[period]}</span>`});document.querySelectorAll('.billing-switch button').forEach(b=>b.classList.toggle('active',b.dataset.period===period));const savings={quarterly:'Tarif réduit par rapport au mensuel',semiannual:'Économie sur engagement 6 mois',annual:'Meilleur tarif — engagement annuel'};document.querySelectorAll('[data-saving]').forEach(el=>el.textContent=savings[period]||'');document.querySelectorAll('.payment-link').forEach(a=>a.href=`payment.html?plan=${a.dataset.plan}&period=${period}`)}document.querySelectorAll('.billing-switch button').forEach(b=>b.addEventListener('click',()=>renderPeriod(b.dataset.period)));renderPeriod('monthly');
+const cursor=document.getElementById('cursor'),ring=document.getElementById('cursorRing');let mx=0,my=0,rx=0,ry=0;document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY});(function loop(){rx+=(mx-rx)*.18;ry+=(my-ry)*.18;cursor.style.left=mx+'px';cursor.style.top=my+'px';ring.style.left=rx+'px';ring.style.top=ry+'px';requestAnimationFrame(loop)})();const header=document.querySelector('header'),scrollLine=document.getElementById('scrollLine');window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60);scrollLine.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%'});const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible')}),{threshold:.1});document.querySelectorAll('.anim').forEach(el=>obs.observe(el));const hamburger=document.getElementById('hamburger'),mobile=document.getElementById('mobile-menu');if(hamburger)hamburger.addEventListener('click',()=>mobile.classList.toggle('open'));
+</script></body></html>
