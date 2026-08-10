@@ -20,10 +20,11 @@ function atCleanTechnicalLabels(){
 }
 function atInitNavigation(){
   atLoadModernTheme();
-  const chart=document.getElementById('atMainChart'),sel=document.getElementById('atTicker');
-  if(sel)sel.onchange=()=>{if(sel.value&&typeof atLoadTicker==='function')atLoadTicker()};
+  const chart=document.getElementById('atMainChart');
+  // Le sélecteur ticker est géré par index.js. Un second onchange provoquait
+  // deux chargements concurrents et des états incohérents.
   if(chart&&!document.getElementById('atNavBar')){
-    const nav=document.createElement('div');nav.id='atNavBar';nav.innerHTML='<div class="at-nav-group"><button class="at-nav-btn" type="button" onclick="atZoomIn()" title="Zoomer">+</button><button class="at-nav-btn" type="button" onclick="atZoomOut()" title="Dézoomer">−</button><button class="at-nav-btn" type="button" onclick="atZoomReset()" title="Réinitialiser">100%</button></div><div class="at-nav-sep"></div><div class="at-nav-group"><button class="at-nav-btn" type="button" onclick="atPanLeft()" title="Période précédente">‹</button><button class="at-nav-btn" type="button" onclick="atPanRight()" title="Période suivante">›</button><button class="at-nav-btn" type="button" onclick="atGoToEnd()" title="Dernières données">FIN</button></div>';nav.style.cssText='position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;background:rgba(10,8,4,.92);border:1px solid rgba(184,150,78,.24);border-radius:9px;padding:5px;z-index:50;backdrop-filter:blur(10px);box-shadow:0 8px 24px rgba(0,0,0,.25);';chart.appendChild(nav);
+    const nav=document.createElement('div');nav.id='atNavBar';nav.className='at-nav-bar';nav.innerHTML='<div class="at-nav-group"><button class="at-nav-btn" type="button" onclick="atZoomIn()" title="Zoomer">+</button><button class="at-nav-btn" type="button" onclick="atZoomOut()" title="Dézoomer">−</button><button class="at-nav-btn" type="button" onclick="atZoomReset()" title="Réinitialiser">100%</button></div><div class="at-nav-sep"></div><div class="at-nav-group"><button class="at-nav-btn" type="button" onclick="atPanLeft()" title="Période précédente">‹</button><button class="at-nav-btn" type="button" onclick="atPanRight()" title="Période suivante">›</button><button class="at-nav-btn" type="button" onclick="atGoToEnd()" title="Dernières données">FIN</button></div>';chart.appendChild(nav);
   }
   atInstallThemeToggle();atCleanTechnicalLabels();
 }
