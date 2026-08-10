@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from './lib/supabase.js';
+import { supabase, supabaseAdmin } from '../server/lib/supabase.js';
 
 const db = supabaseAdmin || supabase;
 
@@ -20,48 +20,23 @@ async function query(table, build) {
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') return json(res, 405, { error: 'Method Not Allowed' });
-
   try {
     const url = new URL(req.url, `https://${req.headers.host || 'localhost'}`);
     const type = url.searchParams.get('type') || 'cours';
     const ticker = (url.searchParams.get('ticker') || '').trim().toUpperCase();
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 30, 1), 1000);
-
     let result;
-
     switch (type) {
-      case 'cours':
-        result = await query('cours_latest', q => q.order('ticker', { ascending: true }));
-        break;
-      case 'indices':
-        result = await query('indices', q => q.order('date_seance', { ascending: false }).limit(1000));
-        break;
+      case 'cours': result = await query('cours_latest', q => q.order('ticker', { ascending: true })); break;
+      case 'indices': result = await query('indices', q => q.order('date_seance', { ascending: false }).limit(1000)); break;
       case 'historique':
         if (!ticker) return json(res, 400, { error: 'ticker requis' });
-        result = await query('historique', q => q
-          .eq('ticker', ticker)
-          .order('date_seance', { ascending: false })
-          .limit(limit)
-        );
+        result = await query('historique', q => q.eq('ticker', ticker).order('date_seance', { ascending: false }).limit(limit));
         if (!result.error && Array.isArray(result.data)) result.data.reverse();
         break;
-      case 'entreprises':
-        result = await query('entreprises', q => q.eq('actif', true).order('ticker', { ascending: true }));
-        break;
-      case 'financials':
-        // Do not silently discard existing draft data: it is still part of the
-        // database and may be needed by the Admin workflow. Instead expose the
-        // validation state and order validated records first so consumers can
-        // make an explicit choice without mistaking a draft for a validated source.
-        result = await query('financials', q => q
-          .order('validation_status', { ascending: true })
-          .order('annee', { ascending: false })
-          .limit(2000)
-        );
-        break;
-      case 'analyses':
-        result = await query('analyses', q => q.order('date_analyse', { ascending: false }).limit(500));
-        break;
+      case 'entreprises': result = await query('entreprises', q => q.eq('actif', true).order('ticker', { ascending: true })); break;
+      case 'financials': result = await query('financials', q => q.order('validation_status', { ascending: true }).order('annee', { ascending: false }).limit(2000)); break;
+      case 'analyses': result = await query('analyses', q => q.order('date_analyse', { ascending: false }).limit(500)); break;
       case 'apercu': {
         const [cours, indices] = await Promise.all([
           query('cours_latest', q => q.order('ticker', { ascending: true })),
@@ -71,10 +46,8 @@ export default async function handler(req, res) {
         if (indices.error) throw indices.error;
         return json(res, 200, { success: true, cours: cours.data || [], indices: indices.data || [] });
       }
-      default:
-        return json(res, 400, { error: `Type de données inconnu: ${type}` });
+      default: return json(res, 400, { error: `Type de données inconnu: ${type}` });
     }
-
     if (result.error) throw result.error;
     return json(res, 200, result.data || []);
   } catch (error) {

@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from './lib/supabase.js';
+import { supabase, supabaseAdmin } from '../server/lib/supabase.js';
 
 const db = supabaseAdmin || supabase;
 
