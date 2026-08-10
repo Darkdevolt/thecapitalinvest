@@ -1,4 +1,4 @@
-// THE CAPITAL — Unified application bootstrap
+// INIT — Unified application bootstrap
 (function () {
   'use strict';
 
@@ -15,14 +15,27 @@
   function loadRuntimeLayers(done){loadScript('app/js/views/portefeuille/portfolio-store.js?v=9',function(){loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8',function(){loadScript('app/js/views/user-data-patch.js?v=7',function(){loadScript('app/js/views/fundamental-ratios.js?v=1',done);});});});}
   function renderAfterData(){try{if(typeof window.renderCurrentView==='function')window.renderCurrentView();else if(typeof window.parseHash==='function')window.parseHash();}catch(e){console.warn('[INIT] rendu après données:',e);}}
 
-  function initMobileMenu(){
-    var header=document.querySelector('.header'),sidebar=document.getElementById('sidebar'),overlay=document.getElementById('overlay');if(!header||!sidebar)return;
-    var btn=document.getElementById('mobileMenuToggle');
-    if(!btn){btn=document.createElement('button');btn.id='mobileMenuToggle';btn.className='mobile-menu-toggle';btn.type='button';btn.setAttribute('aria-label','Ouvrir le menu');btn.setAttribute('aria-controls','sidebar');btn.setAttribute('aria-expanded','false');btn.innerHTML='<span></span><span></span><span></span>';header.insertBefore(btn,header.firstChild);}
-    function setMenu(open){sidebar.classList.toggle('mobile-open',open);if(overlay)overlay.classList.toggle('mobile-open',open);btn.setAttribute('aria-expanded',open?'true':'false');btn.setAttribute('aria-label',open?'Fermer le menu':'Ouvrir le menu');document.body.classList.toggle('menu-open',open);}
-    btn.onclick=function(){setMenu(!sidebar.classList.contains('mobile-open'));};if(overlay)overlay.onclick=function(){setMenu(false);};sidebar.querySelectorAll('.nav-item').forEach(function(item){item.addEventListener('click',function(){if(window.innerWidth<=760)setMenu(false);});});window.addEventListener('resize',function(){if(window.innerWidth>760)setMenu(false);});
+  function init(){
+    if(started)return;
+    started=true;
+    if(!requireAuth())return;
+    normalizeDocument();
+    console.log('[INIT] Session authentifiée — démarrage The Capital');
+    if(typeof window.initApp!=='function'){
+      console.error('[INIT] initApp manquant — main.js doit être chargé avant init.js');
+      document.body.classList.remove('init-hidden');
+      return;
+    }
+    try{window.initApp();console.log('[INIT] initApp lancé');}catch(e){console.error('[INIT] initApp:',e);}
+    // Mobile navigation is owned exclusively by components/sidebar.js.
+    if(typeof window.initSidebar==='function'){
+      try{window.initSidebar();}catch(e){console.warn('[INIT] sidebar:',e);}
+    }
+    if(typeof window.initUserDataLayer==='function'){try{window.initUserDataLayer();}catch(e){console.warn('[INIT] user data:',e);}}
+    if(window.marketsModule&&typeof window.marketsModule.loadData==='function'){try{window.marketsModule.loadData();}catch(e){console.warn('[INIT] marketsModule:',e);}}
+    document.body.classList.remove('init-hidden');
+    renderAfterData();
   }
-  function init(){if(started)return;started=true;if(!requireAuth())return;normalizeDocument();console.log('[INIT] Session authentifiée — démarrage The Capital');if(typeof window.initApp!=='function'){console.error('[INIT] initApp manquant — main.js doit être chargé avant init.js');document.body.classList.remove('init-hidden');return;}try{window.initApp();console.log('[INIT] initApp lancé');}catch(e){console.error('[INIT] initApp:',e);}initMobileMenu();if(typeof window.initUserDataLayer==='function'){try{window.initUserDataLayer();}catch(e){console.warn('[INIT] user data:',e);}}if(window.marketsModule&&typeof window.marketsModule.loadData==='function'){try{window.marketsModule.loadData();}catch(e){console.warn('[INIT] marketsModule:',e);}}document.body.classList.remove('init-hidden');renderAfterData();}
   function boot(){normalizeDocument();if(!requireAuth())return;loadRuntimeLayers(init);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
 })();
