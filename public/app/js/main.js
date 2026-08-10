@@ -18,6 +18,12 @@
     var link=document.createElement('link');link.id='tc-mobile-polish';link.rel='stylesheet';link.href='app/css/mobile-polish.css?v=3';document.head.appendChild(link);
     var finalLink=document.createElement('link');finalLink.id='tc-mobile-polish-v2';finalLink.rel='stylesheet';finalLink.href='app/css/mobile-polish-v2.css?v=3';document.head.appendChild(finalLink);
   }
+
+  function loadFinancialPolish(){
+    if(document.getElementById('tc-financial-polish'))return;
+    var link=document.createElement('link');link.id='tc-financial-polish';link.rel='stylesheet';link.href='app/css/financials-polish.css?v=1';document.head.appendChild(link);
+  }
+
   function loadMobileNavigation(){
     // Single owner: components/sidebar.js is already loaded by app.html.
     // Never inject or initialize a second mobile navigation implementation.
@@ -35,7 +41,7 @@
   }
 
   async function initApp(){
-    console.log('[MAIN] Initialisation...');loadMobilePolish();loadMobileNavigation();
+    console.log('[MAIN] Initialisation...');loadMobilePolish();loadFinancialPolish();loadMobileNavigation();
     if(!document.getElementById('toastContainer')){var tc=document.createElement('div');tc.id='toastContainer';tc.style.cssText='position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';document.body.appendChild(tc);}
     loadAll().catch(function(err){console.error('[MAIN] Erreur loadAll:',err);if(typeof toast==='function')toast('Erreur de chargement des données','error');});
     window.addEventListener('hashchange',function(){if(typeof parseHash==='function')parseHash();if(parseHashFromUrl()==='analyse-technique')ensureTechnicalReady();scheduleFundamentalRender(true);ensureFundamentalReady();});
