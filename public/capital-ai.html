@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Capital AI — Intelligence Financière</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0a09;--panel:#12100e;--line:#2b251e;--gold:#c5a15a;--text:#f3eee5;--muted:#9d958a;--danger:#d97777}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 50% -10%,#2b2114 0,#0b0a09 45%);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh}.wrap{max-width:1050px;margin:auto;padding:28px 18px 60px}.brand{letter-spacing:.16em;font-size:12px;color:var(--gold)}h1{font:700 clamp(36px,7vw,64px) 'Playfair Display',serif;margin:10px 0}.sub{color:var(--muted);max-width:720px;line-height:1.7}.orb{width:82px;height:82px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff1a6,#c5a15a 38%,#62481e 70%,#201607);box-shadow:0 0 50px #c5a15a44;margin:34px 0 18px}.panel{background:#12100eee;border:1px solid var(--line);border-radius:18px;padding:20px;margin-top:25px}.chips{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}.chip{border:1px solid var(--line);background:#18140f;color:#cfc6b8;padding:9px 12px;border-radius:999px;cursor:pointer}.chip:hover{border-color:var(--gold);color:#fff}.row{display:flex;gap:12px}.row input{flex:1;background:#0b0a09;color:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;outline:none}.row input:focus{border-color:var(--gold)}button.send{background:var(--gold);color:#17120a;border:0;border-radius:12px;padding:0 20px;font-weight:700;cursor:pointer}.messages{min-height:180px;max-height:520px;overflow:auto;margin:12px 0}.msg{padding:14px 16px;border-radius:14px;margin:10px 0;line-height:1.65;white-space:pre-wrap}.user{background:#1b1712;margin-left:12%}.ai{background:#15120e;border:1px solid #2b251e;margin-right:8%}.status{color:var(--muted);font-size:12px;margin-top:10px}.back{color:var(--gold);text-decoration:none;font-size:13px}.notice{font-size:12px;color:var(--muted);line-height:1.6;margin-top:16px}.notice b{color:#d6c5a2}@media(max-width:620px){.row{flex-direction:column}.send{height:48px}.user,.ai{margin-left:0;margin-right:0}}
+</style>
+</head><body>
+<div class="wrap">
+<a class="back" href="app/app.html">← Retour à The Capital</a>
+<div class="orb"></div><div class="brand">THE CAPITAL AI</div><h1>L’intelligence financière.</h1>
+<p class="sub">Analysez une société, comparez des titres, interprétez un ratio ou interrogez votre portefeuille. The Capital AI répond à partir des données financières que l’application lui transmet.</p>
+<div class="panel">
+<div class="chips"><button class="chip" data-q="Analyse Sonatel : fondamentaux, croissance, marges et principaux risques.">Analyser Sonatel</button><button class="chip" data-q="Compare les critères importants pour choisir entre deux actions BRVM.">Comparer deux titres</button><button class="chip" data-q="Explique-moi simplement le ROE, le P/E et le payout.">Comprendre un ratio</button><button class="chip" data-q="Quels éléments dois-je vérifier avant d'investir dans une action BRVM ?">Checklist investissement</button></div>
+<div id="messages" class="messages"><div class="msg ai">Bonjour. Je suis The Capital AI. Posez-moi une question financière.</div></div>
+<div class="row"><input id="question" maxlength="2000" placeholder="Ex. Analyse SONATEL sur les données disponibles…"><button class="send" id="send">Analyser</button></div><div id="status" class="status"></div>
+<div class="notice"><b>Important :</b> l’IA ne remplace pas une décision d’investissement. Elle ne doit jamais inventer une donnée absente de la base. Les cours et informations temps réel doivent être vérifiés dans les modules de marché.</div>
+</div></div>
+<script>
+const messages=document.getElementById('messages'),q=document.getElementById('question'),send=document.getElementById('send'),status=document.getElementById('status');
+function session(){try{return JSON.parse(localStorage.getItem('tc_session')||'null')}catch{return null}}
+function add(text,cls){const d=document.createElement('div');d.className='msg '+cls;d.textContent=text;messages.appendChild(d);messages.scrollTop=messages.scrollHeight}
+async function ask(){const question=q.value.trim();if(!question)return;const s=session();if(!s?.access_token){location.href='login.html?redirect='+encodeURIComponent(location.pathname);return}add(question,'user');q.value='';send.disabled=true;status.textContent='Analyse en cours…';try{const r=await fetch('/api/capital-ai',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.access_token},body:JSON.stringify({question,context:''})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Erreur');add(data.data?.answer||'Réponse indisponible.','ai');status.textContent='';}catch(e){add(e.message,'ai');status.textContent='';}finally{send.disabled=false;q.focus()}}
+send.onclick=ask;q.addEventListener('keydown',e=>{if(e.key==='Enter')ask()});document.querySelectorAll('.chip').forEach(b=>b.onclick=()=>{q.value=b.dataset.q;q.focus()});
+</script></body></html>
