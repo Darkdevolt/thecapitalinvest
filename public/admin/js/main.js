@@ -10,9 +10,21 @@ async function ensureAdvancedClientele(){
     if(document.getElementById('clientele-advanced-script')) return;
     await new Promise(function(resolve){var s=document.createElement('script');s.id='clientele-advanced-script';s.src='js/clientele-advanced.js';s.onload=resolve;s.onerror=resolve;document.head.appendChild(s);});
 }
+async function ensureQuality(){
+    if(typeof loadQuality==='function') return;
+    if(document.getElementById('quality-script')) return;
+    await new Promise(function(resolve){var s=document.createElement('script');s.id='quality-script';s.src='js/qualite.js';s.onload=resolve;s.onerror=resolve;document.head.appendChild(s);});
+}
+function ensureQualityTab(){
+    if(document.getElementById('panel-qualite')) return;
+    var nav=document.querySelector('.admin-nav');
+    if(nav){var b=document.createElement('button');b.className='admin-tab';b.textContent='Data Quality';b.onclick=function(){switchTab('qualite',b);};nav.appendChild(b);}
+    var main=document.querySelector('.main');
+    if(main){var p=document.createElement('div');p.className='tab-panel';p.id='panel-qualite';p.innerHTML='<div class="section-header"><div class="section-title">Data Quality <em>centre de contrôle</em></div></div><div class="loading"><div class="spinner"></div><p>Initialisation…</p></div>';main.appendChild(p);}
+}
 
-/* ── INIT ───────────────────────────────────────────────────── */
 async function init() {
+    ensureQualityTab();
     showLoadingScreen('Vérification de la session...');
     const s = localStorage.getItem(SK);
     if (!s) { location.href = 'login.html'; return; }
@@ -51,8 +63,11 @@ const tabLoaders={
  dividendes:function(){if(typeof loadDividendes==='function')loadDividendes();},
  analyses:function(){if(typeof loadAnalyses==='function')loadAnalyses();},
  utilisateurs:async function(){if(typeof loadUsers==='function')await loadUsers();await ensureAdvancedClientele();if(typeof loadAdvancedClientele==='function')await loadAdvancedClientele();},
+ scraper:function(){},
  import:function(){},
- indices:function(){if(typeof loadIndices==='function')loadIndices();}
+ diagnostic:function(){if(typeof loadDiagnostic==='function')loadDiagnostic();},
+ indices:function(){if(typeof loadIndices==='function')loadIndices();},
+ qualite:async function(){await ensureQuality();if(typeof loadQuality==='function')await loadQuality();}
 };
 function switchTab(name,el){document.querySelectorAll('.tab-panel').forEach(function(p){p.classList.remove('active');});document.querySelectorAll('.admin-tab').forEach(function(t){t.classList.remove('active');});const panel=document.getElementById('panel-'+name);if(panel)panel.classList.add('active');if(el&&el.classList)el.classList.add('active');if(name!==activeTab){activeTab=name;if(typeof tabLoaders[name]==='function')tabLoaders[name]();}}
 function switchSubTab(prefix,panel,el){if(!el)return;const container=el.closest('.tab-panel');if(!container)return;container.querySelectorAll('.sub-tab').forEach(function(t){t.classList.remove('active');});el.classList.add('active');['ligne','bulk','view','list','add'].forEach(function(p){const e2=document.getElementById(prefix+'-panel-'+p);if(e2)e2.style.display='none';});const target=document.getElementById(prefix+'-panel-'+panel);if(target)target.style.display='';}
