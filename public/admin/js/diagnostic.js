@@ -25,33 +25,37 @@ async function runDiagnostic() {
     const nEnt=base[0], nCours=base[1], nHist=base[2], nFin=base[3], nDiv=base[4];
 
     const issues = [];
-
-    // Couverture minimale.
     issues.push(diagIssue('Entreprises absentes', nEnt === 0 ? 1 : 0, nEnt === 0 ? 'critical' : 'ok', 'Le référentiel entreprises est vide.'));
     issues.push(diagIssue('Cours absents', nCours === 0 ? 1 : 0, nCours === 0 ? 'critical' : 'ok', 'Aucun cours disponible.'));
     issues.push(diagIssue('Financials absents', nFin === 0 ? 1 : 0, nFin === 0 ? 'critical' : 'ok', 'Aucune donnée financière disponible.'));
     issues.push(diagIssue('Dividendes absents', nDiv === 0 ? 1 : 0, nDiv === 0 ? 'warning' : 'ok', 'Aucun calendrier de dividendes.'));
 
-    // Cours : valeurs impossibles / incohérentes. Les contraintes DB bloquent désormais les nouvelles anomalies.
-    const [badCours, futureCours, missingVariation, badHist, badFinancial, missingSource, badDivDates] = await Promise.all([
+    const [badCours, badOhlc, futureCours, missingVariation, extremeCours, badHist, badFinancial, missingSource, missingSourceUrl, badDivDates, correctionLog] = await Promise.all([
         diagCount('cours', 'or=(cours.lt.0,ouverture.lt.0,plus_haut.lt.0,plus_bas.lt.0,volume.lt.0,capitalisation.lt.0,variation.lt.-100)'),
+        diagCount('cours', 'and=(plus_haut.not.is.null,plus_bas.not.is.null,plus_haut.lt.plus_bas)'),
         diagCount('cours', 'date_seance=gt.' + new Date().toISOString().slice(0,10)),
         diagCount('cours', 'variation=is.null'),
+        diagCount('cours', 'or=(cours.gte.100000,ouverture.gte.100000,plus_haut.gte.100000,plus_bas.gte.100000)'),
         diagCount('historique', 'or=(cloture.lt.0,cours_cloture.lt.0,cours_ouverture.lt.0,plus_haut.lt.0,plus_bas.lt.0,volume.lt.0,variation.lt.-100)'),
         diagCount('financials', 'or=(chiffre_affaires.lt.0,ebitda.lt.0,fonds_propres.lt.0,dettes_financieres.lt.0,total_actif.lt.0,cap_boursiere.lt.0,dpa.lt.0,capex.lt.0,dividend_yield.lt.0,rendement_dividende.lt.0,payout_ratio.lt.0)'),
-        diagCount('financials', 'source=is.null'),
-        diagCount('dividendes_calendrier', 'and=(ex_date.not.is.null,date_paiement.not.is.null,ex_date.gt.date_paiement)')
+        diagCount('financials', 'or=(source.is.null,source.eq.)'),
+        diagCount('financials', 'source_url=is.null'),
+        diagCount('dividendes_calendrier', 'and=(ex_date.not.is.null,date_paiement.not.is.null,ex_date.gt.date_paiement)'),
+        diagCount('data_corrections_log')
     ]);
 
-    issues.push(diagIssue('Cours avec valeur négative', badCours, badCours ? 'critical' : 'ok', 'À corriger avant publication.'));
+    issues.push(diagIssue('Cours avec valeur impossible', badCours, badCours ? 'critical' : 'ok', 'Prix, volumes ou capitalisation négatifs détectés.'));
+    issues.push(diagIssue('Cours avec High < Low', badOhlc, badOhlc ? 'critical' : 'ok', 'High doit toujours être supérieur ou égal à Low.'));
     issues.push(diagIssue('Cours datés dans le futur', futureCours, futureCours ? 'critical' : 'ok', 'Une séance future ne doit pas être publiée.'));
     issues.push(diagIssue('Cours sans variation', missingVariation, missingVariation ? 'warning' : 'ok', 'Peut être acceptable si la source ne fournit pas la variation, mais doit être identifié.'));
+    issues.push(diagIssue('Cours à échelle anormale', extremeCours, extremeCours ? 'critical' : 'ok', 'Seuil de contrôle : ≥ 100 000 FCFA. À vérifier comme possible erreur d’unité.'));
     issues.push(diagIssue('Historique avec valeurs impossibles', badHist, badHist ? 'critical' : 'ok', 'Prix/volumes négatifs détectés.'));
     issues.push(diagIssue('Financials avec valeurs négatives impossibles', badFinancial, badFinancial ? 'critical' : 'ok', 'CA, EBITDA, actifs, dette, DPA, etc. ne doivent pas être négatifs.'));
     issues.push(diagIssue('Financials sans source', missingSource, missingSource ? 'warning' : 'ok', 'Toute donnée professionnelle doit être traçable.'));
+    issues.push(diagIssue('Financials sans URL source', missingSourceUrl, missingSourceUrl ? 'warning' : 'ok', 'Ajoute le lien du document lorsque disponible.'));
     issues.push(diagIssue('Dividendes : dates incohérentes', badDivDates, badDivDates ? 'critical' : 'ok', 'La date de détachement doit précéder ou égaler la date de paiement.'));
+    issues.push(diagIssue('Corrections auditées', correctionLog, correctionLog ? 'ok' : 'warning', correctionLog ? 'Les corrections historiques sont traçables.' : 'Aucune correction enregistrée.'));
 
-    // Couverture des financials : tous les tickers doivent au moins avoir une observation.
     const [ents, fins] = await Promise.all([
         sbGet('entreprises', 'select=ticker&limit=1000'),
         sbGet('financials', 'select=ticker&limit=1000')
@@ -60,8 +64,8 @@ async function runDiagnostic() {
     const missingFinancialTickers = (ents || []).filter(function(e){ return !finSet.has(String(e.ticker || '').toUpperCase()); });
     issues.push(diagIssue('Entreprises sans financial', missingFinancialTickers.length, missingFinancialTickers.length ? 'warning' : 'ok', missingFinancialTickers.slice(0,20).map(function(e){ return e.ticker; }).join(', ')));
 
-    // Référentiel : ISIN / nombre d'actions manquants sont des avertissements, pas des erreurs bloquantes.
-    const missingIdentity = await diagCount('entreprises', 'or=(isin.is.null,code_isin.is.null,nombre_actions.is.null,nb_actions.is.null)');
+    // Vérification volontairement limitée aux colonnes réellement utilisées par le référentiel.
+    const missingIdentity = await diagCount('entreprises', 'or=(isin.is.null,nombre_actions.is.null,nb_actions.is.null)');
     issues.push(diagIssue('Entreprises sans identifiants de marché complets', missingIdentity, missingIdentity ? 'warning' : 'ok', 'ISIN et nombre d’actions sont importants pour les analyses professionnelles.'));
 
     const errors = issues.filter(function(i){ return i.severity === 'critical' && i.count > 0; });
@@ -81,7 +85,7 @@ async function runDiagnostic() {
 
     if(res){
         res.innerHTML = '<div class="card"><div style="padding:18px;">' +
-            '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Le diagnostic contrôle la qualité des données et les règles qui empêchent les nouvelles erreurs. Les anomalies historiques ne sont pas supprimées automatiquement.</div>' +
+            '<div style="font-size:12px;color:var(--muted);margin-bottom:12px;">Le diagnostic contrôle la qualité des données et les règles qui empêchent les nouvelles erreurs. Les anomalies historiques ne sont jamais corrigées silencieusement.</div>' +
             '<table class="diag-table" style="width:100%;font-size:13px;">' +
             '<tr><th style="text-align:left;">Contrôle</th><th style="text-align:right;">Éléments</th><th>État</th><th style="text-align:left;">Détail</th></tr>' +
             issues.map(function(i){
@@ -96,11 +100,9 @@ async function runDiagnostic() {
     }
 
     diagData = {
-        generated_at: new Date().toISOString(),
-        score: score,
-        critical_errors: errors.length,
-        warnings: warnings.length,
-        counts: { entreprises:nEnt, cours:nCours, historique:nHist, financials:nFin, dividendes:nDiv, financials_annuels:base[5], financials_infrannuels:base[6], documents_financiers:base[7], indices:base[8] },
+        generated_at: new Date().toISOString(), score: score,
+        critical_errors: errors.length, warnings: warnings.length,
+        counts: { entreprises:nEnt, cours:nCours, historique:nHist, financials:nFin, dividendes:nDiv, financials_annuels:base[5], financials_infrannuels:base[6], documents_financiers:base[7], indices:base[8], corrections:correctionLog },
         issues: issues,
         missing_financial_tickers: missingFinancialTickers.map(function(e){ return e.ticker; })
     };
