@@ -2,4 +2,6 @@
 
 Production deployment marker for the current Vercel API adapter configuration.
 
-Latest source fix: safe Vercel build command, Supabase signup response handling, and landing page redesign.
+Latest source fix: Wave payment checkout, manual receipt verification, pricing periods, and payment subscription security.
+
+Deployment trigger: 2026-08-10 payment-flow release.
