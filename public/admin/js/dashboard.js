@@ -52,8 +52,9 @@ async function loadDashboard() {
     var aberrations = [];
     var diagAvailable = false;
     try {
-        var resp = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_aberrations', {
-            method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+        var resp = await fetch(SB_REST + '/rpc/get_aberrations', {
+            method: 'POST',
+            headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + TK, 'Content-Type': 'application/json' },
             body: JSON.stringify({ limit_per_type: 50 })
         });
         if (resp.ok) { aberrations = await resp.json(); diagAvailable = true; }
@@ -131,8 +132,9 @@ async function loadDashboardAlerts(prefetched, prefetchedAvailable) {
 
     if (!available) {
         try {
-            var resp = await fetch(SUPABASE_URL + '/rest/v1/rpc/get_aberrations', {
-                method: 'POST', headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+            var resp = await fetch(SB_REST + '/rpc/get_aberrations', {
+                method: 'POST',
+                headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + TK, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ limit_per_type: 10 })
             });
             if (resp.ok) { aberrations = await resp.json(); available = true; }
