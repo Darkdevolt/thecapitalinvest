@@ -15,8 +15,13 @@
 
   function loadMobilePolish(){
     if(document.getElementById('tc-mobile-polish'))return;
-    var link=document.createElement('link');link.id='tc-mobile-polish';link.rel='stylesheet';link.href='app/css/mobile-polish.css?v=2';document.head.appendChild(link);
-    var finalLink=document.createElement('link');finalLink.id='tc-mobile-polish-v2';finalLink.rel='stylesheet';finalLink.href='app/css/mobile-polish-v2.css?v=2';document.head.appendChild(finalLink);
+    var link=document.createElement('link');link.id='tc-mobile-polish';link.rel='stylesheet';link.href='app/css/mobile-polish.css?v=3';document.head.appendChild(link);
+    var finalLink=document.createElement('link');finalLink.id='tc-mobile-polish-v2';finalLink.rel='stylesheet';finalLink.href='app/css/mobile-polish-v2.css?v=3';document.head.appendChild(finalLink);
+  }
+  function loadMobileNavigation(){
+    if(typeof window.initSidebar==='function'){window.initSidebar();return;}
+    if(document.getElementById('tc-sidebar-js'))return;
+    var s=document.createElement('script');s.id='tc-sidebar-js';s.src='app/js/components/sidebar.js?v=3';s.onload=function(){window.initSidebar?.();};document.body.appendChild(s);
   }
 
   function ensureTechnicalReady(){
@@ -28,9 +33,7 @@
         if(ok===false)return false;
         technicalInitialized=true;
         console.log('[MAIN] Analyse technique initialisée avec '+window.allCours.length+' cours');
-      }else if(typeof window.atRefreshUI==='function'){
-        window.atRefreshUI();
-      }
+      }else if(typeof window.atRefreshUI==='function')window.atRefreshUI();
       return true;
     }catch(err){
       technicalInitialized=false;console.error('[MAIN] Erreur initialisation analyse technique:',err);
@@ -40,7 +43,7 @@
   }
 
   async function initApp(){
-    console.log('[MAIN] Initialisation...');loadMobilePolish();
+    console.log('[MAIN] Initialisation...');loadMobilePolish();loadMobileNavigation();
     if(!document.getElementById('toastContainer')){var tc=document.createElement('div');tc.id='toastContainer';tc.style.cssText='position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';document.body.appendChild(tc);}
     loadAll().catch(function(err){console.error('[MAIN] Erreur loadAll:',err);if(typeof toast==='function')toast('Erreur de chargement des données','error');});
     window.addEventListener('hashchange',function(){if(typeof parseHash==='function')parseHash();if(parseHashFromUrl()==='analyse-technique')ensureTechnicalReady();scheduleFundamentalRender(true);ensureFundamentalReady();});
