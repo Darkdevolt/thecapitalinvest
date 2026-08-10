@@ -44,6 +44,46 @@ async function dashFinancialQuality() {
     }
 }
 
+async function dashForecastQuality() {
+    try {
+        var rows = await sbGet('forecasts', 'select=ticker,annee_forecast,metrique,methode,valeur,valeur_cible,potentiel_pct,calcule_le&limit=1000');
+        rows = Array.isArray(rows) ? rows : [];
+        var currentYear = new Date().getFullYear();
+        return {
+            total: rows.length,
+            future: rows.filter(function(r){ return Number(r.annee_forecast) >= currentYear; }).length,
+            stale: rows.filter(function(r){ return Number(r.annee_forecast) < currentYear; }).length,
+            noMethod: rows.filter(function(r){ return !r.methode || !String(r.methode).trim(); }).length,
+            extreme: rows.filter(function(r){ return r.potentiel_pct != null && Math.abs(Number(r.potentiel_pct)) > 100; }).length
+        };
+    } catch (e) {
+        return { total: 0, future: 0, stale: 0, noMethod: 0, extreme: 0 };
+    }
+}
+
+async function dashFinancialAnomalies() {
+    try {
+        var resp = await fetch(SB_REST + '/rpc/get_financial_anomalies', {
+            method: 'POST',
+            headers: { 'apikey': SB_ANON, 'Authorization': 'Bearer ' + TK, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ limit_per_type: 50 })
+        });
+        if (!resp.ok) return [];
+        var rows = await resp.json();
+        return Array.isArray(rows) ? rows : [];
+    } catch (e) {
+        console.warn('[dashboard] financial anomalies:', e);
+        return [];
+    }
+}
+
+function dashAnomalyTarget(sourceTable) {
+    if (sourceTable === 'historique') return 'historique';
+    if (sourceTable === 'financials' || sourceTable === 'financials_annuels' || sourceTable === 'financials_infrannuels' || sourceTable === 'forecasts') return 'financials';
+    if (sourceTable === 'dividendes_calendrier') return 'dividendes';
+    return 'cours';
+}
+
 async function loadDashboard() {
     var info = document.getElementById('dash-info');
     if (!info) return;
@@ -57,13 +97,14 @@ async function loadDashboard() {
         financials_annuels: counts[4], financials_infrannuels: counts[5], dividendes: counts[6], users: counts[7]
     };
     var fq = await dashFinancialQuality();
+    var forecast = await dashForecastQuality();
 
     var latest = await Promise.all([
         dashLatest('cours', 'date_seance'),
         dashLatest('historique', 'date_seance'),
         dashLatest('financials', 'updated_at'),
-        dashLatest('financials_annuels', 'updated_at'),
-        dashLatest('dividendes_calendrier', 'updated_at')
+        dashLatest('financials_annuels', 'created_at'),
+        dashLatest('dividendes_calendrier', 'created_at')
     ]);
 
     var ids = {
@@ -85,8 +126,11 @@ async function loadDashboard() {
         if (resp.ok) { aberrations = await resp.json(); diagAvailable = true; }
     } catch (e) { console.warn('[dashboard] diagnostic RPC:', e); }
 
+    var financialAnomalies = await dashFinancialAnomalies();
     var critical = aberrations.filter(function(a) { return a.severity === 'err'; }).length;
     var warnings = aberrations.filter(function(a) { return a.severity !== 'err'; }).length;
+    var financialCritical = financialAnomalies.filter(function(a){ return a.severity === 'err'; }).length;
+    var financialWarnings = financialAnomalies.filter(function(a){ return a.severity !== 'err'; }).length;
     var provenanceIssues = fq.missingSource + fq.missingUrl;
     var quality = diagAvailable ? Math.max(0, Math.min(100, 100 - critical * 5 - warnings - (fq.total ? Math.round((provenanceIssues / (fq.total * 2)) * 20) : 0))) : null;
     var healthClass = quality === null ? 'neutral' : quality >= 95 ? 'good' : quality >= 80 ? 'warn' : 'bad';
@@ -103,9 +147,14 @@ async function loadDashboard() {
     var actions = [];
     if (critical) actions.push({ level: 'critical', title: critical + ' anomalie(s) critique(s)', detail: 'À corriger avant de considérer la base fiable.', panel: 'diagnostic' });
     if (warnings) actions.push({ level: 'warning', title: warnings + ' avertissement(s)', detail: 'Données à vérifier ou à compléter.', panel: 'diagnostic' });
+    if (financialCritical) actions.push({ level: 'critical', title: financialCritical + ' anomalie(s) financières critique(s)', detail: 'Doublons, années futures ou incohérences structurelles.', panel: 'financials' });
+    if (financialWarnings) actions.push({ level: 'warning', title: financialWarnings + ' contrôle(s) financier(s) à revoir', detail: 'Ratios, provenance ou prévisions nécessitent une revue.', panel: 'financials' });
     if (fq.total && fq.validated < fq.total) actions.push({ level: 'warning', title: (fq.total - fq.validated) + ' financial(s) non validé(s)', detail: fq.draft + ' brouillon(s) · ' + fq.review + ' en revue.', panel: 'financials' });
     if (fq.missingSource) actions.push({ level: 'warning', title: fq.missingSource + ' financial(s) sans source', detail: 'Ajouter uniquement une source réellement vérifiable.', panel: 'financials' });
     if (fq.missingUrl) actions.push({ level: 'warning', title: fq.missingUrl + ' financial(s) sans URL source', detail: 'La provenance doit rester traçable.', panel: 'financials' });
+    if (forecast.stale) actions.push({ level: 'warning', title: forecast.stale + ' prévision(s) dépassée(s)', detail: 'Actualiser ou archiver les scénarios dont l’année cible est passée.', panel: 'financials' });
+    if (forecast.noMethod) actions.push({ level: 'warning', title: forecast.noMethod + ' prévision(s) sans méthode', detail: 'Une prévision doit indiquer sa méthode de calcul.', panel: 'financials' });
+    if (forecast.extreme) actions.push({ level: 'warning', title: forecast.extreme + ' prévision(s) à potentiel extrême', detail: 'Revue manuelle recommandée avant publication.', panel: 'financials' });
     if (!c.entreprises) actions.push({ level: 'critical', title: 'Aucune entreprise référencée', detail: 'Le référentiel titres doit être créé avant les financials.', panel: 'entreprises' });
     freshness.forEach(function(x) {
         if (x.date && dashAgeLabel(x.date).cls === 'bad') actions.push({ level: 'warning', title: x.name + ' non récent', detail: 'Dernière donnée : ' + dashDate(x.date), panel: x.panel });
@@ -113,13 +162,24 @@ async function loadDashboard() {
 
     var html = '<div class="dash-health-grid">';
     html += '<div class="dash-health-card ' + healthClass + '"><div class="dash-mini-label">QUALITÉ DE LA BASE</div><div class="dash-score">' + healthText + '</div><div class="dash-muted">' + (diagAvailable ? (critical + ' critique(s) · ' + warnings + ' avertissement(s)') : 'Diagnostic non disponible') + '</div></div>';
-    html += '<div class="dash-health-card"><div class="dash-mini-label">PROVENANCE FINANCIALS</div><div class="dash-score small">' + dashNum(fq.validated) + '/' + dashNum(fq.total) + '</div><div class="dash-muted">validés · ' + dashNum(fq.missingSource) + ' sans source</div></div>';
-    html += '<div class="dash-health-card"><div class="dash-mini-label">PERFORMANCE</div><div class="dash-score small">' + (Date.now() - started) + ' ms</div><div class="dash-muted">Temps de lecture du dashboard</div></div></div>';
+    html += '<div class="dash-health-card"><div class="dash-mini-label">QUALITÉ FINANCIÈRE</div><div class="dash-score small">' + dashNum(financialAnomalies.length) + '</div><div class="dash-muted">' + financialCritical + ' critique(s) · ' + financialWarnings + ' à revoir</div></div>';
+    html += '<div class="dash-health-card"><div class="dash-mini-label">PRÉVISIONS</div><div class="dash-score small">' + dashNum(forecast.future) + '</div><div class="dash-muted">scénario(s) futur(s) · ' + dashNum(forecast.noMethod) + ' sans méthode</div></div></div>';
 
     html += '<div class="dash-section-title">Fraîcheur des données</div><div class="dash-fresh-grid">';
     freshness.forEach(function(x) {
         var st = dashAgeLabel(x.date);
         html += '<div class="dash-fresh-row"><div><strong>' + dashEsc(x.name) + '</strong><span>' + (x.date ? dashDate(x.date) : 'Aucune donnée') + '</span></div><span class="dash-status ' + st.cls + '">' + dashEsc(st.text) + '</span></div>';
+    });
+    html += '</div>';
+
+    html += '<div class="dash-section-title">Contrôles financiers & anticipation</div><div class="dash-module-grid">';
+    [
+        ['Anomalies financières', financialAnomalies.length, 'Cohérence, doublons, ratios, sources', 'diagnostic'],
+        ['Prévisions', forecast.total, 'Scénarios et signaux à revoir', 'financials'],
+        ['Financials validés', fq.validated, 'Données avec workflow de validation', 'financials'],
+        ['Financials à revoir', fq.total - fq.validated, 'Brouillons et revues en attente', 'financials']
+    ].forEach(function(m) {
+        html += '<button class="dash-module" onclick="switchTab(\'' + m[3] + '\')"><div><strong>' + dashEsc(m[0]) + '</strong><span>' + dashEsc(m[2]) + '</span></div><b>' + dashNum(m[1]) + '</b></button>';
     });
     html += '</div>';
 
@@ -139,7 +199,7 @@ async function loadDashboard() {
         html += '<div class="dash-empty good">✓ Aucun point prioritaire détecté. La base est prête pour la vérification manuelle.</div>';
     } else {
         html += '<div class="dash-actions">';
-        actions.slice(0, 10).forEach(function(a) {
+        actions.slice(0, 12).forEach(function(a) {
             html += '<div class="dash-action ' + a.level + '"><div><strong>' + dashEsc(a.title) + '</strong><span>' + dashEsc(a.detail) + '</span></div><button onclick="switchTab(\'' + dashEsc(a.panel) + '\')">Voir →</button></div>';
         });
         html += '</div>';
@@ -152,7 +212,7 @@ async function loadDashboard() {
         ['Historique', c.historique, 'Séries historiques', 'historique'],
         ['Financials', c.financials, 'États financiers', 'financials'],
         ['Dividendes', c.dividendes, 'Calendrier et historique', 'dividendes'],
-        ['Diagnostic', critical + warnings, 'Contrôles qualité', 'diagnostic']
+        ['Diagnostic', critical + warnings + financialAnomalies.length, 'Contrôles qualité et anticipation', 'diagnostic']
     ].forEach(function(m) {
         html += '<button class="dash-module" onclick="switchTab(\'' + m[3] + '\')"><div><strong>' + dashEsc(m[0]) + '</strong><span>' + dashEsc(m[2]) + '</span></div><b>' + dashNum(m[1]) + '</b></button>';
     });
@@ -193,9 +253,10 @@ async function loadDashboardAlerts(prefetched, prefetchedAvailable) {
         var isErr = items.some(function(i){ return i.severity === 'err'; });
         html += '<div class="dash-anomaly-group ' + (isErr ? 'critical' : 'warning') + '"><div class="dash-anomaly-head"><strong>' + dashEsc(type) + '</strong><span>' + items.length + '</span></div>';
         items.slice(0, 10).forEach(function(item){
-            html += '<div class="dash-anomaly-row"><div><strong>' + dashEsc(item.ticker || '—') + '</strong><span>' + dashEsc(item.date_seance || '—') + '</span></div><div><span>' + dashEsc(item.valeur_actuelle || '—') + '</span><small>' + dashEsc(item.valeur_attendue || '—') + '</small></div><em>' + dashEsc(item.source_table || '—') + '</em></div>';
+            var period = item.date_seance || item.periode || '—';
+            html += '<div class="dash-anomaly-row"><div><strong>' + dashEsc(item.ticker || '—') + '</strong><span>' + dashEsc(period) + '</span></div><div><span>' + dashEsc(item.valeur_actuelle || '—') + '</span><small>' + dashEsc(item.valeur_attendue || '—') + '</small></div><em>' + dashEsc(item.source_table || '—') + '</em></div>';
         });
-        var target = items[0].source_table === 'historique' ? 'historique' : 'cours';
+        var target = dashAnomalyTarget(items[0].source_table);
         html += '<button class="dash-anomaly-link" onclick="switchTab(\'' + target + '\')">→ Ouvrir ' + dashEsc(target) + '</button></div>';
     });
     panel.innerHTML = html;
