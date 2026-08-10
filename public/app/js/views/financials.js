@@ -2,6 +2,30 @@
 // VIEW — États Financiers
 // ═══════════════════════════════════════
 
+function financialValidationBadge(f) {
+  const status = String(f?.validation_status || 'draft').toLowerCase();
+  const labels = { validated: 'Validé', review: 'En revue', rejected: 'Rejeté', draft: 'Brouillon' };
+  const label = labels[status] || status;
+  const style = {
+    validated: 'color:#6fbf8f;border-color:rgba(111,191,143,.35);background:rgba(111,191,143,.08)',
+    review: 'color:var(--gold);border-color:rgba(184,150,78,.35);background:rgba(184,150,78,.08)',
+    rejected: 'color:#d98282;border-color:rgba(217,130,130,.35);background:rgba(217,130,130,.08)',
+    draft: 'color:var(--dim);border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.03)'
+  }[status] || 'color:var(--dim);border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.03)';
+  return `<span style="display:inline-flex;align-items:center;padding:3px 7px;border:1px solid;border-radius:999px;font-size:10px;${style}">${label}</span>`;
+}
+
+function financialSourceLine(f) {
+  const source = f?.source ? String(f.source) : '';
+  const url = f?.source_url ? String(f.source_url) : '';
+  const page = f?.source_page != null ? String(f.source_page) : '';
+  if (!source && !url && !page) return '<div style="font-size:10px;color:var(--dim);margin-top:8px">Source : non renseignée</div>';
+  const safeUrl = /^https?:\/\//i.test(url) ? url.replace(/"/g, '&quot;') : '';
+  const link = safeUrl ? ` · <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">source</a>` : '';
+  const pageLabel = page ? ` · p. ${page}` : '';
+  return `<div style="font-size:10px;color:var(--dim);margin-top:8px">Source : ${source || 'non renseignée'}${pageLabel}${link}</div>`;
+}
+
 // ═══════════════════════════════════════
 // FINANCIALS
 // ═══════════════════════════════════════
@@ -31,6 +55,7 @@ function filterFin() {
         <div>
           <div style="font-family:var(--mono);font-size:11px;color:var(--gold);margin-bottom:2px">${ticker}</div>
           <div class="card-title">Dernier exercice : ${latest.annee}${periodeLabel}</div>
+          <div style="display:flex;gap:7px;align-items:center;margin-top:6px">${financialValidationBadge(latest)}${latest.validation_status !== 'validated' ? '<span style="font-size:10px;color:var(--dim)">Donnée non validée</span>' : ''}</div>
         </div>
         <div style="display:flex;align-items:center;gap:10px">
           ${growthRN !== null ? `<span class="pill ${parseFloat(growthRN)>=0?'up':'down'}">${parseFloat(growthRN)>=0?'▲':'▼'} ${Math.abs(growthRN)}% RN</span>` : ''}
@@ -55,6 +80,7 @@ function filterFin() {
             <div class="fin-row"><span class="fin-label">ROA</span><span class="fin-value">${latest.resultat_net != null && latest.total_actif != null && latest.total_actif !== 0 ? ((latest.resultat_net/latest.total_actif)*100).toFixed(2)+'%' : '—'}</span></div>
           </div>
         </div>
+        ${financialSourceLine(latest)}
       </div>
     </div>`;
   }).join('');
@@ -105,7 +131,7 @@ function openFinDetail(ticker) {
       ['RATIOS', [["Marge nette", f.resultat_net != null && f.chiffre_affaires != null && f.chiffre_affaires !== 0 ? ((f.resultat_net/f.chiffre_affaires)*100).toFixed(2)+'%' : '—'], ["ROE", f.resultat_net != null && f.fonds_propres != null && f.fonds_propres !== 0 ? ((f.resultat_net/f.fonds_propres)*100).toFixed(2)+'%' : '—'], ["ROA", f.resultat_net != null && f.total_actif != null && f.total_actif !== 0 ? ((f.resultat_net/f.total_actif)*100).toFixed(2)+'%' : '—'], ["Dette / FP", f.dettes_financieres != null && f.fonds_propres != null && f.fonds_propres !== 0 ? (f.dettes_financieres/f.fonds_propres).toFixed(2)+'x' : '—'], ["P/E", f.bpa != null && f.bpa > 0 && cp ? (cp/f.bpa).toFixed(1)+'x' : '—'], ["Div. Yield", f.dpa != null && cp && cp > 0 ? ((f.dpa/cp)*100).toFixed(2)+'%' : '—']]]
     ];
     return `<div class="card mb20">
-      <div class="card-header"><div class="card-title">${periodeTitle}</div></div>
+      <div class="card-header"><div class="card-title">${periodeTitle}</div><div>${financialValidationBadge(f)}</div></div>
       <div class="card-body">
         <div class="fin-detail-grid">
           ${sections.map(([title, rows]) => {
@@ -114,6 +140,7 @@ function openFinDetail(ticker) {
             return `<div class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</div>`;
           }).join('')}
         </div>
+        ${financialSourceLine(f)}
       </div>
     </div>`;
   }).join('');
