@@ -1,4 +1,4 @@
-// THE CAPITAL — Analyse technique : navigation, thème et expérience
+// THE CAPITAL — Analyse technique : navigation, thèmes et expérience
 // UI uniquement : aucune API, endpoint ou donnée métier modifiée.
 function atLoadModernTheme(){
   if(!document.getElementById('atModernCss')){const link=document.createElement('link');link.id='atModernCss';link.rel='stylesheet';link.href='/app/css/technique-modern.css';document.head.appendChild(link)}
