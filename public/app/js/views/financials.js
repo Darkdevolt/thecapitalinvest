@@ -1,147 +1,170 @@
 // ═══════════════════════════════════════
 // VIEW — États Financiers
+// User-facing presentation layer: no raw database fields are exposed.
 // ═══════════════════════════════════════
 
-function financialValidationBadge(f) {
+function finEsc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch]));
+}
+
+function finStatus(f) {
   const status = String(f?.validation_status || 'draft').toLowerCase();
-  const labels = { validated: 'Validé', review: 'En revue', rejected: 'Rejeté', draft: 'Brouillon' };
-  const label = labels[status] || status;
-  const style = {
-    validated: 'color:#6fbf8f;border-color:rgba(111,191,143,.35);background:rgba(111,191,143,.08)',
-    review: 'color:var(--gold);border-color:rgba(184,150,78,.35);background:rgba(184,150,78,.08)',
-    rejected: 'color:#d98282;border-color:rgba(217,130,130,.35);background:rgba(217,130,130,.08)',
-    draft: 'color:var(--dim);border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.03)'
-  }[status] || 'color:var(--dim);border-color:rgba(255,255,255,.12);background:rgba(255,255,255,.03)';
-  return `<span style="display:inline-flex;align-items:center;padding:3px 7px;border:1px solid;border-radius:999px;font-size:10px;${style}">${label}</span>`;
+  return ['validated','review','rejected','draft'].includes(status) ? status : 'draft';
+}
+
+function financialValidationBadge(f) {
+  const status = finStatus(f);
+  const labels = { validated:'Validé', review:'En revue', rejected:'Rejeté', draft:'En validation' };
+  return `<span class="fin-status fin-status-${status}"><span class="fin-status-dot"></span>${labels[status]}</span>`;
 }
 
 function financialSourceLine(f) {
-  const source = f?.source ? String(f.source) : '';
+  const source = f?.source ? finEsc(f.source) : '';
   const url = f?.source_url ? String(f.source_url) : '';
-  const page = f?.source_page != null ? String(f.source_page) : '';
-  if (!source && !url && !page) return '<div style="font-size:10px;color:var(--dim);margin-top:8px">Source : non renseignée</div>';
+  const page = f?.source_page != null ? finEsc(f.source_page) : '';
+  if (!source && !url && !page) return `<div class="fin-source fin-source-missing"><span>Source</span><strong>En cours de renseignement</strong></div>`;
   const safeUrl = /^https?:\/\//i.test(url) ? url.replace(/"/g, '&quot;') : '';
-  const link = safeUrl ? ` · <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color:var(--gold)">source</a>` : '';
-  const pageLabel = page ? ` · p. ${page}` : '';
-  return `<div style="font-size:10px;color:var(--dim);margin-top:8px">Source : ${source || 'non renseignée'}${pageLabel}${link}</div>`;
+  const link = safeUrl ? `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">Voir la source ↗</a>` : '';
+  return `<div class="fin-source"><span>Source</span><strong>${source || 'Document source'}</strong>${page ? `<em>p. ${page}</em>` : ''}${link}</div>`;
 }
 
-// ═══════════════════════════════════════
-// FINANCIALS
-// ═══════════════════════════════════════
+function finValue(value, unit = '') {
+  if (value == null || value === '' || !Number.isFinite(Number(value))) return '—';
+  return `${fmtM(value)}${unit ? ` ${unit}` : ''}`;
+}
+
+function finRatio(a,b, suffix='%') {
+  const x=Number(a), y=Number(b);
+  if (!Number.isFinite(x) || !Number.isFinite(y) || y===0) return '—';
+  return `${(x/y*100).toFixed(1)}${suffix}`;
+}
+
+function finMetric(label, value, note='') {
+  return `<div class="fin-metric"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
+}
+
+function finCard(title, rows) {
+  const valid = rows.filter(([,v]) => v !== '—');
+  if (!valid.length) return '';
+  return `<section class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</section>`;
+}
+
 function renderFinancials() {
   const byTicker = {};
-  allFinancials.forEach(f => { if (!byTicker[f.ticker]) byTicker[f.ticker] = []; byTicker[f.ticker].push(f); });
+  (Array.isArray(allFinancials) ? allFinancials : []).forEach(f => {
+    if (!f?.ticker || finStatus(f) === 'rejected') return;
+    const t = String(f.ticker).toUpperCase();
+    if (!byTicker[t]) byTicker[t] = [];
+    byTicker[t].push(f);
+  });
+  Object.values(byTicker).forEach(list => list.sort((a,b) => Number(b.annee||0)-Number(a.annee||0)));
   window._finByTicker = byTicker;
   window._finTickers = Object.keys(byTicker).sort();
   filterFin();
 }
 
 function filterFin() {
-  const q = (document.getElementById('searchFin')?.value || '').toLowerCase();
+  const q = (document.getElementById('searchFin')?.value || '').trim().toLowerCase();
   const tickers = (window._finTickers || []).filter(t => !q || t.toLowerCase().includes(q));
   const byTicker = window._finByTicker || {};
   const container = document.getElementById('finGrid');
-  if (!tickers.length) { container.innerHTML = '<div class="empty-state"><div class="empty-icon">≡</div><div class="empty-title">Aucun résultat</div><div class="empty-text">Vérifiez vos données Supabase</div></div>'; return; }
-  container.innerHTML = tickers.map(ticker => {
-    const fins = (byTicker[ticker]||[]).sort((a,b) => b.annee - a.annee);
-    const latest = fins[0]; const prev = fins[1];
-    if (!latest) return '';
-    const growthRN = (latest.resultat_net != null && prev?.resultat_net != null && prev.resultat_net !== 0)
-      ? ((latest.resultat_net - prev.resultat_net) / Math.abs(prev.resultat_net) * 100).toFixed(1) : null;
-    const periodeLabel = latest.periode && latest.periode !== 'annuel' ? ` · ${latest.periode}` : '';
-    return `<div class="card" style="margin-bottom:16px">
-      <div class="card-header" style="cursor:pointer" onclick="openFinDetail('${ticker}')">
-        <div>
-          <div style="font-family:var(--mono);font-size:11px;color:var(--gold);margin-bottom:2px">${ticker}</div>
-          <div class="card-title">Dernier exercice : ${latest.annee}${periodeLabel}</div>
-          <div style="display:flex;gap:7px;align-items:center;margin-top:6px">${financialValidationBadge(latest)}${latest.validation_status !== 'validated' ? '<span style="font-size:10px;color:var(--dim)">Donnée non validée</span>' : ''}</div>
-        </div>
-        <div style="display:flex;align-items:center;gap:10px">
-          ${growthRN !== null ? `<span class="pill ${parseFloat(growthRN)>=0?'up':'down'}">${parseFloat(growthRN)>=0?'▲':'▼'} ${Math.abs(growthRN)}% RN</span>` : ''}
-          <span style="font-size:11px;color:var(--gold)">Détail →</span>
-        </div>
+  if (!container) return;
+
+  if (!tickers.length) {
+    container.innerHTML = `<div class="fin-empty"><div class="fin-empty-icon">⌕</div><h3>Aucun titre trouvé</h3><p>Essayez un autre ticker.</p></div>`;
+    return;
+  }
+
+  const total = tickers.length;
+  const validated = tickers.filter(t => finStatus(byTicker[t][0]) === 'validated').length;
+  const inReview = tickers.filter(t => ['review','draft'].includes(finStatus(byTicker[t][0]))).length;
+  const noSource = tickers.filter(t => !byTicker[t][0]?.source && !byTicker[t][0]?.source_url).length;
+
+  container.innerHTML = `
+    <div class="fin-overview">
+      <div class="fin-overview-copy"><span class="fin-kicker">DONNÉES FINANCIÈRES</span><h2>Les fondamentaux, enfin lisibles.</h2><p>Résultats, bilan, ratios et évolution présentés dans un format conçu pour la décision — pas pour la lecture d'une base de données.</p></div>
+      <div class="fin-overview-stats">
+        ${finMetric('Titres', total)}
+        ${finMetric('Validés', validated)}
+        ${finMetric('En validation', inReview)}
+        ${finMetric('Sources à compléter', noSource)}
       </div>
-      <div class="card-body">
-        <div class="fin-detail-grid">
-          <div class="fin-detail-card"><h4>Résultats</h4>
-            <div class="fin-row"><span class="fin-label">CA</span><span class="fin-value">${fmtM(latest.chiffre_affaires)}</span></div>
-            <div class="fin-row"><span class="fin-label">Résultat Net</span><span class="fin-value">${fmtM(latest.resultat_net)}</span></div>
-            <div class="fin-row"><span class="fin-label">BPA</span><span class="fin-value">${latest.bpa ? fmt(latest.bpa) : '—'}</span></div>
-          </div>
-          <div class="fin-detail-card"><h4>Bilan</h4>
-            <div class="fin-row"><span class="fin-label">Total Actif</span><span class="fin-value">${fmtM(latest.total_actif)}</span></div>
-            <div class="fin-row"><span class="fin-label">Fonds Propres</span><span class="fin-value">${fmtM(latest.fonds_propres)}</span></div>
-            <div class="fin-row"><span class="fin-label">Dettes</span><span class="fin-value">${fmtM(latest.dettes_financieres)}</span></div>
-          </div>
-          <div class="fin-detail-card"><h4>Ratios</h4>
-            <div class="fin-row"><span class="fin-label">Marge nette</span><span class="fin-value">${latest.resultat_net != null && latest.chiffre_affaires != null && latest.chiffre_affaires !== 0 ? ((latest.resultat_net/latest.chiffre_affaires)*100).toFixed(2)+'%' : '—'}</span></div>
-            <div class="fin-row"><span class="fin-label">ROE</span><span class="fin-value">${latest.resultat_net != null && latest.fonds_propres != null && latest.fonds_propres !== 0 ? ((latest.resultat_net/latest.fonds_propres)*100).toFixed(2)+'%' : '—'}</span></div>
-            <div class="fin-row"><span class="fin-label">ROA</span><span class="fin-value">${latest.resultat_net != null && latest.total_actif != null && latest.total_actif !== 0 ? ((latest.resultat_net/latest.total_actif)*100).toFixed(2)+'%' : '—'}</span></div>
-          </div>
-        </div>
-        ${financialSourceLine(latest)}
-      </div>
-    </div>`;
-  }).join('');
+    </div>
+    <div class="fin-trust-note"><span>●</span><div><strong>Transparence des données</strong><p>Un indicateur marqué « En validation » est présenté à titre informatif et n'est pas encore certifié par l'équipe The Capital.</p></div></div>
+    <div class="fin-grid-list">${tickers.map(ticker => renderFinancialTicker(ticker, byTicker[ticker])).join('')}</div>`;
+}
+
+function renderFinancialTicker(ticker, fins) {
+  const latest = fins[0];
+  const prev = fins[1];
+  const ent = (Array.isArray(allEntreprises) ? allEntreprises : []).find(e => String(e?.ticker||'').toUpperCase()===ticker) || {};
+  const company = finEsc(ent.nom || ent.raison_sociale || ticker);
+  const rn = Number(latest?.resultat_net);
+  const prevRn = Number(prev?.resultat_net);
+  const growth = Number.isFinite(rn) && Number.isFinite(prevRn) && prevRn !== 0 ? ((rn-prevRn)/Math.abs(prevRn)*100) : null;
+  const annual = !latest.periode || latest.periode === 'annuel';
+  const period = annual ? 'Exercice annuel' : finEsc(latest.periode);
+  const status = finStatus(latest);
+  const confidence = status === 'validated' ? 'Donnée validée' : status === 'review' ? 'Contrôle éditorial en cours' : 'Donnée en cours de validation';
+
+  return `<article class="fin-company-card">
+    <div class="fin-company-head" onclick="openFinDetail('${finEsc(ticker)}')">
+      <div class="fin-company-id"><span class="fin-ticker">${finEsc(ticker)}</span><h3>${company}</h3><span class="fin-period">${period} · ${finEsc(latest.annee)}</span></div>
+      <div class="fin-company-status">${financialValidationBadge(latest)}<span class="fin-open">Voir l'analyse →</span></div>
+    </div>
+    <div class="fin-key-grid">
+      ${finMetric("Chiffre d'affaires", finValue(latest.chiffre_affaires), `Exercice ${finEsc(latest.annee)}`)}
+      ${finMetric('Résultat net', finValue(latest.resultat_net), growth === null ? confidence : `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% vs exercice précédent`)}
+      ${finMetric('BPA', latest.bpa != null ? `${fmt(latest.bpa)} FCFA` : '—', 'Bénéfice par action')}
+      ${finMetric('Marge nette', finRatio(latest.resultat_net, latest.chiffre_affaires), 'Résultat net / CA')}
+    </div>
+    <div class="fin-company-foot">${financialSourceLine(latest)}<button class="fin-detail-btn" onclick="event.stopPropagation();openFinDetail('${finEsc(ticker)}')">Explorer les états financiers</button></div>
+  </article>`;
 }
 
 function openFinDetail(ticker) {
   nav('financials-detail');
   history.replaceState(null, '', '#financials-detail');
-  const fins = (window._finByTicker[ticker] || []).sort((a,b) => b.annee - a.annee);
-  const ent = allEntreprises.find(e => e.ticker === ticker) || {};
-  const cours = allCours.find(c => c.ticker === ticker) || {};
-  const cp = parseFloat(cours.cours);
+  const fins = [...(window._finByTicker?.[ticker] || [])].sort((a,b) => Number(b.annee||0)-Number(a.annee||0));
+  const ent = (Array.isArray(allEntreprises) ? allEntreprises : []).find(e => String(e?.ticker||'').toUpperCase()===String(ticker).toUpperCase()) || {};
+  const cours = (Array.isArray(allCours) ? allCours : []).find(c => String(c?.ticker||'').toUpperCase()===String(ticker).toUpperCase()) || {};
+  const cp = Number(cours.cours);
+  const company = finEsc(ent.nom || ent.raison_sociale || ticker);
+  const periods = [...new Set(fins.map(f => `${f.annee}${f.periode && f.periode !== 'annuel' ? ' '+f.periode : ''}`))];
+  const latest = fins[0] || {};
 
-  const periods = [...new Set(fins.map(f => f.annee + (f.periode && f.periode !== 'annuel' ? ' ' + f.periode : '')))];
-
-  document.getElementById('finDetailContent').innerHTML = `
-    <div class="fiche-hero" style="margin-bottom:20px">
-      <div class="fiche-ticker-label">${ticker}</div>
-      <div class="fiche-company">${ent.nom || ticker}</div>
-      <div class="fiche-meta">États financiers détaillés — ${periods.length} période(s) disponible(s)</div>
+  const detail = document.getElementById('finDetailContent');
+  if (!detail) return;
+  detail.innerHTML = `
+    <button class="back-btn" onclick="nav('financials')">← Retour aux états financiers</button>
+    <div class="fin-detail-hero">
+      <div><span class="fin-kicker">FICHE FINANCIÈRE · ${finEsc(ticker)}</span><h1>${company}</h1><p>Lecture structurée des comptes disponibles, période par période.</p></div>
+      <div class="fin-detail-price"><span>Cours disponible</span><strong>${Number.isFinite(cp) && cp ? fmt(cp)+' FCFA' : '—'}</strong><small>Dernière cotation disponible</small></div>
     </div>
-    <div class="card mb20">
-      <div class="card-header"><div class="card-title">Évolution du résultat net</div></div>
-      <div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div>
-    </div>
-    <div id="finDetailPeriods"></div>
-  `;
+    <div class="fin-detail-trust">${financialValidationBadge(latest)}<span>${finStatus(latest)==='validated' ? 'Les données affichées sont validées.' : 'Certaines données sont encore en validation éditoriale.'}</span></div>
+    <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du résultat net</div><div class="fin-section-note">Historique disponible dans la base The Capital.</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
+    <div id="finDetailPeriods"></div>`;
 
-  const evolLabels = fins.filter(f => f.periode === 'annuel' || !f.periode).map(f => f.annee).reverse();
-  const evolData = fins.filter(f => f.periode === 'annuel' || !f.periode).map(f => f.resultat_net).reverse();
-  if (evolLabels.length > 1) {
-    new Chart(document.getElementById('chartFinEvolution'), {
-      type: 'bar',
-      data: { labels: evolLabels, datasets: [{ data: evolData, backgroundColor: 'rgba(184,150,78,0.3)', borderColor: 'rgba(184,150,78,0.6)', borderWidth: 1, borderRadius: 4 }] },
-      options: { ...chartOpts, plugins: { ...chartOpts.plugins, tooltip: { ...chartOpts.plugins.tooltip, callbacks: { label: ctx => ' ' + fmtM(ctx.parsed.y) } } } }
-    });
-  } else {
-    document.getElementById('chartFinEvolution').parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--dim)">Pas assez de données pour un graphique</div>';
+  const annual = fins.filter(f => f.periode === 'annuel' || !f.periode);
+  const evolLabels = annual.map(f=>f.annee).reverse();
+  const evolData = annual.map(f=>f.resultat_net).reverse();
+  const canvas = document.getElementById('chartFinEvolution');
+  if (canvas && evolLabels.length > 1) {
+    new Chart(canvas,{type:'bar',data:{labels:evolLabels,datasets:[{label:'Résultat net',data:evolData,backgroundColor:'rgba(184,150,78,0.30)',borderColor:'rgba(184,150,78,0.65)',borderWidth:1,borderRadius:5}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}}}});
+  } else if (canvas) {
+    canvas.parentElement.innerHTML='<div class="fin-chart-empty">Pas assez d\'historique pour afficher une tendance.</div>';
   }
 
   const container = document.getElementById('finDetailPeriods');
-  container.innerHTML = fins.map((f, i) => {
-    const periodeTitle = f.periode && f.periode !== 'annuel' ? `${f.annee} — ${f.periode.charAt(0).toUpperCase() + f.periode.slice(1)}` : `${f.annee} — Annuel`;
+  if (!container) return;
+  container.innerHTML = fins.map(f => {
+    const title = !f.periode || f.periode==='annuel' ? `${finEsc(f.annee)} · Annuel` : `${finEsc(f.annee)} · ${finEsc(String(f.periode).charAt(0).toUpperCase()+String(f.periode).slice(1))}`;
     const sections = [
-      ['COMPTE DE RÉSULTAT', [["Chiffre d'affaires", fmtM(f.chiffre_affaires)], ["RBE", fmtM(f.rbe)], ["Résultat Net", fmtM(f.resultat_net)], ["BPA", f.bpa ? fmt(f.bpa)+' FCFA' : '—'], ["DPA", f.dpa ? fmt(f.dpa)+' FCFA' : '—']]],
-      ['BILAN', [["Total Actif", fmtM(f.total_actif)], ["Fonds Propres", fmtM(f.fonds_propres)], ["Dettes Financières", fmtM(f.dettes_financieres)]]],
-      ['FLUX DE TRÉSORERIE', [["Cash-flow Opérationnel", fmtM(f.cash_flow_operationnel)], ["CAPEX", fmtM(f.capex)]]],
-      ['RATIOS', [["Marge nette", f.resultat_net != null && f.chiffre_affaires != null && f.chiffre_affaires !== 0 ? ((f.resultat_net/f.chiffre_affaires)*100).toFixed(2)+'%' : '—'], ["ROE", f.resultat_net != null && f.fonds_propres != null && f.fonds_propres !== 0 ? ((f.resultat_net/f.fonds_propres)*100).toFixed(2)+'%' : '—'], ["ROA", f.resultat_net != null && f.total_actif != null && f.total_actif !== 0 ? ((f.resultat_net/f.total_actif)*100).toFixed(2)+'%' : '—'], ["Dette / FP", f.dettes_financieres != null && f.fonds_propres != null && f.fonds_propres !== 0 ? (f.dettes_financieres/f.fonds_propres).toFixed(2)+'x' : '—'], ["P/E", f.bpa != null && f.bpa > 0 && cp ? (cp/f.bpa).toFixed(1)+'x' : '—'], ["Div. Yield", f.dpa != null && cp && cp > 0 ? ((f.dpa/cp)*100).toFixed(2)+'%' : '—']]]
-    ];
-    return `<div class="card mb20">
-      <div class="card-header"><div class="card-title">${periodeTitle}</div><div>${financialValidationBadge(f)}</div></div>
-      <div class="card-body">
-        <div class="fin-detail-grid">
-          ${sections.map(([title, rows]) => {
-            const valid = rows.filter(([,v]) => v !== '—');
-            if (!valid.length) return '';
-            return `<div class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</div>`;
-          }).join('')}
-        </div>
-        ${financialSourceLine(f)}
-      </div>
-    </div>`;
+      finCard('Compte de résultat', [["Chiffre d'affaires",finValue(f.chiffre_affaires)],['RBE',finValue(f.rbe)],['Résultat net',finValue(f.resultat_net)],['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA':'—'],['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA':'—']]),
+      finCard('Bilan', [['Total actif',finValue(f.total_actif)],['Fonds propres',finValue(f.fonds_propres)],['Dettes financières',finValue(f.dettes_financieres)]]),
+      finCard('Flux de trésorerie', [['Cash-flow opérationnel',finValue(f.cash_flow_operationnel)],['CAPEX',finValue(f.capex)]]),
+      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'):'—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x':'—'],['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%':'—']])
+    ].join('');
+    return `<article class="fin-period-card"><div class="fin-period-head"><div><span class="fin-period-label">PÉRIODE</span><h3>${title}</h3></div>${financialValidationBadge(f)}</div><div class="fin-period-grid">${sections}</div>${financialSourceLine(f)}</article>`;
   }).join('');
 }
