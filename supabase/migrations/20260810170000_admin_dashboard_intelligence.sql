@@ -31,6 +31,7 @@ begin
     'financials',v_fin_count,'financial_tickers',v_fin_tickers,'forecasts',v_forecast_count,'companies',v_company_count,
     'cours',v_cours_count,'historique',v_hist_count,'dividendes',v_div_count,'users',v_users,
     'quality',jsonb_build_object('overall',v_health,'completeness',v_complete,'coherence',v_coherence,'provenance',v_prov,'validation',v_valid,'freshness',v_fresh),
+    'validation',jsonb_build_object('draft',(select count(*) from financials where validation_status='draft'),'review',(select count(*) from financials where validation_status='review'),'validated',(select count(*) from financials where validation_status='validated'),'rejected',(select count(*) from financials where validation_status='rejected')),
     'forecast',jsonb_build_object('stale',(select count(*) from forecasts where annee_forecast<extract(year from current_date)::int),'extreme',(select count(*) from forecasts where potentiel_pct is not null and abs(potentiel_pct)>p_forecast_extreme),'missing_method',(select count(*) from forecasts where btrim(coalesce(methode,''))='')),
     'anomalies',jsonb_build_object('financial',(select count(*) from get_financial_anomalies(1000)),'market',(select count(*) from get_aberrations(1000)))
   ) into v_result;
