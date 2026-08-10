@@ -6,6 +6,43 @@
   window.__TC_SINGLE_MOBILE_NAV__ = true;
   function get(id){return document.getElementById(id);}
 
+  function syncMobileIdentity(){
+    var session=window.tcSession||null;
+    var user=session&&session.user?session.user:null;
+    var meta=user&&user.user_metadata?user.user_metadata:{};
+    var nameEl=get('sidebarName');
+    var roleEl=get('sidebarRole');
+    var avatar=get('sidebarAvatar');
+    var adminLink=get('adminLink');
+
+    if(nameEl && (!nameEl.textContent.trim() || nameEl.textContent.trim()==='Chargement...')){
+      var first=String(meta.first_name||meta.firstname||meta.prenom||'').trim();
+      var last=String(meta.last_name||meta.lastname||meta.nom||'').trim();
+      var full=String(meta.full_name||meta.fullName||meta.name||'').trim();
+      var display=[first,last].filter(Boolean).join(' ')||full;
+      if(display) nameEl.textContent=display;
+      else if(user&&user.email) nameEl.textContent=user.email.split('@')[0];
+    }
+
+    if(roleEl && user){
+      var role=String(meta.role||user.app_metadata?.role||'').trim();
+      if(role) roleEl.textContent=role==='admin'||role==='administrator'||role==='super_admin'?'Administrateur':'BRVM';
+    }
+
+    if(avatar && nameEl){
+      var initials=nameEl.textContent.trim().split(/\s+/).filter(Boolean).slice(0,2).map(function(part){return part.charAt(0).toUpperCase();}).join('');
+      if(initials) avatar.textContent=initials;
+    }
+
+    if(adminLink && user){
+      var role=String(meta.role||user.app_metadata?.role||'').toLowerCase();
+      var isAdmin=role==='admin'||role==='administrator'||role==='super_admin';
+      // Respect the existing server/auth decision when present; otherwise use the authenticated role.
+      var alreadyVisible=adminLink.style.display && adminLink.style.display!=='none';
+      adminLink.style.display=(alreadyVisible||isAdmin)?'block':'none';
+    }
+  }
+
   function ensureMobileIdentityStyles(){
     if(document.getElementById('tc-mobile-identity-fix')) return;
     var style=document.createElement('style');
@@ -118,9 +155,10 @@
     sidebar.insertBefore(generated,bottom);
     sidebar.querySelectorAll('.sidebar-section:not(.tc-mobile-generated .sidebar-section), .sidebar > .nav-item').forEach(function(el){el.remove();});
     bindSidebarItems();
+    syncMobileIdentity();
   }
 
-  function initSidebar(){ensureMobileMenu();syncMobileDestinations();bindSidebarItems();window.toggleSidebar=toggleSidebar;window.openSidebar=openSidebar;window.closeSidebar=closeSidebar;}
+  function initSidebar(){ensureMobileMenu();syncMobileDestinations();bindSidebarItems();syncMobileIdentity();window.toggleSidebar=toggleSidebar;window.openSidebar=openSidebar;window.closeSidebar=closeSidebar;}
   window.initSidebar=initSidebar;
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initSidebar,{once:true});else initSidebar();
 })();
