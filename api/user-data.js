@@ -23,9 +23,7 @@ async function readBody(req) {
 
 const TABLES = { alerts: 'alertes_cours', watchlist: 'watchlist' };
 
-// The database constraint uses HAUSSE / BAISSE. The frontend historically used
-// above / below, so the API normalizes both representations without changing
-// existing Supabase data.
+// Supabase stores HAUSSE / BAISSE. The frontend historically used above / below.
 function normalizeAlertType(value) {
   const type = String(value || '').trim().toLowerCase();
   if (type === 'above' || type === 'hausse') return 'HAUSSE';
@@ -63,10 +61,12 @@ export default async function handler(req, res) {
       if (mode === 'alerts') {
         const alertType = normalizeAlertType(input.condition || input.type_alerte);
         if (!alertType) return json(res,400,{success:false,error:'Condition d’alerte invalide'});
-        row = { user_id:userId, ticker:String(input.ticker||'').toUpperCase(), type_alerte:alertType, seuil:Number(input.price ?? input.seuil), active:input.active !== false, note:input.note || null };
-        if (!row.ticker || !Number.isFinite(row.seuil)) return json(res,400,{success:false,error:'Ticker et seuil obligatoires'});
+        const threshold = Number(input.price ?? input.seuil);
+        if (!Number.isFinite(threshold) || threshold < 0) return json(res,400,{success:false,error:'Seuil d’alerte invalide'});
+        row = { user_id:userId, ticker:String(input.ticker||'').trim().toUpperCase(), type_alerte:alertType, seuil:threshold, active:input.active !== false, note:input.note || null };
+        if (!row.ticker) return json(res,400,{success:false,error:'Ticker et seuil obligatoires'});
       } else {
-        row = { user_id:userId, ticker:String(input.ticker||'').toUpperCase(), note:input.note || null };
+        row = { user_id:userId, ticker:String(input.ticker||'').trim().toUpperCase(), note:input.note || null };
         if (!row.ticker) return json(res,400,{success:false,error:'Ticker obligatoire'});
       }
       const { data, error } = await supabaseAdmin.from(table).insert(row).select('*').single();
