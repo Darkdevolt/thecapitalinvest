@@ -23,12 +23,7 @@
   }
 
   function getSession() {
-    // app.html owns the authoritative auth guard. Reuse its validated session
-    // instead of making the application pass through a second JWT gate.
-    if (window.tcSession && window.tcSession.access_token) {
-      return window.tcSession;
-    }
-
+    if (window.tcSession && window.tcSession.access_token) return window.tcSession;
     try {
       var raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return null;
@@ -41,16 +36,13 @@
   }
 
   function requireAuth() {
-    // When app.html has already authenticated the user, do not redirect again.
     if (window.tcSession && window.tcSession.access_token) return true;
-
     var session = getSession();
     if (session) {
       window.tcSession = session;
       window.tcAccessToken = session.access_token;
       return true;
     }
-
     var current = location.pathname.split('/').pop() || 'app.html';
     var redirect = encodeURIComponent(current + location.search + location.hash);
     location.replace('login.html?redirect=' + redirect);
@@ -71,18 +63,17 @@
   function loadScript(src, done) {
     var existing = document.querySelector('script[data-tc-runtime="' + src.replace(/"/g, '') + '"]');
     if (existing) {
-      done();
+      if (typeof done === 'function') done();
       return;
     }
-
     var script = document.createElement('script');
     script.src = src;
     script.async = false;
     script.dataset.tcRuntime = src;
-    script.onload = done;
+    script.onload = function () { if (typeof done === 'function') done(); };
     script.onerror = function () {
       console.error('[INIT] Script impossible à charger:', src);
-      done();
+      if (typeof done === 'function') done();
     };
     document.head.appendChild(script);
   }
@@ -97,15 +88,17 @@
   }
 
   function loadRuntimeLayers() {
-    // Optional enhancements: never block the first application render.
+    // The technical experience is independent: it must never wait for
+    // portfolio/fundamental enhancements before becoming interactive.
     loadStyle('app/css/technique-experience.css?v=2');
+    loadScript('app/js/views/technique/experience.js?v=3');
+
+    // Optional enhancements remain non-blocking for the application core.
     loadScript('app/js/views/portefeuille/portfolio-store.js?v=9', function () {
       loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8', function () {
         loadScript('app/js/views/user-data-patch.js?v=7', function () {
           loadScript('app/js/views/fundamental-ratios.js?v=1', function () {
-            loadScript('app/js/views/technique/experience.js?v=2', function () {
-              renderAfterData();
-            });
+            renderAfterData();
           });
         });
       });
@@ -114,11 +107,8 @@
 
   function renderAfterData() {
     try {
-      if (typeof window.renderCurrentView === 'function') {
-        window.renderCurrentView();
-      } else if (typeof window.parseHash === 'function') {
-        window.parseHash();
-      }
+      if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
+      else if (typeof window.parseHash === 'function') window.parseHash();
     } catch (e) {
       console.warn('[INIT] rendu après données:', e);
     }
@@ -127,56 +117,39 @@
   function init() {
     if (started) return;
     started = true;
-
     if (!requireAuth()) return;
     normalizeDocument();
     console.log('[INIT] Session authentifiée — démarrage The Capital');
 
-    // CORE: the application must start before any optional runtime layer.
+    // CORE: always start the application before optional enhancements.
     if (typeof window.initApp !== 'function') {
       console.error('[INIT] initApp manquant — main.js doit être chargé avant init.js');
       document.body.classList.remove('init-hidden');
       return;
     }
 
-    try {
-      window.initApp();
-      console.log('[INIT] initApp lancé');
-    } catch (e) {
-      console.error('[INIT] initApp:', e);
-    }
-
+    try { window.initApp(); } catch (e) { console.error('[INIT] initApp:', e); }
     if (typeof window.initSidebar === 'function') {
       try { window.initSidebar(); } catch (e) { console.warn('[INIT] sidebar:', e); }
     }
-
     if (typeof window.initUserDataLayer === 'function') {
       try { window.initUserDataLayer(); } catch (e) { console.warn('[INIT] user data:', e); }
     }
-
     if (window.marketsModule && typeof window.marketsModule.loadData === 'function') {
       try { window.marketsModule.loadData(); } catch (e) { console.warn('[INIT] marketsModule:', e); }
     }
 
-    // Never leave the complete application hidden because an enhancement failed.
     document.body.classList.remove('init-hidden');
     renderAfterData();
-
-    // ENHANCEMENTS: load after the core application is visible.
     setTimeout(loadRuntimeLayers, 0);
   }
 
   function boot() {
     normalizeDocument();
     if (!requireAuth()) return;
-
-    // Critical ordering: auth → core application → visible UI → enhancements.
     init();
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, { once: true });
-  } else {
-    boot();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot, { once: true });
+  else boot();
 })();
