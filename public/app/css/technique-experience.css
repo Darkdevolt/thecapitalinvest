@@ -45,10 +45,10 @@
  #view-analyse-technique .at-mode-thumb{width:14px;height:14px}
  #view-analyse-technique.at-pro .at-mode-thumb{left:17px}
  #view-analyse-technique.at-simple .at-right,#view-analyse-technique.at-pro .at-right{width:100%;max-height:230px;border-left:0;border-top:1px solid var(--border2)}
- #view-analyse-technique.at-simple .at-right .at-ind-item:nth-child(n+5){display:flex}
  #view-analyse-technique.at-pro .at-draw-hint{display:none}
- #view-analyse-technique.at-pro .at-left{display:none}
- #view-analyse-technique.at-pro .at-drawtb{min-height:44px}
+ /* Le mode Pro doit réellement exposer les outils avancés sur mobile. */
+ #view-analyse-technique.at-pro .at-left{display:flex;width:42px;padding:7px 0;flex:0 0 42px}
+ #view-analyse-technique.at-pro .at-drawtb{display:flex;min-height:44px;overflow-x:auto}
  #view-analyse-technique.at-pro .at-drawtb .at-btn{min-width:max-content;min-height:42px}
 }
 @media(max-width:360px){
