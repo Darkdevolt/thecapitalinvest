@@ -10,6 +10,10 @@ if (window.__crosshairLoaded) {
     if (!overlay) return;
     if (overlay.dataset.atPointerReady === '1') return;
     overlay.dataset.atPointerReady = '1';
+    overlay.style.touchAction = 'none';
+    overlay.style.userSelect = 'none';
+    overlay.style.webkitUserSelect = 'none';
+    overlay.style.webkitTouchCallout = 'none';
 
     const ctx = overlay.getContext('2d');
     const pos = e => {
@@ -19,7 +23,6 @@ if (window.__crosshairLoaded) {
       return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
     };
     const norm = p => ({ x: Math.max(0, Math.min(1, p.x / Math.max(1, overlay.width))), y: Math.max(0, Math.min(1, p.y / Math.max(1, overlay.height))) });
-    const denorm = p => ({ x: p.x * overlay.width, y: p.y * overlay.height });
 
     function repaint() {
       const AT = window.AT;
@@ -49,14 +52,11 @@ if (window.__crosshairLoaded) {
       e.preventDefault();
       e.stopPropagation();
       try { overlay.setPointerCapture(e.pointerId); } catch (_) {}
-      const p = pos(e), n = norm(p);
-      const mode = AT.drawMode;
+      const p = pos(e), n = norm(p), mode = AT.drawMode;
 
       if (mode === 'hline') {
         AT.draws.push({ type:'hline', p1:n });
-        AT.trendPts = [];
-        repaint();
-        atRender();
+        repaint(); atRender();
         if (typeof atSetDraw === 'function') atSetDraw('cursor');
         return;
       }
@@ -71,8 +71,7 @@ if (window.__crosshairLoaded) {
       const target = mode === 'rect' ? AT.rectPts : (mode === 'trend' || mode === 'fib' || mode === 'channel' || mode === 'pitch' ? AT.trendPts : null);
       if (!target) return;
       target.push(n);
-
-      const required = mode === 'pitch' ? 3 : mode === 'channel' ? 3 : 2;
+      const required = mode === 'pitch' || mode === 'channel' ? 3 : 2;
       if (target.length < required) { repaint(); return; }
 
       if (mode === 'rect') AT.draws.push({ type:'rect', p1:target[0], p2:target[1] });
@@ -95,11 +94,7 @@ if (window.__crosshairLoaded) {
     const AT = window.AT;
     if (!AT || !Array.isArray(AT.draws)) return;
     const xy = p => ({ x:p.x*W, y:p.y*H });
-    ctx.save();
-    ctx.strokeStyle = '#B8964E';
-    ctx.fillStyle = 'rgba(184,150,78,.12)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([]);
+    ctx.save(); ctx.strokeStyle='#B8964E'; ctx.fillStyle='rgba(184,150,78,.12)'; ctx.lineWidth=1.5; ctx.setLineDash([]);
     AT.draws.forEach(d => {
       const a=xy(d.p1), b=d.p2?xy(d.p2):null, c=d.p3?xy(d.p3):null;
       if(d.type==='hline'){ctx.beginPath();ctx.moveTo(0,a.y);ctx.lineTo(W,a.y);ctx.stroke();}
@@ -115,16 +110,13 @@ if (window.__crosshairLoaded) {
   window.atDrawStored = atDrawStored;
 
   function atDrawPreview(ctx, W, H) {
-    const AT = window.AT;
-    if (!AT || AT.drawMode === 'cursor' || AT._mouseX == null) return;
-    const mx=AT._mouseX,my=AT._mouseY;
-    const p=arr => ({x:arr.x*W,y:arr.y*H});
-    const pts=AT.drawMode==='rect'?AT.rectPts:AT.trendPts;
-    ctx.save(); ctx.strokeStyle='rgba(184,150,78,.65)'; ctx.setLineDash([5,4]); ctx.lineWidth=1.5;
+    const AT=window.AT;if(!AT||AT.drawMode==='cursor'||AT._mouseX==null)return;
+    const mx=AT._mouseX,my=AT._mouseY,p=arr=>({x:arr.x*W,y:arr.y*H}),pts=AT.drawMode==='rect'?AT.rectPts:AT.trendPts;
+    ctx.save();ctx.strokeStyle='rgba(184,150,78,.65)';ctx.setLineDash([5,4]);ctx.lineWidth=1.5;
     if(AT.drawMode==='hline'){ctx.beginPath();ctx.moveTo(0,my);ctx.lineTo(W,my);ctx.stroke();}
     else if(pts?.length===1){const a=p(pts[0]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(mx,my);ctx.stroke();}
     else if(pts?.length===2&&(AT.drawMode==='pitch'||AT.drawMode==='channel')){const a=p(pts[0]),b=p(pts[1]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(mx,my);ctx.stroke();}
     ctx.restore();
   }
-  window.atDrawPreview = atDrawPreview;
+  window.atDrawPreview=atDrawPreview;
 }
