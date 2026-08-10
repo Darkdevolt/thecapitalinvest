@@ -1,5 +1,5 @@
-import { supabaseAdmin, isSupabaseReady } from './lib/supabase.js';
-import { authenticate } from './lib/middleware.js';
+import { supabaseAdmin, isSupabaseReady } from '../server/lib/supabase.js';
+import { authenticate } from '../server/lib/middleware.js';
 
 function json(res, status, payload) {
   res.statusCode = status;
@@ -22,19 +22,8 @@ async function readBody(req) {
 }
 
 const TABLES = { alerts: 'alertes_cours', watchlist: 'watchlist' };
-
-// Supabase stores HAUSSE / BAISSE. The frontend historically used above / below.
-function normalizeAlertType(value) {
-  const type = String(value || '').trim().toLowerCase();
-  if (type === 'above' || type === 'hausse') return 'HAUSSE';
-  if (type === 'below' || type === 'baisse') return 'BAISSE';
-  return null;
-}
-
-function apiAlert(row) {
-  if (!row) return row;
-  return { ...row, condition: row.type_alerte === 'HAUSSE' ? 'above' : row.type_alerte === 'BAISSE' ? 'below' : row.type_alerte };
-}
+function normalizeAlertType(value) { const type = String(value || '').trim().toLowerCase(); if (type === 'above' || type === 'hausse') return 'HAUSSE'; if (type === 'below' || type === 'baisse') return 'BAISSE'; return null; }
+function apiAlert(row) { if (!row) return row; return { ...row, condition: row.type_alerte === 'HAUSSE' ? 'above' : row.type_alerte === 'BAISSE' ? 'below' : row.type_alerte }; }
 
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') return json(res, 204, null);
@@ -46,56 +35,11 @@ export default async function handler(req, res) {
   const mode = url.searchParams.get('mode');
   const table = TABLES[mode];
   if (!table) return json(res, 400, { success:false, error:'Mode invalide' });
-
   try {
-    if (req.method === 'GET') {
-      const { data, error } = await supabaseAdmin.from(table).select('*').eq('user_id', userId).order('created_at', { ascending:false });
-      if (error) throw error;
-      const output = mode === 'alerts' ? (data || []).map(apiAlert) : (data || []);
-      return json(res, 200, { success:true, data:output });
-    }
-
-    if (req.method === 'POST') {
-      const input = await readBody(req);
-      let row;
-      if (mode === 'alerts') {
-        const alertType = normalizeAlertType(input.condition || input.type_alerte);
-        if (!alertType) return json(res,400,{success:false,error:'Condition d’alerte invalide'});
-        const threshold = Number(input.price ?? input.seuil);
-        if (!Number.isFinite(threshold) || threshold < 0) return json(res,400,{success:false,error:'Seuil d’alerte invalide'});
-        row = { user_id:userId, ticker:String(input.ticker||'').trim().toUpperCase(), type_alerte:alertType, seuil:threshold, active:input.active !== false, note:input.note || null };
-        if (!row.ticker) return json(res,400,{success:false,error:'Ticker et seuil obligatoires'});
-      } else {
-        row = { user_id:userId, ticker:String(input.ticker||'').trim().toUpperCase(), note:input.note || null };
-        if (!row.ticker) return json(res,400,{success:false,error:'Ticker obligatoire'});
-      }
-      const { data, error } = await supabaseAdmin.from(table).insert(row).select('*').single();
-      if (error) throw error;
-      return json(res,201,{success:true,data:mode === 'alerts' ? apiAlert(data) : data});
-    }
-
-    if (req.method === 'PUT') {
-      const id = url.searchParams.get('id');
-      if (!id) return json(res,400,{success:false,error:'ID manquant'});
-      const input = await readBody(req);
-      const update = mode === 'alerts'
-        ? { active: input.active, note: input.note }
-        : { note: input.note };
-      const { data, error } = await supabaseAdmin.from(table).update(update).eq('id',id).eq('user_id',userId).select('*').single();
-      if (error) throw error;
-      return json(res,200,{success:true,data:mode === 'alerts' ? apiAlert(data) : data});
-    }
-
-    if (req.method === 'DELETE') {
-      const id = url.searchParams.get('id');
-      if (!id) return json(res,400,{success:false,error:'ID manquant'});
-      const { error } = await supabaseAdmin.from(table).delete().eq('id',id).eq('user_id',userId);
-      if (error) throw error;
-      return json(res,200,{success:true});
-    }
+    if (req.method === 'GET') { const { data, error } = await supabaseAdmin.from(table).select('*').eq('user_id', userId).order('created_at', { ascending:false }); if (error) throw error; return json(res, 200, { success:true, data: mode === 'alerts' ? (data || []).map(apiAlert) : (data || []) }); }
+    if (req.method === 'POST') { const input = await readBody(req); let row; if (mode === 'alerts') { const alertType = normalizeAlertType(input.condition || input.type_alerte); if (!alertType) return json(res,400,{success:false,error:'Condition d’alerte invalide'}); const threshold = Number(input.price ?? input.seuil); if (!Number.isFinite(threshold) || threshold < 0) return json(res,400,{success:false,error:'Seuil d’alerte invalide'}); row = { user_id:userId, ticker:String(input.ticker||'').trim().toUpperCase(), type_alerte:alertType, seuil:threshold, active:input.active !== false, note:input.note || null }; if (!row.ticker) return json(res,400,{success:false,error:'Ticker et seuil obligatoires'}); } else { row = { user_id:userId, ticker:String(input.ticker||'').trim().toUpperCase(), note:input.note || null }; if (!row.ticker) return json(res,400,{success:false,error:'Ticker obligatoire'}); } const { data, error } = await supabaseAdmin.from(table).insert(row).select('*').single(); if (error) throw error; return json(res,201,{success:true,data:mode === 'alerts' ? apiAlert(data) : data}); }
+    if (req.method === 'PUT') { const id = url.searchParams.get('id'); if (!id) return json(res,400,{success:false,error:'ID manquant'}); const input = await readBody(req); const update = mode === 'alerts' ? { active: input.active, note: input.note } : { note: input.note }; const { data, error } = await supabaseAdmin.from(table).update(update).eq('id',id).eq('user_id',userId).select('*').single(); if (error) throw error; return json(res,200,{success:true,data:mode === 'alerts' ? apiAlert(data) : data}); }
+    if (req.method === 'DELETE') { const id = url.searchParams.get('id'); if (!id) return json(res,400,{success:false,error:'ID manquant'}); const { error } = await supabaseAdmin.from(table).delete().eq('id',id).eq('user_id',userId); if (error) throw error; return json(res,200,{success:true}); }
     return json(res,405,{success:false,error:'Méthode non autorisée'});
-  } catch (error) {
-    console.error('[USER DATA]', error);
-    return json(res,500,{success:false,error:'Erreur serveur',detail:error.message});
-  }
+  } catch (error) { console.error('[USER DATA]', error); return json(res,500,{success:false,error:'Erreur serveur',detail:error.message}); }
 }
