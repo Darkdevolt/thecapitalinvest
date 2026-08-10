@@ -38,24 +38,26 @@ export default async function handler(req, res) {
         break;
       case 'historique':
         if (!ticker) return json(res, 400, { error: 'ticker requis' });
-
-        // Les historiques de marché sont stockés dans `historique`.
-        // `cours` ne contient que les données de cours récentes et ne doit
-        // pas être utilisé pour alimenter les graphiques historiques.
         result = await query('historique', q => q
           .eq('ticker', ticker)
           .order('date_seance', { ascending: false })
           .limit(limit)
         );
-
-        // Le graphique attend une série chronologique dans l'ordre ancien -> récent.
         if (!result.error && Array.isArray(result.data)) result.data.reverse();
         break;
       case 'entreprises':
         result = await query('entreprises', q => q.eq('actif', true).order('ticker', { ascending: true }));
         break;
       case 'financials':
-        result = await query('financials', q => q.order('annee', { ascending: false }).limit(2000));
+        // Do not silently discard existing draft data: it is still part of the
+        // database and may be needed by the Admin workflow. Instead expose the
+        // validation state and order validated records first so consumers can
+        // make an explicit choice without mistaking a draft for a validated source.
+        result = await query('financials', q => q
+          .order('validation_status', { ascending: true })
+          .order('annee', { ascending: false })
+          .limit(2000)
+        );
         break;
       case 'analyses':
         result = await query('analyses', q => q.order('date_analyse', { ascending: false }).limit(500));
