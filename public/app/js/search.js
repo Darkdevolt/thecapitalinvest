@@ -8,6 +8,30 @@
 function initGlobalSearch() {
   const input = document.getElementById('globalSearchInput');
   const results = document.getElementById('globalSearchResults');
+  if (!input || !results) return;
+
+  // On mobile, the results are deliberately rendered below the fixed header,
+  // not inside/over the header itself. This avoids the dropdown being trapped
+  // in the header stacking context while keeping the input in the top bar.
+  if (!document.getElementById('tc-mobile-global-search-position')) {
+    const style = document.createElement('style');
+    style.id = 'tc-mobile-global-search-position';
+    style.textContent = `
+      @media (max-width: 768px) {
+        #globalSearchResults {
+          position: fixed !important;
+          top: calc(var(--header-h) + 8px) !important;
+          left: 12px !important;
+          right: 12px !important;
+          width: auto !important;
+          max-width: none !important;
+          max-height: min(52vh, 320px) !important;
+          z-index: 10050 !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
   
   input.addEventListener('input', (e) => {
     const q = e.target.value.toLowerCase().trim();
