@@ -21,7 +21,7 @@ function renderUsrTable(data) {
             '<td>' + r.email + '</td>' +
             '<td>' + (r.nom||'—') + '</td>' +
             '<td><span class="badge ' + (r.plan==='elite'?'badge-gold':r.plan==='pro'?'badge-blue':'badge-green') + '">' + (r.plan||'free') + '</span></td>' +
-            '<td class="td-muted">' + fmtDate(r.plan_expiry) + '</td>' +
+            '<td class="td-muted">' + fmtDate(r.plan_expire_at) + '</td>' +
             '<td>' + (r.is_admin?'✓':'—') + '</td>' +
             '<td class="td-muted">' + fmtDate(r.created_at) + '</td>' +
             '<td><button class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditUsr(this)">✎</button></td>' +
@@ -55,7 +55,7 @@ function filterUsrTable() {
 function openUsrModal(row) {
     set('modal-usr-id', row.id);
     set('modal-usr-plan',   row.plan||'free');
-    set('modal-usr-expiry', row.plan_expiry ? row.plan_expiry.split('T')[0] : '');
+    set('modal-usr-expiry', row.plan_expire_at ? row.plan_expire_at.split('T')[0] : '');
     set('modal-usr-nom',    row.nom);
     set('modal-usr-admin',  String(row.is_admin));
     openModal('modal-user');
@@ -65,7 +65,7 @@ async function saveUser() {
     const id  = v('modal-usr-id');
     const msg = document.getElementById('modal-usr-msg');
     const body = {
-        plan: v('modal-usr-plan'), plan_expiry: v('modal-usr-expiry')||null,
+        plan: v('modal-usr-plan'), plan_expire_at: v('modal-usr-expiry')||null,
         nom: v('modal-usr-nom'), is_admin: v('modal-usr-admin') === 'true'
     };
     const r = await sbPatch('users', 'id=eq.' + id, body);
