@@ -21,8 +21,6 @@ function atCleanTechnicalLabels(){
 function atInitNavigation(){
   atLoadModernTheme();
   const chart=document.getElementById('atMainChart');
-  // Le sélecteur ticker est géré par index.js. Un second onchange provoquait
-  // deux chargements concurrents et des états incohérents.
   if(chart&&!document.getElementById('atNavBar')){
     const nav=document.createElement('div');nav.id='atNavBar';nav.className='at-nav-bar';nav.innerHTML='<div class="at-nav-group"><button class="at-nav-btn" type="button" onclick="atZoomIn()" title="Zoomer">+</button><button class="at-nav-btn" type="button" onclick="atZoomOut()" title="Dézoomer">−</button><button class="at-nav-btn" type="button" onclick="atZoomReset()" title="Réinitialiser">100%</button></div><div class="at-nav-sep"></div><div class="at-nav-group"><button class="at-nav-btn" type="button" onclick="atPanLeft()" title="Période précédente">‹</button><button class="at-nav-btn" type="button" onclick="atPanRight()" title="Période suivante">›</button><button class="at-nav-btn" type="button" onclick="atGoToEnd()" title="Dernières données">FIN</button></div>';chart.appendChild(nav);
   }
