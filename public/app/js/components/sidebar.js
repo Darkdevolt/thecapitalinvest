@@ -21,17 +21,29 @@
     var sidebar=document.getElementById('sidebar');
     if(sidebar&&sidebar.classList.contains('mobile-open'))closeSidebar();else openSidebar();
   }
+  function removeLegacyMobileMenus(){
+    var header=document.querySelector('.header');
+    if(!header)return;
+    header.querySelectorAll('button,[role="button"]').forEach(function(el){
+      if(el.id==='tcMobileMenu')return;
+      var id=(el.id||'').toLowerCase(), cls=(typeof el.className==='string'?el.className:'').toLowerCase(), aria=(el.getAttribute('aria-label')||'').toLowerCase(), title=(el.getAttribute('title')||'').toLowerCase();
+      var looksLikeMenu=/hamburger|mobile-menu|menu-toggle|sidebar-toggle|mobile-toggle|mobilemenu|sidebarmenu/.test(id+' '+cls)||/menu|navigation|sidebar/.test(aria+' '+title);
+      if(looksLikeMenu)el.remove();
+    });
+  }
   function ensureMobileMenu(){
     var header=document.querySelector('.header');
-    if(!header||document.getElementById('tcMobileMenu'))return;
-    var btn=document.createElement('button');
+    if(!header)return;
+    removeLegacyMobileMenus();
+    var btn=document.getElementById('tcMobileMenu');
+    if(btn)return;
+    btn=document.createElement('button');
     btn.id='tcMobileMenu';btn.type='button';btn.className='mobile-menu-toggle';btn.setAttribute('aria-label','Ouvrir le menu');btn.setAttribute('aria-expanded','false');btn.innerHTML='<span></span><span></span><span></span>';
     btn.addEventListener('click',toggleSidebar);
     header.insertBefore(btn,header.firstChild);
   }
   function ensureAllMobileNavItems(){
     var sidebar=document.getElementById('sidebar');if(!sidebar)return;
-    // Ne filtre aucune destination : le mobile doit exposer le même périmètre fonctionnel que desktop/iPad.
     sidebar.querySelectorAll('.sidebar-section,.nav-item,.sidebar-bottom').forEach(function(el){el.style.removeProperty('display');el.style.removeProperty('visibility');});
     sidebar.querySelectorAll('.nav-item').forEach(function(el){el.setAttribute('role','button');el.setAttribute('tabindex','0');if(!el.dataset.mobileKey){el.dataset.mobileKey='1';el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}});el.addEventListener('click',function(){setTimeout(closeSidebar,80);});}});
   }
