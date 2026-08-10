@@ -19,27 +19,19 @@
     var finalLink=document.createElement('link');finalLink.id='tc-mobile-polish-v2';finalLink.rel='stylesheet';finalLink.href='app/css/mobile-polish-v2.css?v=3';document.head.appendChild(finalLink);
   }
   function loadMobileNavigation(){
-    if(typeof window.initSidebar==='function'){window.initSidebar();return;}
-    if(document.getElementById('tc-sidebar-js'))return;
-    var s=document.createElement('script');s.id='tc-sidebar-js';s.src='app/js/components/sidebar.js?v=3';s.onload=function(){window.initSidebar?.();};document.body.appendChild(s);
+    // Single owner: components/sidebar.js is already loaded by app.html.
+    // Never inject or initialize a second mobile navigation implementation.
+    if(typeof window.initSidebar==='function')window.initSidebar();
   }
 
   function ensureTechnicalReady(){
     if(!Array.isArray(window.allCours)||window.allCours.length===0){console.warn('[MAIN] Analyse technique en attente des cours.');return false;}
     if(typeof window.atInit!=='function'){console.warn('[MAIN] atInit indisponible.');return false;}
     try{
-      if(!technicalInitialized){
-        var ok=window.atInit();
-        if(ok===false)return false;
-        technicalInitialized=true;
-        console.log('[MAIN] Analyse technique initialisée avec '+window.allCours.length+' cours');
-      }else if(typeof window.atRefreshUI==='function')window.atRefreshUI();
+      if(!technicalInitialized){var ok=window.atInit();if(ok===false)return false;technicalInitialized=true;console.log('[MAIN] Analyse technique initialisée avec '+window.allCours.length+' cours');}
+      else if(typeof window.atRefreshUI==='function')window.atRefreshUI();
       return true;
-    }catch(err){
-      technicalInitialized=false;console.error('[MAIN] Erreur initialisation analyse technique:',err);
-      if(typeof window.toast==='function')window.toast('Analyse technique indisponible : '+(err.message||err),'error');
-      return false;
-    }
+    }catch(err){technicalInitialized=false;console.error('[MAIN] Erreur initialisation analyse technique:',err);if(typeof window.toast==='function')window.toast('Analyse technique indisponible : '+(err.message||err),'error');return false;}
   }
 
   async function initApp(){
@@ -59,13 +51,7 @@
 
   async function loadAll(){
     await Promise.allSettled([
-      fetchOrEmpty('/marche?type=cours',function(d){
-        window.allCours=Array.isArray(d)?d:[];
-        if(typeof window.populateTickerSelect==='function')window.populateTickerSelect();
-        if(typeof window.populateTickerSelects==='function')window.populateTickerSelects();
-        if(parseHashFromUrl()==='analyse-technique')ensureTechnicalReady();
-        renderCurrentView();ensureFundamentalReady();
-      },[]),
+      fetchOrEmpty('/marche?type=cours',function(d){window.allCours=Array.isArray(d)?d:[];if(typeof window.populateTickerSelect==='function')window.populateTickerSelect();if(typeof window.populateTickerSelects==='function')window.populateTickerSelects();if(parseHashFromUrl()==='analyse-technique')ensureTechnicalReady();renderCurrentView();ensureFundamentalReady();},[]),
       fetchOrEmpty('/marche?type=indices',function(d){window.allIndices=Array.isArray(d)?d:[];renderCurrentView();},[])
     ]);
     await Promise.allSettled([
@@ -101,9 +87,6 @@
     var h=location.hash;if(h.indexOf('#fiche=')===0)return'fiche';if(h.indexOf('#analyse=')===0)return'analyse-detail';
     var map={'#titres':'titres','#marche':'marche','#boc':'boc','#analyses':'analyses','#analyse-detail':'analyse-detail','#analyse-technique':'analyse-technique','#analyse-fondamentale':'analyse-fondamentale','#screener':'screener','#portefeuille':'portefeuille','#alertes':'alertes','#financials':'financials','#financials-detail':'financials-detail','#publications':'publications','#formation':'formation'};return map[h]||'overview';
   }
-  function setupGlobalEvents(){
-    document.addEventListener('click',function(e){if(!e.target.closest('.nav-dropdown')&&!e.target.closest('.topnav-logo')){if(typeof closeDropdowns==='function')closeDropdowns();}});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(typeof closeDropdowns==='function')closeDropdowns();if(typeof closeSidebar==='function')closeSidebar();}});
-  }
+  function setupGlobalEvents(){document.addEventListener('click',function(e){if(!e.target.closest('.nav-dropdown')&&!e.target.closest('.topnav-logo')){if(typeof closeDropdowns==='function')closeDropdowns();}});document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(typeof closeDropdowns==='function')closeDropdowns();if(typeof closeSidebar==='function')closeSidebar();}});}
   window.loadAll=loadAll;window.initApp=initApp;
 })();
