@@ -15,7 +15,7 @@
 <body>
 <div class="top"><a href="app.html" class="logo">THE <span>·</span> CAPITAL</a><a href="app.html" class="sub">← Retour à l'application</a><div class="status"><span class="dot"></span><span id="status">Synchronisation…</span></div></div>
 <main class="wrap">
-<div class="head"><div><div class="eyebrow">Gestion & monitoring</div><h1>Suivi des investissements</h1><div class="sub">Vos sociétés sélectionnées, leurs cours, variations et historiques, réunis dans un seul écran.</div></div><div class="actions"><button class="btn" id="refresh">↻ Actualiser</button><a class="btn primary" href="app.html">Voir le marché</a></div></div>
+<div class="head"><div><div class="eyebrow">Gestion & monitoring</div><h1>Suivi des investissements</h1><div class="sub">Vos sociétés sélectionnées, leurs derniers cours disponibles, variations et historiques, réunis dans un seul écran.</div></div><div class="actions"><button class="btn" id="refresh">↻ Actualiser</button><a class="btn primary" href="app.html">Voir le marché</a></div></div>
 <div id="error" class="error"></div>
 <section class="kpis"><div class="kpi"><div class="label">Titres suivis</div><div class="value" id="k-count">—</div></div><div class="kpi"><div class="label">Hausses</div><div class="value up" id="k-up">—</div></div><div class="kpi"><div class="label">Baisses</div><div class="value down" id="k-down">—</div></div><div class="kpi"><div class="label">Dernière synchro</div><div class="value" style="font-size:15px" id="k-sync">—</div></div></section>
 <div class="grid">
@@ -26,7 +26,7 @@
 <aside>
 <div class="card"><div class="card-head"><div class="card-title">Ajouter un titre</div></div><div class="card-body"><div class="add"><input id="tickerInput" placeholder="Ticker, ex. SNTS" autocomplete="off"><button class="btn primary" id="addBtn">Ajouter</button></div><div class="suggestions" id="suggestions"></div></div></div>
 <div class="card"><div class="card-head"><div class="card-title">Alertes actives</div></div><div class="card-body" id="alerts"><div class="empty">Chargement…</div></div></div>
-<div class="card"><div class="card-head"><div class="card-title">Ce que vous surveillez</div></div><div class="card-body"><div class="small">Le suivi est personnel à votre compte. Les titres ajoutés ici alimentent votre watchlist existante. Les prix sont rechargés automatiquement toutes les 60 secondes.</div><div class="source">Source applicative : données BRVM disponibles dans The Capital.</div></div></div>
+<div class="card"><div class="card-head"><div class="card-title">Ce que vous surveillez</div></div><div class="card-body"><div class="small">Le suivi est personnel à votre compte. Les titres ajoutés ici alimentent votre watchlist existante. L'écran se resynchronise automatiquement toutes les 60 secondes avec les dernières données disponibles dans The Capital.</div><div class="source">Source applicative : données BRVM disponibles dans The Capital.</div></div></div>
 </aside>
 </div>
 </main>
@@ -40,10 +40,10 @@ var raw=localStorage.getItem(SK),session=null;try{session=JSON.parse(raw||'null'
 if(!session||!session.access_token||!valid(session.access_token)){location.replace('login.html?redirect='+encodeURIComponent('app/suivi.html'));return}
 var token=session.access_token,headers={Authorization:'Bearer '+token,'Content-Type':'application/json'};
 var state={watch:[],cours:[],companies:[],alerts:[],chart:null};
-function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#039;'})[c]})}
+function esc(v){return String(v==null?'':v).replace(/[&<>\\\"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','\\\"':'&quot;',"'":'&#039;'})[c]})}
 function num(v){var n=Number(v);return Number.isFinite(n)?n:null}
 function price(r){return r?num(r.cours_cloture??r.cours??r.price):null}
-function variation(r){return r?num(r.variation??r.variation_pct):null}
+function variation(r){return r?num(r.variation_pct??r.variation):null}
 function fmt(n){return n==null?'—':n.toLocaleString('fr-FR',{maximumFractionDigits:2})}
 async function get(url){var r=await fetch(url,{headers:headers,cache:'no-store'});var d=await r.json();if(!r.ok)throw new Error(d.error||'Erreur réseau');return d}
 async function send(url,method,body){var r=await fetch(url,{method:method,headers:headers,body:JSON.stringify(body||{})});var d=await r.json();if(!r.ok)throw new Error(d.error||'Erreur serveur');return d}
