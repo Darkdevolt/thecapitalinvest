@@ -1,7 +1,7 @@
 const SK      = 'tc_session';
 const SB_URL  = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_REST = SB_URL + '/rest/v1';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJvdHNpd2lsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LU';
 
 const INDICES_BRV = ['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT','BRVM FINANCE','BRVM DISTRIBUTION','BRVM INDUSTRIE','BRVM AGRICULTURE','BRVM SERVICES PUBLICS','BRVM AUTRES SECTEURS'];
 
@@ -69,3 +69,53 @@ const TEMPLATE_CONFIG = {
         required: ['ticker','nom_actionnaire','pourcentage'], table: 'actionnaires', uniqueKey: null
     }
 };
+
+/* ═══════════════════════════════════════════════════════════════
+   ADMIN UX HARDENING
+   Objectif : empêcher les champs de se chevaucher, stabiliser les
+   grilles de formulaires et améliorer l'utilisation sur mobile/tablette.
+   Aucun changement de données ni de logique métier.
+═══════════════════════════════════════════════════════════════ */
+(function adminUXHardening(){
+    function inject(){
+        if(document.getElementById('tc-admin-ux-hardening')) return;
+        var style=document.createElement('style');
+        style.id='tc-admin-ux-hardening';
+        style.textContent=`
+            .form-grid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px 14px;align-items:start}
+            .form-grid .field{min-width:0;width:100%}
+            .form-grid .field label{line-height:1.35;min-height:28px;display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px}
+            .form-grid .field input,.form-grid .field select,.form-grid .field textarea{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
+            .form-grid .field input[type=number]{font-family:var(--mono)}
+            .actions-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 18px 18px;min-height:42px}
+            .actions-row .msg{min-width:0;flex:1 1 220px;line-height:1.4}
+            .card-header{flex-wrap:wrap}
+            .card-header>div:last-child{min-width:0;max-width:100%}
+            .tw{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+            .tw table{min-width:max-content}
+            .info-box{line-height:1.55}
+            .sub-tabs{align-items:center}
+            .admin-nav{scrollbar-width:thin}
+            @media(max-width:900px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main{padding-left:16px;padding-right:16px}}
+            @media(max-width:600px){.form-grid{grid-template-columns:1fr;gap:12px}.form-grid .field label{min-height:0}.actions-row{padding-left:14px;padding-right:14px}.btn{max-width:100%}.topbar{padding-left:14px;padding-right:14px}.topbar-user{display:none}}
+        `;
+        document.head.appendChild(style);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',inject); else inject();
+})();
+
+/* Raccourci explicite vers le nouveau centre de suivi investisseur. */
+(function addTrackingShortcut(){
+    function add(){
+        var nav=document.querySelector('.admin-nav');
+        if(!nav||nav.querySelector('[data-tc-suivi]')) return;
+        var b=document.createElement('button');
+        b.className='admin-tab';
+        b.dataset.tcSuivi='1';
+        b.textContent='Suivi investisseur';
+        b.title='Ouvrir le suivi des titres sélectionnés';
+        b.onclick=function(){window.location.href='app/suivi.html'};
+        nav.appendChild(b);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',add); else add();
+})();
