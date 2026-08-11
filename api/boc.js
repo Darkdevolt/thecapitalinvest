@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from './lib/supabase.js';
+import { supabase, supabaseAdmin } from '../lib/supabase.js';
 
 const db = supabaseAdmin || supabase;
 
@@ -11,7 +11,6 @@ function json(res, status, payload) {
 export default async function handler(req, res) {
   if (req.method !== 'GET') return json(res, 405, { success: false, error: 'Method Not Allowed' });
   if (!db) return json(res, 503, { success: false, error: 'Supabase non configuré' });
-
   try {
     const { data, error } = await db.from('boc').select('*').order('date_seance', { ascending: false }).limit(500);
     if (error) throw error;
