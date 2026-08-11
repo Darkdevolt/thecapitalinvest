@@ -115,9 +115,40 @@
   }
 
   function ensureSuiviNavigation() {
-    if (typeof window.ensureSuiviNavigation !== 'function') return;
-    try { window.ensureSuiviNavigation(); }
-    catch (e) { console.warn('[INIT] suivi navigation:', e); }
+    var href = '/app/suivi.html';
+    var sidebar = document.getElementById('sidebar');
+    if (sidebar && !sidebar.querySelector('[data-tc-suivi]')) {
+      var sections = sidebar.querySelectorAll('.sidebar-section');
+      var gestionSection = null;
+      sections.forEach(function (section) {
+        if (String(section.textContent || '').trim() === 'Gestion') gestionSection = section;
+      });
+      if (gestionSection) {
+        var item = document.createElement('a');
+        item.setAttribute('data-tc-suivi', '1');
+        item.href = href;
+        item.target = '_self';
+        item.className = 'nav-item';
+        item.style.textDecoration = 'none';
+        item.innerHTML = '<span class="icon">☆</span> Suivi';
+        gestionSection.insertAdjacentElement('afterend', item);
+      }
+    }
+
+    var menu = document.getElementById('menu-dd-gestion');
+    if (menu && !menu.querySelector('[data-tc-suivi]')) {
+      var separator = document.createElement('div');
+      separator.className = 'nav-dropdown-separator';
+      var desktopItem = document.createElement('a');
+      desktopItem.setAttribute('data-tc-suivi', '1');
+      desktopItem.href = href;
+      desktopItem.target = '_self';
+      desktopItem.className = 'nav-dropdown-item';
+      desktopItem.style.textDecoration = 'none';
+      desktopItem.innerHTML = '<span class="icon">☆</span><div><div>Suivi</div><div class="item-desc">Valeurs surveillées & monitoring</div></div>';
+      menu.appendChild(separator);
+      menu.appendChild(desktopItem);
+    }
   }
 
   function init() {
@@ -139,8 +170,8 @@
       try { window.initSidebar(); } catch (e) { console.warn('[INIT] sidebar:', e); }
     }
 
-    // Le suivi doit être réinjecté APRÈS l'initialisation de la sidebar,
-    // sinon le rendu mobile peut remplacer l'élément ajouté trop tôt.
+    // IMPORTANT : injecter le Suivi après la sidebar pour qu'il reste visible
+    // sur mobile lorsque le menu hamburger reconstruit/actualise la navigation.
     ensureSuiviNavigation();
     setTimeout(ensureSuiviNavigation, 0);
 
