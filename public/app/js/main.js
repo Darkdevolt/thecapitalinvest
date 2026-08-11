@@ -30,6 +30,45 @@
     if(typeof window.initSidebar==='function')window.initSidebar();
   }
 
+  // La page de suivi existe déjà et utilise le même mécanisme de session.
+  // On l'intègre explicitement dans les deux niveaux de navigation de l'app
+  // sans dupliquer la logique métier du suivi.
+  function ensureSuiviNavigation(){
+    var href='suivi.html';
+
+    var sidebar=document.getElementById('sidebar');
+    if(sidebar&&!sidebar.querySelector('[data-tc-suivi]')){
+      var sections=sidebar.querySelectorAll('.sidebar-section');
+      var gestionSection=null;
+      sections.forEach(function(s){if(String(s.textContent||'').trim()==='Gestion')gestionSection=s;});
+      if(gestionSection){
+        var item=document.createElement('a');
+        item.setAttribute('data-tc-suivi','1');
+        item.href=href;
+        item.target='_self';
+        item.className='nav-item';
+        item.style.textDecoration='none';
+        item.innerHTML='<span class="icon">☆</span> Suivi';
+        gestionSection.insertAdjacentElement('afterend',item);
+      }
+    }
+
+    var menu=document.getElementById('menu-dd-gestion');
+    if(menu&&!menu.querySelector('[data-tc-suivi]')){
+      var separator=document.createElement('div');
+      separator.className='nav-dropdown-separator';
+      var item=document.createElement('a');
+      item.setAttribute('data-tc-suivi','1');
+      item.href=href;
+      item.target='_self';
+      item.className='nav-dropdown-item';
+      item.style.textDecoration='none';
+      item.innerHTML='<span class="icon">☆</span><div><div>Suivi</div><div class="item-desc">Valeurs surveillées & monitoring</div></div>';
+      menu.appendChild(separator);
+      menu.appendChild(item);
+    }
+  }
+
   function ensureTechnicalReady(){
     if(!Array.isArray(window.allCours)||window.allCours.length===0){console.warn('[MAIN] Analyse technique en attente des cours.');return false;}
     if(typeof window.atInit!=='function'){console.warn('[MAIN] atInit indisponible.');return false;}
@@ -41,7 +80,7 @@
   }
 
   async function initApp(){
-    console.log('[MAIN] Initialisation...');loadMobilePolish();loadFinancialPolish();loadMobileNavigation();
+    console.log('[MAIN] Initialisation...');loadMobilePolish();loadFinancialPolish();loadMobileNavigation();ensureSuiviNavigation();
     if(!document.getElementById('toastContainer')){var tc=document.createElement('div');tc.id='toastContainer';tc.style.cssText='position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';document.body.appendChild(tc);}
     loadAll().catch(function(err){console.error('[MAIN] Erreur loadAll:',err);if(typeof toast==='function')toast('Erreur de chargement des données','error');});
     window.addEventListener('hashchange',function(){if(typeof parseHash==='function')parseHash();if(parseHashFromUrl()==='analyse-technique')ensureTechnicalReady();scheduleFundamentalRender(true);ensureFundamentalReady();});
