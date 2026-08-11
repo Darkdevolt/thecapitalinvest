@@ -24,9 +24,9 @@
   }
   function loadMobileNavigation(){if(typeof window.initSidebar==='function')window.initSidebar();}
 
-  // Desk Trading est le nom de l'espace. Le Suivi historique reste la source unique des titres suivis.
+  // Un seul espace pour le suivi et le travail de décision.
   function ensureDeskTradingNavigation(){
-    var href='desk-trading.html';
+    var href='desk-workspace.html';
     var sidebar=document.getElementById('sidebar');
     if(sidebar&&!sidebar.querySelector('[data-tc-desk]')){
       var sections=sidebar.querySelectorAll('.sidebar-section');
@@ -43,9 +43,32 @@
     if(menu&&!menu.querySelector('[data-tc-desk]')){
       var separator=document.createElement('div');separator.className='nav-dropdown-separator';
       var item=document.createElement('a');item.setAttribute('data-tc-desk','1');item.href=href;item.target='_self';item.className='nav-dropdown-item';item.style.textDecoration='none';
-      item.innerHTML='<span class="icon">▣</span><div><div>Desk Trading</div><div class="item-desc">Suivi, décisions, simulations et positions</div></div>';
+      item.innerHTML='<span class="icon">▣</span><div><div>Desk Trading</div><div class="item-desc">Suivis, décisions, simulations et positions</div></div>';
       menu.appendChild(separator);menu.appendChild(item);
     }
+  }
+
+  function ensureGuide(){
+    if(document.getElementById('tc-guide-btn'))return;
+    var style=document.createElement('style');style.id='tc-guide-style';style.textContent='.tc-guide-btn{border:1px solid var(--border2);background:rgba(184,150,78,.08);color:var(--gold);border-radius:7px;padding:7px 10px;font-size:11px;cursor:pointer;white-space:nowrap}.tc-guide-btn:hover{border-color:var(--gold);background:rgba(184,150,78,.14)}.tc-guide-overlay{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:10000;display:none;align-items:center;justify-content:center;padding:18px}.tc-guide-overlay.open{display:flex}.tc-guide-box{width:min(760px,100%);max-height:88vh;overflow:auto;background:var(--card,#181410);border:1px solid var(--border,rgba(184,150,78,.18));border-radius:12px;padding:20px;color:var(--cream,#f5f0e8)}.tc-guide-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.tc-guide-title{font:700 22px var(--serif,serif)}.tc-guide-close{border:0;background:none;color:var(--muted);font-size:24px;cursor:pointer}.tc-guide-search{width:100%;margin:14px 0;padding:11px;background:var(--surface,#13110c);border:1px solid var(--border);border-radius:7px;color:var(--cream);outline:0}.tc-guide-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.tc-guide-item{border:1px solid rgba(184,150,78,.12);border-radius:8px;background:var(--surface,#13110c);padding:12px}.tc-guide-item b{display:block;font-size:12px;margin-bottom:5px}.tc-guide-item span{display:block;font-size:11px;color:var(--muted);line-height:1.5}.tc-guide-link{margin-top:9px;border:1px solid var(--border);background:none;color:var(--gold);border-radius:6px;padding:6px 8px;font-size:10px;cursor:pointer}@media(max-width:650px){.tc-guide-grid{grid-template-columns:1fr}}';document.head.appendChild(style);
+    var right=document.querySelector('.topnav-right');if(!right)return;
+    var btn=document.createElement('button');btn.id='tc-guide-btn';btn.className='tc-guide-btn';btn.type='button';btn.textContent='ⓘ Guide';right.insertBefore(btn,right.firstChild);
+    var overlay=document.createElement('div');overlay.id='tc-guide-overlay';overlay.className='tc-guide-overlay';overlay.innerHTML='<div class="tc-guide-box" role="dialog" aria-modal="true" aria-labelledby="tc-guide-title"><div class="tc-guide-head"><div class="tc-guide-title" id="tc-guide-title">Guide The Capital</div><button class="tc-guide-close" id="tc-guide-close" aria-label="Fermer">×</button></div><input class="tc-guide-search" id="tc-guide-search" placeholder="Ex. je veux voir mes dividendes…" autocomplete="off"><div class="tc-guide-grid" id="tc-guide-grid"></div></div></div>';document.body.appendChild(overlay);
+    var items=[
+      ['Surveiller une valeur','Ajoutez et consultez vos titres favoris, variations, liquidité et notes.','Ouvrir Suivis','desk-workspace.html#suivi'],
+      ['Analyser une décision','Construisez une idée avec sens, prix, objectif, stop, horizon et justification.','Ouvrir Idées','desk-workspace.html#ideas'],
+      ['Tester un scénario','Calculez capital engagé, gain, perte, rendement et ratio risque/rendement.','Ouvrir Simulations','desk-workspace.html#sim'],
+      ['Suivre mes positions','Retrouvez vos positions simulées et leur P&L.','Ouvrir Positions','desk-workspace.html#positions'],
+      ['Comprendre les marchés','Consultez les cours, indices, BOC et titres BRVM.','Ouvrir Marché','app.html#marche'],
+      ['Analyser une entreprise','Utilisez l’analyse fondamentale pour les ratios, historiques et valorisations.','Ouvrir Analyse fondamentale','app.html#analyse-fondamentale'],
+      ['Voir les publications','Retrouvez le calendrier et les publications disponibles.','Ouvrir Calendrier','app.html#publications'],
+      ['Apprendre','Accédez à la formation, au lexique et aux guides.','Ouvrir Formation','app.html#formation'],
+      ['Pourquoi Suivis + Trading Desk ?','Suivis = ce que je surveille. Trading Desk = ce que je fais avec ce que je surveille. Ils sont maintenant réunis dans un même workspace pour éviter les ruptures de navigation.','Ouvrir le Desk','desk-workspace.html']
+    ];
+    var grid=document.getElementById('tc-guide-grid'),search=document.getElementById('tc-guide-search');
+    function renderGuide(filter){var f=String(filter||'').toLowerCase();grid.innerHTML=items.filter(function(x){return(x[0]+' '+x[1]).toLowerCase().indexOf(f)>-1;}).map(function(x){return '<div class="tc-guide-item"><b>'+x[0]+'</b><span>'+x[1]+'</span><button class="tc-guide-link" data-href="'+x[3]+'">'+x[2]+' →</button></div>';}).join('')||'<div class="tc-guide-item"><span>Aucun résultat. Essayez « surveiller », « simulation », « position » ou « analyse ».</span></div>';grid.querySelectorAll('[data-href]').forEach(function(a){a.addEventListener('click',function(){var h=a.getAttribute('data-href');if(h.indexOf('desk-workspace.html')===0){location.href=h;return}if(h.indexOf('app.html#')===0){var hash=h.split('#')[1];if(typeof nav==='function')nav(hash);else location.hash=hash;closeGuide();}});});}
+    function openGuide(){overlay.classList.add('open');search.value='';renderGuide('');setTimeout(function(){search.focus();},30)}function closeGuide(){overlay.classList.remove('open')}
+    btn.addEventListener('click',openGuide);document.getElementById('tc-guide-close').addEventListener('click',closeGuide);overlay.addEventListener('click',function(e){if(e.target===overlay)closeGuide()});search.addEventListener('input',function(){renderGuide(search.value)});document.addEventListener('keydown',function(e){if(e.key==='Escape')closeGuide()});renderGuide('');
   }
 
   function ensureTechnicalReady(){
@@ -55,7 +78,7 @@
     catch(err){technicalInitialized=false;console.error('[MAIN] Erreur initialisation analyse technique:',err);if(typeof window.toast==='function')window.toast('Analyse technique indisponible : '+(err.message||err),'error');return false;}
   }
   async function initApp(){
-    console.log('[MAIN] Initialisation...');loadMobilePolish();loadFinancialPolish();loadMobileNavigation();ensureDeskTradingNavigation();
+    console.log('[MAIN] Initialisation...');loadMobilePolish();loadFinancialPolish();loadMobileNavigation();ensureDeskTradingNavigation();ensureGuide();
     if(!document.getElementById('toastContainer')){var tc=document.createElement('div');tc.id='toastContainer';tc.style.cssText='position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:8px;';document.body.appendChild(tc);}
     loadAll().catch(function(err){console.error('[MAIN] Erreur loadAll:',err);if(typeof toast==='function')toast('Erreur de chargement des données','error');});
     window.addEventListener('hashchange',function(){if(typeof parseHash==='function')parseHash();if(parseHashFromUrl()==='analyse-technique')ensureTechnicalReady();scheduleFundamentalRender(true);ensureFundamentalReady();});
