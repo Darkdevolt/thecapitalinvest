@@ -24,10 +24,9 @@
   }
   function loadMobileNavigation(){if(typeof window.initSidebar==='function')window.initSidebar();}
 
-  // Desk Trading est le nom de l'espace. La fonction de suivi existante reste
-  // la source unique des titres suivis : aucune nouvelle watchlist n'est créée.
+  // Desk Trading est le nom de l'espace. Le Suivi historique reste la source unique des titres suivis.
   function ensureDeskTradingNavigation(){
-    var href='suivi.html';
+    var href='desk-trading.html';
     var sidebar=document.getElementById('sidebar');
     if(sidebar&&!sidebar.querySelector('[data-tc-desk]')){
       var sections=sidebar.querySelectorAll('.sidebar-section');
@@ -44,7 +43,7 @@
     if(menu&&!menu.querySelector('[data-tc-desk]')){
       var separator=document.createElement('div');separator.className='nav-dropdown-separator';
       var item=document.createElement('a');item.setAttribute('data-tc-desk','1');item.href=href;item.target='_self';item.className='nav-dropdown-item';item.style.textDecoration='none';
-      item.innerHTML='<span class="icon">▣</span><div><div>Desk Trading</div><div class="item-desc">Suivi, décisions, simulations & positions</div></div>';
+      item.innerHTML='<span class="icon">▣</span><div><div>Desk Trading</div><div class="item-desc">Suivi, décisions, simulations et positions</div></div>';
       menu.appendChild(separator);menu.appendChild(item);
     }
   }
