@@ -26,6 +26,10 @@
     {
       "source": "/app.html",
       "destination": "/app/app.html"
+    },
+    {
+      "source": "/api/signup-otp",
+      "destination": "https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2"
     }
   ],
   "headers": [
@@ -35,7 +39,8 @@
         {"key": "Access-Control-Allow-Origin", "value": "*"},
         {"key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS"},
         {"key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-Cron-Secret"},
-        {"key": "Access-Control-Max-Age", "value": "86400"}
+        {"key": "Access-Control-Max-Age", "value": "86400"},
+        {"key": "Cache-Control", "value": "no-store"}
       ]
     }
   ]
