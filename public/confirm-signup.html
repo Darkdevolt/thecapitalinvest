@@ -1,47 +1,42 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Confirmation — The Capital</title>
-<meta name="robots" content="noindex,nofollow">
-<style>body{margin:0;min-height:100vh;background:#0A0804;color:#F5F0E8;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center}.card{width:min(420px,calc(100% - 40px));box-sizing:border-box;background:#181410;border:1px solid rgba(184,150,78,.22);border-radius:10px;padding:36px;text-align:center}.logo{width:220px;max-width:80%;margin-bottom:28px}.title{font-family:Georgia,serif;font-size:26px}.gold{color:#B8964E}.text{color:rgba(245,240,232,.62);font-size:14px;line-height:1.6;margin:14px 0 24px}.btn{display:inline-block;padding:12px 20px;background:#B8964E;color:#0A0804;text-decoration:none;border-radius:4px;font-size:13px;font-weight:600}.status{font-size:13px;margin-top:16px;min-height:20px}.help{display:none;margin-top:18px;padding:13px;border:1px solid rgba(184,150,78,.2);border-radius:5px;color:rgba(245,240,232,.65);font-size:12px;line-height:1.6}.help.show{display:block}</style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Vérification — The Capital</title><meta name="robots" content="noindex,nofollow">
+<style>body{margin:0;min-height:100vh;background:#0A0804;color:#F5F0E8;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center}.card{width:min(430px,calc(100% - 40px));box-sizing:border-box;background:#181410;border:1px solid rgba(184,150,78,.22);border-radius:10px;padding:36px;text-align:center}.logo{width:220px;max-width:80%;margin-bottom:28px}.title{font-family:Georgia,serif;font-size:26px}.gold{color:#B8964E}.text{color:rgba(245,240,232,.65);font-size:14px;line-height:1.6;margin:14px 0 24px}.field{width:100%;box-sizing:border-box;padding:14px;background:#0F0D09;border:1px solid rgba(184,150,78,.25);border-radius:5px;color:#F5F0E8;text-align:center;font-size:25px;letter-spacing:8px;outline:none}.btn{width:100%;box-sizing:border-box;padding:13px 20px;background:#B8964E;color:#0A0804;border:0;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;margin-top:14px}.btn:disabled{opacity:.5;cursor:default}.secondary{background:transparent;color:#B8964E;border:1px solid rgba(184,150,78,.3)}.status{font-size:13px;margin-top:16px;min-height:20px;line-height:1.5}.ok{color:#4ADE80}.err{color:#F87171}.help{margin-top:18px;padding:13px;border:1px solid rgba(184,150,78,.2);border-radius:5px;color:rgba(245,240,232,.65);font-size:12px;line-height:1.6}.email{color:#F5F0E8;word-break:break-word}.small{margin-top:12px;color:rgba(245,240,232,.42);font-size:11px}</style>
 </head>
 <body>
-<div class="card">
-<img class="logo" src="/assets/the-capital-logo.png" alt="The Capital">
-<div class="title">Vérification de votre <span class="gold">email</span></div>
-<div id="text" class="text">Votre adresse email est en cours de vérification. Vous serez redirigé vers votre espace dès que la confirmation sera terminée.</div>
-<a id="login" class="btn" href="login.html">Aller à la connexion</a>
-<div id="status" class="status"></div>
-<div id="help" class="help">Si vous n’avez pas reçu l’email de confirmation, vérifiez votre dossier <strong>Spam / Courrier indésirable</strong> ainsi que les onglets Promotions ou Notifications.</div>
-</div>
+<div class="card"><img class="logo" src="/assets/the-capital-logo.png" alt="The Capital"><div class="title">Vérifiez votre <span class="gold">email</span></div><div id="text" class="text">Saisissez le code à 6 chiffres envoyé à votre adresse email.</div><div id="emailLabel" class="email"></div><div style="margin-top:20px"><input id="otp" class="field" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]*" placeholder="••••••"></div><button id="verify" class="btn" onclick="verifyCode()">Confirmer mon email</button><button id="resend" class="btn secondary" onclick="resendCode()">Renvoyer un code</button><div id="status" class="status"></div><div class="help"><strong>Vous ne trouvez pas l'email ?</strong><br>Vérifiez aussi votre dossier <strong>Spam / Courrier indésirable</strong> et vos onglets Promotions ou Notifications.</div><div class="small">Le code est à usage unique. Si vous demandez un nouveau code, utilisez le dernier reçu.</div></div>
 <script>
-(function(){
- const status=document.getElementById('status');
- const text=document.getElementById('text');
- const help=document.getElementById('help');
- const hash=window.location.hash||'';
- const params=new URLSearchParams(hash.replace(/^#/,'').replace(/^\?/,'')||window.location.search);
- const error=params.get('error_description')||params.get('error');
- if(error){
-   text.textContent='La confirmation n’a pas pu être finalisée. Le lien peut avoir déjà été utilisé ou avoir expiré.';
-   status.textContent=decodeURIComponent(error.replace(/\+/g,' '));
-   help.classList.add('show');
-   return;
- }
- if(params.get('access_token')){
-   try{
-     const session={access_token:params.get('access_token'),refresh_token:params.get('refresh_token')||'',expires_in:Number(params.get('expires_in')||3600),token_type:params.get('token_type')||'bearer',user:null};
-     localStorage.setItem('tc_session',JSON.stringify(session));
-   }catch(e){}
-   text.textContent='Email confirmé. Votre compte est maintenant activé.';
-   status.textContent='Redirection vers votre espace…';
-   setTimeout(function(){location.href='app.html';},900);
- } else {
-   status.textContent='Confirmation terminée. Vous pouvez vous connecter.';
- }
-})();
+const SB_URL="https://otsiwiwlnowxeolbbgvm.supabase.co";
+const SB_KEY="sb_publishable_MhaI5b-kMmb5liIMOJ4P3Q_xGTsJAFJ";
+const params=new URLSearchParams(location.search);
+const email=(params.get("email")||localStorage.getItem("tc_pending_email")||"").trim().toLowerCase();
+const statusEl=document.getElementById("status"),otpEl=document.getElementById("otp"),verifyEl=document.getElementById("verify"),resendEl=document.getElementById("resend");
+if(email){localStorage.setItem("tc_pending_email",email);document.getElementById("emailLabel").textContent=email;}
+function status(msg,type=""){statusEl.textContent=msg;statusEl.className="status "+type;}
+async function verifyCode(){
+ const token=otpEl.value.replace(/\D/g,"");
+ if(!email)return status("Adresse email manquante. Recommencez l'inscription.","err");
+ if(!/^\d{6}$/.test(token))return status("Entrez le code à 6 chiffres reçu par email.","err");
+ verifyEl.disabled=true;status("Vérification en cours…");
+ try{
+  const r=await fetch(SB_URL+"/auth/v1/verify",{method:"POST",headers:{"Content-Type":"application/json","apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY},body:JSON.stringify({type:"email",token,email})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){status(d.error_description||d.msg||d.message||"Code invalide ou expiré. Demandez un nouveau code.","err");verifyEl.disabled=false;return;}
+  if(d.access_token){localStorage.setItem("tc_session",JSON.stringify(d));localStorage.removeItem("tc_pending_email");status("Email confirmé. Ouverture de votre espace…","ok");setTimeout(()=>location.href="app.html",700);return;}
+  localStorage.removeItem("tc_pending_email");status("Email confirmé. Vous pouvez maintenant vous connecter.","ok");setTimeout(()=>location.href="login.html",1000);
+ }catch(e){status("Erreur réseau. Réessayez dans quelques instants.","err");verifyEl.disabled=false;}
+}
+async function resendCode(){
+ if(!email)return status("Adresse email manquante. Recommencez l'inscription.","err");
+ resendEl.disabled=true;status("Envoi d'un nouveau code…");
+ try{
+  const r=await fetch(SB_URL+"/auth/v1/resend",{method:"POST",headers:{"Content-Type":"application/json","apikey":SB_KEY,"Authorization":"Bearer "+SB_KEY},body:JSON.stringify({type:"signup",email})});
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){status(d.error_description||d.msg||d.message||"Impossible de renvoyer le code pour le moment.","err");resendEl.disabled=false;return;}
+  status("Nouveau code envoyé. Vérifiez aussi vos spams.","ok");setTimeout(()=>resendEl.disabled=false,30000);
+ }catch(e){status("Erreur réseau. Réessayez dans quelques instants.","err");resendEl.disabled=false;}
+}
+otpEl.addEventListener("input",()=>{otpEl.value=otpEl.value.replace(/\D/g,"").slice(0,6);if(otpEl.value.length===6)verifyCode();});
 </script>
-</body>
-</html>
+</body></html>
