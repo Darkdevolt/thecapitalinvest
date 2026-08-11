@@ -1,0 +1,37 @@
+/* THE CAPITAL ADMIN — UX / integrity layer. Loaded only by admin.html. */
+(function(){
+  'use strict';
+  var initialized=false;
+  var panelNames={dashboard:'Dashboard',cours:'Cours',historique:'Historique',entreprises:'Entreprises',financials:'Financials',dividendes:'Dividendes',analyses:'Analyses',utilisateurs:'Utilisateurs',scraper:'Scraper',import:'Import Excel',diagnostic:'Diagnostic',indices:'Indices'};
+  function q(s){return document.querySelector(s)}
+  function qa(s){return Array.prototype.slice.call(document.querySelectorAll(s))}
+  function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function addStyle(){if(q('#tc-admin-experience-style'))return;var s=document.createElement('style');s.id='tc-admin-experience-style';s.textContent=''+
+  '.tc-health{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:0 0 16px}.tc-health-card{background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012));border:1px solid var(--border);border-radius:8px;padding:13px 14px;min-width:0}.tc-health-card b{display:block;font-family:var(--mono);font-size:18px;color:var(--cream);margin-bottom:4px}.tc-health-card span{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}.tc-health-card.good b{color:#8fd3a8}.tc-health-card.warn b{color:#e5bd6a}.tc-health-card.bad b{color:#e58a8a}.tc-section-tools{display:flex;gap:8px;align-items:center;margin-left:auto}.tc-section-search{min-width:170px!important}.tc-action-busy{opacity:.55!important;pointer-events:none!important}.tc-broken-action{outline:1px solid #b85c5c!important}.tc-required:invalid{border-color:#b85c5c!important}.tc-help{font-size:10px;color:var(--muted);margin-top:4px}.tc-empty{padding:30px!important;text-align:center;color:var(--muted)}@media(max-width:800px){.tc-health{grid-template-columns:repeat(2,minmax(0,1fr))}.tc-section-tools{width:100%;margin:8px 0 0}.tc-section-search{width:100%!important;min-width:0!important}}';document.head.appendChild(s)}
+  function panelData(id){
+    var map={cours:'coursData',historique:'histData',entreprises:'entData',financials:'financialsData',dividendes:'divData',analyses:'anData',utilisateurs:'usersData',indices:'idxData'};
+    var key=map[id],data=window[key];return Array.isArray(data)?data:[];
+  }
+  function quality(id,data){
+    if(!data.length)return {score:'—',total:0,issues:0};
+    var issues=0;
+    if(id==='cours'||id==='historique'){
+      var seen={};data.forEach(function(r){var k=(r.ticker||'')+'|'+(r.date_seance||'');if(seen[k])issues++;seen[k]=1;if(r.date_seance&&new Date(r.date_seance)>new Date())issues++;var c=Number(r.cours||r.cours_cloture);if(c<0)issues++;var hi=Number(r.plus_haut),lo=Number(r.plus_bas);if(isFinite(hi)&&isFinite(lo)&&hi<lo)issues++;});
+    } else if(id==='entreprises'){data.forEach(function(r){if(!r.ticker||!r.nom)issues++;if(!r.isin)issues++;if(!r.secteur)issues++})
+    } else if(id==='financials'){data.forEach(function(r){if(!r.ticker||!r.annee)issues++;if(!r.source)issues++})
+    } else if(id==='dividendes'){data.forEach(function(r){if(!r.ticker||r.montant==null||!r.annee)issues++;if(r.date_paiement&&new Date(r.date_paiement)>new Date(Date.now()+1000*60*60*24*366))issues++})
+    } else if(id==='analyses'){data.forEach(function(r){if(!r.ticker||!r.recommandation||!r.commentaire)issues++})
+    } else if(id==='indices'){data.forEach(function(r){if(r.valeur==null||Number(r.valeur)<0)issues++;if(r.date_seance&&new Date(r.date_seance)>new Date())issues++})}
+    var score=Math.max(0,Math.round(100-(issues/data.length)*100));return {score:score,total:data.length,issues:issues};
+  }
+  function renderHealth(id){var p=q('#panel-'+id);if(!p||q('#tc-health-'+id))return;var h=document.createElement('div');h.className='tc-health';h.id='tc-health-'+id;h.innerHTML='<div class="tc-health-card"><b>—</b><span>Qualité</span></div><div class="tc-health-card"><b>—</b><span>Enregistrements</span></div><div class="tc-health-card"><b>—</b><span>Anomalies</span></div><div class="tc-health-card"><b>Prêt</b><span>État interface</span></div>';var header=p.querySelector('.section-header');if(header)header.after(h);else p.insertBefore(h,p.firstChild)}
+  function refreshHealth(id){var h=q('#tc-health-'+id),data=panelData(id);if(!h)return;var x=quality(id,data),cards=h.querySelectorAll('.tc-health-card');if(cards[0]){cards[0].querySelector('b').textContent=x.score==='—'?'—':x.score+'/100';cards[0].className='tc-health-card '+(x.score==='—'?'':x.score>=90?'good':x.score>=70?'warn':'bad')}if(cards[1])cards[1].querySelector('b').textContent=x.total;if(cards[2]){cards[2].querySelector('b').textContent=x.issues;cards[2].className='tc-health-card '+(x.issues?'warn':'good')} }
+  function installSearch(id){var p=q('#panel-'+id),head=p&&p.querySelector('.section-header');if(!head||head.querySelector('.tc-section-tools'))return;if(!['cours','historique','entreprises','financials','dividendes','analyses','utilisateurs','indices'].includes(id))return;var tools=document.createElement('div');tools.className='tc-section-tools';var input=document.createElement('input');input.className='tc-section-search';input.placeholder='Rechercher dans la section…';input.setAttribute('aria-label','Rechercher dans '+panelNames[id]);input.addEventListener('input',function(){var needle=input.value.toLowerCase().trim();var rows=qa('#panel-'+id+' tbody tr');rows.forEach(function(r){r.style.display=!needle||r.textContent.toLowerCase().indexOf(needle)>=0?'':'none'})});tools.appendChild(input);head.appendChild(tools)}
+  function guardActions(){qa('button[onclick]').forEach(function(btn){if(btn.dataset.tcGuard)return;btn.dataset.tcGuard='1';btn.addEventListener('click',function(){if(btn.classList.contains('tc-action-busy'))return;if(/enregistrer|importer|supprimer|delete|save|ajouter|publier|relancer/i.test(btn.textContent)){btn.classList.add('tc-action-busy');setTimeout(function(){btn.classList.remove('tc-action-busy')},1800)}})})}
+  function checkHandlers(){qa('button[onclick]').forEach(function(btn){var m=(btn.getAttribute('onclick')||'').match(/^\s*([A-Za-z_$][\w$]*)\s*\(/);if(m&&!window[m[1]]){btn.classList.add('tc-broken-action');btn.title='Action indisponible : '+m[1]+'()';console.error('[Admin] action manquante',m[1],btn)}})}
+  function keyboard(){document.addEventListener('keydown',function(e){if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='k'){var p=q('.tab-panel.active'),i=p&&p.querySelector('.tc-section-search');if(i){e.preventDefault();i.focus();i.select()}}if(e.key==='Escape'){qa('.inline-edit').forEach(function(m){if(m.style.display==='flex'||m.classList.contains('open'))m.style.display='none'})}})}
+  function observe(){var obs=new MutationObserver(function(){guardActions();checkHandlers();qa('.tab-panel').forEach(function(p){var id=p.id.replace('panel-','');refreshHealth(id)})});obs.observe(document.body,{childList:true,subtree:true});}
+  window.tcAdminExperience={refresh:function(){Object.keys(panelNames).forEach(function(id){if(id!=='dashboard'&&id!=='scraper'&&id!=='import'&&id!=='diagnostic'){renderHealth(id);installSearch(id);refreshHealth(id)}});guardActions();checkHandlers()}};
+  function init(){if(initialized)return;initialized=true;addStyle();window.tcAdminExperience.refresh();keyboard();observe();setInterval(function(){window.tcAdminExperience.refresh()},2500)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
