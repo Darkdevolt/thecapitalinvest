@@ -2,92 +2,167 @@
 // VIEW — Recommandations / Analyses
 // ═══════════════════════════════════════
 
-// ═══════════════════════════════════════
-// ANALYSES
-// ═══════════════════════════════════════
+function analyseRecType(value) {
+  const rec = String(value || '').toLowerCase();
+  if (rec.includes('achat') || rec.includes('buy')) return 'buy';
+  if (rec.includes('vend') || rec.includes('sell')) return 'sell';
+  return 'hold';
+}
+
+function analyseRecLabel(type) {
+  return { buy: 'Achat', sell: 'Vendre', hold: 'Conserver' }[type] || 'Conserver';
+}
+
+function analyseSafeText(value) {
+  return String(value == null ? '' : value);
+}
+
 function renderAnalyseCard(a, clickable) {
-  const rec = (a.recommandation||'').toLowerCase();
-  const rc = rec.includes('achat')||rec.includes('buy') ? 'buy' : rec.includes('vend')||rec.includes('sell') ? 'sell' : 'hold';
-  const rl = { buy:'Achat', sell:'Vendre', hold:'Conserver' }[rc];
-  const text = (a.resume || a.contenu || '');
+  const rc = analyseRecType(a.recommandation);
+  const rl = analyseRecLabel(rc);
+  const text = analyseSafeText(a.resume || a.contenu);
   const clickAttr = clickable ? `onclick="openAnalyseDetail(${a.id})"` : '';
-  return `<div class="analyse-card" ${clickAttr}>
+  const target = Number(a.cours_cible);
+  const targetText = Number.isFinite(target) ? `🎯 ${fmt(target)} FCFA` : '';
+  return `<div class="analyse-card" ${clickAttr} style="transition:transform .18s ease,box-shadow .18s ease;cursor:${clickable ? 'pointer' : 'default'}">
     <div class="analyse-header">
-      <div><div class="analyse-ticker">${a.ticker||'—'}</div><div class="analyse-title">${a.titre||'Analyse fondamentale'}</div></div>
+      <div><div class="analyse-ticker">${a.ticker || '—'}</div><div class="analyse-title">${a.titre || 'Analyse fondamentale'}</div></div>
       <span class="rec ${rc}">${rl}</span>
     </div>
-    ${text ? `<div class="analyse-text">${text.slice(0,240)}${text.length>240?'…':''}</div>` : ''}
+    ${text ? `<div class="analyse-text">${text.slice(0,240)}${text.length > 240 ? '…' : ''}</div>` : ''}
     <div class="analyse-meta">
       ${a.date_analyse ? `<span>📅 ${fmtDate(a.date_analyse)}</span>` : ''}
       ${a.analyste ? `<span>✍ ${a.analyste}</span>` : ''}
-      ${a.cours_cible ? `<span>🎯 Cible : ${fmt(a.cours_cible)} FCFA</span>` : ''}
+      ${targetText ? `<span>${targetText}</span>` : ''}
     </div>
   </div>`;
 }
 
-function renderAnalyses() { window._analyseRows = allAnalyses; filterAnalyses(); }
+function renderAnalysesDashboard(rows) {
+  const data = Array.isArray(rows) ? rows : [];
+  const counts = { buy: 0, sell: 0, hold: 0 };
+  data.forEach(a => { counts[analyseRecType(a.recommandation)]++; });
+  const total = data.length;
+  const dated = data.filter(a => a.date_analyse).length;
+  const targets = data.filter(a => Number.isFinite(Number(a.cours_cible))).length;
+  const latest = data.filter(a => a.date_analyse).slice().sort((a,b) => new Date(b.date_analyse) - new Date(a.date_analyse))[0];
+
+  return `<div class="tc-analysis-dashboard" style="display:grid;gap:16px;margin:0 0 22px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);font-family:var(--mono)">Research Desk</div>
+        <h2 style="margin:5px 0 4px;font-size:24px">Analyses & recommandations</h2>
+        <div style="color:var(--muted);font-size:13px">Lecture rapide des convictions disponibles, avec traçabilité de la date et du cours cible.</div>
+      </div>
+      ${latest ? `<div style="font-size:11px;color:var(--dim);text-align:right">Dernière analyse<br><strong style="color:var(--text)">${fmtDate(latest.date_analyse)}</strong></div>` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:10px">
+      <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--dim)">Analyses</div><div style="font-size:23px;font-family:var(--mono);margin-top:4px">${total}</div><div style="font-size:10px;color:var(--dim)">${dated}/${total || 0} datées</div></div>
+      <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--dim)">Achat</div><div style="font-size:23px;font-family:var(--mono);margin-top:4px">${counts.buy}</div></div>
+      <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--dim)">Conserver</div><div style="font-size:23px;font-family:var(--mono);margin-top:4px">${counts.hold}</div></div>
+      <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--dim)">Vendre</div><div style="font-size:23px;font-family:var(--mono);margin-top:4px">${counts.sell}</div></div>
+      <div class="card" style="padding:14px"><div style="font-size:11px;color:var(--dim)">Cours cibles</div><div style="font-size:23px;font-family:var(--mono);margin-top:4px">${targets}</div></div>
+    </div>
+  </div>`;
+}
+
+function renderAnalyses() {
+  window._analyseRows = Array.isArray(allAnalyses) ? allAnalyses.slice() : [];
+  filterAnalyses();
+}
 
 function setAnalyseFilter(f, btn) {
   _analyseFilter = f;
-  document.querySelectorAll('#view-analyses .filter-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active'); filterAnalyses();
+  document.querySelectorAll('#view-analyses .filter-btn').forEach(b => {
+    b.classList.remove('active');
+    b.setAttribute('aria-pressed', 'false');
+  });
+  if (btn) {
+    btn.classList.add('active');
+    btn.setAttribute('aria-pressed', 'true');
+  }
+  filterAnalyses();
 }
 
 function filterAnalyses() {
-  const q = (document.getElementById('searchAnalyses')?.value || '').toLowerCase();
-  let rows = window._analyseRows || [];
+  const q = (document.getElementById('searchAnalyses')?.value || '').trim().toLowerCase();
+  let rows = Array.isArray(window._analyseRows) ? window._analyseRows.slice() : [];
+
   if (_analyseFilter !== 'all') {
+    rows = rows.filter(r => analyseRecType(r.recommandation) === _analyseFilter);
+  }
+
+  if (q) {
     rows = rows.filter(r => {
-      const rec = (r.recommandation||'').toLowerCase();
-      if (_analyseFilter==='buy') return rec.includes('achat')||rec.includes('buy');
-      if (_analyseFilter==='sell') return rec.includes('vend')||rec.includes('sell');
-      if (_analyseFilter==='hold') return rec.includes('conserv')||rec.includes('hold')||rec.includes('neutr');
-      return true;
+      const haystack = [r.ticker, r.titre, r.resume, r.contenu, r.analyste, r.recommandation].map(analyseSafeText).join(' ').toLowerCase();
+      return haystack.includes(q);
     });
   }
-  if (q) rows = rows.filter(r => (r.ticker||'').toLowerCase().includes(q) || (r.titre||'').toLowerCase().includes(q) || (r.resume||'').toLowerCase().includes(q));
-  document.getElementById('analysesList').innerHTML = rows.length
+
+  rows.sort((a, b) => {
+    const da = a.date_analyse ? new Date(a.date_analyse).getTime() : 0;
+    const db = b.date_analyse ? new Date(b.date_analyse).getTime() : 0;
+    return db - da;
+  });
+
+  const list = document.getElementById('analysesList');
+  if (!list) return;
+
+  const dashboard = document.getElementById('analysesDashboard');
+  if (dashboard) dashboard.innerHTML = renderAnalysesDashboard(rows);
+
+  list.innerHTML = rows.length
     ? rows.map(a => renderAnalyseCard(a, true)).join('')
-    : '<div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Aucune analyse</div><div class="empty-text">Vérifiez vos données Supabase</div></div>';
+    : '<div class="empty-state"><div class="empty-icon">◎</div><div class="empty-title">Aucune analyse</div><div class="empty-text">Aucune analyse ne correspond aux critères sélectionnés.</div></div>';
 }
 
 function openAnalyseDetail(id, noHash) {
-  const a = allAnalyses.find(x => x.id === id);
+  const rows = Array.isArray(allAnalyses) ? allAnalyses : [];
+  const a = rows.find(x => x.id === id);
   if (!a) return;
+
   nav('analyse-detail', noHash);
   if (!noHash) history.replaceState(null, '', '#analyse=' + id);
-  const rec = (a.recommandation||'').toLowerCase();
-  const rc = rec.includes('achat')||rec.includes('buy') ? 'buy' : rec.includes('vend')||rec.includes('sell') ? 'sell' : 'hold';
-  const rl = { buy:'ACHAT', sell:'VENTE', hold:'CONSERVER' }[rc];
+
+  const rec = analyseRecType(a.recommandation);
+  const rl = analyseRecLabel(rec).toUpperCase();
+  const target = Number(a.cours_cible);
+  const sameTicker = rows.filter(x => x.ticker === a.ticker && x.id !== a.id).sort((x,y) => new Date(y.date_analyse || 0) - new Date(x.date_analyse || 0));
+  const targetHtml = Number.isFinite(target) ? `<span style="font-family:var(--mono);font-size:16px;color:var(--gold)">🎯 Cible : ${fmt(target)} FCFA</span>` : '';
+
   document.getElementById('analyseDetailContent').innerHTML = `
     <div class="fiche-hero" style="margin-bottom:20px">
-      <div class="fiche-ticker-label">${a.ticker}</div>
-      <div class="fiche-company">${a.titre}</div>
+      <div class="fiche-ticker-label">${a.ticker || '—'}</div>
+      <div class="fiche-company">${a.titre || 'Analyse'}</div>
       <div style="display:flex;align-items:center;gap:12px;margin-top:12px;flex-wrap:wrap">
-        <span class="rec ${rc}" style="font-size:13px;padding:6px 16px">${rl}</span>
-        ${a.cours_cible ? `<span style="font-family:var(--mono);font-size:16px;color:var(--gold)">🎯 Cible : ${fmt(a.cours_cible)} FCFA</span>` : ''}
+        <span class="rec ${rec}" style="font-size:13px;padding:6px 16px">${rl}</span>
+        ${targetHtml}
       </div>
-      <div class="fiche-meta" style="margin-top:8px">📅 ${fmtDate(a.date_analyse)} · ✍ ${a.analyste || 'Research BRVM'}</div>
+      <div class="fiche-meta" style="margin-top:8px">${a.date_analyse ? `📅 ${fmtDate(a.date_analyse)}` : ''}${a.analyste ? ` · ✍ ${a.analyste}` : ''}</div>
     </div>
-    <div class="grid-2">
+    <div style="display:grid;grid-template-columns:minmax(0,1.5fr) minmax(260px,1fr);gap:18px">
       <div class="card">
-        <div class="card-header"><div class="card-title">Synthèse</div></div>
-        <div class="card-body" style="font-size:14px;color:var(--muted);line-height:1.8">${a.resume || 'Aucun résumé disponible.'}</div>
+        <div class="card-header"><div class="card-title">Synthèse de l'analyse</div></div>
+        <div class="card-body" style="font-size:14px;color:var(--muted);line-height:1.85">${a.resume || a.contenu || 'Aucun contenu disponible.'}</div>
       </div>
-      <div>
-        <div class="card mb20">
+      <div style="display:grid;gap:16px;align-content:start">
+        <div class="card">
           <div class="card-header"><div class="card-title">Actions rapides</div></div>
-          <div class="card-body">
-            <button class="back-btn" onclick="openFiche('${a.ticker}','analyse-detail')" style="margin-bottom:0">Voir la fiche ${a.ticker} →</button>
+          <div class="card-body" style="display:grid;gap:8px">
+            ${a.ticker ? `<button class="back-btn" onclick="openFiche('${String(a.ticker).replace(/'/g, "\\'")}','analyse-detail')">Voir la fiche ${a.ticker} →</button>` : ''}
           </div>
         </div>
         <div class="card">
-          <div class="card-header"><div class="card-title">Autres analyses ${a.ticker}</div></div>
+          <div class="card-header"><div class="card-title">Autres analyses ${a.ticker || ''}</div></div>
           <div class="card-body">
-            ${allAnalyses.filter(x => x.ticker === a.ticker && x.id !== a.id).map(x => `<div style="padding:8px 0;border-bottom:1px solid var(--border2);cursor:pointer" onclick="openAnalyseDetail(${x.id})"><div style="font-size:12px;color:var(--gold);font-family:var(--mono)">${x.titre}</div><div style="font-size:11px;color:var(--dim)">${fmtDate(x.date_analyse)}</div></div>`).join('') || '<div style="color:var(--dim);font-size:13px">Aucune autre analyse.</div>'}
+            ${sameTicker.length ? sameTicker.map(x => `<div style="padding:9px 0;border-bottom:1px solid var(--border2);cursor:pointer" onclick="openAnalyseDetail(${x.id})"><div style="font-size:12px;color:var(--gold);font-family:var(--mono)">${x.titre || 'Analyse'}</div><div style="font-size:11px;color:var(--dim)">${x.date_analyse ? fmtDate(x.date_analyse) : 'Date non renseignée'}</div></div>`).join('') : '<div style="color:var(--dim);font-size:13px">Aucune autre analyse.</div>'}
           </div>
         </div>
       </div>
     </div>
+    <style>
+      @media(max-width:760px){#view-analyses .grid-2,.tc-analysis-dashboard + div{grid-template-columns:1fr!important}.analyse-card{padding:14px}.analyse-meta{flex-wrap:wrap}}
+      .analyse-card:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.12)}
+    </style>
   `;
 }
