@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Confirmation — The Capital</title>
+<meta name="robots" content="noindex,nofollow">
+<style>body{margin:0;min-height:100vh;background:#0A0804;color:#F5F0E8;font-family:Arial,sans-serif;display:flex;align-items:center;justify-content:center}.card{width:min(420px,calc(100% - 40px));box-sizing:border-box;background:#181410;border:1px solid rgba(184,150,78,.22);border-radius:10px;padding:36px;text-align:center}.logo{width:220px;max-width:80%;margin-bottom:28px}.title{font-family:Georgia,serif;font-size:26px}.gold{color:#B8964E}.text{color:rgba(245,240,232,.62);font-size:14px;line-height:1.6;margin:14px 0 24px}.btn{display:inline-block;padding:12px 20px;background:#B8964E;color:#0A0804;text-decoration:none;border-radius:4px;font-size:13px;font-weight:600}.status{font-size:13px;margin-top:16px;min-height:20px}</style>
+</head>
+<body>
+<div class="card">
+<img class="logo" src="/assets/the-capital-logo.png" alt="The Capital">
+<div class="title">Vérification de votre <span class="gold">email</span></div>
+<div id="text" class="text">Votre adresse email est en cours de vérification. Vous serez redirigé vers la connexion dès que la confirmation sera terminée.</div>
+<a id="login" class="btn" href="login.html">Aller à la connexion</a>
+<div id="status" class="status"></div>
+</div>
+<script>
+(function(){
+ const status=document.getElementById('status');
+ const text=document.getElementById('text');
+ const hash=window.location.hash||'';
+ const params=new URLSearchParams(hash.replace(/^#/,'').replace(/^\?/,'')||window.location.search);
+ const error=params.get('error_description')||params.get('error');
+ if(error){
+   text.textContent='La confirmation n’a pas pu être finalisée. Le lien peut avoir déjà été utilisé ou avoir expiré. Vous pouvez retourner à la connexion et demander un nouvel email si nécessaire.';
+   status.textContent=decodeURIComponent(error.replace(/\+/g,' '));
+   return;
+ }
+ if(params.get('access_token')){
+   try{
+     const session={access_token:params.get('access_token'),refresh_token:params.get('refresh_token')||'',expires_in:Number(params.get('expires_in')||3600),token_type:params.get('token_type')||'bearer',user:null};
+     localStorage.setItem('tc_session',JSON.stringify(session));
+   }catch(e){}
+   text.textContent='Email confirmé. Votre compte est maintenant activé.';
+   status.textContent='Redirection vers votre espace…';
+   setTimeout(function(){location.href='app.html';},900);
+ } else {
+   status.textContent='Confirmation terminée. Vous pouvez vous connecter.';
+ }
+})();
+</script>
+</body>
+</html>
