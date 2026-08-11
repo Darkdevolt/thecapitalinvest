@@ -114,6 +114,12 @@
     }
   }
 
+  function ensureSuiviNavigation() {
+    if (typeof window.ensureSuiviNavigation !== 'function') return;
+    try { window.ensureSuiviNavigation(); }
+    catch (e) { console.warn('[INIT] suivi navigation:', e); }
+  }
+
   function init() {
     if (started) return;
     started = true;
@@ -132,6 +138,12 @@
     if (typeof window.initSidebar === 'function') {
       try { window.initSidebar(); } catch (e) { console.warn('[INIT] sidebar:', e); }
     }
+
+    // Le suivi doit être réinjecté APRÈS l'initialisation de la sidebar,
+    // sinon le rendu mobile peut remplacer l'élément ajouté trop tôt.
+    ensureSuiviNavigation();
+    setTimeout(ensureSuiviNavigation, 0);
+
     if (typeof window.initUserDataLayer === 'function') {
       try { window.initUserDataLayer(); } catch (e) { console.warn('[INIT] user data:', e); }
     }
