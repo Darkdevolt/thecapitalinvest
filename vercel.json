@@ -3,7 +3,7 @@
   "version": 2,
   "buildCommand": "npm run build",
   "crons": [
-    {"path": "/api/sync-brvm", "schedule": "30 18 * * 1-5"}
+    {"path": "/api/sync-brvm", "schedule": "5 16 * * 1-5"}
   ],
   "redirects": [
     {
