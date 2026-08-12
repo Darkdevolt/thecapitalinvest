@@ -17,7 +17,9 @@ async function runScraper() {
     appendScraperLog('Lancement du scraper BRVM...', 'info');
     try {
         const ctrl = new AbortController();
-        const t = setTimeout(function() { ctrl.abort(); }, 30000);
+        // Le scraping BRVM peut dépasser 30 s (4 pages + parsing + écritures Supabase).
+        // On laisse 90 s au traitement avant de considérer la requête comme abandonnée.
+        const t = setTimeout(function() { ctrl.abort(); }, 90000);
         const r = await fetch(SB_URL + '/functions/v1/scrape-brvm', {
             method: 'POST',
             headers: { Authorization: 'Bearer ' + TK, 'Content-Type': 'application/json' },
@@ -30,7 +32,7 @@ async function runScraper() {
             if(msg){ msg.textContent = '✓ Terminé'; msg.className = 'msg ok'; }
             toast('Scraper terminé', 'ok');
         } else {
-            appendScraperLog('Erreur scraper : ' + (data && data.message || r.status), 'err');
+            appendScraperLog('Erreur scraper : ' + (data && (data.message || data.error) || r.status), 'err');
             if(msg){ msg.textContent = 'Erreur : vérifiez l\'Edge Function'; msg.className = 'msg err'; }
         }
     } catch(e) {
