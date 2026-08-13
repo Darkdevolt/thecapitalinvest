@@ -1,4 +1,4 @@
-// THE CAPITAL — Portefeuille utilities
+// THE CAPITAL, Portefeuille utilities
 // Supabase is the source of truth for positions, cash, dividends, watchlist and alerts.
 (function ensurePortfolioStoreLoaded(){
   if (window.portfolioStore) return;

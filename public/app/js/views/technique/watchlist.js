@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT — Watchlist, Axes & Legend
+// AT, Watchlist, Axes & Legend
 // ═══════════════════════════════════════
 
 // ── Watchlist ──
@@ -55,10 +55,10 @@ function atDrawAxisX(data) {
 function atDrawLegend(closes, highs, lows, vols) {
   const el = document.getElementById('atLegend'); if (!el) return;
   const inds = AT.activeInds;
-  const items = [{ color: 'var(--gold)', label: AT.ticker || '—' }];
+  const items = [{ color: 'var(--gold)', label: AT.ticker || ', ' }];
   const maConf = [['sma20',atSMA(closes,20)],['sma50',atSMA(closes,50)],['sma200',atSMA(closes,200)],['ema12',atEMA(closes,12)],['ema26',atEMA(closes,26)]];
   maConf.forEach(([k,vals]) => { if(inds[k].on) { const v=vals[vals.length-1]; if(v) items.push({color:inds[k].color, label:`${inds[k].label}: ${fmt(v)}`}); }});
-  if (inds.bb.on) { const bb=atBB(closes); const b=bb[bb.length-1]; if(b.upper) items.push({color:'rgba(184,150,78,0.6)',label:`BB: ${fmt(b.lower)}–${fmt(b.upper)}`}); }
+  if (inds.bb.on) { const bb=atBB(closes); const b=bb[bb.length-1]; if(b.upper) items.push({color:'rgba(184,150,78,0.6)',label:`BB: ${fmt(b.lower)}, ${fmt(b.upper)}`}); }
   if (inds.vwap.on) { const vw=atVWAP(closes,vols); items.push({color:'#e879f9',label:`VWAP: ${fmt(vw[vw.length-1])}`}); }
   if (AT.compareTicker) items.push({color:'rgba(96,165,250,0.7)', label:AT.compareTicker});
   el.innerHTML = items.map(it => `<div class="at-leg-item"><div class="at-leg-dot" style="background:${it.color}"></div>${it.label}</div>`).join('');

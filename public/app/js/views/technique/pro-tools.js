@@ -1,4 +1,4 @@
-// THE CAPITAL — Analyse technique PRO tools
+// THE CAPITAL, Analyse technique PRO tools
 // Isolé à la vue Analyse technique. Ne modifie aucune API, donnée métier ou autre vue.
 (function(){
   'use strict';

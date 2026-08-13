@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// INDICATORS (CORRIGE — garde anti-double + utilise window.AT)
+// INDICATORS (CORRIGE, garde anti-double + utilise window.AT)
 // ═══════════════════════════════════════
 if (window.__indicatorsLoaded) {
   console.warn('[INDICATORS] Deja charge, skip.');

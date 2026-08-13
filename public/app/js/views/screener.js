@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// VIEW — Screener BRVM
+// VIEW, Screener BRVM
 // ═══════════════════════════════════════
 function latestFinancial(ticker) {
   return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
@@ -24,8 +24,8 @@ function financialRow(ticker, c) {
   const yieldValue = finNumber(f,'dividend_yield','rendement_dividende') ?? (f?.dpa && c?.cours ? Number(f.dpa)/Number(c.cours)*100 : null);
   const debt = finNumber(f,'dette_nette','dette_fin','dettes_financieres');
   const growth = financialGrowth(ticker);
-  const pct = v => v == null ? '—' : `${Number(v).toFixed(2)}%`;
-  return `<tr><td><strong style="color:var(--gold)">${escapeHtml(ticker)}</strong></td><td>${escapeHtml(c.nom||c.entreprise||c.name||'—')}</td><td class="right">${fmt(c.cours)}</td><td class="right">${fmt(c.variation)}%</td><td class="right">${fmt(c.volume)}</td><td>${escapeHtml(getSector(ticker)||'—')}</td><td class="right pro-only">${pct(roe)}</td><td class="right pro-only">${pct(margin)}</td><td class="right pro-only">${pct(yieldValue)}</td><td class="right pro-only">${debt==null?'—':fmt(debt)}</td><td class="right pro-only">${pct(growth)}</td></tr>`;
+  const pct = v => v == null ? ', ' : `${Number(v).toFixed(2)}%`;
+  return `<tr><td><strong style="color:var(--gold)">${escapeHtml(ticker)}</strong></td><td>${escapeHtml(c.nom||c.entreprise||c.name||', ')}</td><td class="right">${fmt(c.cours)}</td><td class="right">${fmt(c.variation)}%</td><td class="right">${fmt(c.volume)}</td><td>${escapeHtml(getSector(ticker)||', ')}</td><td class="right pro-only">${pct(roe)}</td><td class="right pro-only">${pct(margin)}</td><td class="right pro-only">${pct(yieldValue)}</td><td class="right pro-only">${debt==null?', ':fmt(debt)}</td><td class="right pro-only">${pct(growth)}</td></tr>`;
 }
 
 function ensureFundamentalFilters() {
@@ -35,7 +35,7 @@ function ensureFundamentalFilters() {
     ['scrMinRoe','ROE min %',true],['scrMinMargin','Marge nette min %',true],['scrMinYield','Dividend yield min %',false],['scrMaxDebt','Dette max',true],['scrMinGrowth','Croissance CA min %',true]
   ];
   fields.forEach(([id,label,proOnly]) => {
-    const wrap=document.createElement('div'); if(proOnly)wrap.className='pro-only'; wrap.innerHTML=`<label>${label}</label><input type="number" id="${id}" placeholder="—" step="0.1" oninput="runScreener()">`; box.appendChild(wrap);
+    const wrap=document.createElement('div'); if(proOnly)wrap.className='pro-only'; wrap.innerHTML=`<label>${label}</label><input type="number" id="${id}" placeholder=", " step="0.1" oninput="runScreener()">`; box.appendChild(wrap);
   });
   const head=document.querySelector('#view-screener table thead tr');
   if(head && !head.querySelector('.fundamental-head')) ['ROE','Marge nette','Yield','Dette','Croissance CA'].forEach(label=>{const th=document.createElement('th');th.className='right pro-only fundamental-head';th.textContent=label;head.appendChild(th);});

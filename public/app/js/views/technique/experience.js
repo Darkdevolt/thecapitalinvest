@@ -1,4 +1,4 @@
-// THE CAPITAL — Analyse technique : expérience Simple / Pro
+// THE CAPITAL, Analyse technique : expérience Simple / Pro
 // Module isolé : ne modifie ni le bootstrap, ni l'authentification, ni les autres vues.
 (function(){
   'use strict';

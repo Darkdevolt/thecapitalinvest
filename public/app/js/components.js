@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// UTILITAIRES & COMPONENTS (CORRIGÉ — protégé contre redéclaration)
+// UTILITAIRES & COMPONENTS (CORRIGÉ, protégé contre redéclaration)
 // ═══════════════════════════════════════
 // Ce fichier est chargé APRÈS utils.js, donc les fonctions peuvent déjà exister.
 // On utilise des gardes pour éviter "Identifier 'xxx' has already been declared"
@@ -7,7 +7,7 @@
 // ─── FORMATTERS (protégés) ───────────────────────────────────────────────────
 if (typeof window.fmt === 'undefined') {
   window.fmt = function(n, d) {
-    if (n == null || isNaN(n)) return '—';
+    if (n == null || isNaN(n)) return ', ';
     d = d || 0;
     return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
   };
@@ -15,7 +15,7 @@ if (typeof window.fmt === 'undefined') {
 
 if (typeof window.fmtM === 'undefined') {
   window.fmtM = function(n) {
-    if (n == null || isNaN(n)) return '—';
+    if (n == null || isNaN(n)) return ', ';
     if (Math.abs(n) >= 1e9) return fmt(n / 1e9, 2) + ' Mds';
     if (Math.abs(n) >= 1e6) return fmt(n / 1e6, 2) + ' M';
     if (Math.abs(n) >= 1e3) return fmt(n / 1e3, 2) + ' K';
@@ -25,7 +25,7 @@ if (typeof window.fmtM === 'undefined') {
 
 if (typeof window.fmtDate === 'undefined') {
   window.fmtDate = function(d) {
-    if (!d) return '—';
+    if (!d) return ', ';
     const date = new Date(d);
     if (isNaN(date)) return String(d);
     return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -82,14 +82,14 @@ if (typeof window.tickerRow === 'undefined') {
       '<td class="var-cell right"><span class="pill ' + cls + '">' + sign + v.toFixed(2) + '%</span></td>';
 
     if (opts.show52Week) {
-      html += '<td class="right mono">' + (c.high_52 || '—') + '</td>' +
-        '<td class="right mono">' + (c.low_52 || '—') + '</td>';
+      html += '<td class="right mono">' + (c.high_52 || ', ') + '</td>' +
+        '<td class="right mono">' + (c.low_52 || ', ') + '</td>';
     }
 
     html += '<td class="vol-cell right">' + fmt(c.volume) + '</td>';
 
     if (opts.showCapital) {
-      html += '<td class="cap-cell right">' + (c.capitalisation ? fmtM(c.capitalisation) : '—') + '</td>';
+      html += '<td class="cap-cell right">' + (c.capitalisation ? fmtM(c.capitalisation) : ', ') + '</td>';
     }
 
     html += '<td class="sector-cell right"><span class="sector-badge ' + sectorClass + '">' + (ent && ent.secteur ? ent.secteur : 'Autre') + '</span></td>' +
@@ -150,7 +150,7 @@ if (typeof window.initGlobalSearch === 'undefined') {
         results.innerHTML = matches.map(function(c) {
           const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[c.ticker] : null;
           return '<div class="gsr-item" onclick="openFiche(\'' + c.ticker + '\');document.getElementById(\'globalSearchResults\').classList.remove(\'open\');">' +
-            '<div><span class="gsr-ticker">' + c.ticker + '</span><span class="gsr-name">' + (ent && ent.nom ? ' — ' + ent.nom : '') + '</span></div>' +
+            '<div><span class="gsr-ticker">' + c.ticker + '</span><span class="gsr-name">' + (ent && ent.nom ? ', ' + ent.nom : '') + '</span></div>' +
             '<span class="gsr-sector">' + (ent && ent.secteur ? ent.secteur : 'Autre') + '</span>' +
           '</div>';
         }).join('');

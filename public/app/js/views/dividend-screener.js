@@ -1,4 +1,4 @@
-// THE CAPITAL — Dividend Screener
+// THE CAPITAL, Dividend Screener
 (function () {
   if (window.__TC_DIVIDEND_SCREENER_LOADED__) return;
   window.__TC_DIVIDEND_SCREENER_LOADED__ = true;
@@ -27,7 +27,7 @@
       <div class="card mb20"><div class="card-body"><div class="screener-filters">
         <div><label>Rendement min %</label><input type="number" id="divMinYield" value="0" step="0.1"></div>
         <div><label>Rendement max %</label><input type="number" id="divMaxYield" placeholder="∞" step="0.1"></div>
-        <div class="pro-only"><label>Croissance min %</label><input type="number" id="divMinGrowth" placeholder="—" step="0.1"></div>
+        <div class="pro-only"><label>Croissance min %</label><input type="number" id="divMinGrowth" placeholder=", " step="0.1"></div>
         <div><label>Exercice</label><select id="divYear"><option value="">Tous</option>${[...new Set(rows.map(r => r.exercice ?? r.annee).filter(Boolean))].sort((a,b) => b-a).map(y => `<option value="${esc(y)}">${esc(y)}</option>`).join('')}</select></div>
       </div></div></div>
       <div class="card"><div class="card-header"><div class="card-title">Résultats</div><div id="divCount" style="font-size:12px;color:var(--dim)"></div></div><div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Exercice</th><th class="right">Dividende</th><th class="right">Rendement</th><th class="right pro-only">Croissance</th><th>Date détachement</th><th>Date paiement</th></tr></thead><tbody id="dividendScreenerTable"></tbody></table></div></div>`;
@@ -75,7 +75,7 @@
     if (!tbody) return;
     document.getElementById('divCount').textContent = `${out.length} résultat(s)`;
     tbody.innerHTML = out.length
-      ? out.sort((a,b) => (b.yieldValue ?? -Infinity) - (a.yieldValue ?? -Infinity)).map(r => `<tr><td><strong style="color:var(--gold)">${esc(r.ticker)}</strong></td><td>${esc(r.exercice ?? r.annee ?? '—')}</td><td class="right">${r.montant_net ?? r.montant ?? 'Donnée non disponible'}</td><td class="right">${pct(r.yieldValue)}</td><td class="right pro-only">${pct(r.growth)}</td><td>${esc(r.date_detachement ?? r.ex_date ?? '—')}</td><td>${esc(r.date_paiement_cal ?? r.date_paiement ?? '—')}</td></tr>`).join('')
+      ? out.sort((a,b) => (b.yieldValue ?? -Infinity) - (a.yieldValue ?? -Infinity)).map(r => `<tr><td><strong style="color:var(--gold)">${esc(r.ticker)}</strong></td><td>${esc(r.exercice ?? r.annee ?? ', ')}</td><td class="right">${r.montant_net ?? r.montant ?? 'Donnée non disponible'}</td><td class="right">${pct(r.yieldValue)}</td><td class="right pro-only">${pct(r.growth)}</td><td>${esc(r.date_detachement ?? r.ex_date ?? ', ')}</td><td>${esc(r.date_paiement_cal ?? r.date_paiement ?? ', ')}</td></tr>`).join('')
       : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--dim)">Aucune société ne correspond aux critères.</td></tr>';
 
     if (window.TCDisplayMode) window.TCDisplayMode.set(document.body.dataset.mode);

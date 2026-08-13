@@ -1,11 +1,10 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — CRUD (v3)
+// PORTEFEUILLE, CRUD (v3)
 // Positions (achat/vente/édition), cash, dividendes,
 // watchlist, alertes, objectif, rééquilibrage, recherche/tri.
 // ═══════════════════════════════════════════════════════
 
-// — ONGLET ACHAT / VENTE —
-window.switchPfSubtab = function(tab) {
+//, ONGLET ACHAT / VENTE, window.switchPfSubtab = function(tab) {
   document.getElementById('tabBuy').classList.toggle('active', tab === 'buy');
   document.getElementById('tabSell').classList.toggle('active', tab === 'sell');
   document.getElementById('panelBuy').classList.toggle('active', tab === 'buy');
@@ -41,8 +40,7 @@ window.updateSellHint = function() {
   if (priceEl && !priceEl.value) priceEl.value = getLatestPrice(ticker) || '';
 };
 
-// — AJOUT D'UNE POSITION (ACHAT) —
-window.addPosition = function() {
+//, AJOUT D'UNE POSITION (ACHAT), window.addPosition = function() {
   const tickerEl = document.getElementById('pfTicker');
   const typeEl   = document.getElementById('pfType');
   const qtyEl    = document.getElementById('pfQty');
@@ -74,8 +72,7 @@ window.addPosition = function() {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — VENTE RAPIDE (depuis le formulaire principal) —
-window.sellPositionQuick = function() {
+//, VENTE RAPIDE (depuis le formulaire principal), window.sellPositionQuick = function() {
   const ticker = (document.getElementById('pfSellTicker')?.value || '').toUpperCase().trim();
   const qty = +document.getElementById('pfSellQty')?.value;
   const price = +document.getElementById('pfSellPrice')?.value;
@@ -88,8 +85,7 @@ window.sellPositionQuick = function() {
   });
 };
 
-// — VENTE VIA MODAL (depuis le tableau) —
-window.openSellModal = function(ticker) {
+//, VENTE VIA MODAL (depuis le tableau), window.openSellModal = function(ticker) {
   document.getElementById('sellTicker').value = ticker;
   const pf = getPortfolio();
   const totalQty = pf.filter(p => (p.ticker || '').toUpperCase().trim() === ticker).reduce((s, p) => s + (+p.qty || 0), 0);
@@ -138,13 +134,12 @@ function executeSell(ticker, qty, price, date, onSuccess) {
   const realizedPL = proceeds - costBasis;
   logTransaction({ type: 'sell', ticker, qty, price, date, realizedPL });
 
-  toast(`Vente enregistrée — P&L réalisé : ${realizedPL >= 0 ? '+' : ''}${typeof fmtM === 'function' ? fmtM(realizedPL) : realizedPL.toFixed(0)} FCFA`, realizedPL >= 0 ? 'success' : 'error');
+  toast(`Vente enregistrée, P&L réalisé : ${realizedPL >= 0 ? '+' : ''}${typeof fmtM === 'function' ? fmtM(realizedPL) : realizedPL.toFixed(0)} FCFA`, realizedPL >= 0 ? 'success' : 'error');
   if (typeof onSuccess === 'function') onSuccess();
   if (typeof renderPortfolio === 'function') renderPortfolio();
 }
 
-// — ÉDITION D'UNE POSITION —
-window.openEditModal = function(id) {
+//, ÉDITION D'UNE POSITION, window.openEditModal = function(id) {
   const pf = getPortfolio();
   const pos = pf.find(p => String(p.id) === String(id));
   if (!pos) return;
@@ -174,8 +169,7 @@ window.confirmEdit = function() {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — SUPPRESSION D'UNE POSITION —
-window.removePosition = function(id) {
+//, SUPPRESSION D'UNE POSITION, window.removePosition = function(id) {
   if (!confirm('Supprimer cette position ?')) return;
   const pf = getPortfolio().filter(p => String(p.id) !== String(id));
   savePortfolio(pf);
@@ -184,8 +178,7 @@ window.removePosition = function(id) {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — SÉLECTION MULTIPLE —
-window.toggleSelectAllPositions = function(masterCheckbox) {
+//, SÉLECTION MULTIPLE, window.toggleSelectAllPositions = function(masterCheckbox) {
   document.querySelectorAll('.position-checkbox[data-id]').forEach(cb => {
     cb.checked = masterCheckbox.checked;
   });
@@ -213,8 +206,7 @@ window.deleteSelectedPositions = function() {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — CASH (DÉPÔTS / RETRAITS) —
-window.addCash = function() {
+//, CASH (DÉPÔTS / RETRAITS), window.addCash = function() {
   const typeEl = document.getElementById('cashType');
   const amountEl = document.getElementById('cashAmount');
 
@@ -239,8 +231,7 @@ window.addCash = function() {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — DIVIDENDES —
-window.addDividend = function() {
+//, DIVIDENDES, window.addDividend = function() {
   const tickerEl = document.getElementById('divTicker');
   const amountEl = document.getElementById('divAmount');
   const dateEl   = document.getElementById('divDate');
@@ -265,8 +256,7 @@ window.addDividend = function() {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — CALCULATEUR DE POSITION —
-window.calculatePosition = function() {
+//, CALCULATEUR DE POSITION, window.calculatePosition = function() {
   const tickerEl = document.getElementById('calcTicker');
   const qtyEl    = document.getElementById('calcQty');
   const targetEl = document.getElementById('calcTarget');
@@ -320,8 +310,7 @@ window.calculatePosition = function() {
   `;
 };
 
-// — WATCHLIST —
-window.addToWatchlist = function() {
+//, WATCHLIST, window.addToWatchlist = function() {
   const el = document.getElementById('watchTicker');
   const ticker = (el?.value || '').toUpperCase().trim();
   if (!ticker) { toast('Sélectionnez un titre.', 'error'); return; }
@@ -338,8 +327,7 @@ window.removeFromWatchlist = function(ticker) {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — ALERTES DE PRIX —
-window.addPriceAlert = function() {
+//, ALERTES DE PRIX, window.addPriceAlert = function() {
   const tickerEl = document.getElementById('alertTicker');
   const condEl = document.getElementById('alertCondition');
   const targetEl = document.getElementById('alertTarget');
@@ -361,8 +349,7 @@ window.removePriceAlert = function(id) {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — OBJECTIF DE PORTEFEUILLE —
-window.setPortfolioGoal = function() {
+//, OBJECTIF DE PORTEFEUILLE, window.setPortfolioGoal = function() {
   const targetEl = document.getElementById('goalTarget');
   const dateEl = document.getElementById('goalDate');
   const target = +targetEl?.value;
@@ -372,8 +359,7 @@ window.setPortfolioGoal = function() {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — RÉÉQUILIBRAGE : ALLOCATIONS CIBLES —
-window.setTargetAllocation = function() {
+//, RÉÉQUILIBRAGE : ALLOCATIONS CIBLES, window.setTargetAllocation = function() {
   const tickerEl = document.getElementById('rebalTicker');
   const pctEl = document.getElementById('rebalPct');
   const ticker = (tickerEl?.value || '').toUpperCase().trim();
@@ -395,8 +381,7 @@ window.removeTargetAllocation = function(ticker) {
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
-// — RECHERCHE / TRI DU TABLEAU —
-window._pfTableState = { search: '', sortBy: 'value', sortDir: 'desc' };
+//, RECHERCHE / TRI DU TABLEAU, window._pfTableState = { search: '', sortBy: 'value', sortDir: 'desc' };
 window.filterPositionsTable = function() {
   window._pfTableState.search = (document.getElementById('pfSearch')?.value || '').toUpperCase().trim();
   if (typeof renderPortfolio === 'function') renderPortfolio();

@@ -1,4 +1,4 @@
-// INIT — Unified application bootstrap
+// INIT, Unified application bootstrap
 (function () {
   'use strict';
 
@@ -156,11 +156,11 @@
     started = true;
     if (!requireAuth()) return;
     normalizeDocument();
-    console.log('[INIT] Session authentifiée — démarrage The Capital');
+    console.log('[INIT] Session authentifiée, démarrage The Capital');
 
     // CORE: always start the application before optional enhancements.
     if (typeof window.initApp !== 'function') {
-      console.error('[INIT] initApp manquant — main.js doit être chargé avant init.js');
+      console.error('[INIT] initApp manquant, main.js doit être chargé avant init.js');
       document.body.classList.remove('init-hidden');
       return;
     }

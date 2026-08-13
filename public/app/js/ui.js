@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// UI — Table Sort + Shared
+// UI, Table Sort + Shared
 // ═══════════════════════════════════════
 
 // ═══════════════════════════════════════
@@ -23,7 +23,7 @@ function sortTable(tbodyId, colIndex) {
 }
 
 // ═══════════════════════════════════════
-// LOAD — 100% SUPABASE, PAS DE DEMO
+// LOAD, 100% SUPABASE, PAS DE DEMO
 // ═══════════════════════════════════════
 async function loadAll() {
   try {

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// ZOOM (CORRIGE — garde anti-double + utilise window.AT)
+// ZOOM (CORRIGE, garde anti-double + utilise window.AT)
 // ═══════════════════════════════════════
 if (window.__zoomLoaded) {
   console.warn('[ZOOM] Deja charge, skip.');

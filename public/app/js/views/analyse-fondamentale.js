@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// VIEW — Analyse Fondamentale Avancée
+// VIEW, Analyse Fondamentale Avancée
 // ═══════════════════════════════════════
 
 let _fundMethod = 'tcam';
@@ -24,7 +24,7 @@ function setFundMethod(method, btn) {
 
 function formatFundNumber(value) {
   const n = Number(value);
-  if (!Number.isFinite(n)) return '—';
+  if (!Number.isFinite(n)) return ', ';
   return fmtM(n);
 }
 
@@ -140,20 +140,20 @@ async function loadFundAnalysis() {
     <div class="fund-hero">
       <div>
         <div class="fund-kicker">ANALYSE FONDAMENTALE · ${ticker}</div>
-        <h2>${ticker} — Lecture fondamentale</h2>
+        <h2>${ticker}, Lecture fondamentale</h2>
         <p>Historique financier, trajectoire de croissance, hypothèses de projection et valorisation intrinsèque. Les hypothèses restent modifiables.</p>
       </div>
       <div class="fund-market-box">
         <span>Cours actuel</span>
-        <strong>${cp ? fmt(cp) + ' FCFA' : '—'}</strong>
+        <strong>${cp ? fmt(cp) + ' FCFA' : ', '}</strong>
         <small>Dernière cotation disponible</small>
       </div>
     </div>
 
     <div class="fund-kpi-grid">
-      <div class="fund-kpi"><span>CA · ${lastActual.annee}</span><strong>${formatFundNumber(latestCA)}</strong><small>TCAM ${Number.isFinite(tcamCA) ? tcamCA.toFixed(1) + '%' : '—'}</small></div>
-      <div class="fund-kpi"><span>Résultat net</span><strong>${formatFundNumber(latestRN)}</strong><small>TCAM ${Number.isFinite(tcamRN) ? tcamRN.toFixed(1) + '%' : '—'}</small></div>
-      <div class="fund-kpi"><span>Marge nette</span><strong>${margin == null ? '—' : margin.toFixed(1) + '%'}</strong><small>FCF margin ${fcfMargin == null ? '—' : fcfMargin.toFixed(1) + '%'}</small></div>
+      <div class="fund-kpi"><span>CA · ${lastActual.annee}</span><strong>${formatFundNumber(latestCA)}</strong><small>TCAM ${Number.isFinite(tcamCA) ? tcamCA.toFixed(1) + '%' : ', '}</small></div>
+      <div class="fund-kpi"><span>Résultat net</span><strong>${formatFundNumber(latestRN)}</strong><small>TCAM ${Number.isFinite(tcamRN) ? tcamRN.toFixed(1) + '%' : ', '}</small></div>
+      <div class="fund-kpi"><span>Marge nette</span><strong>${margin == null ? ', ' : margin.toFixed(1) + '%'}</strong><small>FCF margin ${fcfMargin == null ? ', ' : fcfMargin.toFixed(1) + '%'}</small></div>
       <div class="fund-kpi"><span>Qualité du forecast</span><strong class="${trendClass}">${relevance.label}</strong><small>${relevance.reason}</small></div>
     </div>
 
@@ -183,11 +183,11 @@ async function loadFundAnalysis() {
       <div class="card fund-valuation-card">
         <div class="card-header"><div><div class="card-title">Valorisation DCF</div><div class="fund-section-note">Valeur d’entreprise issue des FCF projetés.</div></div></div>
         <div class="card-body">
-          <div class="fund-value-highlight"><span>Valeur par action</span><strong>${fairValue ? fmt(fairValue) + ' FCFA' : '—'}</strong><b class="${upsideClass}">${upside == null ? '—' : (upside >= 0 ? '+' : '') + upside.toFixed(1) + '%'}</b></div>
-          <div class="fin-row"><span class="fin-label">Valeur d'entreprise</span><span class="fin-value">${dcfValid ? formatFundNumber(enterpriseValue) : '—'}</span></div>
-          <div class="fin-row"><span class="fin-label">Valeur terminale</span><span class="fin-value">${dcfValid ? formatFundNumber(terminalValue) : '—'}</span></div>
-          <div class="fin-row"><span class="fin-label">PV des FCF</span><span class="fin-value">${dcfValid ? formatFundNumber(sumPV) : '—'}</span></div>
-          <div class="fin-row"><span class="fin-label">Nombre d’actions</span><span class="fin-value">${shares ? fmt(shares) : '—'}</span></div>
+          <div class="fund-value-highlight"><span>Valeur par action</span><strong>${fairValue ? fmt(fairValue) + ' FCFA' : ', '}</strong><b class="${upsideClass}">${upside == null ? ', ' : (upside >= 0 ? '+' : '') + upside.toFixed(1) + '%'}</b></div>
+          <div class="fin-row"><span class="fin-label">Valeur d'entreprise</span><span class="fin-value">${dcfValid ? formatFundNumber(enterpriseValue) : ', '}</span></div>
+          <div class="fin-row"><span class="fin-label">Valeur terminale</span><span class="fin-value">${dcfValid ? formatFundNumber(terminalValue) : ', '}</span></div>
+          <div class="fin-row"><span class="fin-label">PV des FCF</span><span class="fin-value">${dcfValid ? formatFundNumber(sumPV) : ', '}</span></div>
+          <div class="fin-row"><span class="fin-label">Nombre d’actions</span><span class="fin-value">${shares ? fmt(shares) : ', '}</span></div>
           <div class="fund-explain"><strong>Comment lire ce résultat ?</strong><p>La valeur par action est une estimation fondée sur les flux de trésorerie projetés et les hypothèses saisies. Elle ne constitue pas un objectif de cours et devient très sensible au WACC et à la croissance terminale.</p></div>
         </div>
       </div>
@@ -203,7 +203,7 @@ async function loadFundAnalysis() {
         <div class="card-body fund-checks">
           <div class="fund-check"><span class="${tcamCA >= 0 ? 'positive' : 'negative'}">●</span><div><strong>Chiffre d’affaires</strong><p>TCAM historique : ${Number.isFinite(tcamCA) ? tcamCA.toFixed(1) + '%' : 'non calculable'}.</p></div></div>
           <div class="fund-check"><span class="${tcamRN >= 0 ? 'positive' : 'negative'}">●</span><div><strong>Résultat net</strong><p>TCAM historique : ${Number.isFinite(tcamRN) ? tcamRN.toFixed(1) + '%' : 'non calculable'}.</p></div></div>
-          <div class="fund-check"><span class="${r2 >= 0.5 ? 'positive' : 'neutral'}">●</span><div><strong>Stabilité de la tendance</strong><p>R² de la tendance du résultat net : ${Number.isFinite(r2) ? r2.toFixed(2) : '—'}.</p></div></div>
+          <div class="fund-check"><span class="${r2 >= 0.5 ? 'positive' : 'neutral'}">●</span><div><strong>Stabilité de la tendance</strong><p>R² de la tendance du résultat net : ${Number.isFinite(r2) ? r2.toFixed(2) : ', '}.</p></div></div>
           <div class="fund-check"><span class="${upsideClass}">●</span><div><strong>Écart au cours</strong><p>${upside == null ? 'Valorisation indisponible.' : upside >= 0 ? 'La valeur DCF ressort au-dessus du cours actuel.' : 'La valeur DCF ressort sous le cours actuel.'}</p></div></div>
         </div>
       </div>

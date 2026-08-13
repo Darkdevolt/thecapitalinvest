@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — Base Utilities
+// AT Indicator, Base Utilities
 // ═══════════════════════════════════════
 
 // Shared math utilities for indicators

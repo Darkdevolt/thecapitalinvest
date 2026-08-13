@@ -1,4 +1,4 @@
-// THE CAPITAL — Crosshair + outils de dessin tactiles
+// THE CAPITAL, Crosshair + outils de dessin tactiles
 // UI locale uniquement : aucune API, donnée ou source métier modifiée.
 if (window.__crosshairLoaded) {
   console.warn('[CROSSHAIR] Déjà chargé, skip.');

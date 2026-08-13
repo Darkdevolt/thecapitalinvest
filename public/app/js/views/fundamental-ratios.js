@@ -1,13 +1,13 @@
-// The Capital — Advanced fundamental ratios & sector valuation
+// The Capital, Advanced fundamental ratios & sector valuation
 // Read-only enhancement: consumes already loaded financial/market data only.
 (function () {
   'use strict';
   var lastTicker = '';
   function num(v){var x=Number(v);return Number.isFinite(x)?x:NaN;}
   function first(o,keys){for(var i=0;i<keys.length;i++){var v=num(o&&o[keys[i]]);if(Number.isFinite(v))return v;}return NaN;}
-  function money(v){return Number.isFinite(v)?(typeof window.fmtM==='function'?window.fmtM(v):Math.round(v).toLocaleString('fr-FR')):'—';}
-  function pct(v){return Number.isFinite(v)?(v*100).toFixed(1)+'%':'—';}
-  function mult(v){return Number.isFinite(v)?v.toFixed(2)+'x':'—';}
+  function money(v){return Number.isFinite(v)?(typeof window.fmtM==='function'?window.fmtM(v):Math.round(v).toLocaleString('fr-FR')):', ';}
+  function pct(v){return Number.isFinite(v)?(v*100).toFixed(1)+'%':', ';}
+  function mult(v){return Number.isFinite(v)?v.toFixed(2)+'x':', ';}
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function fins(){return Array.isArray(window.allFinancials)?window.allFinancials:[];}
   function quotes(){return Array.isArray(window.allCours)?window.allCours:[];}

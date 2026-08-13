@@ -1,6 +1,6 @@
 /* =====================================================================
-   RECOMMANDATION.JS — Moteur de scoring & recommandation d'investissement
-   The Capital — BRVM
+   RECOMMANDATION.JS, Moteur de scoring & recommandation d'investissement
+   The Capital, BRVM
    ---------------------------------------------------------------------
    S'appuie sur les données déjà chargées par analyse.html :
    allCours, allFinancials, tickerHistorique, fmt, fmtM, fmtDateShort,
@@ -216,14 +216,14 @@
 
   function buildRationale(ticker, tech, fund, composite) {
     const strengths = [], weaknesses = [];
-    if (tech.trend >= 62) strengths.push('Cours au-dessus de ses moyennes mobiles — tendance haussière confirmée.');
-    if (tech.trend <= 38) weaknesses.push('Cours sous ses moyennes mobiles — tendance baissière en cours.');
+    if (tech.trend >= 62) strengths.push('Cours au-dessus de ses moyennes mobiles, tendance haussière confirmée.');
+    if (tech.trend <= 38) weaknesses.push('Cours sous ses moyennes mobiles, tendance baissière en cours.');
     if (tech.momentum >= 62) strengths.push(`Momentum positif : +${tech.raw.m1.toFixed(1)}% sur 1 mois.`);
     if (tech.momentum <= 38) weaknesses.push(`Momentum négatif : ${tech.raw.m1.toFixed(1)}% sur 1 mois.`);
-    if (tech.raw.rsi < 30) strengths.push(`RSI en zone de survente (${tech.raw.rsi.toFixed(0)}) — rebond technique possible.`);
-    if (tech.raw.rsi > 70) weaknesses.push(`RSI en zone de surachat (${tech.raw.rsi.toFixed(0)}) — risque de correction à court terme.`);
-    if (tech.raw.volatility > 30) weaknesses.push(`Volatilité annualisée élevée (${tech.raw.volatility.toFixed(0)}%) — titre nerveux.`);
-    if (tech.raw.volatility < 15) strengths.push(`Faible volatilité (${tech.raw.volatility.toFixed(0)}%) — profil plus stable.`);
+    if (tech.raw.rsi < 30) strengths.push(`RSI en zone de survente (${tech.raw.rsi.toFixed(0)}), rebond technique possible.`);
+    if (tech.raw.rsi > 70) weaknesses.push(`RSI en zone de surachat (${tech.raw.rsi.toFixed(0)}), risque de correction à court terme.`);
+    if (tech.raw.volatility > 30) weaknesses.push(`Volatilité annualisée élevée (${tech.raw.volatility.toFixed(0)}%), titre nerveux.`);
+    if (tech.raw.volatility < 15) strengths.push(`Faible volatilité (${tech.raw.volatility.toFixed(0)}%), profil plus stable.`);
 
     if (fund.raw.hasData) {
       if (fund.raw.roe != null && fund.raw.roe >= 12) strengths.push(`Bonne rentabilité des fonds propres (ROE ≈ ${fund.raw.roe.toFixed(1)}%).`);
@@ -234,9 +234,9 @@
       if (fund.raw.solidRatio != null && fund.raw.solidRatio >= 25) strengths.push(`Structure financière solide (fonds propres ≈ ${fund.raw.solidRatio.toFixed(0)}% du total bilan).`);
       if (fund.raw.solidRatio != null && fund.raw.solidRatio < 10) weaknesses.push('Niveau de fonds propres relativement faible par rapport au bilan.');
     } else {
-      weaknesses.push('Données financières fondamentales incomplètes pour ce titre — analyse basée principalement sur la technique.');
+      weaknesses.push('Données financières fondamentales incomplètes pour ce titre, analyse basée principalement sur la technique.');
     }
-    if (!strengths.length) strengths.push('Aucun signal fort identifié — profil neutre sur les critères analysés.');
+    if (!strengths.length) strengths.push('Aucun signal fort identifié, profil neutre sur les critères analysés.');
     if (!weaknesses.length) weaknesses.push('Aucun signal d\'alerte majeur identifié à ce stade.');
     return { strengths, weaknesses };
   }
@@ -368,7 +368,7 @@
     let reco = (window._recoRows || []).find(r => r.ticker === ticker);
     if (!reco) reco = computeReco(ticker);
 
-    setText('recoDetailSub', `${ticker} — pondération : ${{ technical: 'court terme', balanced: 'équilibrée', fundamental: 'long terme' }[recoWeightMode]}`);
+    setText('recoDetailSub', `${ticker}, pondération : ${{ technical: 'court terme', balanced: 'équilibrée', fundamental: 'long terme' }[recoWeightMode]}`);
 
     const body = document.getElementById('recoDetailBody');
     if (!body) return;

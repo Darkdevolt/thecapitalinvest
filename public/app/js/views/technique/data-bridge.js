@@ -1,4 +1,4 @@
-// THE CAPITAL — Analyse technique : pont de données historique
+// THE CAPITAL, Analyse technique : pont de données historique
 // UI/front-end uniquement. Utilise l'endpoint existant sans le modifier.
 (function(){
   'use strict';

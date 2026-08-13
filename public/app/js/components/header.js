@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// COMPONENT — Header
+// COMPONENT, Header
 // ═══════════════════════════════════════
 
 // Header-related logic extracted from router.js

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════════
-// VIEW — Titres BRVM — VERSION CORRIGÉE & AMÉLIORÉE
+// VIEW, Titres BRVM, VERSION CORRIGÉE & AMÉLIORÉE
 // Base : script "CORRECTION Z-INDEX & VISIBILITÉ" fourni.
 // Tout le comportement et l'API publique d'origine sont conservés.
 //
@@ -10,7 +10,7 @@
 //      ou mal stylés. Ajoutés avec des couleurs cohérentes avec le thème.
 //   2. Historique trié chronologiquement une seule fois à l'indexation
 //      (buildHistoryIndex) au lieu de supposer que allCoursHistorique est
-//      déjà dans l'ordre — évite des sparklines / indicateurs 52 sem.
+//      déjà dans l'ordre, évite des sparklines / indicateurs 52 sem.
 //      faux si les données arrivent dans le désordre.
 //   3. historyFor() utilise désormais l'index déjà construit (_histByTicker)
 //      au lieu de refiltrer tout le tableau brut à chaque appel
@@ -107,7 +107,7 @@
 
   // Trie un tableau d'historique dans l'ordre chronologique croissant
   // (le plus ancien en premier), sans planter si aucun champ de date
-  // n'est reconnu — dans ce cas on conserve l'ordre d'origine.
+  // n'est reconnu, dans ce cas on conserve l'ordre d'origine.
   function sortHistoryChronological(arr) {
     if (!Array.isArray(arr) || arr.length < 2) return arr;
     var field = findDateField(arr[0]) || findDateField(arr[arr.length - 1]);
@@ -1406,7 +1406,7 @@
       '<td class="r" style="font-weight:600;">' + safeFmt(c.cours) + '</td>' +
       '<td class="r"><span class="tag ' + varClass + '">' + varHtml + '</span></td>' +
       '<td class="r">' + safeFmt(c.volume) + '</td>' +
-      '<td class="r">' + (c.capitalisation ? safeFmtM(c.capitalisation) : "—") + '</td>' +
+      '<td class="r">' + (c.capitalisation ? safeFmtM(c.capitalisation) : ", ") + '</td>' +
       '<td><span class="tagp">' + esc(c._secteur) + '</span></td>' +
       '<td><label onclick="event.stopPropagation()">' +
         '<input type="checkbox" data-role="compare-toggle" data-ticker="' + esc(c.ticker) + '" aria-label="Ajouter ' + esc(c.ticker) + ' à la comparaison" ' + (isChecked ? "checked" : "") + ' style="accent-color:#B8964E;width:14px;height:14px;">' +

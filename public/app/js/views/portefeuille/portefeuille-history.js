@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — HISTORIQUE (v4)
+// PORTEFEUILLE, HISTORIQUE (v4)
 // Valeur de compte = titres valorisés + trésorerie reconstruite.
 // Les dépôts/retraits sont des flux externes; achats/ventes/dividendes
 // restent des mouvements internes au portefeuille.

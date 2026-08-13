@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// UTILS — The Capital BRVM
+// UTILS, The Capital BRVM
 // ═══════════════════════════════════════
 // Guard pattern: empêche le double chargement
 (function() {
@@ -40,10 +40,10 @@
   };
 
   // ═══════════════════════════════════════
-  // CONFIG SUPABASE (MASQUÉE — utiliser proxy API)
+  // CONFIG SUPABASE (MASQUÉE, utiliser proxy API)
   // ═══════════════════════════════════════
   // ⚠️ NE JAMAIS EXPOSER LA CLÉ SUPABASE CÔTÉ CLIENT
-  // La clé a été retirée — tous les appels passent par /api/*
+  // La clé a été retirée, tous les appels passent par /api/*
   window.SB_URL = null; // Désactivé côté client
   window.SB_KEY = null; // Désactivé côté client
   window.SK = 'tc_session';
@@ -52,20 +52,20 @@
   // HELPERS (correction fmtM)
   // ═══════════════════════════════════════
   window.fmt = function(n, d = 0) {
-    if (n == null || isNaN(+n)) return '—';
+    if (n == null || isNaN(+n)) return ', ';
     return (+n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
   };
 
   window.fmtDate = function(d) {
-    if (!d) return '—';
+    if (!d) return ', ';
     try {
       return new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
-    } catch(e) { return '—'; }
+    } catch(e) { return ', '; }
   };
 
   // CORRECTION: variable 'v' utilisée au lieu de paramètre 'n'
   window.fmtM = function(n) {
-    if (n == null || isNaN(+n)) return '—';
+    if (n == null || isNaN(+n)) return ', ';
     const v = +n;
     if (Math.abs(v) >= 1e9) return (v/1e9).toFixed(1) + ' Mrd';
     if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(0) + ' M';
@@ -74,7 +74,7 @@
 
   window.changePill = function(v) {
     const n = parseFloat(v);
-    if (isNaN(n)) return '—';
+    if (isNaN(n)) return ', ';
     if (n > 0) return `▲ ${n.toFixed(2)}%`;
     if (n < 0) return `▼ ${Math.abs(n).toFixed(2)}%`;
     return '= 0.00%';
@@ -129,7 +129,7 @@
   };
 
   // ═══════════════════════════════════════
-  // CHART DEFAULTS (chartOpts — alias chartDefaults)
+  // CHART DEFAULTS (chartOpts, alias chartDefaults)
   // ═══════════════════════════════════════
   window.chartOpts = {
     responsive: true,

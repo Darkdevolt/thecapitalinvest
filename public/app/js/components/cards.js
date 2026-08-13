@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// COMPONENT — Cards
+// COMPONENT, Cards
 // ═══════════════════════════════════════
 
 // Shared card rendering utilities

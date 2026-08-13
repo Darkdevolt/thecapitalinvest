@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// VIEW — États Financiers
+// VIEW, États Financiers
 // User-facing presentation layer: no raw database fields are exposed.
 // ═══════════════════════════════════════
 
@@ -29,13 +29,13 @@ function financialSourceLine(f) {
 }
 
 function finValue(value, unit = '') {
-  if (value == null || value === '' || !Number.isFinite(Number(value))) return '—';
+  if (value == null || value === '' || !Number.isFinite(Number(value))) return ', ';
   return `${fmtM(value)}${unit ? ` ${unit}` : ''}`;
 }
 
 function finRatio(a,b, suffix='%') {
   const x=Number(a), y=Number(b);
-  if (!Number.isFinite(x) || !Number.isFinite(y) || y===0) return '—';
+  if (!Number.isFinite(x) || !Number.isFinite(y) || y===0) return ', ';
   return `${(x/y*100).toFixed(1)}${suffix}`;
 }
 
@@ -44,7 +44,7 @@ function finMetric(label, value, note='') {
 }
 
 function finCard(title, rows) {
-  const valid = rows.filter(([,v]) => v !== '—');
+  const valid = rows.filter(([,v]) => v !== ', ');
   if (!valid.length) return '';
   return `<section class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</section>`;
 }
@@ -82,7 +82,7 @@ function filterFin() {
 
   container.innerHTML = `
     <div class="fin-overview">
-      <div class="fin-overview-copy"><span class="fin-kicker">DONNÉES FINANCIÈRES</span><h2>Les fondamentaux, enfin lisibles.</h2><p>Résultats, bilan, ratios et évolution présentés dans un format conçu pour la décision — pas pour la lecture d'une base de données.</p></div>
+      <div class="fin-overview-copy"><span class="fin-kicker">DONNÉES FINANCIÈRES</span><h2>Les fondamentaux, enfin lisibles.</h2><p>Résultats, bilan, ratios et évolution présentés dans un format conçu pour la décision, pas pour la lecture d'une base de données.</p></div>
       <div class="fin-overview-stats">
         ${finMetric('Titres', total)}
         ${finMetric('Validés', validated)}
@@ -115,9 +115,9 @@ function renderFinancialTicker(ticker, fins) {
     <div class="fin-key-grid">
       ${finMetric("Chiffre d'affaires", finValue(latest.chiffre_affaires), `Exercice ${finEsc(latest.annee)}`)}
       ${finMetric('Résultat net', finValue(latest.resultat_net), growth === null ? confidence : `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% vs exercice précédent`)}
-      <div class="pro-only">${finMetric('BPA', latest.bpa != null ? `${fmt(latest.bpa)} FCFA` : '—', 'Bénéfice par action')}</div>
+      <div class="pro-only">${finMetric('BPA', latest.bpa != null ? `${fmt(latest.bpa)} FCFA` : ', ', 'Bénéfice par action')}</div>
       ${finMetric('Marge nette', finRatio(latest.resultat_net, latest.chiffre_affaires), 'Résultat net / CA')}
-      ${finMetric('Dividende par action', latest.dpa != null ? `${fmt(latest.dpa)} FCFA` : '—', 'DPA disponible en base')}
+      ${finMetric('Dividende par action', latest.dpa != null ? `${fmt(latest.dpa)} FCFA` : ', ', 'DPA disponible en base')}
     </div>
     <div class="fin-company-foot pro-only">${financialSourceLine(latest)}<button class="fin-detail-btn" onclick="event.stopPropagation();openFinDetail('${finEsc(ticker)}')">Explorer les états financiers</button></div>
   </article>`;
@@ -140,7 +140,7 @@ function openFinDetail(ticker) {
     <button class="back-btn" onclick="nav('financials')">← Retour aux états financiers</button>
     <div class="fin-detail-hero">
       <div><span class="fin-kicker">FICHE FINANCIÈRE · ${finEsc(ticker)}</span><h1>${company}</h1><p>Lecture structurée des comptes disponibles, période par période.</p></div>
-      <div class="fin-detail-price"><span>Cours disponible</span><strong>${Number.isFinite(cp) && cp ? fmt(cp)+' FCFA' : '—'}</strong><small>Dernière cotation disponible</small></div>
+      <div class="fin-detail-price"><span>Cours disponible</span><strong>${Number.isFinite(cp) && cp ? fmt(cp)+' FCFA' : ', '}</strong><small>Dernière cotation disponible</small></div>
     </div>
     <div class="fin-detail-trust">${financialValidationBadge(latest)}<span>${finStatus(latest)==='validated' ? 'Les données affichées sont validées.' : 'Certaines données sont encore en validation éditoriale.'}</span></div>
     <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du résultat net</div><div class="fin-section-note">Historique disponible dans la base The Capital.</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
@@ -161,10 +161,10 @@ function openFinDetail(ticker) {
   container.innerHTML = fins.map(f => {
     const title = !f.periode || f.periode==='annuel' ? `${finEsc(f.annee)} · Annuel` : `${finEsc(f.annee)} · ${finEsc(String(f.periode).charAt(0).toUpperCase()+String(f.periode).slice(1))}`;
     const sections = [
-      finCard('Compte de résultat', [["Chiffre d'affaires",finValue(f.chiffre_affaires)],['RBE',finValue(f.rbe)],['Résultat net',finValue(f.resultat_net)],['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA':'—'],['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA':'—']]),
+      finCard('Compte de résultat', [["Chiffre d'affaires",finValue(f.chiffre_affaires)],['RBE',finValue(f.rbe)],['Résultat net',finValue(f.resultat_net)],['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA':', '],['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA':', ']]),
       finCard('Bilan', [['Total actif',finValue(f.total_actif)],['Fonds propres',finValue(f.fonds_propres)],['Dettes financières',finValue(f.dettes_financieres)]]),
       finCard('Flux de trésorerie', [['Cash-flow opérationnel',finValue(f.cash_flow_operationnel)],['CAPEX',finValue(f.capex)]]),
-      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'):'—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x':'—'],['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%':'—']])
+      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'):', '],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x':', '],['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%':', ']])
     ].join('');
     return `<article class="fin-period-card"><div class="fin-period-head"><div><span class="fin-period-label">PÉRIODE</span><h3>${title}</h3></div>${financialValidationBadge(f)}</div><div class="fin-period-grid">${sections}</div>${financialSourceLine(f)}</article>`;
   }).join('');

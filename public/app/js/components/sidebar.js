@@ -1,4 +1,4 @@
-// COMPONENT — Single mobile navigation controller
+// COMPONENT, Single mobile navigation controller
 // UI/navigation only. No API, Supabase, auth or market-data logic is modified.
 (function(){
   'use strict';

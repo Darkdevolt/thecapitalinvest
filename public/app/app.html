@@ -2,10 +2,10 @@
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<!-- ═══ AUTH GUARD — DOIT RESTER LE TOUT PREMIER SCRIPT ═══ -->
+<!-- ═══ AUTH GUARD, DOIT RESTER LE TOUT PREMIER SCRIPT ═══ -->
 <script>
 (function authGuard(){
-  var SK = "tc_session"; // clé écrite par login.html — doit rester identique
+  var SK = "tc_session"; // clé écrite par login.html, doit rester identique
 
   function b64urlDecode(str){
     str = str.replace(/-/g,'+').replace(/_/g,'/');
@@ -48,7 +48,7 @@
 })();
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>The Capital — Intelligence Financière BRVM</title>
+<title>The Capital, Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
@@ -222,7 +222,7 @@
     <div class="header-time" id="headerTime"></div>
     <div class="topnav-user" id="topnavUser">
       <div class="topnav-avatar" id="headerAvatar">TC</div>
-      <span class="topnav-username" id="headerName">—</span>
+      <span class="topnav-username" id="headerName">, </span>
     </div>
     <button class="topnav-logout" onclick="doLogout()">⎋</button>
   </div>
@@ -235,16 +235,16 @@
 <div class="view active" id="view-overview">
   <div class="page-header">
     <h1>Tableau de Bord <span style="color:var(--gold)">BRVM</span></h1>
-    <p>Bourse Régionale des Valeurs Mobilières — Données en temps réel</p>
+    <p>Bourse Régionale des Valeurs Mobilières, Données en temps réel</p>
   </div>
   <div class="grid-3" id="overviewStats">
-    <div class="stat-card"><div class="stat-label">BRVM Composite</div><div class="stat-value" id="idx-composite">—</div><div class="stat-change" id="idx-composite-chg">—</div></div>
-    <div class="stat-card"><div class="stat-label">BRVM 30</div><div class="stat-value" id="idx-30">—</div><div class="stat-change" id="idx-30-chg">—</div></div>
-    <div class="stat-card"><div class="stat-label">BRVM Prestige</div><div class="stat-value" id="idx-prestige">—</div><div class="stat-change" id="idx-prestige-chg">—</div></div>
+    <div class="stat-card"><div class="stat-label">BRVM Composite</div><div class="stat-value" id="idx-composite">, </div><div class="stat-change" id="idx-composite-chg">, </div></div>
+    <div class="stat-card"><div class="stat-label">BRVM 30</div><div class="stat-value" id="idx-30">, </div><div class="stat-change" id="idx-30-chg">, </div></div>
+    <div class="stat-card"><div class="stat-label">BRVM Prestige</div><div class="stat-value" id="idx-prestige">, </div><div class="stat-change" id="idx-prestige-chg">, </div></div>
   </div>
   <div class="grid-7030">
     <div class="card">
-      <div class="card-header"><div class="card-title">BRVM Composite — 30 séances</div><div style="font-family:var(--mono);font-size:11px;color:var(--dim)" id="lastSession"></div></div>
+      <div class="card-header"><div class="card-title">BRVM Composite, 30 séances</div><div style="font-family:var(--mono);font-size:11px;color:var(--dim)" id="lastSession"></div></div>
       <div class="card-body"><div class="chart-container tall"><canvas id="chartComposite"></canvas></div></div>
     </div>
     <div class="card">
@@ -292,22 +292,22 @@
   <button class="back-btn" id="ficheBackBtn" onclick="nav('titres')">← Retour</button>
   <div class="fiche-hero">
     <div class="fiche-ticker-label" id="ficheTickerLabel"></div>
-    <div class="fiche-company" id="ficheCompany">—</div>
+    <div class="fiche-company" id="ficheCompany">, </div>
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
       <span class="sector-tag" id="ficheSector"></span>
       <span style="font-size:11px;color:var(--dim)" id="fichePays"></span>
     </div>
     <div class="fiche-price-row">
-      <div class="fiche-price" id="fichePrice">—</div>
+      <div class="fiche-price" id="fichePrice">, </div>
       <div style="font-size:14px;color:var(--muted)">FCFA</div>
       <div id="ficheChange" style="font-family:var(--mono);font-size:18px;font-weight:500"></div>
     </div>
     <div class="fiche-meta" id="ficheMeta"></div>
     <div class="ratios-grid" id="ficheRatios">
-      <div class="ratio-item"><div class="ratio-label">P/E Ratio</div><div class="ratio-value" id="r-per">—</div></div>
-      <div class="ratio-item"><div class="ratio-label">Div. Yield</div><div class="ratio-value" id="r-rdt">—</div></div>
-      <div class="ratio-item"><div class="ratio-label">P / Actif Net</div><div class="ratio-value" id="r-pan">—</div></div>
-      <div class="ratio-item"><div class="ratio-label">Capitalisation</div><div class="ratio-value" id="r-cap">—</div></div>
+      <div class="ratio-item"><div class="ratio-label">P/E Ratio</div><div class="ratio-value" id="r-per">, </div></div>
+      <div class="ratio-item"><div class="ratio-label">Div. Yield</div><div class="ratio-value" id="r-rdt">, </div></div>
+      <div class="ratio-item"><div class="ratio-label">P / Actif Net</div><div class="ratio-value" id="r-pan">, </div></div>
+      <div class="ratio-item"><div class="ratio-label">Capitalisation</div><div class="ratio-value" id="r-cap">, </div></div>
     </div>
   </div>
   <div class="grid-7030">
@@ -327,7 +327,7 @@
     <div>
       <div class="card mb20" style="margin-bottom:16px">
         <div class="card-header"><div class="card-title">Description</div></div>
-        <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7" id="ficheDesc">—</div>
+        <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7" id="ficheDesc">, </div>
       </div>
       <div class="card">
         <div class="card-header"><div class="card-title">Informations</div></div>
@@ -351,18 +351,18 @@
 <!-- ═══ BOC ═══ -->
 <div class="view" id="view-boc">
   <div class="page-header">
-    <h1>BOC — <span style="color:var(--gold)">Bulletin Officiel de la Cote</span></h1>
-    <p>Documents officiels BRVM par séance de bourse — téléchargez les PDF</p>
+    <h1>BOC, <span style="color:var(--gold)">Bulletin Officiel de la Cote</span></h1>
+    <p>Documents officiels BRVM par séance de bourse, téléchargez les PDF</p>
   </div>
   
   <div class="grid-3" style="margin-bottom:20px">
     <div class="stat-card">
       <div class="stat-label">Séances disponibles</div>
-      <div class="stat-value" id="bocCount">—</div>
+      <div class="stat-value" id="bocCount">, </div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Dernière séance</div>
-      <div class="stat-value" id="bocLastDate">—</div>
+      <div class="stat-value" id="bocLastDate">, </div>
     </div>
     <div class="stat-card">
       <div class="stat-label">Année en cours</div>
@@ -482,7 +482,7 @@
       <span class="at-tb-label">Dessin</span>
       <button class="at-btn" id="dBtnCursor" onclick="atSetDraw('cursor')" title="Curseur">↖ Curseur</button>
       <div class="at-sep"></div>
-      <button class="at-btn" id="dBtnHLine" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">— Support / Résistance</button>
+      <button class="at-btn" id="dBtnHLine" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">, Support / Résistance</button>
       <button class="at-btn" id="dBtnTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱ Ligne de tendance</button>
       <button class="at-btn" id="dBtnChannel" onclick="atSetDraw('channel')" title="Canal de tendance">⫴ Canal</button>
       <button class="at-btn" id="dBtnRect" onclick="atSetDraw('rect')" title="Zone de prix">▭ Zone de prix</button>
@@ -502,7 +502,7 @@
       <div class="at-left">
         <div class="at-tool on" id="atToolCursor" onclick="atSetDraw('cursor')" title="Curseur">↖</div>
         <div class="at-tool-sep"></div>
-        <div class="at-tool" id="atToolHline" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">—</div>
+        <div class="at-tool" id="atToolHline" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">, </div>
         <div class="at-tool" id="atToolTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱</div>
         <div class="at-tool" id="atToolChannel" onclick="atSetDraw('channel')" title="Canal de tendance">⫴</div>
         <div class="at-tool" id="atToolRect" onclick="atSetDraw('rect')" title="Zone de prix">▭</div>
@@ -520,14 +520,14 @@
 
         <!-- OHLCV BAR -->
         <div class="at-ohlc" id="atOHLC">
-          <span style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600" id="atOhlcTicker">—</span>
-          <div class="ohlc-item"><span class="ohlc-lbl">Ouverture</span><span class="ohlc-v" id="atO">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">Plus Haut</span><span class="ohlc-v up" id="atH">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">Plus Bas</span><span class="ohlc-v down" id="atL">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">Clôture</span><span class="ohlc-v" id="atC">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">Volume</span><span class="ohlc-v" style="color:var(--dim)" id="atV">—</span></div>
-          <div class="ohlc-item"><span class="ohlc-lbl">Variation</span><span class="ohlc-v" id="atVar">—</span></div>
-          <div class="ohlc-item" style="margin-left:auto"><span class="ohlc-lbl">Dernière Mise à Jour</span><span class="ohlc-v" style="color:var(--dim);font-size:10px" id="atLastUpdate">—</span></div>
+          <span style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600" id="atOhlcTicker">, </span>
+          <div class="ohlc-item"><span class="ohlc-lbl">Ouverture</span><span class="ohlc-v" id="atO">, </span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Plus Haut</span><span class="ohlc-v up" id="atH">, </span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Plus Bas</span><span class="ohlc-v down" id="atL">, </span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Clôture</span><span class="ohlc-v" id="atC">, </span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Volume</span><span class="ohlc-v" style="color:var(--dim)" id="atV">, </span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Variation</span><span class="ohlc-v" id="atVar">, </span></div>
+          <div class="ohlc-item" style="margin-left:auto"><span class="ohlc-lbl">Dernière Mise à Jour</span><span class="ohlc-v" style="color:var(--dim);font-size:10px" id="atLastUpdate">, </span></div>
         </div>
 
         <!-- CHART PRINCIPAL -->
@@ -582,9 +582,9 @@
 
         <!-- BOTTOM BAR -->
         <div class="at-bottom">
-          <span class="at-bb-item">BRVM Composite <span style="color:var(--green)" id="atIdxComp">—</span></span>
-          <span class="at-bb-item">BRVM 30 <span style="color:var(--green)" id="atIdx30">—</span></span>
-          <span class="at-bb-item" style="margin-left:auto" id="atBBTime">—</span>
+          <span class="at-bb-item">BRVM Composite <span style="color:var(--green)" id="atIdxComp">, </span></span>
+          <span class="at-bb-item">BRVM 30 <span style="color:var(--green)" id="atIdx30">, </span></span>
+          <span class="at-bb-item" style="margin-left:auto" id="atBBTime">, </span>
         </div>
 
       </div>
@@ -594,14 +594,14 @@
 
         <div style="border-bottom:1px solid var(--border2)">
           <div class="at-rp-title">Signaux</div>
-          <div class="at-sig-row"><span class="at-sig-label">Global</span><span class="sig-badge sig-n" id="sigGlob">—</span></div>
-          <div class="at-sig-row"><span class="at-sig-label">Tendance</span><span class="sig-badge sig-n" id="sigTrend">—</span></div>
-          <div class="at-sig-row"><span class="at-sig-label">Momentum</span><span class="sig-badge sig-n" id="sigMom">—</span></div>
-          <div class="at-sig-row"><span class="at-sig-label">Volatilité</span><span class="sig-badge sig-n" id="sigVol">—</span></div>
-          <div class="at-sig-row"><span class="at-sig-label">Volume</span><span class="sig-badge sig-n" id="sigVolTrend">—</span></div>
-          <div class="at-sig-row"><span class="at-sig-label">RSI (14)</span><span class="sig-badge sig-n" id="sigRSI">—</span></div>
-          <div class="at-sig-row"><span class="at-sig-label">MACD</span><span class="sig-badge sig-n" id="sigMACD">—</span></div>
-          <div class="at-sig-row"><span class="at-sig-label">Stoch</span><span class="sig-badge sig-n" id="sigStoch">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Global</span><span class="sig-badge sig-n" id="sigGlob">, </span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Tendance</span><span class="sig-badge sig-n" id="sigTrend">, </span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Momentum</span><span class="sig-badge sig-n" id="sigMom">, </span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Volatilité</span><span class="sig-badge sig-n" id="sigVol">, </span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Volume</span><span class="sig-badge sig-n" id="sigVolTrend">, </span></div>
+          <div class="at-sig-row"><span class="at-sig-label">RSI (14)</span><span class="sig-badge sig-n" id="sigRSI">, </span></div>
+          <div class="at-sig-row"><span class="at-sig-label">MACD</span><span class="sig-badge sig-n" id="sigMACD">, </span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Stoch</span><span class="sig-badge sig-n" id="sigStoch">, </span></div>
         </div>
 
         <div style="border-bottom:1px solid var(--border2);flex-shrink:0">
@@ -637,7 +637,7 @@
 <div class="view" id="view-analyse-fondamentale">
   <div class="page-header">
     <h1>Analyse <span style="color:var(--gold)">Fondamentale</span></h1>
-    <p>Forecast, DCF, TCAM & régression — paramétrez vos hypothèses</p>
+    <p>Forecast, DCF, TCAM & régression, paramétrez vos hypothèses</p>
   </div>
   <div class="search-bar">
     <select class="search-input" id="fundTickerSelect" onchange="loadFundAnalysis()" style="flex:0 0 220px">
@@ -688,7 +688,7 @@
 <div class="view" id="view-portefeuille">
   <div class="page-header">
     <h1>Gestion de <span style="color:var(--gold)">Portefeuille</span></h1>
-    <p>Suivi réel de vos positions, analyse de performance et optimisation d'allocation — Actions, Obligations & OPCVM</p>
+    <p>Suivi réel de vos positions, analyse de performance et optimisation d'allocation, Actions, Obligations & OPCVM</p>
   </div>
 
   <!-- ═══════════════════════════════════════
@@ -697,37 +697,37 @@
   <div class="portf-kpi-grid">
     <div class="portf-kpi">
       <div class="portf-kpi-label">Valeur Totale</div>
-      <div class="portf-kpi-value" id="pfTotal">—</div>
+      <div class="portf-kpi-value" id="pfTotal">, </div>
       <div class="portf-kpi-sub" id="pfTotalSub"></div>
     </div>
     <div class="portf-kpi">
       <div class="portf-kpi-label">Investi</div>
-      <div class="portf-kpi-value" id="pfInvested">—</div>
+      <div class="portf-kpi-value" id="pfInvested">, </div>
     </div>
     <div class="portf-kpi">
       <div class="portf-kpi-label">P&L Net</div>
-      <div class="portf-kpi-value" id="pfPL">—</div>
+      <div class="portf-kpi-value" id="pfPL">, </div>
       <div class="portf-kpi-sub" id="pfPLSub"></div>
     </div>
     <div class="portf-kpi">
       <div class="portf-kpi-label">Rendement</div>
-      <div class="portf-kpi-value" id="pfReturn">—</div>
+      <div class="portf-kpi-value" id="pfReturn">, </div>
     </div>
     <div class="portf-kpi">
       <div class="portf-kpi-label">Volatilité (ann.)</div>
-      <div class="portf-kpi-value" id="pfVolatility">—</div>
+      <div class="portf-kpi-value" id="pfVolatility">, </div>
     </div>
     <div class="portf-kpi">
       <div class="portf-kpi-label">Ratio de Sharpe</div>
-      <div class="portf-kpi-value" id="pfSharpe">—</div>
+      <div class="portf-kpi-value" id="pfSharpe">, </div>
     </div>
     <div class="portf-kpi">
       <div class="portf-kpi-label">Max Drawdown</div>
-      <div class="portf-kpi-value" id="pfDrawdown">—</div>
+      <div class="portf-kpi-value" id="pfDrawdown">, </div>
     </div>
     <div class="portf-kpi">
       <div class="portf-kpi-label">Beta (vs BRVM)</div>
-      <div class="portf-kpi-value" id="pfBeta">—</div>
+      <div class="portf-kpi-value" id="pfBeta">, </div>
     </div>
   </div>
 
@@ -816,13 +816,13 @@
   </div>
 
   <!-- ═══════════════════════════════════════
-       TABLEAU DES POSITIONS — AVEC SÉLECTION
+       TABLEAU DES POSITIONS, AVEC SÉLECTION
   ═══════════════════════════════════════ -->
   <div class="card mb20">
     <div class="card-header" style="display:flex;justify-content:space-between;align-items:center">
       <div class="card-title">📋 Positions Détaillées</div>
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:12px;color:var(--dim)" id="pfPositionCount">—</div>
+        <div style="font-size:12px;color:var(--dim)" id="pfPositionCount">, </div>
         <button onclick="deleteSelectedPositions()" id="btnDeleteSelected" style="display:none;padding:4px 12px;border-radius:6px;border:1px solid var(--red);background:rgba(248,113,113,0.1);color:var(--red);font-size:11px;cursor:pointer;transition:all .2s" onmouseover="this.style.background='rgba(248,113,113,0.2)'" onmouseout="this.style.background='rgba(248,113,113,0.1)'">🗑 Supprimer sélection</button>
       </div>
     </div>
@@ -919,7 +919,7 @@
 <div class="view" id="view-publications">
   <div class="page-header">
     <h1>Calendrier de <span style="color:var(--gold)">Publication</span></h1>
-    <p>États financiers publiés vs en attente — détection automatique via le résultat net</p>
+    <p>États financiers publiés vs en attente, détection automatique via le résultat net</p>
   </div>
   <div class="search-bar">
     <input class="search-input" id="searchPubs" placeholder="🔍  Filtrer par ticker, société..." oninput="filterPublications()">
@@ -999,15 +999,15 @@
         <div class="card-body" style="max-height:500px;overflow-y:auto">
           <div class="lexique-list">
             <div class="lexique-item">
-              <div class="lexique-term">SMA — Moyenne Mobile Simple</div>
+              <div class="lexique-term">SMA, Moyenne Mobile Simple</div>
               <div class="lexique-def">Moyenne arithmétique des cours sur N périodes. La SMA 20 et 50 sont les plus utilisées pour identifier la tendance.</div>
             </div>
             <div class="lexique-item">
-              <div class="lexique-term">EMA — Moyenne Mobile Exponentielle</div>
+              <div class="lexique-term">EMA, Moyenne Mobile Exponentielle</div>
               <div class="lexique-def">Moyenne mobile pondérée donnant plus d'importance aux cours récents. Plus réactive que la SMA.</div>
             </div>
             <div class="lexique-item">
-              <div class="lexique-term">RSI — Relative Strength Index</div>
+              <div class="lexique-term">RSI, Relative Strength Index</div>
               <div class="lexique-def">Indicateur de momentum de 0 à 100. >70 = surachat (vente), <30 = survente (achat).</div>
             </div>
             <div class="lexique-item">
@@ -1093,7 +1093,7 @@
   </div>
 
   <!-- ═══════════════════════════
-       SECTION 1 — INDICES
+       SECTION 1, INDICES
   ═══════════════════════════ -->
   <div class="section" id="indices">
     <div class="section-title">Cours des Indices</div>
@@ -1102,28 +1102,28 @@
     <div class="grid-3 mb20">
       <div class="stat-card">
         <div class="stat-label">BRVM Composite</div>
-        <div class="stat-value" id="marche-idx-composite">—</div>
-        <div class="stat-change" id="marche-idx-composite-chg">—</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-composite-vol">Volume —</div>
+        <div class="stat-value" id="marche-idx-composite">, </div>
+        <div class="stat-change" id="marche-idx-composite-chg">, </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-composite-vol">Volume, </div>
       </div>
       <div class="stat-card">
         <div class="stat-label">BRVM 30</div>
-        <div class="stat-value" id="marche-idx-30">—</div>
-        <div class="stat-change" id="marche-idx-30-chg">—</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-30-vol">—</div>
+        <div class="stat-value" id="marche-idx-30">, </div>
+        <div class="stat-change" id="marche-idx-30-chg">, </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-30-vol">, </div>
       </div>
       <div class="stat-card">
         <div class="stat-label">BRVM Prestige</div>
-        <div class="stat-value" id="marche-idx-prestige">—</div>
-        <div class="stat-change" id="marche-idx-prestige-chg">—</div>
-        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-prestige-vol">—</div>
+        <div class="stat-value" id="marche-idx-prestige">, </div>
+        <div class="stat-change" id="marche-idx-prestige-chg">, </div>
+        <div style="font-size:11px;color:var(--dim);margin-top:6px" id="marche-idx-prestige-vol">, </div>
       </div>
     </div>
 
     <!-- Index chart -->
     <div class="card mb20">
       <div class="card-header">
-        <div class="card-title">BRVM Composite — Historique</div>
+        <div class="card-title">BRVM Composite, Historique</div>
         <div style="display:flex;gap:6px" id="marche-idxPeriodBtns">
           <button class="filter-btn active" onclick="setIdxPeriod(30,this)">1M</button>
           <button class="filter-btn" onclick="setIdxPeriod(90,this)">3M</button>
@@ -1139,7 +1139,7 @@
   </div>
 
   <!-- ═══════════════════════════
-       SECTION 2 — COURS ACTIONS
+       SECTION 2, COURS ACTIONS
   ═══════════════════════════ -->
   <div class="section" id="cours">
     <div class="section-title">Cours des Actions</div>
@@ -1158,8 +1158,8 @@
 
     <div class="card">
       <div class="card-header">
-        <div class="card-title">Séance du <span id="marche-coursDate">—</span></div>
-        <div style="font-size:12px;color:var(--dim)" id="marche-coursCount">—</div>
+        <div class="card-title">Séance du <span id="marche-coursDate">, </span></div>
+        <div style="font-size:12px;color:var(--dim)" id="marche-coursCount">, </div>
       </div>
       <div class="table-wrap">
         <table>
@@ -1185,7 +1185,7 @@
   </div>
 
   <!-- ═══════════════════════════
-       SECTION 3 — PALMARES
+       SECTION 3, PALMARES
   ═══════════════════════════ -->
   <div class="section" id="palmares">
     <div class="section-title">Palmarès</div>
@@ -1236,11 +1236,11 @@
   </div>
 
   <!-- ═══════════════════════════
-       SECTION 4 — DIVIDENDES
+       SECTION 4, DIVIDENDES
   ═══════════════════════════ -->
   <div class="section" id="dividendes">
     <div class="section-title">Dividendes</div>
-    <div class="section-sub">Distributions de dividendes des sociétés cotées — dernier exercice</div>
+    <div class="section-sub">Distributions de dividendes des sociétés cotées, dernier exercice</div>
 
     <div class="card">
       <div class="card-header">
@@ -1268,7 +1268,7 @@
   </div>
 
   <!-- ═══════════════════════════
-       SECTION 5 — PUBLICATIONS
+       SECTION 5, PUBLICATIONS
   ═══════════════════════════ -->
   <div class="section" id="publications">
     <div class="section-title">Publications Officielles</div>
@@ -1287,7 +1287,7 @@
   </div>
 
   <!-- ═══════════════════════════
-       SECTION 6 — CALENDRIER
+       SECTION 6, CALENDRIER
   ═══════════════════════════ -->
   <div class="section" id="calendrier">
     <div class="section-title">Calendrier des Évènements</div>
@@ -1307,7 +1307,7 @@
   </div>
 
   <!-- ═══════════════════════════
-       SECTION 7 — CTA CONVERSION
+       SECTION 7, CTA CONVERSION
   ═══════════════════════════ -->
   <div class="section" style="text-align:center;padding:60px 20px;background:linear-gradient(to right, rgba(184,150,78,0.05), transparent, rgba(184,150,78,0.05));border:1px solid var(--border);border-radius:12px;margin-top:40px;">
     <div style="font-family:var(--serif);font-size:24px;font-weight:700;color:var(--cream);margin-bottom:12px;">
@@ -1396,7 +1396,7 @@
   document.body.style.opacity='1';
   document.body.style.visibility='visible';
 
-  // Déconnexion fiable — remplace toute implémentation antérieure,
+  // Déconnexion fiable, remplace toute implémentation antérieure,
   // garantit la suppression de la session réelle (tc_session).
   window.doLogout = function(){
     try { localStorage.removeItem('tc_session'); } catch(e){}

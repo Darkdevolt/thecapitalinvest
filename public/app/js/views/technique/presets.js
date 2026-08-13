@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT — Presets & Onboarding
+// AT, Presets & Onboarding
 // ═══════════════════════════════════════
 
 const AT_PRESETS = {

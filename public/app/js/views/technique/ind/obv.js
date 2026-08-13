@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATOBV
+// AT Indicator, ATOBV
 // ═══════════════════════════════════════
 
 function atOBV(c, v) {

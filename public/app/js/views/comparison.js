@@ -1,4 +1,4 @@
-// THE CAPITAL — Fundamental comparison (2 to 4 companies)
+// THE CAPITAL, Fundamental comparison (2 to 4 companies)
 (function () {
   if (window.__TC_COMPARISON_LOADED__) return;
   window.__TC_COMPARISON_LOADED__ = true;

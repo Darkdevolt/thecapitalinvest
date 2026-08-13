@@ -75,5 +75,5 @@
     delete:window.apiDelete
   };
 
-  console.log('[FETCH] API client chargé — CRUD HTTP complet');
+  console.log('[FETCH] API client chargé, CRUD HTTP complet');
 })();

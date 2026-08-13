@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATADX
+// AT Indicator, ATADX
 // ═══════════════════════════════════════
 
 function atADX(h, l, c, n = 14) {

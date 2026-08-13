@@ -1,4 +1,4 @@
-// THE CAPITAL — Portefeuille trade & flux flows patch
+// THE CAPITAL, Portefeuille trade & flux flows patch
 // Frontend-only: uses the existing portfolio transaction API/store.
 (function () {
   'use strict';
@@ -79,7 +79,7 @@
       if (document.getElementById('pfSellDate')) document.getElementById('pfSellDate').value = '';
       if (document.getElementById('sellHint')) document.getElementById('sellHint').textContent = '';
       if (typeof window.renderPortfolio === 'function') window.renderPortfolio();
-      toastSafe(`Vente enregistrée — ${qty} × ${ticker} à ${price.toLocaleString('fr-FR')} FCFA. P&L réalisé : ${realizedPL >= 0 ? '+' : ''}${Math.round(realizedPL).toLocaleString('fr-FR')} FCFA`, realizedPL >= 0 ? 'success' : 'error');
+      toastSafe(`Vente enregistrée, ${qty} × ${ticker} à ${price.toLocaleString('fr-FR')} FCFA. P&L réalisé : ${realizedPL >= 0 ? '+' : ''}${Math.round(realizedPL).toLocaleString('fr-FR')} FCFA`, realizedPL >= 0 ? 'success' : 'error');
     } catch (error) {
       console.error('[PORTFOLIO] Vente:', error);
       toastSafe(error.message || 'Impossible d’enregistrer la vente.', 'error');

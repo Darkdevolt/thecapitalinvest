@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATMACD
+// AT Indicator, ATMACD
 // ═══════════════════════════════════════
 
 function atMACD(d) {

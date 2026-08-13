@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// VIEW — Overview / Tableau de bord
+// VIEW, Overview / Tableau de bord
 // ═══════════════════════════════════════
 (function() {
   if (window.__TC_OVERVIEW_LOADED__) {
@@ -112,12 +112,12 @@
     };
     const setIdx = (id,val,chgId,chg) => {
       const el=document.getElementById(id), ce=document.getElementById(chgId);
-      if(el) el.textContent=(val!=null&&!isNaN(+val))?fmt(+val,2):'—';
-      if(ce){const n=parseFloat(chg),cls=isNaN(n)?'neutral':n>0?'up':n<0?'down':'neutral';ce.className=`stat-change ${cls}`;ce.textContent=isNaN(n)?'—':(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(2)+' pts';}
+      if(el) el.textContent=(val!=null&&!isNaN(+val))?fmt(+val,2):', ';
+      if(ce){const n=parseFloat(chg),cls=isNaN(n)?'neutral':n>0?'up':n<0?'down':'neutral';ce.className=`stat-change ${cls}`;ce.textContent=isNaN(n)?', ':(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(2)+' pts';}
     };
     let lastDate=null;
     Object.values(mapCard).forEach(card=>{const realName=findIndice(card.candidates),data=realName?latest[realName]:null;if(data){setIdx(card.id,data.valeur,card.chgId,data.variation);if(data.date_seance)lastDate=data.date_seance;const history=getIndiceHistory(realName,20);if(history.length>=2)drawSparkline(card.sparkId,history.map(d=>d.valeur));}else setIdx(card.id,null,card.chgId,null);});
-    const lastSessionEl=document.getElementById('lastSession');if(lastSessionEl)lastSessionEl.textContent=lastDate?'Séance '+fmtDate(lastDate):'—';
+    const lastSessionEl=document.getElementById('lastSession');if(lastSessionEl)lastSessionEl.textContent=lastDate?'Séance '+fmtDate(lastDate):', ';
   }
 
   window.renderCompositeChart=function(){
@@ -134,7 +134,7 @@
 
   function renderSectorHeatmap(){const bySector={},byTicker={};(window.allCours||[]).forEach(c=>{if(c?.ticker&&!byTicker[c.ticker])byTicker[c.ticker]=c;});Object.values(byTicker).forEach(c=>{const sector=getSector(c.ticker)||'Autre';if(!bySector[sector])bySector[sector]={total:0,count:0};const v=parseFloat(c.variation)||0;bySector[sector].total+=v;bySector[sector].count++;});const container=document.getElementById('sectorHeatmap');if(!container)return;const sectors=Object.entries(bySector).map(([name,data])=>({name,avg:data.total/data.count,count:data.count})).sort((a,b)=>Math.abs(b.avg)-Math.abs(a.avg));if(!sectors.length){container.innerHTML='<div class="empty-state">Aucune donnée sectorielle</div>';return;}container.innerHTML=sectors.map(s=>{const cls=s.avg>0?'heatmap-up':s.avg<0?'heatmap-down':'heatmap-neutral',color=s.avg>0?'var(--green)':s.avg<0?'var(--red)':'var(--dim)';return `<div class="heatmap-cell ${cls}" style="border-left-color:${color}"><div class="hm-name">${escapeHtml(s.name)}</div><div class="hm-value" style="color:${color}">${s.avg>0?'+':''}${s.avg.toFixed(2)}%</div><div class="hm-count">${s.count} titre${s.count>1?'s':''}</div></div>`;}).join('');}
 
-  function renderNewsFeed(){const container=document.getElementById('newsFeed');if(!container)return;const recent=(window.allAnalyses||[]).slice(0,5);if(!recent.length){container.innerHTML='<div class="empty-state">Aucune analyse disponible</div>';return;}container.innerHTML=recent.map(a=>{const badgeClass=(a.recommandation||'').toLowerCase(),badgeText=a.recommandation||'NEWS',ticker=a.ticker||'—';return `<div class="news-item"><span class="badge ${escapeHtml(badgeClass)}">${escapeHtml(badgeText)}</span><div class="news-title">${escapeHtml(a.titre||'Analyse '+ticker)}</div><div class="news-meta">${escapeHtml(ticker)} • ${fmtDate(a.date_analyse)} • Objectif: ${a.objectif||'—'} FCFA</div></div>`;}).join('');}
+  function renderNewsFeed(){const container=document.getElementById('newsFeed');if(!container)return;const recent=(window.allAnalyses||[]).slice(0,5);if(!recent.length){container.innerHTML='<div class="empty-state">Aucune analyse disponible</div>';return;}container.innerHTML=recent.map(a=>{const badgeClass=(a.recommandation||'').toLowerCase(),badgeText=a.recommandation||'NEWS',ticker=a.ticker||', ';return `<div class="news-item"><span class="badge ${escapeHtml(badgeClass)}">${escapeHtml(badgeText)}</span><div class="news-title">${escapeHtml(a.titre||'Analyse '+ticker)}</div><div class="news-meta">${escapeHtml(ticker)} • ${fmtDate(a.date_analyse)} • Objectif: ${a.objectif||', '} FCFA</div></div>`;}).join('');}
 
   // ─── TOP MOVERS ───
   function renderMoversControls(){
@@ -173,7 +173,7 @@
     }).join('');
   }
 
-  function renderPubFeed(){const container=document.getElementById('pubFeed');if(!container)return;const upcoming=(window.allFinancials||[]).filter(f=>f.periode==='annuel'||f.periode==='s1').sort((a,b)=>(b.annee||0)-(a.annee||0)).slice(0,5);if(!upcoming.length){container.innerHTML='<div class="empty-state">Aucune publication prévue</div>';return;}container.innerHTML=upcoming.map(p=>{const ticker=p.ticker||'—',year=p.annee||new Date().getFullYear(),isPublished=p.resultat_net!=null,month=isPublished?'03':'06';return `<div class="pub-item"><div class="pub-date"><span class="day">15</span><span class="month">${month}</span></div><div class="pub-info"><span class="ticker">${escapeHtml(ticker)}</span><span class="period">${escapeHtml(p.periode)} ${year}</span></div></div>`;}).join('');}
+  function renderPubFeed(){const container=document.getElementById('pubFeed');if(!container)return;const upcoming=(window.allFinancials||[]).filter(f=>f.periode==='annuel'||f.periode==='s1').sort((a,b)=>(b.annee||0)-(a.annee||0)).slice(0,5);if(!upcoming.length){container.innerHTML='<div class="empty-state">Aucune publication prévue</div>';return;}container.innerHTML=upcoming.map(p=>{const ticker=p.ticker||', ',year=p.annee||new Date().getFullYear(),isPublished=p.resultat_net!=null,month=isPublished?'03':'06';return `<div class="pub-item"><div class="pub-date"><span class="day">15</span><span class="month">${month}</span></div><div class="pub-info"><span class="ticker">${escapeHtml(ticker)}</span><span class="period">${escapeHtml(p.periode)} ${year}</span></div></div>`;}).join('');}
 
   function renderAlertFeed(){const container=document.getElementById('alertFeed');if(!container)return;const alerts=safeJSON(localStorage.getItem('tc_alerts'),[]),active=alerts.filter(a=>!a.triggered).slice(0,5);if(!active.length){container.innerHTML='<div class="empty-state">Aucune alerte active</div>';return;}const byTicker={};(window.allCours||[]).forEach(c=>{if(c?.ticker)byTicker[c.ticker]=c;});container.innerHTML=active.map(a=>{const c=byTicker[a.ticker],current=c?.cours||0,triggered=a.condition==='above'?current>=a.price:current<=a.price;return `<div class="alert-item ${triggered?'triggered':''}"><span class="ticker">${escapeHtml(a.ticker)}</span><span class="condition">${a.condition==='above'?'>':'<'} ${a.price} FCFA</span><span class="current">${fmt(current)}</span></div>`;}).join('');}
 
@@ -185,7 +185,7 @@
     const countEl=document.getElementById('coursCount');if(countEl)countEl.textContent=rows.length+' titre'+(rows.length>1?'s':'');
     const tableEl=document.getElementById('coursTable');if(!tableEl)return;
     if(!rows.length){tableEl.innerHTML='<tr><td colspan="6" class="empty-cell">Aucune donnée de cours disponible.</td></tr>';return;}
-    tableEl.innerHTML=rows.map(c=>`<tr onclick="openFiche('${escapeHtml(c.ticker)}')"><td><strong>${escapeHtml(c.ticker)}</strong></td><td>${fmt(c.cours)}</td><td>${changePill(c.variation)}</td><td>${fmt(c.volume)}</td><td>${c.capitalisation?fmtM(c.capitalisation):'—'}</td><td>${escapeHtml(getSector(c.ticker))}</td></tr>`).join('');
+    tableEl.innerHTML=rows.map(c=>`<tr onclick="openFiche('${escapeHtml(c.ticker)}')"><td><strong>${escapeHtml(c.ticker)}</strong></td><td>${fmt(c.cours)}</td><td>${changePill(c.variation)}</td><td>${fmt(c.volume)}</td><td>${c.capitalisation?fmtM(c.capitalisation):', '}</td><td>${escapeHtml(getSector(c.ticker))}</td></tr>`).join('');
   }
 
   console.log('[OVERVIEW] Chargé avec succès');

@@ -1,4 +1,4 @@
-// THE CAPITAL — Alertes de prix
+// THE CAPITAL, Alertes de prix
 // Source de vérité : Supabase via /api/user-data. Aucune persistance métier en local.
 (function () {
   'use strict';
@@ -27,7 +27,7 @@
         <div class="alert-info">
           <div class="alert-ticker">${a.ticker}</div>
           <div class="alert-desc">Cours ${label} ${fmt(threshold)} FCFA</div>
-          <div class="alert-meta">${triggered ? '🔔 Déclenchée' : a.active ? '✅ Active' : '⏸️ Désactivée'} · Cours actuel : ${Number.isFinite(current) ? fmt(current) : '—'}</div>
+          <div class="alert-meta">${triggered ? '🔔 Déclenchée' : a.active ? '✅ Active' : '⏸️ Désactivée'} · Cours actuel : ${Number.isFinite(current) ? fmt(current) : ', '}</div>
         </div>
         <div class="alert-actions">
           <button onclick="toggleAlert('${a.id}')">${a.active ? 'Désactiver' : 'Activer'}</button>

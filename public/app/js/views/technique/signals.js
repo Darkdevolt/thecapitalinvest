@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT — Explainable Signals
+// AT, Explainable Signals
 // ═══════════════════════════════════════
 
 function atUpdateSignals(closes, highs, lows, vols, liveVar, liveC) {
@@ -26,7 +26,7 @@ function atUpdateSignals(closes, highs, lows, vols, liveVar, liveC) {
   let rsiScore = 0, rsiReason = '';
   if (lr > 70) { rsiScore = -1; rsiReason = `RSI ${lr.toFixed(1)} > 70 (surachat)`; }
   else if (lr < 30) { rsiScore = 1; rsiReason = `RSI ${lr.toFixed(1)} < 30 (survente)`; }
-  else { rsiReason = `RSI ${lr.toFixed(1)} — zone neutre`; }
+  else { rsiReason = `RSI ${lr.toFixed(1)}, zone neutre`; }
   signals.push({ id: 'sigMom', label: 'Momentum', value: rsiScore, reason: rsiReason, icon: '⚡' });
   
   // 3. VOLATILITÉ (Bollinger)

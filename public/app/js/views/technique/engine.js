@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT — Canvas 2D Engine (CORRIGE — garde anti-double)
+// AT, Canvas 2D Engine (CORRIGE, garde anti-double)
 // ═══════════════════════════════════════
 if (window.__engineLoaded) {
   console.warn('[ENGINE] Deja charge, skip.');
@@ -243,7 +243,7 @@ if (window.__engineLoaded) {
 
   // ── Formatage des dates avec annee complete et contexte agregation ──
   function atFmtDate(dateStr, interval) {
-    if (!dateStr) return '—';
+    if (!dateStr) return ', ';
     const d = new Date(dateStr + 'T00:00:00');
     if (interval === 'monthly') {
       return d.toLocaleDateString('fr-FR', { month: 'short', year: 'numeric' });
@@ -545,7 +545,7 @@ if (window.__engineLoaded) {
     ctx.strokeStyle='#fb923c'; ctx.lineWidth=1.5;
     ctx.beginPath(); rsi.forEach((v,i)=>{if(!v)return; i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v));});  ctx.stroke();
     const last = rsi[rsi.length-1];
-    document.getElementById('lblRSI').textContent = `RSI (14) · ${last ? last.toFixed(1) : '—'}`;
+    document.getElementById('lblRSI').textContent = `RSI (14) · ${last ? last.toFixed(1) : ', '}`;
   }
   window._atDrawRSI = _atDrawRSI;
 
@@ -590,7 +590,7 @@ if (window.__engineLoaded) {
       ctx.beginPath(); arr.forEach((v,i)=>{if(!v)return; i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v));}); ctx.stroke();
     });
     const lk=st.K[n-1],ld=st.D[n-1];
-    document.getElementById('lblStoch').textContent=`Stoch · %K:${lk?lk.toFixed(1):'—'} %D:${ld?ld.toFixed(1):'—'}`;
+    document.getElementById('lblStoch').textContent=`Stoch · %K:${lk?lk.toFixed(1):', '} %D:${ld?ld.toFixed(1):', '}`;
   }
   window._atDrawStoch = _atDrawStoch;
 
@@ -607,7 +607,7 @@ if (window.__engineLoaded) {
       ctx.beginPath(); arr.forEach((v,i)=>{if(!v)return; i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v));}); ctx.stroke();
     });
     const last=adx[n-1];
-    document.getElementById('lblADX').textContent=`ADX · ${last?last.adx.toFixed(1):'—'} (+DI:${last?last.diP.toFixed(1):'—'} -DI:${last?last.diN.toFixed(1):'—'})`;
+    document.getElementById('lblADX').textContent=`ADX · ${last?last.adx.toFixed(1):', '} (+DI:${last?last.diP.toFixed(1):', '} -DI:${last?last.diN.toFixed(1):', '})`;
   }
   window._atDrawADX = _atDrawADX;
 
@@ -625,7 +625,7 @@ if (window.__engineLoaded) {
     ctx.strokeStyle='#a78bfa'; ctx.lineWidth=1.5;
     ctx.beginPath(); cci.forEach((v,i)=>{if(!v)return; i===0?ctx.moveTo(scX(i),scY(v)):ctx.lineTo(scX(i),scY(v));}); ctx.stroke();
     const last=cci[n-1];
-    document.getElementById('lblCCI').textContent=`CCI (20) · ${last?last.toFixed(1):'—'}`;
+    document.getElementById('lblCCI').textContent=`CCI (20) · ${last?last.toFixed(1):', '}`;
   }
   window._atDrawCCI = _atDrawCCI;
 
@@ -648,7 +648,7 @@ if (window.__engineLoaded) {
   window._atDrawOBV = _atDrawOBV;
 
   // ═══════════════════════════════════════
-  // AT — Navigation Bar (Mini Overview)
+  // AT, Navigation Bar (Mini Overview)
   // ═══════════════════════════════════════
 
   function atDrawNav() {

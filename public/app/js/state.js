@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// STATE — The Capital BRVM
+// STATE, The Capital BRVM
 // ═══════════════════════════════════════
 // Guard pattern: empêche le double chargement
 (function() {

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATEMA
+// AT Indicator, ATEMA
 // ═══════════════════════════════════════
 
 function atEMA(d, n) {

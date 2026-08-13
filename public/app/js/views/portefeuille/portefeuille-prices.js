@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// PORTEFEUILLE — PRIX & HISTORIQUES
+// PORTEFEUILLE, PRIX & HISTORIQUES
 // Source de cours : pipeline marché existant (/api/marche).
 // Le portefeuille ne crée aucune source de prix parallèle.
 // ═══════════════════════════════════════════════════════
@@ -249,15 +249,15 @@ window.validatePortfolioTradePrice = async function(ticker, dateStr, price) {
   const p = Number(price);
   if (!Number.isFinite(p) || p <= 0) return { ok: false, message: 'Le prix doit être supérieur à zéro.' };
   if (p < session.low || p > session.high) {
-    const f = v => Number.isFinite(v) ? Number(v).toLocaleString('fr-FR',{maximumFractionDigits:2}) : '—';
-    return { ok: false, message: `Prix invalide pour ${ticker} le ${session.date}. Fourchette autorisée : ${f(session.low)} – ${f(session.high)} FCFA. Ouverture : ${f(session.open)} · Clôture : ${f(session.close)}.` };
+    const f = v => Number.isFinite(v) ? Number(v).toLocaleString('fr-FR',{maximumFractionDigits:2}) : ', ';
+    return { ok: false, message: `Prix invalide pour ${ticker} le ${session.date}. Fourchette autorisée : ${f(session.low)}, ${f(session.high)} FCFA. Ouverture : ${f(session.open)} · Clôture : ${f(session.close)}.` };
   }
   return { ok: true, session };
 };
 
 function _tradeHintText(session) {
   if (!session) return '';
-  const f = v => Number.isFinite(v) ? (typeof window.fmt === 'function' ? window.fmt(v, 2) : Number(v).toFixed(2)) : '—';
+  const f = v => Number.isFinite(v) ? (typeof window.fmt === 'function' ? window.fmt(v, 2) : Number(v).toFixed(2)) : ', ';
   return `Séance ${session.date} · Ouv. <strong>${f(session.open)}</strong> · Haut <strong>${f(session.high)}</strong> · Bas <strong>${f(session.low)}</strong> · Clôt. <strong>${f(session.close)}</strong> FCFA`;
 }
 
@@ -314,7 +314,7 @@ document.addEventListener('DOMContentLoaded', _installTradeFieldBindings);
 setInterval(_installTradeFieldBindings, 1000);
 
 // ═══════════════════════════════════════════════════════
-// BENCHMARK — BRVM COMPOSITE
+// BENCHMARK, BRVM COMPOSITE
 // ═══════════════════════════════════════════════════════
 let _pfBenchmarkCache = null;
 async function _loadBRVMComposite() {
@@ -344,14 +344,14 @@ async function _renderBRVMCompositeBenchmark() {
   const rows = await _loadBRVMComposite();
   const hist = typeof window.getPortfolioHistory === 'function' ? window.getPortfolioHistory(window._pfPeriod || 99999) : { dates: [], returns: [] };
   if (rows.length < 2 || !hist?.dates?.length) {
-    el.innerHTML = '<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM Composite</div><strong style="font-size:20px;color:var(--dim)">—</strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Benchmark indisponible : la série BRVM Composite disponible ne contient pas assez de séances pour un calcul fiable.</div></div>';
+    el.innerHTML = '<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM Composite</div><strong style="font-size:20px;color:var(--dim)">, </strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Benchmark indisponible : la série BRVM Composite disponible ne contient pas assez de séances pour un calcul fiable.</div></div>';
     return;
   }
   const portfolioDates = (hist.dates || []).map(d => String(d).slice(0,10));
   const firstCommon = portfolioDates.find(d => rows.some(r => r.date >= d));
   const benchmarkSlice = rows.filter(r => r.date >= (firstCommon || rows[0].date));
   if (benchmarkSlice.length < 2) {
-    el.innerHTML = '<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM Composite</div><strong style="font-size:20px;color:var(--dim)">—</strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Pas assez de séances BRVM Composite sur la période comparable.</div></div>';
+    el.innerHTML = '<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM Composite</div><strong style="font-size:20px;color:var(--dim)">, </strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Pas assez de séances BRVM Composite sur la période comparable.</div></div>';
     return;
   }
   const benchmarkReturn = (benchmarkSlice[0].value > 0) ? (benchmarkSlice[benchmarkSlice.length-1].value / benchmarkSlice[0].value - 1) * 100 : null;
@@ -363,7 +363,7 @@ async function _renderBRVMCompositeBenchmark() {
     if (slice.length) portfolioReturn = (slice.reduce((a,r) => a * (1+r), 1) - 1) * 100;
   }
   if (portfolioReturn == null || benchmarkReturn == null) {
-    el.innerHTML = '<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM Composite</div><strong style="font-size:20px;color:var(--dim)">—</strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Performance comparable indisponible sur cette période.</div></div>';
+    el.innerHTML = '<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM Composite</div><strong style="font-size:20px;color:var(--dim)">, </strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Performance comparable indisponible sur cette période.</div></div>';
     return;
   }
   const alpha = portfolioReturn - benchmarkReturn;

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// VIEW — Calendrier des Publications
+// VIEW, Calendrier des Publications
 // ═══════════════════════════════════════
 
 // ═══════════════════════════════════════
@@ -60,7 +60,7 @@ function filterPublications() {
     const waitingTickers = allTickers.filter(t => !publishedTickers.includes(t)).sort();
     const filteredWaiting = q ? waitingTickers.filter(t => t.toLowerCase().includes(q) || (entMap[t]?.nom || t).toLowerCase().includes(q)) : waitingTickers;
     
-    const periodLabel = period.replace(/(\d{4}) (.+)/, '$1 — $2');
+    const periodLabel = period.replace(/(\d{4}) (.+)/, '$1, $2');
     const total = publishedTickers.length + filteredWaiting.length;
     
     return `<div class="pub-period">

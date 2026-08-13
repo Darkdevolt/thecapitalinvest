@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATVWAP
+// AT Indicator, ATVWAP
 // ═══════════════════════════════════════
 
 function atVWAP(c, v) {

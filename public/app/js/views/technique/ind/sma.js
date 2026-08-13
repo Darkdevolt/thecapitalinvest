@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATSMA
+// AT Indicator, ATSMA
 // ═══════════════════════════════════════
 
 function atSMA(d, n) {

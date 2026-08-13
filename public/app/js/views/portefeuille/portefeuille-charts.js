@@ -1,4 +1,4 @@
-// THE CAPITAL — Portefeuille analytics, charts and action wiring
+// THE CAPITAL, Portefeuille analytics, charts and action wiring
 (function () {
   'use strict';
 
@@ -67,7 +67,7 @@
     el.innerHTML = `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:16px">
       <div><div style="font-size:11px;color:var(--dim)">Plus grosse ligne</div><strong style="font-size:18px;color:var(--gold)">${esc(top1.ticker)}</strong><div style="font-size:12px;color:var(--dim)">${number(top1.allocation,2)}%</div></div>
       <div><div style="font-size:11px;color:var(--dim)">Top 3</div><strong style="font-size:18px">${number(top3,2)}%</strong><div style="font-size:12px;color:var(--dim)">du portefeuille investi</div></div>
-      <div><div style="font-size:11px;color:var(--dim)">HHI</div><strong style="font-size:18px">${number(hhi,0)}</strong><div style="font-size:12px;color:var(--dim)">0–10 000 · plus élevé = plus concentré</div></div>
+      <div><div style="font-size:11px;color:var(--dim)">HHI</div><strong style="font-size:18px">${number(hhi,0)}</strong><div style="font-size:12px;color:var(--dim)">0 à 10 000 · plus élevé = plus concentré</div></div>
     </div>`;
   };
 
@@ -97,7 +97,7 @@
   window.renderBenchmark = function () {
     const el = document.getElementById('benchmarkStats');
     if (!el) return;
-    el.innerHTML = `<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM</div><strong style="font-size:20px;color:var(--dim)">—</strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Comparaison non calculée : aucune série d'indice BRVM compatible n'est exposée au moteur portefeuille actuel. Aucune valeur n'est inventée.</div></div>`;
+    el.innerHTML = `<div style="padding:16px"><div style="font-size:11px;color:var(--dim);margin-bottom:6px">Performance vs BRVM</div><strong style="font-size:20px;color:var(--dim)">, </strong><div style="font-size:12px;color:var(--dim);margin-top:6px">Comparaison non calculée : aucune série d'indice BRVM compatible n'est exposée au moteur portefeuille actuel. Aucune valeur n'est inventée.</div></div>`;
   };
 
   window.renderCorrelationMatrix = function (rows) {
@@ -150,7 +150,7 @@
         rows.forEach(r => {
           const value = Number(r.value || 0);
           const sector = r.sector || (typeof window.getSector === 'function' ? window.getSector(r.ticker) : 'Autre');
-          const country = r.pays || (typeof window.getPays === 'function' ? window.getPays(r.ticker) : '—');
+          const country = r.pays || (typeof window.getPays === 'function' ? window.getPays(r.ticker) : ', ');
           sectors[sector] = (sectors[sector] || 0) + value;
           pays[country] = (pays[country] || 0) + value;
         });
@@ -187,9 +187,9 @@
         if (pfPL) { pfPL.textContent = `${latestPL >= 0 ? '+' : ''}${money(latestPL)} FCFA`; pfPL.style.color = latestPL >= 0 ? 'var(--green)' : 'var(--red)'; }
         if (pfPLSub) { pfPLSub.textContent = `${globalReturn >= 0 ? '+' : ''}${number(globalReturn,2)}% de performance globale`; pfPLSub.style.color = globalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
         if (pfReturn) { pfReturn.textContent = `${number(globalReturn,2)}%`; pfReturn.style.color = globalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
-        if (pfVol) pfVol.textContent = returns.length >= 2 ? `${number(vol * 100,2)}%` : '—';
-        if (pfSharpe) pfSharpe.textContent = returns.length >= 2 ? number(sharpe,2) : '—';
-        if (pfDD) pfDD.textContent = (hist.values || []).length >= 2 ? `-${number(maxDD,2)}%` : '—';
+        if (pfVol) pfVol.textContent = returns.length >= 2 ? `${number(vol * 100,2)}%` : ', ';
+        if (pfSharpe) pfSharpe.textContent = returns.length >= 2 ? number(sharpe,2) : ', ';
+        if (pfDD) pfDD.textContent = (hist.values || []).length >= 2 ? `-${number(maxDD,2)}%` : ', ';
 
         const tickers = [...new Set(rows.map(r => String(r.ticker || '').toUpperCase().trim()).filter(Boolean))];
         if (typeof window.hydratePortfolioHistoricalPrices === 'function') {

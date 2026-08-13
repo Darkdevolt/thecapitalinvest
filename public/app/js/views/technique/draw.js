@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// DRAW (CORRIGE — garde anti-double + mainEl declare)
+// DRAW (CORRIGE, garde anti-double + mainEl declare)
 // ═══════════════════════════════════════
 if (window.__drawLoaded) {
   console.warn('[DRAW] Deja charge, skip.');
@@ -11,11 +11,11 @@ if (window.__drawLoaded) {
   // ═══════════════════════════════════════
   const mainEl = document.getElementById('atMain') || document.getElementById('main') || document.querySelector('main') || document.querySelector('.at-main');
   if (!mainEl) {
-    console.error('[DRAW] mainEl introuvable dans le DOM — recherche de fallback...');
+    console.error('[DRAW] mainEl introuvable dans le DOM, recherche de fallback...');
   }
 
   // NOTE: Le code original de draw.js doit etre insere ici.
-  // Les fonctions suivantes sont des placeholders — remplacez-les par votre code original.
+  // Les fonctions suivantes sont des placeholders, remplacez-les par votre code original.
 
   function atRender() {
     if (!AT || !AT.hist || !AT.hist.length) return;

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATHEIKINASHI
+// AT Indicator, ATHEIKINASHI
 // ═══════════════════════════════════════
 
 function atHeikinAshi(o, h, l, c) {

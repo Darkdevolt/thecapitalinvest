@@ -1,4 +1,4 @@
-// MAIN — The Capital BRVM Dashboard
+// MAIN, The Capital BRVM Dashboard
 // Runtime principal : orchestration des données et du rendu.
 (function(){
   'use strict';

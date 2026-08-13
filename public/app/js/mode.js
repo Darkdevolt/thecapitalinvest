@@ -1,4 +1,4 @@
-// THE CAPITAL — Global display mode (Simple / Pro)
+// THE CAPITAL, Global display mode (Simple / Pro)
 (function () {
   if (window.__TC_DISPLAY_MODE_LOADED__) return;
   window.__TC_DISPLAY_MODE_LOADED__ = true;
@@ -201,11 +201,11 @@
     if (id === 'dividend-screener' && typeof window.renderDividendScreener === 'function') window.renderDividendScreener();
     if (id === 'comparison') {
       history.replaceState(null, '', '#comparison');
-      document.title = 'Comparaison Fondamentale — The Capital';
+      document.title = 'Comparaison Fondamentale, The Capital';
     }
     if (id === 'dividend-screener') {
       history.replaceState(null, '', '#dividend-screener');
-      document.title = 'Dividend Screener — The Capital';
+      document.title = 'Dividend Screener, The Capital';
     }
     decorateCurrentView();
     updateToggle(document.body.dataset.mode);

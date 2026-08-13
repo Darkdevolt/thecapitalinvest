@@ -1,4 +1,4 @@
-// THE CAPITAL — Portfolio Store
+// THE CAPITAL, Portfolio Store
 // Source de vérité unique : Supabase via /api/portfolio-transactions.
 (function () {
   'use strict';

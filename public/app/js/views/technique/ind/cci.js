@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATCCI
+// AT Indicator, ATCCI
 // ═══════════════════════════════════════
 
 function atCCI(h, l, c, n = 20) {

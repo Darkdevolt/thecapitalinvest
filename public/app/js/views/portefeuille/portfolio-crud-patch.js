@@ -1,4 +1,4 @@
-// THE CAPITAL — server-side portfolio CRUD corrections
+// THE CAPITAL, server-side portfolio CRUD corrections
 (function(){
   function refresh(){ if(typeof renderPortfolio==='function') renderPortfolio(); }
   function notify(message,type){ if(typeof toast==='function') toast(message,type); }
@@ -24,7 +24,7 @@
     const held=getPortfolio().filter(p=>(p.ticker||'').toUpperCase().trim()===ticker).reduce((s,p)=>s+Number(p.qty||0),0);
     if(qty>held){notify(`Quantité supérieure à la position détenue (${held}).`,'error');return;}
     window.portfolioStore.addTransaction({type:'VENTE',ticker,quantity:qty,price,date:date||new Date().toISOString().slice(0,10)})
-      .then(function(){if(typeof onSuccess==='function')onSuccess();refresh();notify(`Vente enregistrée — ${qty} × ${ticker}`,'success');})
+      .then(function(){if(typeof onSuccess==='function')onSuccess();refresh();notify(`Vente enregistrée, ${qty} × ${ticker}`,'success');})
       .catch(function(error){notify(error.message||'Erreur lors de la vente.','error');});
   }
   window.sellPositionQuick=function(){sell(document.getElementById('pfSellTicker')?.value,document.getElementById('pfSellQty')?.value,document.getElementById('pfSellPrice')?.value,document.getElementById('pfSellDate')?.value,function(){document.getElementById('pfSellQty').value='';document.getElementById('pfSellPrice').value='';document.getElementById('pfSellDate').value='';});};

@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// AT Indicator — ATSTOCH
+// AT Indicator, ATSTOCH
 // ═══════════════════════════════════════
 
 function atStoch(h, l, c, k = 14, d = 3) {

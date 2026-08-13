@@ -1,4 +1,4 @@
-// THE CAPITAL — Portfolio trade guards
+// THE CAPITAL, Portfolio trade guards
 // Frontend-only: cash/position/session guards. No API/Supabase changes.
 (function () {
   'use strict';

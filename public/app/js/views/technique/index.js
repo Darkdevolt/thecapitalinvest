@@ -1,4 +1,4 @@
-// THE CAPITAL — Analyse technique PRO
+// THE CAPITAL, Analyse technique PRO
 // UI / calculs locaux uniquement. Les sources de données existantes restent inchangées.
 if (window.__atIndexLoaded) {
   console.warn('[AT INDEX] Déjà chargé, skip.');
@@ -35,9 +35,9 @@ if (window.__atIndexLoaded) {
   ];
   window.IND_CATALOG = IND_CATALOG;
 
-  function fmtVol(n){if(n==null||isNaN(+n))return '—';const v=+n;if(v>=1e9)return(v/1e9).toFixed(2)+' Mrd';if(v>=1e6)return(v/1e6).toFixed(1)+' M';if(v>=1e3)return(v/1e3).toFixed(0)+' k';return v.toLocaleString('fr-FR');}
+  function fmtVol(n){if(n==null||isNaN(+n))return ', ';const v=+n;if(v>=1e9)return(v/1e9).toFixed(2)+' Mrd';if(v>=1e6)return(v/1e6).toFixed(1)+' M';if(v>=1e3)return(v/1e3).toFixed(0)+' k';return v.toLocaleString('fr-FR');}
   window.fmtVol=fmtVol;
-  function fmtDateFull(d){if(!d)return '—';const date=new Date(d);return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+  function fmtDateFull(d){if(!d)return ', ';const date=new Date(d);return date.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});}
   window.fmtDateFull=fmtDateFull;
   function toastSafe(msg,type){if(typeof window.toast==='function')window.toast(msg,type||'info');else console[type==='error'?'error':'log']('[AT]',msg);}
 
@@ -120,7 +120,7 @@ if (window.__atIndexLoaded) {
       const seen=new Set();
       const list=rows.filter(c=>{const t=atTickerOf(c),name=atNameOf(c).toUpperCase();return t&&(!q||t.includes(q)||name.includes(q));}).filter(c=>{const t=atTickerOf(c);const k=atNormalizeKey(t);if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>atTickerOf(a).localeCompare(atTickerOf(b)));
       const current=sel.value;
-      sel.innerHTML='<option value="">Choisir un titre…</option>'+list.map(c=>{const t=atTickerOf(c);const n=atNameOf(c);return `<option value="${t}">${t}${n?' — '+n:''}</option>`;}).join('');
+      sel.innerHTML='<option value="">Choisir un titre…</option>'+list.map(c=>{const t=atTickerOf(c);const n=atNameOf(c);return `<option value="${t}">${t}${n?', '+n:''}</option>`;}).join('');
       if(current&&list.some(c=>atNormalizeKey(atTickerOf(c))===atNormalizeKey(current)))sel.value=current;
       if(q&&list.length===1){sel.value=atTickerOf(list[0]);atLoadTicker();}
     };
