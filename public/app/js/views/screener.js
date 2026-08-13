@@ -21,7 +21,7 @@ function financialRow(ticker, c) {
   const f = latestFinancial(ticker);
   const roe = finNumber(f,'roe') ?? (f?.resultat_net && f?.fonds_propres ? Number(f.resultat_net)/Number(f.fonds_propres)*100 : null);
   const margin = finNumber(f,'marge_nette') ?? (f?.resultat_net && f?.chiffre_affaires ? Number(f.resultat_net)/Number(f.chiffre_affaires)*100 : null);
-  const yieldValue = finNumber(f,'dividend_yield','rendement_dividende');
+  const yieldValue = finNumber(f,'dividend_yield','rendement_dividende') ?? (f?.dpa && c?.cours ? Number(f.dpa)/Number(c.cours)*100 : null);
   const debt = finNumber(f,'dette_nette','dette_fin','dettes_financieres');
   const growth = financialGrowth(ticker);
   const pct = v => v == null ? '—' : `${Number(v).toFixed(2)}%`;
@@ -32,10 +32,10 @@ function ensureFundamentalFilters() {
   const box = document.querySelector('#view-screener .screener-filters');
   if (!box || document.getElementById('scrMinRoe')) return;
   const fields = [
-    ['scrMinRoe','ROE min %'],['scrMinMargin','Marge nette min %'],['scrMinYield','Dividend yield min %'],['scrMaxDebt','Dette max'],['scrMinGrowth','Croissance CA min %']
+    ['scrMinRoe','ROE min %',true],['scrMinMargin','Marge nette min %',true],['scrMinYield','Dividend yield min %',false],['scrMaxDebt','Dette max',true],['scrMinGrowth','Croissance CA min %',true]
   ];
-  fields.forEach(([id,label]) => {
-    const wrap=document.createElement('div'); wrap.className='pro-only'; wrap.innerHTML=`<label>${label}</label><input type="number" id="${id}" placeholder="—" step="0.1" oninput="runScreener()">`; box.appendChild(wrap);
+  fields.forEach(([id,label,proOnly]) => {
+    const wrap=document.createElement('div'); if(proOnly)wrap.className='pro-only'; wrap.innerHTML=`<label>${label}</label><input type="number" id="${id}" placeholder="—" step="0.1" oninput="runScreener()">`; box.appendChild(wrap);
   });
   const head=document.querySelector('#view-screener table thead tr');
   if(head && !head.querySelector('.fundamental-head')) ['ROE','Marge nette','Yield','Dette','Croissance CA'].forEach(label=>{const th=document.createElement('th');th.className='right pro-only fundamental-head';th.textContent=label;head.appendChild(th);});
