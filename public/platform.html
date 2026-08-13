@@ -155,12 +155,12 @@ font-size: 13px;
 .db-sidebar { display: none; }
 .db-kpi-row { grid-template-columns: repeat(2, 1fr); }
 }
-</style>
-  <link rel="stylesheet" href="/css/public-header.css">
+</style><link rel="stylesheet" href="/css/public-header.css">
 </head>
 <body>
 <div id="public-header"></div>
-<div id="public-header"></div>
+<script src="/js/public-header.js"></script>
+
 
 <div class="cursor" id="cursor"></div>
 <div class="cursor-ring" id="cursorRing"></div>
@@ -283,7 +283,5 @@ const header=document.querySelector('header'),scrollLine=document.getElementById
 window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60);scrollLine.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
 const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
 document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
-</script>
-  <script src="/js/public-header.js"></script>
-</body>
+</script></body>
 </html>
