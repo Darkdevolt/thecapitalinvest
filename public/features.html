@@ -161,8 +161,8 @@ margin-bottom: 20px;
 }
 </style>
   <link rel="stylesheet" href="/css/public-header.css">
-</head>
-<body>
+<link rel="stylesheet" href="/css/public-header.css">\n</head>
+<body>\n<div id="public-header"></div>
 <div id="public-header"></div>
 <div id="public-header"></div>
 <div class="cursor" id="cursor"></div>
@@ -302,5 +302,5 @@ const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersect
 document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
 </script>
   <script src="/js/public-header.js"></script>
-</body>
+<script src="/js/public-header.js"></script>\n</body>
 </html>
