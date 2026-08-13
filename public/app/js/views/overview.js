@@ -134,7 +134,22 @@
 
   function renderSectorHeatmap(){const bySector={},byTicker={};(window.allCours||[]).forEach(c=>{if(c?.ticker&&!byTicker[c.ticker])byTicker[c.ticker]=c;});Object.values(byTicker).forEach(c=>{const sector=getSector(c.ticker)||'Autre';if(!bySector[sector])bySector[sector]={total:0,count:0};const v=parseFloat(c.variation)||0;bySector[sector].total+=v;bySector[sector].count++;});const container=document.getElementById('sectorHeatmap');if(!container)return;const sectors=Object.entries(bySector).map(([name,data])=>({name,avg:data.total/data.count,count:data.count})).sort((a,b)=>Math.abs(b.avg)-Math.abs(a.avg));if(!sectors.length){container.innerHTML='<div class="empty-state">Aucune donnée sectorielle</div>';return;}container.innerHTML=sectors.map(s=>{const cls=s.avg>0?'heatmap-up':s.avg<0?'heatmap-down':'heatmap-neutral',color=s.avg>0?'var(--green)':s.avg<0?'var(--red)':'var(--dim)';return `<div class="heatmap-cell ${cls}" style="border-left-color:${color}"><div class="hm-name">${escapeHtml(s.name)}</div><div class="hm-value" style="color:${color}">${s.avg>0?'+':''}${s.avg.toFixed(2)}%</div><div class="hm-count">${s.count} titre${s.count>1?'s':''}</div></div>`;}).join('');}
 
-  function renderNewsFeed(){const container=document.getElementById('newsFeed');if(!container)return;const recent=(window.allAnalyses||[]).slice(0,5);if(!recent.length){container.innerHTML='<div class="empty-state">Aucune analyse disponible</div>';return;}container.innerHTML=recent.map(a=>{const badgeClass=(a.recommandation||'').toLowerCase(),badgeText=a.recommandation||'NEWS',ticker=a.ticker||', ';return `<div class="news-item"><span class="badge ${escapeHtml(badgeClass)}">${escapeHtml(badgeText)}</span><div class="news-title">${escapeHtml(a.titre||'Analyse '+ticker)}</div><div class="news-meta">${escapeHtml(ticker)} • ${fmtDate(a.date_analyse)} • Objectif: ${a.objectif||', '} FCFA</div></div>`;}).join('');}
+  function renderNewsFeed(){
+    let container=document.getElementById('newsFeed');
+    if(!container){
+      const stats=document.getElementById('overviewStats');
+      if(!stats?.parentElement)return;
+      const section=document.createElement('section');
+      section.className='dashboard-news card';
+      section.setAttribute('aria-label','Dernières actualités');
+      section.innerHTML='<div class="dashboard-news-head"><div><div class="eyebrow">ACTUALITÉS MARCHÉ</div><div class="card-title">Dernières actualités</div></div><button type="button" class="news-refresh" onclick="renderNewsFeed()">Actualiser</button></div><div id="newsFeed" class="dashboard-news-grid"><div class="news-skeleton"></div><div class="news-skeleton"></div><div class="news-skeleton"></div></div>';
+      stats.parentElement.insertBefore(section,stats);
+      container=section.querySelector('#newsFeed');
+    }
+    const recent=(window.allAnalyses||[]).slice().sort((a,b)=>new Date(b.date_analyse||0)-new Date(a.date_analyse||0)).slice(0,3);
+    if(!recent.length){container.innerHTML='<div class="empty-state">Aucune actualité disponible pour le moment</div>';return;}
+    container.innerHTML=recent.map(a=>{const badgeClass=(a.recommandation||'news').toLowerCase(),badgeText=a.recommandation||'NEWS',ticker=a.ticker||'';return `<article class="news-item" ${ticker?`onclick="openFiche('${escapeHtml(ticker)}')"`:''}><span class="badge ${escapeHtml(badgeClass)}">${escapeHtml(badgeText)}</span><div class="news-title">${escapeHtml(a.titre||'Actualité marché')}</div><div class="news-meta">${escapeHtml(ticker||'Marché BRVM')} • ${fmtDate(a.date_analyse)}${a.objectif?` • Objectif ${fmt(a.objectif)} FCFA`:''}</div></article>`;}).join('');
+  }
 
   // ─── TOP MOVERS ───
   function renderMoversControls(){
