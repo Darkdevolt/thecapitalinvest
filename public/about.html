@@ -224,12 +224,11 @@ margin-bottom: 8px;
 .values-grid, .team-grid { grid-template-columns: 1fr; }
 .values-section, .team-section, .timeline-section { padding: 0 24px 60px; }
 }
-</style>
-  <link rel="stylesheet" href="/css/public-header.css">
+</style><link rel="stylesheet" href="/css/public-header.css">
 </head>
 <body>
 <div id="public-header"></div>
-<div id="public-header"></div>
+
 
 <div class="cursor" id="cursor"></div>
 <div class="cursor-ring" id="cursorRing"></div>
@@ -370,7 +369,6 @@ const header=document.querySelector('header'),scrollLine=document.getElementById
 window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.scrollY>60);scrollLine.style.width=(window.scrollY/(document.body.scrollHeight-window.innerHeight)*100)+'%';});
 const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
 document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
-</script>
-  <script src="/js/public-header.js"></script>
+</script><script src="/js/public-header.js"></script>
 </body>
 </html>
