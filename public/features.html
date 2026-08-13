@@ -160,10 +160,10 @@ margin-bottom: 20px;
 .cta-strip { margin: 80px -24px 0; padding: 60px 24px; }
 }
 </style>
-
   <link rel="stylesheet" href="/css/public-header.css">
 </head>
 <body>
+<div id="public-header"></div>
 <div id="public-header"></div>
 <div class="cursor" id="cursor"></div>
 <div class="cursor-ring" id="cursorRing"></div>
@@ -301,7 +301,6 @@ window.addEventListener('scroll',()=>{header.classList.toggle('scrolled',window.
 const obs=new IntersectionObserver(entries=>entries.forEach(e=>{if(e.isIntersecting)e.target.classList.add('visible');}),{threshold:0.1});
 document.querySelectorAll('.anim').forEach(el=>obs.observe(el));
 </script>
-
   <script src="/js/public-header.js"></script>
 </body>
 </html>
