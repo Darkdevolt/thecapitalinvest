@@ -33,7 +33,7 @@ async function openFiche(ticker, from, noHash) {
   const infoRows=[['Pays',ent.pays],['Secteur',ent.secteur||getSector(ticker)],['Bourse','BRVM'],['Devise','FCFA (XOF)'],['Nb. Actions',ent.nombre_actions?fmt(ent.nombre_actions):null]].filter(r=>r[1]);
   document.getElementById('ficheInfo').innerHTML=infoRows.map(([k,v])=>`<div class="fin-row"><span class="fin-label">${k}</span><span class="fin-value">${v}</span></div>`).join('');
   document.getElementById('ficheAnalyseList').innerHTML=ans.length?ans.slice(0,3).map(a=>renderAnalyseCard(a,true)).join(''):'<div style="color:var(--dim);font-size:13px">Aucune analyse disponible pour ce titre.</div>';
-  renderFicheFin(fins,cours); ficheChartPeriod=30; document.querySelectorAll('#view-fiche .year-tab').forEach((b,i)=>b.classList.toggle('active',i===0)); renderFicheChart();
+  renderFicheFin(fins,cours); ficheChartPeriod=252; document.querySelectorAll('#view-fiche .year-tab').forEach((b,i)=>b.classList.toggle('active',i===0)); renderFicheChart();
 }
 
 function renderFicheFin(fins,cours){
