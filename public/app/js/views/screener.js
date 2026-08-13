@@ -25,7 +25,8 @@ function financialRow(ticker, c) {
   const debt = finNumber(f,'dette_nette','dette_fin','dettes_financieres');
   const growth = financialGrowth(ticker);
   const pct = v => v == null ? ', ' : `${Number(v).toFixed(2)}%`;
-  return `<tr><td><strong style="color:var(--gold)">${escapeHtml(ticker)}</strong></td><td>${escapeHtml(c.nom||c.entreprise||c.name||', ')}</td><td class="right">${fmt(c.cours)}</td><td class="right">${fmt(c.variation)}%</td><td class="right">${fmt(c.volume)}</td><td>${escapeHtml(getSector(ticker)||', ')}</td><td class="right pro-only">${pct(roe)}</td><td class="right pro-only">${pct(margin)}</td><td class="right pro-only">${pct(yieldValue)}</td><td class="right pro-only">${debt==null?', ':fmt(debt)}</td><td class="right pro-only">${pct(growth)}</td></tr>`;
+  const companyName = window.entMap?.[ticker]?.nom || c?.nom || c?.entreprise || c?.name || ticker;
+  return `<tr><td><strong style="color:var(--gold)">${escapeHtml(ticker)}</strong></td><td>${escapeHtml(companyName)}</td><td class="right">${fmt(c.cours)}</td><td class="right">${fmt(c.variation)}%</td><td class="right">${fmt(c.volume)}</td><td>${escapeHtml(getSector(ticker)||', ')}</td><td class="right pro-only">${pct(roe)}</td><td class="right pro-only">${pct(margin)}</td><td class="right pro-only">${pct(yieldValue)}</td><td class="right pro-only">${debt==null?', ':fmt(debt)}</td><td class="right pro-only">${pct(growth)}</td></tr>`;
 }
 
 function ensureFundamentalFilters() {
