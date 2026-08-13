@@ -2,77 +2,135 @@
   'use strict';
 
   /*
-   * THE CAPITAL — BRVM / LA SÉANCE DU JOUR EN 1 MINUTE
-   * Générateur réservé à l'administration.
+   * ============================================================
+   * THE CAPITAL — BRVM
+   * LA SÉANCE DU JOUR EN 1 MINUTE
+   * ============================================================
    *
-   * Aucun changement de schéma Supabase.
-   * Utilise les données existantes :
-   * - indices
-   * - cours
-   * - historique
-   * - entreprises
-   * - dividendes_calendrier
-   * - financials
+   * Module autonome réservé à l'administration.
+   *
+   * IMPORTANT :
+   * - Ne modifie aucune table Supabase.
+   * - Ne modifie aucune colonne.
+   * - Ne touche pas à l'authentification.
+   * - Ne touche pas aux clés API.
+   * - Utilise les fonctions Supabase déjà disponibles dans Admin.
+   * - Les données sont récupérées avec select=* afin de ne pas
+   *   supposer des colonnes qui n'existent pas.
+   *
+   * Design :
+   * - DM Sans       : texte
+   * - Playfair      : titres
+   * - DM Mono       : chiffres
+   *
+   * Export :
+   * - PNG
+   * - JPEG
+   * - PDF
+   *
+   * Le logo est converti en Data URI avant génération du SVG
+   * afin qu'il soit également présent dans le fichier exporté.
    */
 
-  var G = '#C9A34A';
-  var G2 = '#F0C866';
-  var B = '#050505';
-  var P = '#0B0A08';
-  var C = '#F5F0E8';
-  var M = '#9B9488';
-  var GR = '#39B96B';
-  var R = '#E34D59';
-  var LINE = 'rgba(201,163,74,.22)';
-  var logo = '/assets/the-capital-logo.png';
+  /* ============================================================
+   * CONFIGURATION
+   * ========================================================== */
 
-  var S = {
-    d: null,
-    svg: '',
-    w: 1080,
-    h: 1620
+  var COLORS = {
+    bg: '#050505',
+    dark: '#0A0804',
+    cream: '#F5F0E8',
+    white: '#FFFFFF',
+    gold: '#B8964E',
+    goldLight: '#D4AF6A',
+    goldBright: '#C9A34A',
+    goldSoft: '#FFF9F0',
+    muted: '#8F887F',
+    mutedDark: '#625B52',
+    line: '#E5DED3',
+    green: '#4ADE80',
+    greenDark: '#1E6B35',
+    red: '#F87171',
+    redDark: '#B4232D'
   };
 
-  function esc(v) {
-    return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) {
-      return {
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-      }[c];
-    });
+  var FONTS = {
+    sans: "'DM Sans', Arial, sans-serif",
+    serif: "'Playfair Display', Georgia, serif",
+    mono: "'DM Mono', Consolas, monospace"
+  };
+
+  /*
+   * Chemin du logo.
+   *
+   * Si ton logo actuel utilise un autre chemin dans le projet,
+   * modifie UNIQUEMENT cette variable.
+   */
+  var LOGO_PATH = '/assets/the-capital-logo.png';
+
+  var STATE = {
+    data: null,
+    svg: '',
+    logoDataUri: null,
+    width: 1080,
+    height: 1620,
+    generated: false
+  };
+
+
+  /* ============================================================
+   * UTILITAIRES
+   * ========================================================== */
+
+  function esc(value) {
+    return String(value == null ? '' : value)
+      .replace(/[&<>"']/g, function (char) {
+        return {
+          '&': '&amp;',
+          '<': '&lt;',
+          '>': '&gt;',
+          '"': '&quot;',
+          "'": '&#039;'
+        }[char];
+      });
   }
 
-  function num(v) {
-    if (v === null || v === undefined || v === '') return 0;
+  function number(value) {
+    if (
+      value === null ||
+      value === undefined ||
+      value === ''
+    ) {
+      return 0;
+    }
 
-    var n = Number(
-      String(v)
-        .replace(/\s/g, '')
-        .replace(',', '.')
-    );
+    var normalized = String(value)
+      .replace(/\s/g, '')
+      .replace(',', '.');
+
+    var n = Number(normalized);
 
     return isFinite(n) ? n : 0;
   }
 
-  function has(v) {
-    return v !== null &&
-      v !== undefined &&
-      v !== '' &&
-      !isNaN(Number(v));
+  function hasNumber(value) {
+    return (
+      value !== null &&
+      value !== undefined &&
+      value !== '' &&
+      !isNaN(Number(value))
+    );
   }
 
-  function fmt(v, d) {
-    return num(v).toLocaleString('fr-FR', {
-      minimumFractionDigits: d || 0,
-      maximumFractionDigits: d || 0
+  function formatNumber(value, decimals) {
+    return number(value).toLocaleString('fr-FR', {
+      minimumFractionDigits: decimals || 0,
+      maximumFractionDigits: decimals || 0
     });
   }
 
-  function pct(v) {
-    var n = num(v);
+  function formatPercent(value) {
+    var n = number(value);
 
     return (
       n >= 0 ? '+' : ''
@@ -84,1530 +142,2767 @@
       ' %';
   }
 
-  function compact(v) {
-    var n = num(v);
+  function compact(value) {
+    var n = number(value);
 
-    if (n >= 1e12) return fmt(n / 1e12, 2) + ' tn';
-    if (n >= 1e9) return fmt(n / 1e9, 2) + ' Mds';
-    if (n >= 1e6) return fmt(n / 1e6, 2) + ' M';
+    if (Math.abs(n) >= 1000000000000) {
+      return formatNumber(n / 1000000000000, 2) + ' tn';
+    }
 
-    return fmt(n, 0);
+    if (Math.abs(n) >= 1000000000) {
+      return formatNumber(n / 1000000000, 2) + ' Mds';
+    }
+
+    if (Math.abs(n) >= 1000000) {
+      return formatNumber(n / 1000000, 2) + ' M';
+    }
+
+    if (Math.abs(n) >= 1000) {
+      return formatNumber(n / 1000, 2) + ' k';
+    }
+
+    return formatNumber(n, 0);
   }
 
-  function dateFR(s) {
-    if (!s) return '—';
+  function dateFR(date) {
+    if (!date) {
+      return '—';
+    }
 
-    return new Date(s + 'T00:00:00')
-      .toLocaleDateString('fr-FR', {
-        weekday: 'long',
-        day: '2-digit',
-        month: 'long',
-        year: 'numeric'
-      });
+    try {
+      return new Date(date + 'T00:00:00')
+        .toLocaleDateString('fr-FR', {
+          weekday: 'long',
+          day: '2-digit',
+          month: 'long',
+          year: 'numeric'
+        });
+    } catch (e) {
+      return date;
+    }
   }
 
-  function shortDate(s) {
-    if (!s) return '—';
+  function shortDate(date) {
+    if (!date) {
+      return '—';
+    }
 
-    return new Date(s + 'T00:00:00')
-      .toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+    try {
+      return new Date(date + 'T00:00:00')
+        .toLocaleDateString('fr-FR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        });
+    } catch (e) {
+      return date;
+    }
   }
 
-  function text(x, y, s, size, color, weight, anchor) {
-    return '<text x="' + x +
-      '" y="' + y +
-      '" font-family="DM Sans,Arial,sans-serif"' +
-      ' font-size="' + size +
-      '" font-weight="' + (weight || 400) +
-      '" fill="' + (color || C) +
-      '" text-anchor="' + (anchor || 'start') +
-      '">' +
-      esc(s) +
-      '</text>';
-  }
-
-  function line(x1, y1, x2, y2, color, width) {
-    return '<line x1="' + x1 +
-      '" y1="' + y1 +
-      '" x2="' + x2 +
-      '" y2="' + y2 +
-      '" stroke="' + (color || LINE) +
-      '" stroke-width="' + (width || 1) +
-      '"/>';
-  }
-
-  function rect(x, y, w, h, fill, stroke, r) {
-    return '<rect x="' + x +
-      '" y="' + y +
-      '" width="' + w +
-      '" height="' + h +
-      '" rx="' + (r || 12) +
-      '" fill="' + fill + '"' +
-      (stroke ? ' stroke="' + stroke + '"' : '') +
-      ' />';
-  }
-
-  function circle(cx, cy, r, fill, stroke, sw) {
-    return '<circle cx="' + cx +
-      '" cy="' + cy +
-      '" r="' + r +
-      '" fill="' + (fill || 'none') + '"' +
-      (stroke ?
-        ' stroke="' + stroke +
-        '" stroke-width="' + (sw || 2) + '"' :
-        '') +
-      ' />';
-  }
-
-  function arrow(cx, cy, up) {
-    var col = up ? GR : R;
-
+  function getTicker(row) {
     return (
-      circle(cx, cy, 24, 'none', col, 3) +
-      line(cx - 8, cy + 7, cx + 7, cy - 8, col, 4) +
-      line(cx + 7, cy - 8, cx + 7, cy + 2, col, 4) +
-      line(cx + 7, cy - 8, cx - 3, cy - 8, col, 4)
-    );
-  }
-
-  function safeName(r) {
-    return (
-      r &&
+      row &&
       (
-        r.societe ||
-        r.nom_court ||
-        r.nom
+        row.ticker ||
+        row.code ||
+        row.symbole ||
+        row.symbol ||
+        row.valeur
       )
     ) || '—';
   }
 
-  function valueOf(r) {
-    return num(
-      r &&
+  function getName(row) {
+    return (
+      row &&
       (
-        r.valeur_totale != null
-          ? r.valeur_totale
-          : r.valeur_transigee != null
-            ? r.valeur_transigee
-            : r.valeur != null
-              ? r.valeur
-              : 0
+        row.societe ||
+        row.nom_court ||
+        row.nom ||
+        row.libelle ||
+        row.raison_sociale ||
+        row.company_name
       )
+    ) || getTicker(row);
+  }
+
+  function getVariation(row) {
+    if (!row) return 0;
+
+    if (hasNumber(row.variation)) {
+      return number(row.variation);
+    }
+
+    if (hasNumber(row.variation_pct)) {
+      return number(row.variation_pct);
+    }
+
+    if (hasNumber(row.var_pct)) {
+      return number(row.var_pct);
+    }
+
+    if (
+      hasNumber(row.cours_veille) &&
+      hasNumber(row.cours)
+    ) {
+      var previous = number(row.cours_veille);
+
+      if (previous !== 0) {
+        return (
+          (number(row.cours) / previous - 1) * 100
+        );
+      }
+    }
+
+    if (
+      hasNumber(row.prix_precedent) &&
+      hasNumber(row.prix)
+    ) {
+      var previousPrice =
+        number(row.prix_precedent);
+
+      if (previousPrice !== 0) {
+        return (
+          (number(row.prix) / previousPrice - 1) * 100
+        );
+      }
+    }
+
+    return 0;
+  }
+
+  function getPrice(row) {
+    if (!row) return 0;
+
+    return number(
+      row.cours ??
+      row.prix ??
+      row.cours_cloture ??
+      row.close ??
+      row.last_price ??
+      row.dernier_cours
     );
   }
 
-  /*
-   * Récupération des cours.
-   */
+  function getVolume(row) {
+    if (!row) return 0;
+
+    return number(
+      row.volume ??
+      row.vol ??
+      row.quantite ??
+      row.quantite_echangee ??
+      row.volume_echange
+    );
+  }
+
+  function getValue(row) {
+    if (!row) return 0;
+
+    return number(
+      row.valeur_totale ??
+      row.valeur_transigee ??
+      row.valeur_echangee ??
+      row.valeur ??
+      row.montant
+    );
+  }
+
+  function getCapitalisation(row) {
+    if (!row) return 0;
+
+    return number(
+      row.capitalisation ??
+      row.capitalisation_boursiere ??
+      row.cap_boursiere
+    );
+  }
+
+
+  /* ============================================================
+   * SVG HELPERS
+   * ========================================================== */
+
+  function svgText(
+    x,
+    y,
+    value,
+    size,
+    color,
+    weight,
+    family,
+    anchor,
+    letterSpacing
+  ) {
+    return (
+      '<text' +
+      ' x="' + x + '"' +
+      ' y="' + y + '"' +
+      ' font-family="' +
+        (family || FONTS.sans) +
+      '"' +
+      ' font-size="' + size + '"' +
+      ' font-weight="' + (weight || 400) + '"' +
+      ' fill="' + (color || COLORS.cream) + '"' +
+      ' text-anchor="' +
+        (anchor || 'start') +
+      '"' +
+      (
+        letterSpacing
+          ? ' letter-spacing="' +
+            letterSpacing +
+            '"'
+          : ''
+      ) +
+      '>' +
+      esc(value) +
+      '</text>'
+    );
+  }
+
+  function svgLine(
+    x1,
+    y1,
+    x2,
+    y2,
+    color,
+    width
+  ) {
+    return (
+      '<line' +
+      ' x1="' + x1 + '"' +
+      ' y1="' + y1 + '"' +
+      ' x2="' + x2 + '"' +
+      ' y2="' + y2 + '"' +
+      ' stroke="' +
+        (color || COLORS.line) +
+      '"' +
+      ' stroke-width="' +
+        (width || 1) +
+      '"' +
+      '/>'
+    );
+  }
+
+  function svgRect(
+    x,
+    y,
+    width,
+    height,
+    fill,
+    stroke,
+    radius
+  ) {
+    return (
+      '<rect' +
+      ' x="' + x + '"' +
+      ' y="' + y + '"' +
+      ' width="' + width + '"' +
+      ' height="' + height + '"' +
+      ' rx="' + (radius || 10) + '"' +
+      ' fill="' + fill + '"' +
+      (
+        stroke
+          ? ' stroke="' + stroke + '"'
+          : ''
+      ) +
+      '/>'
+    );
+  }
+
+  function svgCircle(
+    cx,
+    cy,
+    radius,
+    fill,
+    stroke,
+    strokeWidth
+  ) {
+    return (
+      '<circle' +
+      ' cx="' + cx + '"' +
+      ' cy="' + cy + '"' +
+      ' r="' + radius + '"' +
+      ' fill="' +
+        (fill || 'none') +
+      '"' +
+      (
+        stroke
+          ? ' stroke="' +
+            stroke +
+            '" stroke-width="' +
+            (strokeWidth || 1) +
+            '"'
+          : ''
+      ) +
+      '/>'
+    );
+  }
+
+
+  /* ============================================================
+   * LOGO
+   *
+   * C'est la correction principale de l'export.
+   *
+   * L'image n'est plus référencée uniquement par :
+   * /assets/the-capital-logo.png
+   *
+   * Elle est transformée en Data URI :
+   * data:image/png;base64,...
+   *
+   * Le Canvas peut donc l'exporter dans le JPEG/PNG/PDF.
+   * ========================================================== */
+
+  async function loadLogoDataUri() {
+
+    if (STATE.logoDataUri) {
+      return STATE.logoDataUri;
+    }
+
+    try {
+
+      var response =
+        await fetch(
+          LOGO_PATH,
+          {
+            cache: 'no-cache'
+          }
+        );
+
+      if (!response.ok) {
+        throw new Error(
+          'Logo introuvable : ' +
+          LOGO_PATH
+        );
+      }
+
+      var blob =
+        await response.blob();
+
+      STATE.logoDataUri =
+        await blobToDataUri(blob);
+
+      return STATE.logoDataUri;
+
+    } catch (error) {
+
+      console.warn(
+        '[seance] impossible de charger le logo',
+        error
+      );
+
+      /*
+       * L'aperçu peut continuer sans logo
+       * si le chemin est mauvais, mais l'utilisateur
+       * sera prévenu.
+       */
+
+      return null;
+    }
+  }
+
+  function blobToDataUri(blob) {
+
+    return new Promise(function (
+      resolve,
+      reject
+    ) {
+
+      var reader =
+        new FileReader();
+
+      reader.onload =
+        function () {
+          resolve(
+            reader.result
+          );
+        };
+
+      reader.onerror =
+        reject;
+
+      reader.readAsDataURL(blob);
+    });
+  }
+
+
+  /* ============================================================
+   * DONNÉES
+   * ========================================================== */
+
+  async function readTable(
+    table,
+    filters
+  ) {
+
+    var query =
+      'select=*';
+
+    if (filters) {
+      query += '&' + filters;
+    }
+
+    try {
+
+      var result =
+        await sbGet(
+          table,
+          query
+        );
+
+      return Array.isArray(result)
+        ? result
+        : [];
+
+    } catch (error) {
+
+      console.warn(
+        '[seance] table ' +
+        table +
+        ' indisponible',
+        error
+      );
+
+      return [];
+    }
+  }
+
   async function readCourses(date) {
 
-    var fields =
-      'ticker,date_seance,variation,volume,cours,cours_cloture,valeur_totale,valeur_transigee,capitalisation';
+    /*
+     * IMPORTANT :
+     * On ne sélectionne plus :
+     *
+     * cours_cloture
+     * cours
+     * etc.
+     *
+     * On demande simplement les colonnes
+     * réellement présentes.
+     */
 
-    var rows = await sbGet(
-      'cours',
-      'select=' +
-      fields +
-      '&date_seance=eq.' +
+    var filters =
+      'date_seance=eq.' +
       encodeURIComponent(date) +
-      '&limit=1000'
-    );
+      '&limit=1000';
 
-    if (rows && rows.length) {
+    var rows =
+      await readTable(
+        'cours',
+        filters
+      );
+
+    if (rows.length) {
       return rows;
     }
 
-    rows = await sbGet(
-      'historique',
-      'select=' +
-      fields +
-      '&date_seance=eq.' +
-      encodeURIComponent(date) +
-      '&limit=1000'
-    );
+    /*
+     * Fallback historique.
+     */
 
-    return rows || [];
+    rows =
+      await readTable(
+        'historique',
+        filters
+      );
+
+    return rows;
   }
 
-  /*
-   * Construction des données de séance.
-   */
-  async function getData(date) {
+  async function findLatestDate() {
 
-    var ix = await sbGet(
-      'indices',
-      'select=indice,date_seance,valeur,variation,variation_pct' +
-      '&order=date_seance.desc' +
-      '&limit=1000'
-    ) || [];
-
-    var d = date;
-
-    if (!d && ix.length) {
-      d = ix[0].date_seance;
-    }
-
-    if (!d) {
-
-      var q = await sbGet(
+    var rows =
+      await readTable(
         'cours',
         'select=date_seance' +
         '&order=date_seance.desc' +
         '&limit=1'
-      ) || [];
+      );
 
-      d = q[0] && q[0].date_seance;
+    if (
+      rows.length &&
+      rows[0].date_seance
+    ) {
+      return rows[0].date_seance;
     }
 
-    if (!d) {
-
-      var h = await sbGet(
+    rows =
+      await readTable(
         'historique',
         'select=date_seance' +
         '&order=date_seance.desc' +
         '&limit=1'
-      ) || [];
+      );
 
-      d = h[0] && h[0].date_seance;
+    if (
+      rows.length &&
+      rows[0].date_seance
+    ) {
+      return rows[0].date_seance;
     }
 
-    if (!d) {
-      throw Error('Aucune séance disponible dans la base.');
-    }
+    return null;
+  }
 
-    var c = await readCourses(d);
+  async function readIndices(date) {
 
-    var ent = await sbGet(
-      'entreprises',
-      'select=ticker,nom,nom_court&limit=1000'
-    ) || [];
+    var rows =
+      await readTable(
+        'indices',
+        'limit=1000'
+      );
 
-    var divs = await sbGet(
-      'dividendes_calendrier',
-      'select=ticker,montant_net,montant,ex_date,date_detachement,date_paiement,date_paiement_cal,statut' +
-      '&order=ex_date.asc' +
-      '&limit=12'
-    ) || [];
-
-    var fins = await sbGet(
-      'financials',
-      'select=ticker,annee,periode,bpa,dpa,resultat_net,fonds_propres' +
-      '&order=annee.desc' +
-      '&limit=1000'
-    ) || [];
-
-    var names = {};
-
-    ent.forEach(function (x) {
-      names[x.ticker] =
-        x.nom_court ||
-        x.nom ||
-        x.ticker;
-    });
-
-    c.forEach(function (x) {
-      x.societe =
-        names[x.ticker] ||
-        x.ticker;
-
-      x._value = valueOf(x);
-
-      x._price =
-        has(x.cours_cloture)
-          ? num(x.cours_cloture)
-          : num(x.cours);
-    });
-
-    /*
-     * Indices
-     */
-    var map = {};
-
-    ix.forEach(function (x) {
-
-      if (!map[x.indice]) {
-        map[x.indice] = [];
-      }
-
-      map[x.indice].push(x);
-    });
-
-    function pick(k) {
-
-      var a = map[k] || [];
+    return rows.filter(function (row) {
 
       return (
-        a.find(function (x) {
-          return x.date_seance === d;
-        }) ||
-        a[0] ||
-        null
+        !date ||
+        !row.date_seance ||
+        row.date_seance === date
+      );
+
+    });
+  }
+
+  async function readCompanies() {
+
+    return await readTable(
+      'entreprises',
+      'limit=1000'
+    );
+  }
+
+  async function readDividends() {
+
+    return await readTable(
+      'dividendes_calendrier',
+      'limit=20'
+    );
+  }
+
+  async function readFinancials() {
+
+    return await readTable(
+      'financials',
+      'limit=1000'
+    );
+  }
+
+
+  /* ============================================================
+   * CONSTRUCTION DES DONNÉES
+   * ========================================================== */
+
+  async function getData(date) {
+
+    var actualDate =
+      date || await findLatestDate();
+
+    if (!actualDate) {
+
+      throw new Error(
+        'Impossible de déterminer la date de séance.'
       );
     }
 
-    var namesIdx = [
+    var courses =
+      await readCourses(
+        actualDate
+      );
+
+    if (!courses.length) {
+
+      throw new Error(
+        'Aucune donnée de séance disponible pour ' +
+        actualDate +
+        '.'
+      );
+    }
+
+    var indices =
+      await readIndices(
+        actualDate
+      );
+
+    var companies =
+      await readCompanies();
+
+    var dividends =
+      await readDividends();
+
+    var financials =
+      await readFinancials();
+
+    /*
+     * Mapping des sociétés.
+     */
+
+    var companyMap = {};
+
+    companies.forEach(function (company) {
+
+      var ticker =
+        company.ticker ||
+        company.code ||
+        company.symbole;
+
+      if (ticker) {
+
+        companyMap[
+          String(ticker).toUpperCase()
+        ] =
+          company.nom_court ||
+          company.nom ||
+          company.libelle ||
+          ticker;
+      }
+
+    });
+
+    /*
+     * Normalisation des cours.
+     */
+
+    var normalized =
+      courses.map(function (row) {
+
+        var ticker =
+          getTicker(row);
+
+        var normalizedTicker =
+          String(ticker).toUpperCase();
+
+        var variation =
+          getVariation(row);
+
+        return {
+          raw: row,
+          ticker: ticker,
+          societe:
+            companyMap[
+              normalizedTicker
+            ] ||
+            getName(row),
+          variation: variation,
+          volume: getVolume(row),
+          value: getValue(row),
+          price: getPrice(row),
+          capitalisation:
+            getCapitalisation(row)
+        };
+
+      });
+
+    /*
+     * Ne conserver que les lignes réellement
+     * exploitables pour les tops.
+     */
+
+    var active =
+      normalized.filter(function (row) {
+
+        return (
+          row.volume > 0 ||
+          row.value > 0 ||
+          row.variation !== 0
+        );
+
+      });
+
+    var gain =
+      active
+        .filter(function (row) {
+          return row.variation > 0;
+        })
+        .sort(function (a, b) {
+          return (
+            b.variation -
+            a.variation
+          );
+        })
+        .slice(0, 5);
+
+    var loss =
+      active
+        .filter(function (row) {
+          return row.variation < 0;
+        })
+        .sort(function (a, b) {
+          return (
+            a.variation -
+            b.variation
+          );
+        })
+        .slice(0, 5);
+
+    var flat =
+      active.filter(function (row) {
+        return row.variation === 0;
+      });
+
+    var totalVolume =
+      active.reduce(
+        function (sum, row) {
+          return sum + row.volume;
+        },
+        0
+      );
+
+    var totalValue =
+      active.reduce(
+        function (sum, row) {
+          return sum + row.value;
+        },
+        0
+      );
+
+    var totalCapitalisation =
+      active.reduce(
+        function (sum, row) {
+          return sum +
+            row.capitalisation;
+        },
+        0
+      );
+
+    /*
+     * Indices.
+     */
+
+    var indexNames = [
       'BRVM COMPOSITE',
       'BRVM 30',
       'BRVM PRESTIGE'
     ];
 
-    var indices = namesIdx.map(function (k) {
+    var indexCards =
+      indexNames.map(function (name) {
 
-      var r = pick(k);
-      var ytd = null;
+        var row =
+          indices.find(function (item) {
 
-      if (r) {
-
-        var a = (map[k] || [])
-          .filter(function (x) {
+            var label =
+              String(
+                item.indice ||
+                item.nom ||
+                item.code ||
+                ''
+              ).toUpperCase();
 
             return (
-              x.date_seance &&
-              x.date_seance.slice(0, 4) === d.slice(0, 4)
-            );
-
-          })
-          .sort(function (a, b) {
-
-            return a.date_seance.localeCompare(
-              b.date_seance
+              label === name ||
+              label.indexOf(name) !== -1
             );
 
           });
 
-        if (
-          a.length &&
-          num(a[0].valeur)
-        ) {
-
-          ytd =
-            (
-              num(r.valeur) /
-              num(a[0].valeur) -
-              1
-            ) * 100;
+        if (!row) {
+          return {
+            name: name,
+            row: null,
+            ytd: null
+          };
         }
+
+        return {
+          name: name,
+          row: row,
+          ytd:
+            hasNumber(row.ytd)
+              ? number(row.ytd)
+              : hasNumber(row.variation_ytd)
+                ? number(row.variation_ytd)
+                : null
+        };
+
+      });
+
+    /*
+     * Ratios financiers.
+     */
+
+    var financialMap = {};
+
+    financials.forEach(function (row) {
+
+      var ticker =
+        String(
+          row.ticker ||
+          row.code ||
+          ''
+        ).toUpperCase();
+
+      if (!ticker) {
+        return;
       }
 
-      return {
-        name: k,
-        row: r,
-        ytd: ytd
-      };
-
-    });
-
-    /*
-     * Top hausses / baisses.
-     */
-    var active = c.filter(function (x) {
-
-      return (
-        num(x.volume) > 0 ||
-        x._value > 0 ||
-        has(x.variation)
-      );
-
-    });
-
-    var gain = active
-      .filter(function (x) {
-        return num(x.variation) > 0;
-      })
-      .sort(function (a, b) {
-        return num(b.variation) -
-          num(a.variation);
-      })
-      .slice(0, 5);
-
-    var loss = active
-      .filter(function (x) {
-        return num(x.variation) < 0;
-      })
-      .sort(function (a, b) {
-        return num(a.variation) -
-          num(b.variation);
-      })
-      .slice(0, 5);
-
-    var flat = active.filter(function (x) {
-      return num(x.variation) === 0;
-    });
-
-    var volume = active.reduce(
-      function (s, x) {
-        return s + num(x.volume);
-      },
-      0
-    );
-
-    var value = active.reduce(
-      function (s, x) {
-        return s + x._value;
-      },
-      0
-    );
-
-    var cap = active.reduce(
-      function (s, x) {
-        return s + num(x.capitalisation);
-      },
-      0
-    );
-
-    /*
-     * Ratios financiers disponibles.
-     */
-    var latest = {};
-
-    fins.forEach(function (x) {
-
-      var k = x.ticker;
+      if (!financialMap[ticker]) {
+        financialMap[ticker] =
+          row;
+        return;
+      }
 
       if (
-        !latest[k] ||
-        Number(x.annee) >
-        Number(latest[k].annee)
+        number(row.annee) >
+        number(
+          financialMap[ticker].annee
+        )
       ) {
-        latest[k] = x;
+        financialMap[ticker] =
+          row;
       }
 
     });
 
-    var pe = [];
-    var dy = [];
-    var roe = [];
+    var peValues = [];
+    var yieldValues = [];
+    var roeValues = [];
 
-    active.forEach(function (x) {
+    active.forEach(function (row) {
 
-      var f = latest[x.ticker];
+      var financial =
+        financialMap[
+          String(
+            row.ticker
+          ).toUpperCase()
+        ];
 
-      if (!f) return;
-
-      var price = x._price;
-      var bpa = num(f.bpa);
-      var dpa = num(f.dpa);
-      var rn = num(f.resultat_net);
-      var fp = num(f.fonds_propres);
-
-      if (price > 0 && bpa > 0) {
-        pe.push(price / bpa);
+      if (!financial) {
+        return;
       }
 
-      if (price > 0 && dpa > 0) {
-        dy.push(dpa / price * 100);
+      var bpa =
+        number(
+          financial.bpa
+        );
+
+      var dpa =
+        number(
+          financial.dpa
+        );
+
+      var result =
+        number(
+          financial.resultat_net
+        );
+
+      var equity =
+        number(
+          financial.fonds_propres
+        );
+
+      if (
+        row.price > 0 &&
+        bpa > 0
+      ) {
+
+        peValues.push(
+          row.price / bpa
+        );
+
       }
 
-      if (fp > 0 && rn !== 0) {
-        roe.push(rn / fp * 100);
+      if (
+        row.price > 0 &&
+        dpa > 0
+      ) {
+
+        yieldValues.push(
+          dpa /
+          row.price *
+          100
+        );
+
+      }
+
+      if (
+        equity > 0
+      ) {
+
+        roeValues.push(
+          result /
+          equity *
+          100
+        );
+
       }
 
     });
 
-    function avg(a) {
+    function average(values) {
 
-      return a.length
-        ? a.reduce(function (s, v) {
-            return s + v;
-          }, 0) / a.length
-        : null;
+      if (!values.length) {
+        return null;
+      }
+
+      return (
+        values.reduce(
+          function (sum, value) {
+            return sum + value;
+          },
+          0
+        ) /
+        values.length
+      );
+
     }
 
-    return {
-      date: d,
-      indices: indices,
-      cours: active,
-      gain: gain,
-      loss: loss,
-      flat: flat,
-      volume: volume,
-      value: value,
-      cap: cap,
+    /*
+     * Dividendes.
+     */
 
-      divs: divs
-        .filter(function (x) {
+    var futureDividends =
+      dividends
+        .filter(function (row) {
 
-          var dt =
-            x.ex_date ||
-            x.date_detachement ||
-            x.date_paiement ||
-            '';
+          var d =
+            row.ex_date ||
+            row.date_detachement ||
+            row.date_paiement ||
+            row.date_paiement_cal;
 
-          return !dt || dt >= d;
+          return (
+            !d ||
+            d >= actualDate
+          );
 
         })
-        .slice(0, 5),
+        .slice(0, 5);
+
+    return {
+
+      date: actualDate,
+
+      indices:
+        indexCards,
+
+      courses:
+        active,
+
+      gain:
+        gain,
+
+      loss:
+        loss,
+
+      flat:
+        flat,
+
+      volume:
+        totalVolume,
+
+      value:
+        totalValue,
+
+      capitalisation:
+        totalCapitalisation,
+
+      dividends:
+        futureDividends,
 
       stats: {
-        pe: avg(pe),
-        dy: avg(dy),
-        roe: avg(roe),
-        lines: active.length,
-        sgis: null
-      },
+        pe:
+          average(peValues),
 
-      fins: fins
+        yield:
+          average(yieldValues),
+
+        roe:
+          average(roeValues)
+      }
+
     };
   }
 
-  /*
-   * Header.
-   */
-  function drawHeader(d, w) {
 
-    var o = '';
+  /* ============================================================
+   * HEADER
+   * ========================================================== */
 
-    o += rect(
-      0,
-      0,
-      w,
-      260,
-      B,
-      null,
-      0
-    );
+  function drawHeader(
+    data,
+    width
+  ) {
 
-    o +=
-      '<image href="' +
-      logo +
-      '" x="46" y="24" width="160" height="160" preserveAspectRatio="xMidYMid meet"/>';
+    var output = '';
 
-    o += line(
-      230,
-      26,
-      230,
-      215,
-      G,
-      3
-    );
-
-    o += text(
-      260,
-      82,
-      'BRVM',
-      64,
-      G,
-      800
-    );
-
-    o += text(
-      260,
-      137,
-      'LA SÉANCE DU JOUR',
-      34,
-      C,
-      800
-    );
-
-    o += text(
-      260,
-      178,
-      'EN 1 MINUTE',
-      34,
-      C,
-      800
-    );
-
-    o += rect(
-      260,
-      199,
-      535,
-      40,
-      '#1E170B',
-      G,
-      20
-    );
-
-    o += text(
-      527,
-      225,
-      dateFR(d.date),
-      18,
-      G2,
-      600,
-      'middle'
-    );
-
-    o += text(
-      w - 48,
-      70,
-      'THE CAPITAL',
-      12,
-      M,
-      600,
-      'end'
-    );
-
-    o += text(
-      w - 48,
-      92,
-      'MARKET INTELLIGENCE',
-      10,
-      M,
-      400,
-      'end'
-    );
-
-    return o;
-  }
-
-  /*
-   * Carte indice.
-   */
-  function indexCard(x, y, w, h, it) {
-
-    var o =
-      rect(
-        x,
-        y,
-        w,
-        h,
-        '#FCFBF8',
-        '#E8E3D8',
-        14
-      );
-
-    var r = it.row;
-
-    o += text(
-      x + 22,
-      y + 30,
-      it.name,
-      16,
-      '#25231F',
-      700
-    );
-
-    if (r) {
-
-      var v = num(r.variation);
-      var vc = v >= 0 ? GR : R;
-
-      o += arrow(
-        x + 37,
-        y + 74,
-        v >= 0
-      );
-
-      o += text(
-        x + 72,
-        y + 87,
-        fmt(r.valeur, 2) + ' pts',
-        38,
-        '#1E6B35',
-        800
-      );
-
-      o += text(
-        x + 72,
-        y + 117,
-        pct(v),
-        19,
-        vc,
-        700
-      );
-
-      o += text(
-        x + 22,
-        y + 151,
-        'Depuis le 1er janvier',
-        13,
-        '#55504A',
-        400
-      );
-
-      o += text(
-        x + 22,
-        y + 176,
-        it.ytd == null
-          ? '—'
-          : pct(it.ytd),
-        17,
-        it.ytd == null
-          ? '#777'
-          : (
-            it.ytd >= 0
-              ? '#1E6B35'
-              : R
-          ),
-        700
-      );
-
-      o += rect(
-        x + 16,
-        y + 190,
-        w - 32,
-        62,
-        '#FFF8ED',
+    output +=
+      svgRect(
+        0,
+        0,
+        width,
+        260,
+        COLORS.dark,
         null,
-        9
+        0
       );
 
-      o += text(
-        x + 88,
-        y + 214,
-        'VALEUR',
-        10,
-        '#625B52',
-        600,
-        'middle'
-      );
+    /*
+     * LOGO INTÉGRÉ DIRECTEMENT DANS LE SVG.
+     */
 
-      o += text(
-        x + 88,
-        y + 239,
-        compact(r.valeur) + ' pts',
-        15,
-        '#25231F',
-        700,
-        'middle'
-      );
+    if (STATE.logoDataUri) {
 
-      o += line(
-        x + w / 2,
-        y + 201,
-        x + w / 2,
-        y + 242,
-        '#E4D9C8',
-        1
-      );
-
-      o += text(
-        x + w - 88,
-        y + 214,
-        'VARIATION',
-        10,
-        '#625B52',
-        600,
-        'middle'
-      );
-
-      o += text(
-        x + w - 88,
-        y + 239,
-        pct(v),
-        15,
-        vc,
-        700,
-        'middle'
-      );
+      output +=
+        '<image' +
+        ' href="' +
+        STATE.logoDataUri +
+        '"' +
+        ' x="46"' +
+        ' y="32"' +
+        ' width="160"' +
+        ' height="150"' +
+        ' preserveAspectRatio="xMidYMid meet"' +
+        '/>';
 
     } else {
 
-      o += text(
-        x + 22,
-        y + 88,
-        'Donnée indisponible',
-        17,
-        '#777',
-        500
-      );
+      output +=
+        svgText(
+          46,
+          95,
+          'THE CAPITAL',
+          27,
+          COLORS.cream,
+          700,
+          FONTS.serif
+        );
 
     }
 
-    return o;
+    output +=
+      svgLine(
+        230,
+        28,
+        230,
+        215,
+        COLORS.gold,
+        2
+      );
+
+    output +=
+      svgText(
+        260,
+        82,
+        'BRVM',
+        58,
+        COLORS.gold,
+        800,
+        FONTS.serif
+      );
+
+    output +=
+      svgText(
+        260,
+        135,
+        'LA SÉANCE DU JOUR',
+        30,
+        COLORS.cream,
+        700,
+        FONTS.sans,
+        'start',
+        '1.5'
+      );
+
+    output +=
+      svgText(
+        260,
+        174,
+        'EN 1 MINUTE',
+        30,
+        COLORS.cream,
+        700,
+        FONTS.sans,
+        'start',
+        '1.5'
+      );
+
+    output +=
+      svgRect(
+        260,
+        197,
+        535,
+        39,
+        '#1E170B',
+        COLORS.gold,
+        19
+      );
+
+    output +=
+      svgText(
+        527,
+        222,
+        dateFR(data.date),
+        16,
+        COLORS.goldLight,
+        600,
+        FONTS.sans,
+        'middle'
+      );
+
+    output +=
+      svgText(
+        width - 48,
+        70,
+        'THE CAPITAL',
+        12,
+        COLORS.muted,
+        700,
+        FONTS.serif,
+        'end'
+      );
+
+    output +=
+      svgText(
+        width - 48,
+        92,
+        'MARKET INTELLIGENCE',
+        9,
+        COLORS.muted,
+        500,
+        FONTS.sans,
+        'end',
+        '1'
+      );
+
+    return output;
   }
 
-  /*
-   * Statistiques.
-   */
-  function metricRow(d, x, y, w) {
 
-    var vals = [
-      d.cours.length,
-      d.gain.length,
-      d.loss.length,
-      d.flat.length
+  /* ============================================================
+   * CARTE INDICE
+   * ========================================================== */
+
+  function indexCard(
+    x,
+    y,
+    width,
+    height,
+    item
+  ) {
+
+    var output =
+      svgRect(
+        x,
+        y,
+        width,
+        height,
+        '#FCFBF8',
+        '#E8E3D8',
+        12
+      );
+
+    output +=
+      svgText(
+        x + 20,
+        y + 30,
+        item.name,
+        14,
+        '#25231F',
+        700,
+        FONTS.sans,
+        'start',
+        '.8'
+      );
+
+    if (!item.row) {
+
+      output +=
+        svgText(
+          x + 20,
+          y + 88,
+          'Donnée indisponible',
+          15,
+          '#777',
+          500,
+          FONTS.sans
+        );
+
+      return output;
+    }
+
+    var row =
+      item.row;
+
+    var value =
+      number(
+        row.valeur ??
+        row.value ??
+        row.indice
+      );
+
+    var variation =
+      hasNumber(row.variation)
+        ? number(row.variation)
+        : hasNumber(row.variation_pct)
+          ? number(row.variation_pct)
+          : 0;
+
+    var positive =
+      variation >= 0;
+
+    var color =
+      positive
+        ? COLORS.greenDark
+        : COLORS.redDark;
+
+    output +=
+      svgCircle(
+        x + 37,
+        y + 77,
+        22,
+        'none',
+        positive
+          ? COLORS.green
+          : COLORS.red,
+        2.5
+      );
+
+    output +=
+      svgLine(
+        x + 29,
+        y + 84,
+        x + 44,
+        y + 69,
+        positive
+          ? COLORS.green
+          : COLORS.red,
+        3
+      );
+
+    output +=
+      svgLine(
+        x + 44,
+        y + 69,
+        x + 44,
+        y + 78,
+        positive
+          ? COLORS.green
+          : COLORS.red,
+        3
+      );
+
+    output +=
+      svgLine(
+        x + 44,
+        y + 69,
+        x + 35,
+        y + 69,
+        positive
+          ? COLORS.green
+          : COLORS.red,
+        3
+      );
+
+    output +=
+      svgText(
+        x + 70,
+        y + 87,
+        formatNumber(value, 2),
+        31,
+        color,
+        700,
+        FONTS.mono
+      );
+
+    output +=
+      svgText(
+        x + 70,
+        y + 115,
+        formatPercent(variation),
+        15,
+        positive
+          ? COLORS.greenDark
+          : COLORS.redDark,
+        700,
+        FONTS.mono
+      );
+
+    output +=
+      svgText(
+        x + 20,
+        y + 150,
+        'Depuis le 1er janvier',
+        11,
+        COLORS.mutedDark,
+        500,
+        FONTS.sans
+      );
+
+    output +=
+      svgText(
+        x + 20,
+        y + 174,
+        item.ytd == null
+          ? '—'
+          : formatPercent(item.ytd),
+        15,
+        item.ytd == null
+          ? '#777'
+          : item.ytd >= 0
+            ? COLORS.greenDark
+            : COLORS.redDark,
+        700,
+        FONTS.mono
+      );
+
+    return output;
+  }
+
+
+  /* ============================================================
+   * STATISTIQUES
+   * ========================================================== */
+
+  function marketStats(
+    data,
+    x,
+    y,
+    width
+  ) {
+
+    var output =
+      svgText(
+        x,
+        y,
+        'LE MARCHÉ ACTIONS EN CHIFFRES',
+        23,
+        '#24211D',
+        700,
+        FONTS.serif
+      );
+
+    y += 26;
+
+    var values = [
+      data.courses.length,
+      data.gain.length,
+      data.loss.length,
+      data.flat.length
     ];
 
-    var labs = [
-      'titres cotés échangés aujourd’hui',
+    var labels = [
+      'titres échangés',
       'en hausse',
       'en baisse',
       'inchangés'
     ];
 
-    var o = text(
-      x,
-      y,
-      'LE MARCHÉ ACTIONS EN CHIFFRES',
-      25,
-      '#24211D',
-      800
-    );
+    var cellWidth =
+      width / 4;
 
-    y += 22;
+    values.forEach(function (
+      value,
+      index
+    ) {
 
-    var cw = w / 4;
+      var cellX =
+        x +
+        index *
+        cellWidth;
 
-    vals.forEach(function (v, i) {
+      if (index > 0) {
 
-      var xx = x + i * cw;
+        output +=
+          svgLine(
+            cellX,
+            y,
+            cellX,
+            y + 95,
+            '#E5DED3',
+            1
+          );
 
-      if (i) {
-        o += line(
-          xx,
-          y,
-          xx,
-          y + 105,
-          '#E5DED3',
-          1
-        );
       }
 
-      o += text(
-        xx + cw / 2,
-        y + 47,
-        fmt(v),
-        34,
-        '#171513',
-        800,
-        'middle'
-      );
+      output +=
+        svgText(
+          cellX + cellWidth / 2,
+          y + 42,
+          formatNumber(value),
+          30,
+          '#171513',
+          500,
+          FONTS.mono,
+          'middle'
+        );
 
-      o += text(
-        xx + cw / 2,
-        y + 72,
-        labs[i],
-        12,
-        '#5F5952',
-        500,
-        'middle'
-      );
+      output +=
+        svgText(
+          cellX + cellWidth / 2,
+          y + 67,
+          labels[index],
+          11,
+          COLORS.mutedDark,
+          500,
+          FONTS.sans,
+          'middle'
+        );
 
     });
 
-    y += 123;
+    y += 112;
 
-    o += rect(
-      x,
-      y,
-      w,
-      82,
-      '#FFF9F0',
-      '#EFE5D6',
-      10
-    );
+    output +=
+      svgRect(
+        x,
+        y,
+        width,
+        82,
+        COLORS.goldSoft,
+        '#EFE5D6',
+        10
+      );
 
-    o += text(
-      x + w * .17,
-      y + 28,
-      'VOLUME ÉCHANGÉ',
-      11,
-      '#746B61',
-      600,
-      'middle'
-    );
-
-    o += text(
-      x + w * .17,
-      y + 56,
-      fmt(d.volume) + ' titres',
-      20,
-      G,
-      800,
-      'middle'
-    );
-
-    o += line(
-      x + w * .34,
-      y + 14,
-      x + w * .34,
-      y + 68,
-      '#E5D9C8',
-      1
-    );
-
-    o += text(
-      x + w * .50,
-      y + 28,
-      'VALEUR ÉCHANGÉE',
-      11,
-      '#746B61',
-      600,
-      'middle'
-    );
-
-    o += text(
-      x + w * .50,
-      y + 56,
-      compact(d.value) + ' FCFA',
-      20,
-      G,
-      800,
-      'middle'
-    );
-
-    o += line(
-      x + w * .66,
-      y + 14,
-      x + w * .66,
-      y + 68,
-      '#E5D9C8',
-      1
-    );
-
-    o += text(
-      x + w * .83,
-      y + 28,
-      'CAPITALISATION',
-      11,
-      '#746B61',
-      600,
-      'middle'
-    );
-
-    o += text(
-      x + w * .83,
-      y + 56,
-      compact(d.cap) + ' FCFA',
-      20,
-      G,
-      800,
-      'middle'
-    );
-
-    y += 102;
-
-    o += rect(
-      x,
-      y,
-      w,
-      72,
-      '#FFF9F0',
-      null,
-      10
-    );
-
-    var stats = [
+    var metrics = [
       [
-        'P/E moyen',
-        d.stats.pe == null
-          ? '—'
-          : fmt(d.stats.pe, 2)
+        'VOLUME ÉCHANGÉ',
+        formatNumber(data.volume) +
+          ' titres'
       ],
       [
-        'Rendement moyen',
-        d.stats.dy == null
-          ? '—'
-          : fmt(d.stats.dy, 2) + ' %'
+        'VALEUR ÉCHANGÉE',
+        compact(data.value) +
+          ' FCFA'
       ],
       [
-        'Rentabilité moyenne',
-        d.stats.roe == null
-          ? '—'
-          : fmt(d.stats.roe, 2) + ' %'
+        'CAPITALISATION',
+        compact(data.capitalisation) +
+          ' FCFA'
       ]
     ];
 
-    stats.forEach(function (s, i) {
+    metrics.forEach(function (
+      metric,
+      index
+    ) {
 
-      var xx = x + i * w / 3;
+      var center =
+        x +
+        width *
+        ((index * 2 + 1) / 6);
 
-      if (i) {
-        o += line(
-          xx,
-          y + 12,
-          xx,
-          y + 60,
-          '#E5D9C8',
-          1
-        );
+      if (index > 0) {
+
+        output +=
+          svgLine(
+            x +
+              width *
+              (index / 3),
+            y + 13,
+            x +
+              width *
+              (index / 3),
+            y + 69,
+            '#E5D9C8',
+            1
+          );
+
       }
 
-      o += text(
-        xx + w / 6,
-        y + 27,
-        s[0],
-        11,
-        '#746B61',
-        600,
-        'middle'
+      output +=
+        svgText(
+          center,
+          y + 28,
+          metric[0],
+          10,
+          '#746B61',
+          600,
+          FONTS.sans,
+          'middle',
+          '.8'
+        );
+
+      output +=
+        svgText(
+          center,
+          y + 55,
+          metric[1],
+          17,
+          COLORS.gold,
+          500,
+          FONTS.mono,
+          'middle'
+        );
+
+    });
+
+    y += 100;
+
+    output +=
+      svgRect(
+        x,
+        y,
+        width,
+        72,
+        '#FFF9F0',
+        '#EFE5D6',
+        10
       );
 
-      o += text(
-        xx + w / 6,
-        y + 54,
-        s[1],
-        19,
-        '#171513',
-        800,
-        'middle'
-      );
+    var financials = [
+      [
+        'P/E MOYEN',
+        data.stats.pe == null
+          ? '—'
+          : formatNumber(
+              data.stats.pe,
+              2
+            )
+      ],
+      [
+        'RENDEMENT MOYEN',
+        data.stats.yield == null
+          ? '—'
+          : formatNumber(
+              data.stats.yield,
+              2
+            ) + ' %'
+      ],
+      [
+        'ROE MOYEN',
+        data.stats.roe == null
+          ? '—'
+          : formatNumber(
+              data.stats.roe,
+              2
+            ) + ' %'
+      ]
+    ];
+
+    financials.forEach(function (
+      metric,
+      index
+    ) {
+
+      var cellWidth =
+        width / 3;
+
+      var center =
+        x +
+        cellWidth *
+        index +
+        cellWidth / 2;
+
+      if (index > 0) {
+
+        output +=
+          svgLine(
+            x +
+              cellWidth *
+              index,
+            y + 10,
+            x +
+              cellWidth *
+              index,
+            y + 62,
+            '#E5D9C8',
+            1
+          );
+
+      }
+
+      output +=
+        svgText(
+          center,
+          y + 26,
+          metric[0],
+          10,
+          '#746B61',
+          600,
+          FONTS.sans,
+          'middle',
+          '.7'
+        );
+
+      output +=
+        svgText(
+          center,
+          y + 52,
+          metric[1],
+          17,
+          '#171513',
+          500,
+          FONTS.mono,
+          'middle'
+        );
 
     });
 
     return {
-      svg: o,
-      next: y + 91
+      svg: output,
+      nextY: y + 90
     };
   }
 
-  /*
-   * Top 5.
-   */
+
+  /* ============================================================
+   * TOP 5
+   * ========================================================== */
+
   function topBox(
     x,
     y,
-    w,
-    h,
+    width,
+    height,
     title,
     rows,
     color
   ) {
 
-    var o =
-      rect(
+    var output =
+      svgRect(
         x,
         y,
-        w,
-        h,
+        width,
+        height,
         '#FFFFFF',
         '#E7E0D6',
         12
       );
 
-    o += text(
-      x + 20,
-      y + 29,
-      title,
-      19,
-      color,
-      800
-    );
+    output +=
+      svgText(
+        x + 20,
+        y + 29,
+        title,
+        17,
+        color,
+        700,
+        FONTS.sans,
+        'start',
+        '.4'
+      );
 
-    o += line(
-      x + 20,
-      y + 44,
-      x + w - 20,
-      y + 44,
-      '#E8E1D8',
-      1
-    );
+    output +=
+      svgLine(
+        x + 20,
+        y + 45,
+        x + width - 20,
+        y + 45,
+        '#E8E1D8',
+        1
+      );
 
     if (!rows.length) {
 
-      o += text(
-        x + 20,
-        y + 78,
-        'Aucune donnée disponible',
-        12,
-        '#777',
-        400
-      );
+      output +=
+        svgText(
+          x + 20,
+          y + 78,
+          'Aucune donnée disponible',
+          12,
+          '#777',
+          400,
+          FONTS.sans
+        );
 
-      return o;
+      return output;
     }
 
-    rows.forEach(function (r, i) {
+    rows.forEach(function (
+      row,
+      index
+    ) {
 
-      var yy = y + 76 + i * 43;
+      var yy =
+        y +
+        77 +
+        index *
+        43;
 
-      o +=
-        circle(
+      output +=
+        svgCircle(
           x + 29,
           yy - 5,
           11,
           color
-        ) +
-        text(
+        );
+
+      output +=
+        svgText(
           x + 29,
           yy - 1,
-          String(i + 1),
-          10,
-          '#fff',
-          800,
+          String(index + 1),
+          9,
+          '#FFFFFF',
+          700,
+          FONTS.mono,
           'middle'
         );
 
-      o += text(
-        x + 51,
-        yy,
-        (r.ticker || '—') +
-        ' — ' +
-        safeName(r),
-        12,
-        '#24211D',
-        600
-      );
+      output +=
+        svgText(
+          x + 51,
+          yy,
+          getTicker(row) +
+            ' — ' +
+            getName(row),
+          11,
+          '#24211D',
+          600,
+          FONTS.sans
+        );
 
-      o += text(
-        x + w - 20,
-        yy,
-        pct(r.variation),
-        13,
-        color,
-        800,
-        'end'
-      );
+      output +=
+        svgText(
+          x + width - 20,
+          yy,
+          formatPercent(
+            row.variation
+          ),
+          12,
+          color,
+          600,
+          FONTS.mono,
+          'end'
+        );
 
-      o += text(
-        x + 51,
-        yy + 16,
-        'Vol. ' +
-        fmt(r.volume) +
-        ' · ' +
-        compact(r._value) +
-        ' FCFA',
-        10,
-        '#777',
-        400
-      );
+      output +=
+        svgText(
+          x + 51,
+          yy + 16,
+          'Vol. ' +
+            formatNumber(
+              row.volume
+            ) +
+            ' · ' +
+            compact(row.value) +
+            ' FCFA',
+          9,
+          '#777',
+          400,
+          FONTS.mono
+        );
 
     });
 
-    return o;
+    return output;
   }
 
-  /*
-   * Dividendes.
-   */
-  function upcomingDivs(x, y, w, d) {
 
-    var h = 122;
+  /* ============================================================
+   * DIVIDENDES
+   * ========================================================== */
 
-    var o =
-      rect(
+  function dividendBox(
+    x,
+    y,
+    width,
+    data
+  ) {
+
+    var height = 120;
+
+    var output =
+      svgRect(
         x,
         y,
-        w,
-        h,
+        width,
+        height,
         '#FFF9F0',
         '#E8DFD0',
         11
       );
 
-    o += text(
-      x + 20,
-      y + 27,
-      'DIVIDENDES À VENIR',
-      16,
-      G,
-      800
-    );
+    output +=
+      svgText(
+        x + 20,
+        y + 27,
+        'DIVIDENDES À VENIR',
+        15,
+        COLORS.gold,
+        700,
+        FONTS.sans,
+        'start',
+        '.6'
+      );
 
     var rows =
-      (d.divs || []).slice(0, 4);
+      (data.dividends || [])
+        .slice(0, 4);
 
     if (!rows.length) {
 
-      o += text(
-        x + 20,
-        y + 58,
-        'Aucun dividende disponible dans le calendrier.',
-        12,
-        '#777',
-        400
-      );
+      output +=
+        svgText(
+          x + 20,
+          y + 59,
+          'Aucun dividende disponible.',
+          11,
+          '#777',
+          400,
+          FONTS.sans
+        );
 
-      return o;
+      return output;
     }
 
-    rows.forEach(function (v, i) {
+    rows.forEach(function (
+      row,
+      index
+    ) {
 
-      var yy = y + 51 + i * 17;
+      var yy =
+        y +
+        51 +
+        index *
+        16;
 
-      o += text(
-        x + 20,
-        yy,
-        v.ticker || '—',
-        11,
-        '#24211D',
-        700
-      );
+      var ticker =
+        row.ticker ||
+        row.code ||
+        '—';
 
-      o += text(
-        x + 145,
-        yy,
-        fmt(
-          v.montant_net ||
-          v.montant,
-          2
-        ) +
-        ' FCFA/action',
-        11,
-        '#625B52',
-        500
-      );
+      var amount =
+        row.montant_net ??
+        row.montant ??
+        row.dividende;
 
-      o += text(
-        x + w - 20,
-        yy,
-        shortDate(
-          v.ex_date ||
-          v.date_detachement ||
-          v.date_paiement
-        ),
-        11,
-        '#625B52',
-        500,
-        'end'
-      );
+      var dividendDate =
+        row.ex_date ||
+        row.date_detachement ||
+        row.date_paiement ||
+        row.date_paiement_cal;
+
+      output +=
+        svgText(
+          x + 20,
+          yy,
+          ticker,
+          10,
+          '#24211D',
+          700,
+          FONTS.mono
+        );
+
+      output +=
+        svgText(
+          x + 130,
+          yy,
+          hasNumber(amount)
+            ? formatNumber(
+                amount,
+                2
+              ) +
+              ' FCFA/action'
+            : '—',
+          10,
+          '#625B52',
+          500,
+          FONTS.sans
+        );
+
+      output +=
+        svgText(
+          x + width - 20,
+          yy,
+          shortDate(
+            dividendDate
+          ),
+          10,
+          '#625B52',
+          500,
+          FONTS.mono,
+          'end'
+        );
 
     });
 
-    return o;
+    return output;
   }
 
-  /*
-   * Construction du visuel final.
-   */
-  function build(
-    d,
-    w,
-    h,
+
+  /* ============================================================
+   * GÉNÉRATION SVG
+   * ========================================================== */
+
+  function buildSVG(
+    data,
+    width,
+    height,
     note,
     bond
   ) {
 
-    var p = 34;
-    var cw = w - p * 2;
+    var padding = 34;
+    var contentWidth =
+      width -
+      padding * 2;
 
-    var o =
+    var gap = 12;
+
+    var svg =
       '<?xml version="1.0" encoding="UTF-8"?>' +
-      '<svg xmlns="http://www.w3.org/2000/svg" ' +
-      'xmlns:xlink="http://www.w3.org/1999/xlink" ' +
-      'width="' + w + '" height="' + h + '" ' +
-      'viewBox="0 0 ' + w + ' ' + h + '">';
+      '<svg xmlns="http://www.w3.org/2000/svg"' +
+      ' width="' + width + '"' +
+      ' height="' + height + '"' +
+      ' viewBox="0 0 ' +
+      width +
+      ' ' +
+      height +
+      '">' ;
 
-    o += rect(
-      0,
-      0,
-      w,
-      h,
-      '#FFFFFF',
-      null,
-      0
-    );
+    /*
+     * Fond.
+     */
 
-    o += drawHeader(d, w);
+    svg +=
+      svgRect(
+        0,
+        0,
+        width,
+        height,
+        COLORS.white,
+        null,
+        0
+      );
+
+    /*
+     * Header.
+     */
+
+    svg +=
+      drawHeader(
+        data,
+        width
+      );
 
     var y = 284;
-    var gap = 12;
-    var iw = (cw - gap * 2) / 3;
-    var ih = 268;
 
-    d.indices.forEach(function (it, i) {
+    /*
+     * Indices.
+     */
 
-      o += indexCard(
-        p + i * (iw + gap),
+    var indexWidth =
+      (
+        contentWidth -
+        gap * 2
+      ) / 3;
+
+    var indexHeight =
+      268;
+
+    data.indices.forEach(
+      function (
+        item,
+        index
+      ) {
+
+        svg +=
+          indexCard(
+            padding +
+              index *
+              (indexWidth + gap),
+            y,
+            indexWidth,
+            indexHeight,
+            item
+          );
+
+      }
+    );
+
+    y +=
+      indexHeight +
+      26;
+
+    /*
+     * Statistiques.
+     */
+
+    var metrics =
+      marketStats(
+        data,
+        padding,
         y,
-        iw,
-        ih,
-        it
+        contentWidth
       );
 
-    });
+    svg += metrics.svg;
 
-    y += ih + 26;
+    y = metrics.nextY;
 
-    var mr =
-      metricRow(
-        d,
-        p,
-        y,
-        cw
-      );
+    /*
+     * Top 5.
+     */
 
-    o += mr.svg;
-    y = mr.next;
+    var boxWidth =
+      (
+        contentWidth -
+        gap
+      ) / 2;
 
-    var col =
-      (cw - gap) / 2;
+    var boxHeight =
+      286;
 
-    var bh = 286;
-
-    o +=
+    svg +=
       topBox(
-        p,
+        padding,
         y,
-        col,
-        bh,
+        boxWidth,
+        boxHeight,
         'TOP 5 HAUSSES DU JOUR',
-        d.gain,
-        GR
-      ) +
-      topBox(
-        p + col + gap,
-        y,
-        col,
-        bh,
-        'TOP 5 BAISSES DU JOUR',
-        d.loss,
-        R
+        data.gain,
+        COLORS.greenDark
       );
 
-    y += bh + 18;
+    svg +=
+      topBox(
+        padding +
+          boxWidth +
+          gap,
+        y,
+        boxWidth,
+        boxHeight,
+        'TOP 5 BAISSES DU JOUR',
+        data.loss,
+        COLORS.redDark
+      );
+
+    y +=
+      boxHeight +
+      18;
 
     /*
      * Marché obligataire.
      */
-    var bondH = 110;
 
-    o +=
-      rect(
-        p,
+    var bondHeight =
+      105;
+
+    svg +=
+      svgRect(
+        padding,
         y,
-        cw,
-        bondH,
+        contentWidth,
+        bondHeight,
         '#FFF9F0',
         '#E8DFD0',
         11
-      ) +
-
-      text(
-        p + 20,
-        y + 28,
-        'MARCHÉ OBLIGATAIRE',
-        16,
-        '#C78A00',
-        800
-      ) +
-
-      text(
-        p + 20,
-        y + 52,
-        'Capitalisation',
-        11,
-        '#746B61',
-        500
-      ) +
-
-      text(
-        p + 150,
-        y + 52,
-        has(bond.cap)
-          ? compact(bond.cap) + ' FCFA'
-          : '—',
-        15,
-        '#24211D',
-        800
-      ) +
-
-      text(
-        p + 310,
-        y + 52,
-        'Valeur échangée',
-        11,
-        '#746B61',
-        500
-      ) +
-
-      text(
-        p + 430,
-        y + 52,
-        has(bond.value)
-          ? compact(bond.value) + ' FCFA'
-          : '—',
-        15,
-        '#24211D',
-        800
-      ) +
-
-      text(
-        p + 600,
-        y + 52,
-        'Volume échangé',
-        11,
-        '#746B61',
-        500
-      ) +
-
-      text(
-        p + 720,
-        y + 52,
-        has(bond.volume)
-          ? fmt(bond.volume) + ' titres'
-          : '—',
-        15,
-        '#24211D',
-        800
-      ) +
-
-      line(
-        p + 560,
-        y + 16,
-        p + 560,
-        y + 88,
-        '#E5D9C8',
-        1
-      ) +
-
-      text(
-        p + 580,
-        y + 78,
-        'Données manuelles facultatives',
-        10,
-        '#8A8177',
-        400
       );
 
-    y += bondH + 16;
+    svg +=
+      svgText(
+        padding + 20,
+        y + 27,
+        'MARCHÉ OBLIGATAIRE',
+        15,
+        '#C78A00',
+        700,
+        FONTS.sans,
+        'start',
+        '.6'
+      );
 
-    o += upcomingDivs(
-      p,
-      y,
-      cw,
-      d
+    var bondMetrics = [
+      [
+        'CAPITALISATION',
+        hasNumber(bond.cap)
+          ? compact(bond.cap) +
+            ' FCFA'
+          : '—'
+      ],
+      [
+        'VALEUR ÉCHANGÉE',
+        hasNumber(bond.value)
+          ? compact(bond.value) +
+            ' FCFA'
+          : '—'
+      ],
+      [
+        'VOLUME ÉCHANGÉ',
+        hasNumber(bond.volume)
+          ? formatNumber(
+              bond.volume
+            ) +
+            ' titres'
+          : '—'
+      ]
+    ];
+
+    bondMetrics.forEach(
+      function (
+        metric,
+        index
+      ) {
+
+        var center =
+          padding +
+          145 +
+          index *
+          260;
+
+        if (index > 0) {
+
+          svg +=
+            svgLine(
+              center - 130,
+              y + 43,
+              center - 130,
+              y + 88,
+              '#E5D9C8',
+              1
+            );
+
+        }
+
+        svg +=
+          svgText(
+            center,
+            y + 53,
+            metric[0],
+            9,
+            '#746B61',
+            600,
+            FONTS.sans,
+            'middle',
+            '.6'
+          );
+
+        svg +=
+          svgText(
+            center,
+            y + 76,
+            metric[1],
+            14,
+            '#24211D',
+            500,
+            FONTS.mono,
+            'middle'
+          );
+
+      }
     );
 
-    y += 140;
+    y +=
+      bondHeight +
+      16;
+
+    /*
+     * Dividendes.
+     */
+
+    svg +=
+      dividendBox(
+        padding,
+        y,
+        contentWidth,
+        data
+      );
+
+    y += 138;
+
+    /*
+     * Actualité.
+     */
 
     var noteText =
-      note && note.trim()
+      note &&
+      note.trim()
         ? note.trim()
         : 'Séance BRVM du jour : évolution des indices, activité du marché et valeurs les plus marquantes.';
 
-    o += rect(
-      p,
-      y,
-      cw,
-      112,
-      '#FAF7F1',
-      '#E8DFD0',
-      11
-    );
+    svg +=
+      svgRect(
+        padding,
+        y,
+        contentWidth,
+        112,
+        '#FAF7F1',
+        '#E8DFD0',
+        11
+      );
 
-    o += text(
-      p + 20,
-      y + 27,
-      'ACTU DU JOUR',
-      16,
-      G,
-      800
-    );
+    svg +=
+      svgText(
+        padding + 20,
+        y + 27,
+        'ACTU DU JOUR',
+        15,
+        COLORS.gold,
+        700,
+        FONTS.sans,
+        'start',
+        '.7'
+      );
 
     var words =
       noteText.split(/\s+/);
 
     var lines = [];
-    var cur = '';
+    var current = '';
 
-    words.forEach(function (wd) {
+    words.forEach(function (
+      word
+    ) {
+
+      var candidate =
+        (
+          current +
+          ' ' +
+          word
+        ).trim();
 
       if (
-        (cur + ' ' + wd)
-          .trim()
-          .length > 88
+        candidate.length >
+        92
       ) {
 
-        lines.push(cur);
-        cur = wd;
+        lines.push(
+          current
+        );
+
+        current =
+          word;
 
       } else {
 
-        cur =
-          (cur + ' ' + wd)
-            .trim();
+        current =
+          candidate;
+
       }
 
     });
 
-    if (cur) {
-      lines.push(cur);
+    if (current) {
+      lines.push(current);
     }
 
     lines
       .slice(0, 4)
-      .forEach(function (t, i) {
+      .forEach(function (
+        textValue,
+        index
+      ) {
 
-        o += text(
-          p + 20,
-          y + 53 + i * 18,
-          t,
-          12,
-          '#3F3A34',
-          500
-        );
+        svg +=
+          svgText(
+            padding + 20,
+            y +
+              53 +
+              index * 18,
+            textValue,
+            11,
+            '#3F3A34',
+            500,
+            FONTS.sans
+          );
 
       });
 
-    o += text(
-      w / 2,
-      h - 34,
-      'Données The Capital · Source : données BRVM intégrées à la base The Capital',
-      10,
-      '#8A8177',
-      400,
-      'middle'
-    );
+    /*
+     * Footer.
+     */
 
-    o += '</svg>';
+    svg +=
+      svgText(
+        width / 2,
+        height - 30,
+        'THE CAPITAL  ·  MARKET INTELLIGENCE',
+        9,
+        '#8A8177',
+        600,
+        FONTS.sans,
+        'middle',
+        '1'
+      );
 
-    return o;
+    svg += '</svg>';
+
+    return svg;
   }
 
-  /*
-   * Injection de l'onglet Admin.
-   */
-  function inject() {
+
+  /* ============================================================
+   * SVG -> IMAGE
+   *
+   * Le logo est déjà inclus en Base64.
+   * ========================================================== */
+
+  async function svgToBlob(
+    type
+  ) {
+
+    if (!STATE.svg) {
+
+      throw new Error(
+        'Aucune séance générée.'
+      );
+
+    }
+
+    var svgBlob =
+      new Blob(
+        [STATE.svg],
+        {
+          type:
+            'image/svg+xml;charset=utf-8'
+        }
+      );
+
+    var svgUrl =
+      URL.createObjectURL(
+        svgBlob
+      );
+
+    try {
+
+      var image =
+        await loadImage(
+          svgUrl
+        );
+
+      var canvas =
+        document.createElement(
+          'canvas'
+        );
+
+      canvas.width =
+        STATE.width;
+
+      canvas.height =
+        STATE.height;
+
+      var context =
+        canvas.getContext(
+          '2d'
+        );
+
+      /*
+       * Fond blanc obligatoire pour JPEG.
+       */
+
+      context.fillStyle =
+        '#FFFFFF';
+
+      context.fillRect(
+        0,
+        0,
+        STATE.width,
+        STATE.height
+      );
+
+      context.drawImage(
+        image,
+        0,
+        0,
+        STATE.width,
+        STATE.height
+      );
+
+      var blob =
+        await new Promise(
+          function (
+            resolve,
+            reject
+          ) {
+
+            canvas.toBlob(
+              function (result) {
+
+                if (!result) {
+
+                  reject(
+                    new Error(
+                      'Export impossible.'
+                    )
+                  );
+
+                  return;
+                }
+
+                resolve(result);
+
+              },
+              type,
+              0.96
+            );
+
+          }
+        );
+
+      return blob;
+
+    } finally {
+
+      URL.revokeObjectURL(
+        svgUrl
+      );
+
+    }
+  }
+
+  function loadImage(
+    source
+  ) {
+
+    return new Promise(
+      function (
+        resolve,
+        reject
+      ) {
+
+        var image =
+          new Image();
+
+        image.onload =
+          function () {
+            resolve(image);
+          };
+
+        image.onerror =
+          function () {
+            reject(
+              new Error(
+                'Impossible de rasteriser le visuel.'
+              )
+            );
+          };
+
+        image.src =
+          source;
+
+      }
+    );
+  }
+
+
+  /* ============================================================
+   * DOWNLOAD
+   * ========================================================== */
+
+  function saveBlob(
+    blob,
+    filename
+  ) {
+
+    var url =
+      URL.createObjectURL(
+        blob
+      );
+
+    var link =
+      document.createElement(
+        'a'
+      );
+
+    link.href =
+      url;
+
+    link.download =
+      filename;
+
+    document.body.appendChild(
+      link
+    );
+
+    link.click();
+
+    setTimeout(
+      function () {
+
+        URL.revokeObjectURL(
+          url
+        );
+
+        link.remove();
+
+      },
+      1000
+    );
+  }
+
+  async function downloadPNG() {
+
+    try {
+
+      var blob =
+        await svgToBlob(
+          'image/png'
+        );
+
+      saveBlob(
+        blob,
+        'the-capital-seance-' +
+          STATE.data.date +
+          '.png'
+      );
+
+    } catch (error) {
+
+      showMessage(
+        error.message,
+        'error'
+      );
+
+    }
+  }
+
+  async function downloadJPEG() {
+
+    try {
+
+      var blob =
+        await svgToBlob(
+          'image/jpeg'
+        );
+
+      saveBlob(
+        blob,
+        'the-capital-seance-' +
+          STATE.data.date +
+          '.jpg'
+      );
+
+    } catch (error) {
+
+      showMessage(
+        error.message,
+        'error'
+      );
+
+    }
+  }
+
+
+  /* ============================================================
+   * PDF
+   * ========================================================== */
+
+  function loadJsPDF() {
+
+    return new Promise(
+      function (
+        resolve,
+        reject
+      ) {
+
+        if (
+          window.jspdf &&
+          window.jspdf.jsPDF
+        ) {
+
+          resolve();
+          return;
+
+        }
+
+        var script =
+          document.createElement(
+            'script'
+          );
+
+        script.src =
+          'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+        script.onload =
+          function () {
+            resolve();
+          };
+
+        script.onerror =
+          function () {
+
+            reject(
+              new Error(
+                'Impossible de charger le moteur PDF.'
+              )
+            );
+
+          };
+
+        document.head.appendChild(
+          script
+        );
+
+      }
+    );
+  }
+
+  async function downloadPDF() {
+
+    try {
+
+      await loadJsPDF();
+
+      var blob =
+        await svgToBlob(
+          'image/png'
+        );
+
+      var dataUrl =
+        await blobToDataUri(
+          blob
+        );
+
+      var PDF =
+        window.jspdf.jsPDF;
+
+      var documentPdf =
+        new PDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+      var pageWidth =
+        documentPdf
+          .internal
+          .pageSize
+          .getWidth();
+
+      var pageHeight =
+        documentPdf
+          .internal
+          .pageSize
+          .getHeight();
+
+      documentPdf.addImage(
+        dataUrl,
+        'PNG',
+        0,
+        0,
+        pageWidth,
+        pageHeight,
+        undefined,
+        'FAST'
+      );
+
+      documentPdf.save(
+        'the-capital-seance-' +
+          STATE.data.date +
+          '.pdf'
+      );
+
+    } catch (error) {
+
+      console.error(
+        '[seance] PDF',
+        error
+      );
+
+      showMessage(
+        error.message,
+        'error'
+      );
+
+    }
+  }
+
+
+  /* ============================================================
+   * INTERFACE ADMIN
+   * ========================================================== */
+
+  function showMessage(
+    message,
+    type
+  ) {
+
+    var element =
+      document.getElementById(
+        'seance-msg'
+      );
+
+    if (!element) return;
+
+    element.textContent =
+      message;
+
+    element.className =
+      'msg ' +
+      (
+        type === 'error'
+          ? 'err'
+          : type === 'success'
+            ? 'ok'
+            : 'info'
+      );
+
+  }
+
+  function injectInterface() {
 
     if (
       document.getElementById(
         'tab-seance-1m'
       )
     ) {
+
       return;
+
     }
 
-    var nav =
+    var navigation =
       document.querySelector(
         '.admin-nav'
       );
 
-    if (nav) {
+    if (!navigation) {
+      return;
+    }
 
-      var b =
-        document.createElement(
-          'button'
-        );
+    var button =
+      document.createElement(
+        'button'
+      );
 
-      b.id =
-        'tab-seance-1m';
+    button.id =
+      'tab-seance-1m';
 
-      b.className =
-        'admin-tab';
+    button.className =
+      'admin-tab';
 
-      b.textContent =
-        'Séance 1 minute';
+    button.textContent =
+      'Séance 1 minute';
 
-      b.onclick =
-        function () {
+    button.addEventListener(
+      'click',
+      function () {
+
+        if (
+          typeof switchTab ===
+          'function'
+        ) {
 
           switchTab(
             'seance1m',
-            b
+            button
           );
 
-          loadSeance1m();
-        };
+        }
 
-      nav.appendChild(b);
-    }
+        loadSeance();
+
+      }
+    );
+
+    navigation.appendChild(
+      button
+    );
 
     var main =
       document.querySelector(
         '.main'
       );
 
-    if (!main) return;
+    if (!main) {
+      return;
+    }
 
-    var p =
+    var panel =
       document.createElement(
         'div'
       );
 
-    p.className =
+    panel.className =
       'tab-panel';
 
-    p.id =
+    panel.id =
       'panel-seance1m';
 
-    p.innerHTML =
+    panel.innerHTML =
 
       '<div class="section-header">' +
 
@@ -1618,7 +2913,7 @@
 
         '<button ' +
           'class="btn btn-outline btn-sm" ' +
-          'onclick="loadSeance1m()">' +
+          'id="seance-refresh">' +
           '↺ Actualiser' +
         '</button>' +
 
@@ -1640,121 +2935,128 @@
 
           '</div>' +
 
-          '<div class="form-grid">' +
+          '<div style="padding:18px">' +
 
-            '<div class="field">' +
-              '<label>Date de séance</label>' +
-              '<input type="date" id="seance-date">' +
+            '<div class="form-grid">' +
+
+              '<div class="field">' +
+                '<label>Date de séance</label>' +
+                '<input ' +
+                  'type="date" ' +
+                  'id="seance-date">' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label>Format</label>' +
+
+                '<select ' +
+                  'id="seance-format">' +
+
+                  '<option value="1080x1620">' +
+                    'Vertical — 1080 × 1620' +
+                  '</option>' +
+
+                  '<option value="1080x1920">' +
+                    'Story — 1080 × 1920' +
+                  '</option>' +
+
+                  '<option value="1080x1350">' +
+                    'Instagram — 1080 × 1350' +
+                  '</option>' +
+
+                  '<option value="1080x1080">' +
+                    'Carré — 1080 × 1080' +
+                  '</option>' +
+
+                '</select>' +
+
+              '</div>' +
+
+              '<div class="field">' +
+                '<label>N° Bulletin</label>' +
+                '<input ' +
+                  'type="text" ' +
+                  'id="seance-bulletin" ' +
+                  'placeholder="Facultatif">' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label>Obligataire — capitalisation</label>' +
+                '<input ' +
+                  'type="number" ' +
+                  'id="seance-bond-cap" ' +
+                  'step="any" ' +
+                  'placeholder="Facultatif">' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label>Obligataire — valeur échangée</label>' +
+                '<input ' +
+                  'type="number" ' +
+                  'id="seance-bond-value" ' +
+                  'step="any" ' +
+                  'placeholder="Facultatif">' +
+              '</div>' +
+
+              '<div class="field">' +
+                '<label>Obligataire — volume</label>' +
+                '<input ' +
+                  'type="number" ' +
+                  'id="seance-bond-volume" ' +
+                  'step="1" ' +
+                  'placeholder="Facultatif">' +
+              '</div>' +
+
+              '<div ' +
+                'class="field" ' +
+                'style="grid-column:1/-1">' +
+
+                '<label>' +
+                  'Commentaire éditorial' +
+                '</label>' +
+
+                '<textarea ' +
+                  'id="seance-note" ' +
+                  'rows="4" ' +
+                  'placeholder="Ajoute ici le commentaire de marché du jour...">' +
+                '</textarea>' +
+
+              '</div>' +
+
             '</div>' +
 
-            '<div class="field">' +
-              '<label>Format</label>' +
+            '<div class="actions-row" style="margin-top:16px">' +
 
-              '<select id="seance-format">' +
+              '<button ' +
+                'class="btn btn-primary" ' +
+                'id="seance-generate">' +
+                'Générer la séance' +
+              '</button>' +
 
-                '<option value="1080x1620">' +
-                  'The Capital — vertical 1080 × 1620' +
-                '</option>' +
+              '<button ' +
+                'class="btn btn-outline" ' +
+                'id="seance-jpeg">' +
+                'Télécharger JPEG' +
+              '</button>' +
 
-                '<option value="1080x1920">' +
-                  'Story / TikTok — 1080 × 1920' +
-                '</option>' +
+              '<button ' +
+                'class="btn btn-outline" ' +
+                'id="seance-png">' +
+                'Télécharger PNG' +
+              '</button>' +
 
-                '<option value="1080x1350">' +
-                  'Instagram — 1080 × 1350' +
-                '</option>' +
+              '<button ' +
+                'class="btn btn-green" ' +
+                'id="seance-pdf">' +
+                'Télécharger PDF' +
+              '</button>' +
 
-                '<option value="1080x1080">' +
-                  'Carré — 1080 × 1080' +
-                '</option>' +
-
-              '</select>' +
-
-            '</div>' +
-
-            '<div class="field">' +
-              '<label>N° Bulletin ' +
-                '<span style="color:var(--gold);font-size:9px">' +
-                  'facultatif' +
-                '</span>' +
-              '</label>' +
-
-              '<input ' +
-                'type="text" ' +
-                'id="seance-bulletin" ' +
-                'placeholder="151">' +
+              '<span ' +
+                'id="seance-msg" ' +
+                'class="msg">' +
+              '</span>' +
 
             '</div>' +
-
-            '<div class="field">' +
-              '<label>Obligataire — capitalisation</label>' +
-              '<input ' +
-                'type="number" ' +
-                'id="seance-bond-cap" ' +
-                'placeholder="Optionnel" ' +
-                'step="any">' +
-            '</div>' +
-
-            '<div class="field">' +
-              '<label>Obligataire — valeur échangée</label>' +
-              '<input ' +
-                'type="number" ' +
-                'id="seance-bond-value" ' +
-                'placeholder="Optionnel" ' +
-                'step="any">' +
-            '</div>' +
-
-            '<div class="field">' +
-              '<label>Obligataire — volume</label>' +
-              '<input ' +
-                'type="number" ' +
-                'id="seance-bond-volume" ' +
-                'placeholder="Optionnel" ' +
-                'step="1">' +
-            '</div>' +
-
-            '<div ' +
-              'class="field" ' +
-              'style="grid-column:1/-1">' +
-
-              '<label>' +
-                'Actualité / commentaire du jour' +
-              '</label>' +
-
-              '<textarea ' +
-                'id="seance-note" ' +
-                'rows="4" ' +
-                'placeholder="Commentaire éditorial facultatif...">' +
-              '</textarea>' +
-
-            '</div>' +
-
-          '</div>' +
-
-          '<div class="actions-row">' +
-
-            '<button ' +
-              'class="btn btn-primary" ' +
-              'id="seance-generate">' +
-              'Générer la séance' +
-            '</button>' +
-
-            '<button ' +
-              'class="btn btn-outline" ' +
-              'id="seance-pdf">' +
-              'Télécharger PDF' +
-            '</button>' +
-
-            '<button ' +
-              'class="btn btn-green" ' +
-              'id="seance-png">' +
-              'Télécharger PNG' +
-            '</button>' +
-
-            '<span ' +
-              'id="seance-msg" ' +
-              'class="msg">' +
-            '</span>' +
 
           '</div>' +
 
@@ -1765,7 +3067,7 @@
           '<div class="card-header">' +
 
             '<span class="card-title">' +
-              'Prévisualisation finale' +
+              'Prévisualisation' +
             '</span>' +
 
             '<span ' +
@@ -1777,481 +3079,294 @@
 
           '<div class="seance-preview-wrap">' +
 
-            '<div ' +
-              'id="seance-preview">' +
-            '</div>' +
+            '<div id="seance-preview"></div>' +
 
           '</div>' +
-
-        '</div>' +
-
-      '</div>' +
-
-      '<div ' +
-        'class="card" ' +
-        'style="margin-top:16px">' +
-
-        '<div class="card-header">' +
-
-          '<span class="card-title">' +
-            'Publication client' +
-          '</span>' +
-
-          '<span class="badge badge-gold">' +
-            'Admin uniquement' +
-          '</span>' +
-
-        '</div>' +
-
-        '<div class="seance-publish-box">' +
-
-          '<div>' +
-
-            '<strong>Workflow prévu</strong>' +
-
-            '<p>' +
-              'Le générateur reste strictement dans Admin. ' +
-              'L’export peut ensuite être publié comme contenu client ' +
-              'sans toucher aux tables financières, à l’authentification ' +
-              'ni aux données BRVM.' +
-            '</p>' +
-
-          '</div>' +
-
-          '<button ' +
-            'class="btn btn-outline" ' +
-            'disabled>' +
-            'Publier dans l’App' +
-          '</button>' +
 
         '</div>' +
 
       '</div>';
 
-    main.appendChild(p);
+    main.appendChild(
+      panel
+    );
 
-    var today =
-      new Date()
-        .toISOString()
-        .slice(0, 10);
+    /*
+     * Date par défaut.
+     */
 
-    var dateEl =
+    var dateInput =
       document.getElementById(
         'seance-date'
       );
 
-    if (dateEl) {
-      dateEl.value = today;
+    if (dateInput) {
+
+      dateInput.value =
+        new Date()
+          .toISOString()
+          .slice(0, 10);
+
     }
+
+    /*
+     * Événements.
+     */
 
     document
       .getElementById(
         'seance-generate'
       )
-      .onclick =
-      loadSeance1m;
+      .addEventListener(
+        'click',
+        loadSeance
+      );
+
+    document
+      .getElementById(
+        'seance-refresh'
+      )
+      .addEventListener(
+        'click',
+        loadSeance
+      );
+
+    document
+      .getElementById(
+        'seance-jpeg'
+      )
+      .addEventListener(
+        'click',
+        downloadJPEG
+      );
 
     document
       .getElementById(
         'seance-png'
       )
-      .onclick =
-      downloadPNG;
+      .addEventListener(
+        'click',
+        downloadPNG
+      );
 
     document
       .getElementById(
         'seance-pdf'
       )
-      .onclick =
-      downloadPDF;
+      .addEventListener(
+        'click',
+        downloadPDF
+      );
 
     /*
-     * CSS du générateur.
+     * Charger le CSS dédié uniquement si nécessaire.
      */
+
     if (
       !document.getElementById(
         'seance-css'
       )
     ) {
 
-      var l =
+      var stylesheet =
         document.createElement(
           'link'
         );
 
-      l.rel = 'stylesheet';
-      l.href = 'admin/css/seance.css';
-      l.id = 'seance-css';
+      stylesheet.id =
+        'seance-css';
 
-      document.head.appendChild(l);
+      stylesheet.rel =
+        'stylesheet';
+
+      stylesheet.href =
+        'admin/css/seance.css';
+
+      document.head.appendChild(
+        stylesheet
+      );
+
     }
   }
 
-  /*
-   * Génération.
-   */
-  async function loadSeance1m() {
 
-    inject();
+  /* ============================================================
+   * GÉNÉRER
+   * ========================================================== */
 
-    var msg =
-      document.getElementById(
-        'seance-msg'
-      );
+  async function loadSeance() {
 
-    if (!msg) return;
+    injectInterface();
+
+    showMessage(
+      'Chargement des données BRVM…',
+      'info'
+    );
 
     try {
 
-      msg.textContent =
-        'Lecture des données BRVM…';
+      /*
+       * Charger le logo AVANT de construire le SVG.
+       * C'est ce qui garantit sa présence dans l'export.
+       */
 
-      msg.className =
-        'msg info';
+      await loadLogoDataUri();
 
       var date =
-        document.getElementById(
-          'seance-date'
-        ).value;
+        document
+          .getElementById(
+            'seance-date'
+          )
+          .value;
 
-      S.d =
-        await getData(date);
-
-      var z =
+      var format =
         document
           .getElementById(
             'seance-format'
           )
-          .value
-          .split('x');
+          .value;
 
-      S.w = +z[0];
-      S.h = +z[1];
+      var dimensions =
+        format.split('x');
+
+      STATE.width =
+        Number(
+          dimensions[0]
+        );
+
+      STATE.height =
+        Number(
+          dimensions[1]
+        );
+
+      STATE.data =
+        await getData(
+          date
+        );
 
       var bond = {
 
         cap:
-          document.getElementById(
-            'seance-bond-cap'
-          ).value,
+          document
+            .getElementById(
+              'seance-bond-cap'
+            )
+            .value,
 
         value:
-          document.getElementById(
-            'seance-bond-value'
-          ).value,
+          document
+            .getElementById(
+              'seance-bond-value'
+            )
+            .value,
 
         volume:
-          document.getElementById(
-            'seance-bond-volume'
-          ).value
+          document
+            .getElementById(
+              'seance-bond-volume'
+            )
+            .value
 
       };
 
-      S.svg =
-        build(
-          S.d,
-          S.w,
-          S.h,
-          document.getElementById(
+      var note =
+        document
+          .getElementById(
             'seance-note'
-          ).value,
+          )
+          .value;
+
+      STATE.svg =
+        buildSVG(
+          STATE.data,
+          STATE.width,
+          STATE.height,
+          note,
           bond
         );
 
-      document.getElementById(
-        'seance-preview'
-      ).innerHTML =
-        S.svg;
+      var preview =
+        document.getElementById(
+          'seance-preview'
+        );
+
+      preview.innerHTML =
+        STATE.svg;
 
       document.getElementById(
         'seance-meta'
       ).textContent =
-        dateFR(S.d.date) +
+        dateFR(
+          STATE.data.date
+        ) +
         ' · ' +
-        S.w +
-        '×' +
-        S.h;
+        STATE.width +
+        ' × ' +
+        STATE.height;
 
-      msg.textContent =
-        '✓ Séance générée — ' +
-        S.d.cours.length +
-        ' lignes analysées';
+      STATE.generated =
+        true;
 
-      msg.className =
-        'msg ok';
+      if (!STATE.logoDataUri) {
 
-    } catch (err) {
+        showMessage(
+          'Séance générée. Attention : le logo n’a pas pu être chargé. Vérifie LOGO_PATH.',
+          'error'
+        );
+
+      } else {
+
+        showMessage(
+          '✓ Séance générée avec logo intégré.',
+          'success'
+        );
+
+      }
+
+    } catch (error) {
 
       console.error(
-        '[seance1m]',
-        err
+        '[THE CAPITAL / SEANCE]',
+        error
       );
 
-      msg.textContent =
-        'Erreur : ' +
-        (
-          err &&
-          err.message
-            ? err.message
-            : 'génération impossible'
-        );
+      showMessage(
+        error.message ||
+        'Impossible de générer la séance.',
+        'error'
+      );
 
-      msg.className =
-        'msg err';
     }
   }
 
-  /*
-   * Conversion SVG -> image.
-   */
-  function imageBlob(type) {
 
-    return new Promise(
-      function (resolve, reject) {
-
-        var blob =
-          new Blob(
-            [S.svg],
-            {
-              type:
-                'image/svg+xml;charset=utf-8'
-            }
-          );
-
-        var url =
-          URL.createObjectURL(
-            blob
-          );
-
-        var img =
-          new Image();
-
-        img.onload =
-          function () {
-
-            var c =
-              document.createElement(
-                'canvas'
-              );
-
-            c.width = S.w;
-            c.height = S.h;
-
-            var ctx =
-              c.getContext(
-                '2d'
-              );
-
-            ctx.fillStyle =
-              '#fff';
-
-            ctx.fillRect(
-              0,
-              0,
-              S.w,
-              S.h
-            );
-
-            ctx.drawImage(
-              img,
-              0,
-              0,
-              S.w,
-              S.h
-            );
-
-            URL.revokeObjectURL(
-              url
-            );
-
-            c.toBlob(
-              function (b) {
-
-                if (b) {
-                  resolve(b);
-                } else {
-                  reject(
-                    Error(
-                      'Export image impossible'
-                    )
-                  );
-                }
-
-              },
-              type,
-              .96
-            );
-          };
-
-        img.onerror =
-          function () {
-
-            URL.revokeObjectURL(
-              url
-            );
-
-            reject(
-              Error(
-                'Le logo ou le SVG n’a pas pu être chargé.'
-              )
-            );
-          };
-
-        img.src = url;
-      }
-    );
-  }
-
-  /*
-   * Export PNG.
-   */
-  async function downloadPNG() {
-
-    if (!S.svg) {
-      await loadSeance1m();
-    }
-
-    var b =
-      await imageBlob(
-        'image/png'
-      );
-
-    var a =
-      document.createElement(
-        'a'
-      );
-
-    a.href =
-      URL.createObjectURL(b);
-
-    a.download =
-      'the-capital-seance-' +
-      S.d.date +
-      '.png';
-
-    document.body.appendChild(a);
-
-    a.click();
-
-    setTimeout(
-      function () {
-
-        URL.revokeObjectURL(
-          a.href
-        );
-
-        a.remove();
-
-      },
-      500
-    );
-  }
-
-  /*
-   * Charge jsPDF uniquement au moment de l'export.
-   */
-  function loadPdfLib() {
-
-    return new Promise(
-      function (resolve, reject) {
-
-        if (window.jspdf) {
-          return resolve();
-        }
-
-        var s =
-          document.createElement(
-            'script'
-          );
-
-        s.src =
-          'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-
-        s.onload =
-          resolve;
-
-        s.onerror =
-          reject;
-
-        document.head.appendChild(s);
-      }
-    );
-  }
-
-  /*
-   * Export PDF A4.
-   */
-  async function downloadPDF() {
-
-    if (!S.svg) {
-      await loadSeance1m();
-    }
-
-    if (!window.jspdf) {
-      await loadPdfLib();
-    }
-
-    var b =
-      await imageBlob(
-        'image/png'
-      );
-
-    var reader =
-      new FileReader();
-
-    reader.onload =
-      function () {
-
-        var doc =
-          new window.jspdf.jsPDF(
-            {
-              orientation: 'portrait',
-              unit: 'mm',
-              format: 'a4'
-            }
-          );
-
-        var pw =
-          doc.internal.pageSize
-            .getWidth();
-
-        var ph =
-          doc.internal.pageSize
-            .getHeight();
-
-        doc.addImage(
-          reader.result,
-          'PNG',
-          0,
-          0,
-          pw,
-          ph,
-          undefined,
-          'FAST'
-        );
-
-        doc.save(
-          'the-capital-seance-' +
-          S.d.date +
-          '.pdf'
-        );
-      };
-
-    reader.readAsDataURL(b);
-  }
+  /* ============================================================
+   * EXPOSITION GLOBALE
+   * ========================================================== */
 
   window.loadSeance1m =
-    loadSeance1m;
+    loadSeance;
 
-  window.downloadPNG =
+  window.downloadSeanceJPEG =
+    downloadJPEG;
+
+  window.downloadSeancePNG =
     downloadPNG;
 
-  window.downloadPDF =
+  window.downloadSeancePDF =
     downloadPDF;
 
-  /*
-   * Initialisation.
-   */
+
+  /* ============================================================
+   * INITIALISATION
+   * ========================================================== */
+
+  function init() {
+
+    injectInterface();
+
+  }
+
   if (
     document.readyState ===
     'loading'
@@ -2259,12 +3374,13 @@
 
     document.addEventListener(
       'DOMContentLoaded',
-      inject
+      init
     );
 
   } else {
 
-    inject();
+    init();
+
   }
 
 })();
