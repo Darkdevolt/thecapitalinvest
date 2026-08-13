@@ -55,7 +55,7 @@ const TEMPLATE_CONFIG = {
         name: 'BRVM_Dividendes',
         headers: ['ticker','annee','montant','taux_rendement','date_detachement','date_paiement','statut','exercice','notes'],
         required: ['ticker','annee','montant'],
-        table: 'dividendes_calendrier', uniqueKey: 'ticker,annee', autoCalc: ['taux_rendement']
+        table: 'dividendes_calendrier', uniqueKey: 'ticker,exercice', autoCalc: ['taux_rendement']
     },
     indices: {
         name: 'BRVM_Indices',
