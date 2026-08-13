@@ -1,47 +1,22 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
-  "buildCommand": "npm run build",
-  "crons": [
-    {"path": "/api/sync-brvm", "schedule": "5 16 * * 1-5"}
+  "$schema":"https://openapi.vercel.sh/vercel.json",
+  "version":2,
+  "buildCommand":"npm run build",
+  "crons":[{"path":"/api/sync-brvm","schedule":"5 16 * * 1-5"}],
+  "redirects":[
+    {"source":"/","destination":"/index.html","permanent":false},
+    {"source":"/landing-v4.html","destination":"/","permanent":true},
+    {"source":"/features.html","destination":"/#fonctionnalites","permanent":true},
+    {"source":"/platform.html","destination":"/#fonctionnalites","permanent":true},
+    {"source":"/markets.html","destination":"/#marches","permanent":true},
+    {"source":"/pricing.html","destination":"/#tarifs","permanent":true},
+    {"source":"/about.html","destination":"/#a-propos","permanent":true},
+    {"source":"/contact.html","destination":"/#contact","permanent":true},
+    {"source":"/app/app.html","destination":"/app.html","permanent":true}
   ],
-  "redirects": [
-    {
-      "source": "/",
-      "destination": "/landing-v4.html",
-      "permanent": false
-    },
-    {
-      "source": "/app/app.html",
-      "destination": "/app.html",
-      "permanent": true
-    },
-    {
-      "source": "/markets.html",
-      "destination": "/app.html#marche",
-      "permanent": true
-    }
+  "rewrites":[
+    {"source":"/app.html","destination":"/app/app.html"},
+    {"source":"/api/signup-otp","destination":"https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2"}
   ],
-  "rewrites": [
-    {
-      "source": "/app.html",
-      "destination": "/app/app.html"
-    },
-    {
-      "source": "/api/signup-otp",
-      "destination": "https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2"
-    }
-  ],
-  "headers": [
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {"key": "Access-Control-Allow-Origin", "value": "*"},
-        {"key": "Access-Control-Allow-Methods", "value": "GET, POST, PUT, DELETE, PATCH, OPTIONS"},
-        {"key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization, X-Requested-With, X-Cron-Secret"},
-        {"key": "Access-Control-Max-Age", "value": "86400"},
-        {"key": "Cache-Control", "value": "no-store"}
-      ]
-    }
-  ]
+  "headers":[{"source":"/api/(.*)","headers":[{"key":"Access-Control-Allow-Origin","value":"*"},{"key":"Access-Control-Allow-Methods","value":"GET, POST, PUT, DELETE, PATCH, OPTIONS"},{"key":"Access-Control-Allow-Headers","value":"Content-Type, Authorization, X-Requested-With, X-Cron-Secret"},{"key":"Access-Control-Max-Age","value":"86400"},{"key":"Cache-Control","value":"no-store"}]}]
 }
