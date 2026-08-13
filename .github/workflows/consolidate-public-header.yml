@@ -33,4 +33,4 @@ jobs:
           git add public/landing-v4.html public/features.html public/platform.html public/about.html public/contact.html public/css/public-header.css public/js/public-header.js
           git diff --cached --quiet && exit 0
           git commit -m "Unify public marketing header"
-          git push origin HEAD:${{ github.head_ref }}
+          git push --force-with-lease origin HEAD:${{ github.head_ref }}
