@@ -11,7 +11,9 @@
   const pct = value => value == null ? 'Donnée non disponible' : `${Number(value).toFixed(2)} %`;
 
   function latestByTicker(ticker) {
-    const rows = (Array.isArray(window.allFinancials) ? window.allFinancials : []).filter(x => x.ticker === ticker).sort((a,b) => Number(b.annee || 0) - Number(a.annee || 0));
+    const rows = (Array.isArray(window.allFinancials) ? window.allFinancials : [])
+      .filter(x => x.ticker === ticker)
+      .sort((a,b) => Number(b.annee || 0) - Number(a.annee || 0));
     return rows[0] || null;
   }
 
@@ -20,20 +22,28 @@
     return e?.nom || e?.nom_court || ticker;
   }
 
+  function currentPrice(ticker) {
+    return (Array.isArray(window.allCours) ? window.allCours : []).find(x => x.ticker === ticker)?.cours ?? null;
+  }
+
   function metric(fin, ticker, key) {
     if (!fin) return null;
     if (key === 'pe') {
-      const price = (Array.isArray(window.allCours) ? window.allCours : []).find(x => x.ticker === ticker)?.cours;
+      const price = currentPrice(ticker);
       return fin.bpa && Number(fin.bpa) > 0 && price != null ? Number(price) / Number(fin.bpa) : null;
     }
     if (key === 'roe') return num(fin.roe) ?? (fin.resultat_net && fin.fonds_propres ? Number(fin.resultat_net) / Number(fin.fonds_propres) * 100 : null);
-    if (key === 'yield') return num(fin.dividend_yield) ?? num(fin.rendement_dividende);
+    if (key === 'yield') {
+      return num(fin.dividend_yield) ?? num(fin.rendement_dividende) ?? (fin.dpa != null && currentPrice(ticker) > 0 ? Number(fin.dpa) / Number(currentPrice(ticker)) * 100 : null);
+    }
     if (key === 'debt') return num(fin.dette_nette) ?? num(fin.dette_fin) ?? num(fin.dettes_financieres);
     return null;
   }
 
   function growthCA(ticker) {
-    const rows = (Array.isArray(window.allFinancials) ? window.allFinancials : []).filter(x => x.ticker === ticker).sort((a,b) => Number(b.annee || 0) - Number(a.annee || 0));
+    const rows = (Array.isArray(window.allFinancials) ? window.allFinancials : [])
+      .filter(x => x.ticker === ticker)
+      .sort((a,b) => Number(b.annee || 0) - Number(a.annee || 0));
     if (rows.length < 2 || rows[0].chiffre_affaires == null || rows[1].chiffre_affaires == null || Number(rows[1].chiffre_affaires) === 0) return null;
     return (Number(rows[0].chiffre_affaires) / Number(rows[1].chiffre_affaires) - 1) * 100;
   }
@@ -41,7 +51,9 @@
   function renderComparison() {
     const view = document.getElementById('view-comparison');
     if (!view) return;
-    const companies = (Array.isArray(window.allEntreprises) ? window.allEntreprises : []).filter(x => x.actif !== false).sort((a,b) => String(a.ticker).localeCompare(String(b.ticker)));
+    const companies = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])
+      .filter(x => x.actif !== false)
+      .sort((a,b) => String(a.ticker).localeCompare(String(b.ticker)));
     if (!companies.length) { view.innerHTML = '<div class="empty-state">Données sociétés indisponibles.</div>'; return; }
     const selected = new Set(Array.from(view.querySelectorAll('[data-compare-ticker]:checked')).map(x => x.value));
     const choices = selected.size ? Array.from(selected).slice(0,4) : companies.slice(0,2).map(x => x.ticker);
@@ -65,13 +77,13 @@
 
   function comparisonRows(choices) {
     const rows = [
-      ['P/E', t => { const f=latestByTicker(t); const v=metric(f,t,'pe'); return v==null?'Donnée non disponible':`${v.toFixed(2)}x`; }],
-      ['ROE', t => pct(metric(latestByTicker(t),t,'roe'))],
+      ['P/E', t => { const f = latestByTicker(t); const v = metric(f, t, 'pe'); return v == null ? 'Donnée non disponible' : `${v.toFixed(2)}x`; }],
+      ['ROE', t => pct(metric(latestByTicker(t), t, 'roe'))],
       ['Croissance CA', t => pct(growthCA(t))],
-      ['Dividend Yield', t => pct(metric(latestByTicker(t),t,'yield'))],
-      ['Dette', t => fmt(metric(latestByTicker(t),t,'debt'))]
+      ['Dividend Yield', t => pct(metric(latestByTicker(t), t, 'yield'))],
+      ['Dette', t => fmt(metric(latestByTicker(t), t, 'debt'))]
     ];
-    return rows.map(([label,fn], i) => `<tr><td>${label}</td>${choices.map(t => `<td class="${i > 2 ? 'pro-only' : ''}">${esc(fn(t))}</td>`).join('')}</tr>`).join('');
+    return rows.map(([label, fn], i) => `<tr><td>${label}</td>${choices.map(t => `<td class="${i > 2 ? 'pro-only' : ''}">${esc(fn(t))}</td>`).join('')}</tr>`).join('');
   }
 
   window.renderComparison = renderComparison;
