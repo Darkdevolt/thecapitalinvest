@@ -16,7 +16,7 @@ jobs:
           import re
           targets = [
             Path('public/landing-v4.html'), Path('public/features.html'), Path('public/platform.html'),
-            Path('public/about.html'), Path('public/contact.html'), Path('public/app.html'),
+            Path('public/about.html'), Path('public/contact.html'), Path('public/app/app.html'),
             Path('api/capital-ai.js'), Path('public/js/public-header.js')
           ]
           targets += list(Path('public/app/js').rglob('*.js'))
@@ -47,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add public/landing-v4.html public/features.html public/platform.html public/about.html public/contact.html public/app.html public/js/public-header.js public/app/js api/capital-ai.js punctuation-report.txt
+          git add public/landing-v4.html public/features.html public/platform.html public/about.html public/contact.html public/app/app.html public/js/public-header.js public/app/js api/capital-ai.js punctuation-report.txt
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "Remove long dashes from interface text"
           git push
