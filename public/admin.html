@@ -35,7 +35,7 @@
 
 <div class="admin-nav">
     <button class="admin-tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
-    <button class="admin-tab" onclick="switchTab('cours',this)">Cours</button>
+    <button class="admin-tab" onclick="switchTab('cours',this)">Cours &amp; Historique</button>
     <button class="admin-tab" onclick="switchTab('historique',this)">Historique</button>
     <button class="admin-tab" onclick="switchTab('entreprises',this)">Entreprises</button>
     <button class="admin-tab" onclick="switchTab('financials',this)">Financials</button>
@@ -71,10 +71,45 @@
     </div>
 
     <div class="tab-panel" id="panel-cours">
-        <div class="section-header"><div class="section-title">Cours <em>BRVM</em></div></div>
-        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · cours · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong> · capitalisation · <strong>+haut_52s (calculé)</strong> · <strong>+bas_52s (calculé)</strong></div>
+        <div class="section-header">
+            <div>
+                <div class="section-title">Cours &amp; Historique <em>BRVM</em></div>
+                <div style="margin-top:6px;color:var(--muted);font-size:12px;max-width:820px;line-height:1.6;">Centre de contrôle des données de marché. Ici, vous gérez les cours récents et vous accédez à l’archive des séances historiques. Les contrôles de cohérence sont appliqués avant l’enregistrement.</div>
+            </div>
+        </div>
+
+        <div class="card" style="margin-bottom:16px;border-left:3px solid var(--gold);">
+            <div class="card-header"><span class="card-title">Comment utiliser cette section ?</span></div>
+            <div style="padding:18px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;">
+                <div style="padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;">
+                    <div style="font-size:11px;color:var(--gold);font-family:var(--mono);margin-bottom:7px;">01 · AJOUTER</div>
+                    <div style="font-size:13px;color:var(--cream);font-weight:500;margin-bottom:5px;">Enregistrer un nouveau cours</div>
+                    <div style="font-size:11px;color:var(--muted);line-height:1.55;">Renseignez le ticker, la date et le cours de clôture. Les autres champs permettent de conserver les données complètes de la séance.</div>
+                </div>
+                <div style="padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;">
+                    <div style="font-size:11px;color:var(--gold);font-family:var(--mono);margin-bottom:7px;">02 · MODIFIER</div>
+                    <div style="font-size:13px;color:var(--cream);font-weight:500;margin-bottom:5px;">Corriger un cours existant</div>
+                    <div style="font-size:11px;color:var(--muted);line-height:1.55;">Dans le tableau, utilisez l’action de modification sur la ligne concernée. Vous pouvez ensuite corriger les champs et enregistrer.</div>
+                </div>
+                <div style="padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;">
+                    <div style="font-size:11px;color:var(--gold);font-family:var(--mono);margin-bottom:7px;">03 · CONTRÔLER</div>
+                    <div style="font-size:13px;color:var(--cream);font-weight:500;margin-bottom:5px;">Validation des données</div>
+                    <div style="font-size:11px;color:var(--muted);line-height:1.55;">Les valeurs sont contrôlées avant écriture : formats, cohérence des prix, variation et limite BRVM de ±7,5 %.</div>
+                </div>
+                <div style="padding:14px;background:var(--surface);border:1px solid var(--border);border-radius:4px;">
+                    <div style="font-size:11px;color:var(--gold);font-family:var(--mono);margin-bottom:7px;">04 · HISTORIQUE</div>
+                    <div style="font-size:13px;color:var(--cream);font-weight:500;margin-bottom:5px;">Retrouver les anciennes séances</div>
+                    <div style="font-size:11px;color:var(--muted);line-height:1.55;">L’archive Admin conserve la gestion des données historiques. Elle est séparée visuellement pour éviter de mélanger cours courants et anciennes séances.</div>
+                </div>
+            </div>
+            <div style="padding:0 18px 18px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
+                <div class="info-box" style="margin:0;flex:1;min-width:280px;"><strong>À retenir :</strong> le tableau ci-dessous sert aux cours récents. Pour les anciennes séances, ouvrez <strong>Archive</strong> dans le menu Admin.</div>
+            </div>
+        </div>
+
+        <div class="info-box" style="margin-bottom:16px;"><strong>Données gérées :</strong> ticker · date · clôture · ouverture · plus haut · plus bas · volume · variation · capitalisation · +haut 52S · +bas 52S. Les deux dernières valeurs sont calculées automatiquement.</div>
         <div class="card" style="margin-bottom:16px;">
-            <div class="card-header"><span class="card-title">Ajouter / Modifier un cours</span></div>
+            <div class="card-header"><span class="card-title">Ajouter un cours</span><span style="font-size:11px;color:var(--muted);margin-left:auto;">Pour modifier une ligne existante, utilisez l’action de modification dans le tableau ci-dessous.</span></div>
             <div class="form-grid">
                 <div class="field"><label>Ticker *</label><input type="text" id="c-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
                 <div class="field"><label>Date séance *</label><input type="date" id="c-date"></div>
@@ -88,20 +123,21 @@
                
             </div>
             <div class="actions-row">
-                <button class="btn btn-primary" onclick="addCours()">Enregistrer le cours</button>
+                <button class="btn btn-primary" onclick="addCours()">✓ Enregistrer le cours</button>
                 <button class="btn btn-outline btn-sm" onclick="clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi'])">Effacer</button>
                 <span id="c-msg" class="msg"></span>
             </div>
         </div>
         <div class="card">
             <div class="card-header">
-                <span class="card-title">Derniers cours enregistrés</span>
+                <span class="card-title">Cours enregistrés — consulter &amp; modifier</span>
                 <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
                     <input type="text" id="cours-filter" placeholder="Filtrer ticker..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterCoursTable()">
                     <input type="date" id="cours-date-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" oninput="filterCoursTable()">
                     <button class="btn btn-outline btn-sm" onclick="loadCours()">↺</button>
                 </div>
             </div>
+            <div style="padding:12px 18px 0;color:var(--muted);font-size:11px;line-height:1.55;">Utilisez les filtres pour retrouver une séance. <strong style="color:var(--cream);">Modifier</strong> ouvre les données de la ligne pour correction ; <strong style="color:var(--cream);">Supprimer</strong> retire définitivement la ligne. Les suppressions multiples demandent une confirmation.</div>
             <div class="tw">
                 <table>
                     <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Val. totale</th><th class="r">+Haut 52S</th><th class="r">+Bas 52S</th><th></th></tr></thead>
