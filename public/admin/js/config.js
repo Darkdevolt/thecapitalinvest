@@ -1,7 +1,7 @@
 const SK      = 'tc_session';
 const SB_URL  = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
 const SB_REST = SB_URL + '/rest/v1';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aXdsbm93eGVvbGJiZ3ZtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
+const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aWlnbm93xeolbbgvmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 const INDICES_BRV = ['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT','BRVM FINANCE','BRVM DISTRIBUTION','BRVM INDUSTRIE','BRVM AGRICULTURE','BRVM SERVICES PUBLICS','BRVM AUTRES SECTEURS'];
 
@@ -118,4 +118,18 @@ const TEMPLATE_CONFIG = {
         nav.appendChild(b);
     }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',add); else add();
+})();
+
+(function loadDashboardOverviewModule(){
+    function load(){
+        if(document.getElementById('tc-dashboard-overview-script')) return;
+        var s=document.createElement('script');
+        s.id='tc-dashboard-overview-script';
+        s.src='js/dashboard-overview.js';
+        s.defer=true;
+        s.onerror=function(){console.warn('[dashboard] module indisponible');};
+        document.head.appendChild(s);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0);});
+    else setTimeout(load,0);
 })();
