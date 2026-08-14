@@ -40,3 +40,5 @@ jobs:
           git add public/admin/js/import.js
           git diff --cached --quiet || git commit -m "fix: canonicalize Excel import payload schemas"
           git push
+
+# trigger
