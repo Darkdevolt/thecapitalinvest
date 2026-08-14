@@ -64,7 +64,6 @@ async function runDiagnostic() {
     const missingFinancialTickers = (ents || []).filter(function(e){ return !finSet.has(String(e.ticker || '').toUpperCase()); });
     issues.push(diagIssue('Entreprises sans financial', missingFinancialTickers.length, missingFinancialTickers.length ? 'warning' : 'ok', missingFinancialTickers.slice(0,20).map(function(e){ return e.ticker; }).join(', ')));
 
-    // Vérification volontairement limitée aux colonnes réellement utilisées par le référentiel.
     const missingIdentity = await diagCount('entreprises', 'or=(isin.is.null,nombre_actions.is.null,nb_actions.is.null)');
     issues.push(diagIssue('Entreprises sans identifiants de marché complets', missingIdentity, missingIdentity ? 'warning' : 'ok', 'ISIN et nombre d’actions sont importants pour les analyses professionnelles.'));
 
@@ -136,6 +135,24 @@ async function loadTickersSansFinancials() {
     const missing = (ents || []).filter(function(e){ return !finSet.has(String(e.ticker || '').toUpperCase()); });
     if (!missing.length) { panel.innerHTML = '<div style="padding:16px;color:var(--green);">✓ Toutes les entreprises ont au moins un financial</div>'; return; }
     panel.innerHTML = '<div class="tw"><table style="font-size:12px;"><thead><tr><th>Ticker</th></tr></thead><tbody>' +
-        missing.map(function(e){ return '<tr><td>' + e.ticker + '</td></tr>'; }).join('') +
-        '</tbody></table></div>';
+        missing.map(function(e){ return '<tr><td>' + e.ticker + '</td></tr>'; }).join('') + '</tbody></table></div>';
 }
+
+/* Load the read-only historical quality dashboard without changing the existing diagnostic logic. */
+(function loadHistoricalQualityModule(){
+    var s=document.createElement('script');
+    s.src='js/historique-quality.js';
+    s.async=false;
+    s.onload=function(){
+        setTimeout(function(){
+            var panel=document.getElementById('panel-historique');
+            if(!panel || document.getElementById('hist-quality-dashboard')) return;
+            var host=document.createElement('div');
+            host.id='hist-quality-dashboard';
+            panel.insertBefore(host,panel.firstChild);
+            if(typeof loadHistoriqueQualityDashboard==='function') loadHistoriqueQualityDashboard();
+        },300);
+    };
+    s.onerror=function(){console.warn('[DIAGNOSTIC] historique-quality.js indisponible');};
+    document.head.appendChild(s);
+})();
