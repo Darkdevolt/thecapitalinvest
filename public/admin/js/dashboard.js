@@ -1,17 +1,17 @@
 /*
  * Admin Dashboard — single active implementation.
- *
- * The historical dashboard implementation was retired from the runtime.
- * The complete dashboard lives in dashboard-overview.js so there is only
- * one active Dashboard implementation and no competing loadDashboard().
+ * Loads the unified Dashboard and the unified Cours & Historique control center.
  */
 (function () {
     'use strict';
-    var src = 'admin/js/dashboard-overview.js?v=20260814-clean';
-    if (document.querySelector('script[data-tc-dashboard-overview]')) return;
-    var script = document.createElement('script');
-    script.src = src;
-    script.async = false;
-    script.setAttribute('data-tc-dashboard-overview', 'true');
-    document.head.appendChild(script);
+    function load(src, id) {
+        if (document.querySelector('script[data-tc-module="' + id + '"]')) return;
+        var script = document.createElement('script');
+        script.src = src;
+        script.async = false;
+        script.setAttribute('data-tc-module', id);
+        document.head.appendChild(script);
+    }
+    load('admin/js/dashboard-overview.js?v=20260814-unified', 'dashboard-overview');
+    load('admin/js/cours-historique.js?v=20260814-unified', 'cours-historique');
 })();
