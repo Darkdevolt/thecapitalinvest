@@ -1,3 +1,13 @@
+// PORTFOLIO GLOBAL CHART INSTANCES
+var pfValueChartInst = window.pfValueChartInst || null;
+var pfSectorChartInst = window.pfSectorChartInst || null;
+var pfGeoChartInst = window.pfGeoChartInst || null;
+var pfPLChartInst = window.pfPLChartInst || null;
+window.pfValueChartInst = pfValueChartInst;
+window.pfSectorChartInst = pfSectorChartInst;
+window.pfGeoChartInst = pfGeoChartInst;
+window.pfPLChartInst = pfPLChartInst;
+
 // PORTEFEUILLE - CRUD RESTORED
 (function(){
   'use strict';
@@ -10,35 +20,10 @@
     ['panelBuy','panelSell'].forEach(function(id){var x=el(id);if(x)x.classList.toggle('active',id===(tab==='buy'?'panelBuy':'panelSell'));});
     if(tab==='sell')window.populateSellTickerSelect();
   };
-  window.populateSellTickerSelect=function(){
-    var select=el('pfSellTicker');if(!select)return;var current=select.value;
-    select.innerHTML='<option value="">Ticker à vendre...</option>';
-    var pf=typeof getPortfolio==='function'?getPortfolio():[];
-    [...new Set(pf.map(function(p){return String(p.ticker||'').toUpperCase().trim();}).filter(Boolean))].sort().forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;select.appendChild(o);});
-    if(current)select.value=current;
-  };
-  window.updateSellHint=function(){
-    var ticker=el('pfSellTicker')?.value,hint=el('sellHint');if(!hint)return;if(!ticker){hint.textContent='';return;}
-    var pf=typeof getPortfolio==='function'?getPortfolio():[];var qty=pf.filter(function(p){return String(p.ticker||'').toUpperCase().trim()===ticker;}).reduce(function(s,p){return s+(+p.qty||0);},0);hint.textContent='Quantité détenue : '+qty;
-    var price=el('pfSellPrice');if(price&&!price.value&&typeof getLatestPrice==='function')price.value=getLatestPrice(ticker)||'';
-  };
-  window.addPosition=function(){
-    var tickerEl=el('pfTicker'),typeEl=el('pfType'),qtyEl=el('pfQty'),priceEl=el('pfPrice'),dateEl=el('pfDate');
-    var ticker=String(tickerEl?.value||'').toUpperCase().trim(),type=typeEl?.value||'action',qty=+qtyEl?.value,price=+priceEl?.value,date=dateEl?.value||new Date().toISOString().slice(0,10);
-    if(!ticker){toastSafe('Sélectionnez un titre.','error');return;}if(!qty||qty<=0){toastSafe('Quantité invalide.','error');return;}if(!price||price<=0){toastSafe("Prix d'achat invalide.",'error');return;}
-    var pf=typeof getPortfolio==='function'?getPortfolio():[];pf.push({id:Date.now(),ticker:ticker,type:type,qty:qty,price:price,date:date});
-    savePortfolio(pf);if(typeof invalidatePortfolioCache==='function')invalidatePortfolioCache();if(typeof logTransaction==='function')logTransaction({type:'buy',ticker:ticker,qty:qty,price:price,date:date});
-    if(qtyEl)qtyEl.value='';if(priceEl)priceEl.value='';if(dateEl)dateEl.value='';if(tickerEl)tickerEl.selectedIndex=0;toastSafe(qty+' × '+ticker+' ajouté au portefeuille.','success');render();
-  };
-  function executeSell(ticker,qty,price,date,onSuccess){
-    if(!ticker||!qty||qty<=0||!price||price<=0){toastSafe('Champs invalides.','error');return;}
-    var pf=typeof getPortfolio==='function'?getPortfolio():[];var lots=pf.filter(function(p){return String(p.ticker||'').toUpperCase().trim()===ticker;}).sort(function(a,b){return new Date(a.date||0)-new Date(b.date||0);});
-    var held=lots.reduce(function(s,l){return s+(+l.qty||0);},0);if(qty>held){toastSafe('Quantité supérieure à la position détenue ('+held+').','error');return;}
-    var remaining=qty,cost=0;lots.forEach(function(l){if(remaining<=0)return;var take=Math.min(+l.qty||0,remaining);cost+=take*(+l.price||0);l.qty=(+l.qty||0)-take;remaining-=take;});
-    pf=pf.filter(function(p){return String(p.ticker||'').toUpperCase().trim()!==ticker||(+p.qty||0)>0;});savePortfolio(pf);if(typeof invalidatePortfolioCache==='function')invalidatePortfolioCache();
-    var proceeds=qty*price,pl=proceeds-cost;if(typeof logTransaction==='function')logTransaction({type:'sell',ticker:ticker,qty:qty,price:price,date:date,realizedPL:pl});
-    toastSafe('Vente enregistrée, P&L réalisé : '+(pl>=0?'+':'')+(typeof fmtM==='function'?fmtM(pl):pl.toFixed(0))+' FCFA',pl>=0?'success':'error');if(typeof onSuccess==='function')onSuccess();render();
-  }
+  window.populateSellTickerSelect=function(){var select=el('pfSellTicker');if(!select)return;var current=select.value;select.innerHTML='<option value="">Ticker à vendre...</option>';var pf=typeof getPortfolio==='function'?getPortfolio():[];[...new Set(pf.map(function(p){return String(p.ticker||'').toUpperCase().trim();}).filter(Boolean))].sort().forEach(function(t){var o=document.createElement('option');o.value=t;o.textContent=t;select.appendChild(o);});if(current)select.value=current;};
+  window.updateSellHint=function(){var ticker=el('pfSellTicker')?.value,hint=el('sellHint');if(!hint)return;if(!ticker){hint.textContent='';return;}var pf=typeof getPortfolio==='function'?getPortfolio():[];var qty=pf.filter(function(p){return String(p.ticker||'').toUpperCase().trim()===ticker;}).reduce(function(s,p){return s+(+p.qty||0);},0);hint.textContent='Quantité détenue : '+qty;var price=el('pfSellPrice');if(price&&!price.value&&typeof getLatestPrice==='function')price.value=getLatestPrice(ticker)||'';};
+  window.addPosition=function(){var tickerEl=el('pfTicker'),typeEl=el('pfType'),qtyEl=el('pfQty'),priceEl=el('pfPrice'),dateEl=el('pfDate');var ticker=String(tickerEl?.value||'').toUpperCase().trim(),type=typeEl?.value||'action',qty=+qtyEl?.value,price=+priceEl?.value,date=dateEl?.value||new Date().toISOString().slice(0,10);if(!ticker){toastSafe('Sélectionnez un titre.','error');return;}if(!qty||qty<=0){toastSafe('Quantité invalide.','error');return;}if(!price||price<=0){toastSafe("Prix d'achat invalide.",'error');return;}var pf=typeof getPortfolio==='function'?getPortfolio():[];pf.push({id:Date.now(),ticker:ticker,type:type,qty:qty,price:price,date:date});savePortfolio(pf);if(typeof invalidatePortfolioCache==='function')invalidatePortfolioCache();if(typeof logTransaction==='function')logTransaction({type:'buy',ticker:ticker,qty:qty,price:price,date:date});if(qtyEl)qtyEl.value='';if(priceEl)priceEl.value='';if(dateEl)dateEl.value='';if(tickerEl)tickerEl.selectedIndex=0;toastSafe(qty+' × '+ticker+' ajouté au portefeuille.','success');render();};
+  function executeSell(ticker,qty,price,date,onSuccess){if(!ticker||!qty||qty<=0||!price||price<=0){toastSafe('Champs invalides.','error');return;}var pf=typeof getPortfolio==='function'?getPortfolio():[];var lots=pf.filter(function(p){return String(p.ticker||'').toUpperCase().trim()===ticker;}).sort(function(a,b){return new Date(a.date||0)-new Date(b.date||0);});var held=lots.reduce(function(s,l){return s+(+l.qty||0);},0);if(qty>held){toastSafe('Quantité supérieure à la position détenue ('+held+').','error');return;}var remaining=qty,cost=0;lots.forEach(function(l){if(remaining<=0)return;var take=Math.min(+l.qty||0,remaining);cost+=take*(+l.price||0);l.qty=(+l.qty||0)-take;remaining-=take;});pf=pf.filter(function(p){return String(p.ticker||'').toUpperCase().trim()!==ticker||(+p.qty||0)>0;});savePortfolio(pf);if(typeof invalidatePortfolioCache==='function')invalidatePortfolioCache();var proceeds=qty*price,pl=proceeds-cost;if(typeof logTransaction==='function')logTransaction({type:'sell',ticker:ticker,qty:qty,price:price,date:date,realizedPL:pl});toastSafe('Vente enregistrée, P&L réalisé : '+(pl>=0?'+':'')+(typeof fmtM==='function'?fmtM(pl):pl.toFixed(0))+' FCFA',pl>=0?'success':'error');if(typeof onSuccess==='function')onSuccess();render();}
   window.sellPositionQuick=function(){executeSell(String(el('pfSellTicker')?.value||'').toUpperCase().trim(),+el('pfSellQty')?.value,+el('pfSellPrice')?.value,el('pfSellDate')?.value||new Date().toISOString().slice(0,10),function(){if(el('pfSellQty'))el('pfSellQty').value='';if(el('pfSellPrice'))el('pfSellPrice').value='';if(el('pfSellDate'))el('pfSellDate').value='';if(el('sellHint'))el('sellHint').textContent='';});};
   window.openSellModal=function(ticker){if(el('sellTicker'))el('sellTicker').value=ticker;if(el('sellQtyHint')){var pf=typeof getPortfolio==='function'?getPortfolio():[];var q=pf.filter(function(p){return String(p.ticker||'').toUpperCase().trim()===ticker;}).reduce(function(s,p){return s+(+p.qty||0);},0);el('sellQtyHint').textContent='Quantité détenue : '+q;}if(el('sellQty'))el('sellQty').value='';if(el('sellPrice'))el('sellPrice').value=typeof getLatestPrice==='function'?(getLatestPrice(ticker)||''):'';if(el('sellDate'))el('sellDate').value='';if(el('sellModal'))el('sellModal').classList.add('open');};
   window.closeSellModal=function(){if(el('sellModal'))el('sellModal').classList.remove('open');};
