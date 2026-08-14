@@ -20,25 +20,15 @@ jobs:
           import re
           p=Path('public/admin.html')
           s=p.read_text(encoding='utf-8')
-
-          # Remove the competing top-level Historique navigation entry.
           s=re.sub(r'\n\s*<button class="admin-tab" onclick="switchTab\(\'historique\',this\)\">Historique</button>', '', s, count=1)
-
-          # Remove the complete legacy Historique panel, including all nested
-          # forms/tables. The new Cours & Historique center is the only UI.
           start=s.find('    <div class="tab-panel" id="panel-historique">')
           end=s.find('    <div class="tab-panel" id="panel-entreprises">', start)
           if start != -1 and end != -1:
               s=s[:start]+s[end:]
-
-          # Remove the legacy historical edit modal. Existing JS files remain
-          # available for business logic; they no longer have a legacy UI host.
           start=s.find('\n<div class="inline-edit" id="modal-historique">')
           end=s.find('\n<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js">', start)
           if start != -1 and end != -1:
               s=s[:start]+s[end:]
-
-          # There must be one Cours UI loader: the new control center.
           for tag in (
               '    <script src="admin/js/cours-control.js"></script>\n',
               '    <script src="admin/js/cours-control-enhanced.js"></script>\n',
@@ -48,7 +38,6 @@ jobs:
           center='    <script src="admin/js/cours-control-center.js"></script>\n'
           if center not in s:
               s=s.replace('</body>', center+'</body>', 1)
-
           p.write_text(s,encoding='utf-8')
           PY
       - name: Verify legacy UI is gone
@@ -57,11 +46,15 @@ jobs:
           ! grep -q "switchTab('historique'" public/admin.html
           ! grep -q 'id="modal-historique"' public/admin.html
           grep -q 'admin/js/cours-control-center.js' public/admin.html
-      - name: Commit and remove this one-shot workflow
+      - name: Commit cleanup
         run: |
           git config user.name 'The Capital Bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add public/admin.html
-          git rm .github/workflows/remove-legacy-cours-ui.yml
           git commit -m 'fix(admin): remove legacy Cours UI'
+          git push
+      - name: Delete one-shot workflow
+        run: |
+          git rm .github/workflows/remove-legacy-cours-ui.yml
+          git commit -m 'chore(admin): remove cleanup workflow'
           git push
