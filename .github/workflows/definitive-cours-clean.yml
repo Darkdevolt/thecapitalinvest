@@ -17,28 +17,21 @@ jobs:
           import re
           p=Path('public/admin.html')
           s=p.read_text(encoding='utf-8')
-          # Replace the entire old Cours workspace markup. The new
-          # cours-control-center.js owns the workspace rendered in this panel.
           pattern=r'<div class="tab-panel active?" id="panel-cours">.*?(?=\n\s*<div class="tab-panel" id="panel-entreprises">)'
-          replacement='''<div class="tab-panel" id="panel-cours">\n        <div class="section-header">\n            <div>\n                <div class="section-title">Cours &amp; Historique <em>BRVM</em></div>\n            </div>\n        </div>\n        <!-- The complete workspace is rendered by cours-control-center.js. -->\n    </div>\n\n    '''
+          replacement='''<div class="tab-panel" id="panel-cours">\n        <div class="section-header">\n            <div>\n                <div class="section-title">Cours &amp; Historique <em>BRVM</em></div>\n            </div>\n        </div>\n    </div>\n\n    '''
           ns,n=re.subn(pattern,replacement,s,flags=re.S)
           if n!=1:
               raise SystemExit(f'Expected exactly one legacy panel replacement, got {n}')
           s=ns
-          # Remove all old/duplicate Cours UI entry points.
           for tag in [
               '<script src="admin/js/historique.js"></script>',
               '<script src="admin/js/cours-control.js"></script>',
               '<script src="admin/js/cours-control-enhanced.js"></script>'
           ]:
               s=s.replace(tag+'\n','').replace(tag,'')
-          # Remove duplicate SheetJS include while here; unrelated UI, but it is
-          # an exact duplicate and not needed twice.
           x='<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>'
-          first=s.find(x)
-          second=s.find(x,first+len(x))
-          if second!=-1:
-              s=s[:second]+s[second+len(x):]
+          first=s.find(x); second=s.find(x,first+len(x))
+          if second!=-1: s=s[:second]+s[second+len(x):]
           p.write_text(s,encoding='utf-8')
           PY
       - name: Remove legacy Cours files
@@ -49,5 +42,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
+          git diff --cached --quiet && exit 0
           git commit -m "fix(admin): definitively remove hidden legacy Cours UI [cours-cleaned]"
           git push
