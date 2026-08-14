@@ -88,6 +88,9 @@
   }
 
   function loadRuntimeLayers() {
+    // Navigation is a core layer: it must be available before users start moving between views.
+    loadScript('app/js/navigation-guard.js?v=1');
+
     // The technical experience is independent: it must never wait for
     // portfolio/fundamental enhancements before becoming interactive.
     loadStyle('app/css/technique-experience.css?v=2');
@@ -109,6 +112,7 @@
     try {
       if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
       else if (typeof window.parseHash === 'function') window.parseHash();
+      if (window.tcNavigation && typeof window.tcNavigation.render === 'function') window.tcNavigation.render();
     } catch (e) {
       console.warn('[INIT] rendu après données:', e);
     }
@@ -170,8 +174,6 @@
       try { window.initSidebar(); } catch (e) { console.warn('[INIT] sidebar:', e); }
     }
 
-    // IMPORTANT : injecter le Suivi après la sidebar pour qu'il reste visible
-    // sur mobile lorsque le menu hamburger reconstruit/actualise la navigation.
     ensureSuiviNavigation();
     setTimeout(ensureSuiviNavigation, 0);
 
