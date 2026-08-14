@@ -1,6 +1,9 @@
 /* ══════════════════════════════════════════════════════
    DIVIDENDES — année = exercice bénéficiaire
+   Édition directe depuis le formulaire Admin
 ══════════════════════════════════════════════════════ */
+var divEditingId = null;
+
 async function loadDividendes() {
     const rows = await sbGet('dividendes_calendrier', 'select=*&order=annee.desc&limit=200');
     divData = rows || [];
@@ -13,7 +16,7 @@ function renderDivTable(data) {
     const cnt = document.getElementById('div-count');
     if(cnt) cnt.textContent = data.length;
     if (!tb) return;
-    if (!data.length) { tb.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:20px;">Aucun dividende</td></tr>'; return; }
+    if (!data.length) { tb.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:20px;">Aucun dividende</td></tr>'; return; }
     resetSelection();
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
@@ -25,8 +28,10 @@ function renderDivTable(data) {
             '<td class="td-muted">' + fmtDate(r.date_detachement) + '</td>' +
             '<td class="td-muted">' + fmtDate(r.date_paiement) + '</td>' +
             '<td><span class="badge ' + (r.statut==='payé'?'badge-green':r.statut==='prévisionnel'?'badge-orange':'badge-gold') + '">' + (r.statut||'—') + '</span></td>' +
-            '<td><button type="button" class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditDiv(this);return false;">✎</button> ' +
-              '<button type="button" class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteDiv(this);return false;">✕</button></td>' +
+            '<td>' +
+              '<button type="button" class="btn btn-outline btn-sm" data-row="' + encodeURIComponent(JSON.stringify(r)) + '" onclick="handleEditDiv(this);return false;">✎ Modifier</button> ' +
+              '<button type="button" class="btn btn-danger btn-sm" data-id="' + r.id + '" onclick="handleDeleteDiv(this);return false;">✕</button>' +
+            '</td>' +
             '</tr>';
     }).join('');
 
@@ -51,12 +56,29 @@ function filterDivTable() {
     renderDivTable(divData.filter(function(r){ return !f || ((r.ticker || '')+(r.notes || '')).toLowerCase().indexOf(f) !== -1; }));
 }
 
+function resetDivEditMode() {
+    divEditingId = null;
+    var btn = document.querySelector('#panel-dividendes .actions-row .btn-primary');
+    if (btn) btn.textContent = 'Enregistrer';
+    var msg = document.getElementById('div-msg');
+    if (msg) { msg.textContent = ''; msg.className = 'msg'; }
+}
+
+function cancelDivEdit() {
+    divEditingId = null;
+    clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']);
+    set('div-statut','confirmé');
+    var btn = document.querySelector('#panel-dividendes .actions-row .btn-primary');
+    if (btn) btn.textContent = 'Enregistrer';
+    var msg = document.getElementById('div-msg');
+    if (msg) { msg.textContent = 'Modification annulée'; msg.className = 'msg info'; }
+}
+
 async function addDividende() {
     const msg = document.getElementById('div-msg');
-    const annee = pi('div-annee');
     const body = {
         ticker: v('div-ticker').toUpperCase(),
-        annee: annee,
+        annee: pi('div-annee'),
         montant: pf('div-montant'),
         taux_rendement: pf('div-tx'),
         statut: v('div-statut')
@@ -65,6 +87,21 @@ async function addDividende() {
     if (v('div-paie')) body.date_paiement = v('div-paie');
     if (v('div-notes')) body.notes = v('div-notes');
     if (!body.ticker || !body.annee || body.montant == null) { if(msg){ msg.textContent = 'Ticker, année et montant obligatoires'; msg.className = 'msg err'; } return; }
+
+    if (divEditingId) {
+        const r = await sbPatch('dividendes_calendrier', 'id=eq.' + encodeURIComponent(divEditingId), body);
+        if (r) {
+            if(msg){ msg.textContent = '✓ Dividende modifié'; msg.className = 'msg ok'; }
+            divEditingId = null;
+            clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']);
+            set('div-statut','confirmé');
+            var b = document.querySelector('#panel-dividendes .actions-row .btn-primary');
+            if (b) b.textContent = 'Enregistrer';
+            await loadDividendes();
+        }
+        return;
+    }
+
     const r = await sbPost('dividendes_calendrier', body, 'ticker,annee');
     if (r) {
         if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
@@ -73,19 +110,35 @@ async function addDividende() {
     }
 }
 
-/* Les boutons du tableau étaient générés avec des handlers qui n'existaient
-   plus dans le bundle Admin. On garde des wrappers explicites pour que les
-   clics fonctionnent même si le HTML est reconstruit dynamiquement. */
+/* IMPORTANT : aucune fenêtre modale n'est ouverte pour les dividendes.
+   L'édition se fait directement dans le formulaire de la section, afin
+   qu'aucun overlay invisible ne puisse bloquer la souris ou le clavier. */
 function handleEditDiv(button) {
     if (!button) return false;
     try {
         const raw = decodeURIComponent(button.getAttribute('data-row') || '');
         if (!raw) return false;
         const row = JSON.parse(raw);
-        editDividende(row);
+        divEditingId = row.id;
+        set('div-ticker', row.ticker || '');
+        set('div-annee', row.annee || '');
+        set('div-montant', row.montant);
+        set('div-tx', row.taux_rendement);
+        set('div-detach', row.date_detachement ? String(row.date_detachement).split('T')[0] : '');
+        set('div-paie', row.date_paiement ? String(row.date_paiement).split('T')[0] : '');
+        set('div-statut', row.statut || 'confirmé');
+        set('div-notes', row.notes || '');
+        var saveBtn = document.querySelector('#panel-dividendes .actions-row .btn-primary');
+        if (saveBtn) saveBtn.textContent = 'Enregistrer la modification';
+        var msg = document.getElementById('div-msg');
+        if (msg) { msg.textContent = 'Modification de ' + (row.ticker || '') + ' — ' + (row.annee || '') + ' : modifiez les champs puis enregistrez.'; msg.className = 'msg info'; }
+        var panel = document.getElementById('panel-dividendes');
+        var formCard = panel ? panel.querySelector('.card') : null;
+        if (formCard && formCard.scrollIntoView) formCard.scrollIntoView({behavior:'smooth', block:'start'});
+        setTimeout(function(){ var first = document.getElementById('div-montant'); if(first) first.focus(); }, 250);
     } catch (e) {
-        console.error('[dividendes] Impossible d’ouvrir l’édition:', e);
-        toast('Impossible d’ouvrir la fiche du dividende.', 'err');
+        console.error('[dividendes] Impossible de charger la fiche:', e);
+        toast('Impossible de charger ce dividende.', 'err');
     }
     return false;
 }
@@ -95,47 +148,6 @@ function handleDeleteDiv(button) {
     const id = button.getAttribute('data-id');
     if (id) deleteDivRow(id);
     return false;
-}
-
-function editDividende(row) {
-    const info = document.getElementById('modal-div-info');
-    if(info) info.textContent = (row.ticker || '') + ' — ' + (row.annee || '');
-    set('modal-div-id', row.id);
-    set('modal-div-ticker', row.ticker);
-    set('modal-div-annee', row.annee);
-    set('modal-div-montant', row.montant);
-    set('modal-div-tx', row.taux_rendement);
-    set('modal-div-detach', row.date_detachement ? String(row.date_detachement).split('T')[0] : '');
-    set('modal-div-paie', row.date_paiement ? String(row.date_paiement).split('T')[0] : '');
-    set('modal-div-statut', row.statut || 'confirmé');
-    set('modal-div-notes', row.notes);
-    openModal('modal-dividende');
-}
-
-async function saveDividende() {
-    const id = v('modal-div-id');
-    const msg = document.getElementById('modal-div-msg');
-    if (!id) { if(msg){ msg.textContent = 'Identifiant du dividende introuvable'; msg.className = 'msg err'; } return; }
-    const body = {
-        ticker: v('modal-div-ticker').toUpperCase(),
-        montant: pf('modal-div-montant'),
-        taux_rendement: pf('modal-div-tx'),
-        statut: v('modal-div-statut')
-    };
-    if (v('modal-div-annee')) body.annee = pi('modal-div-annee');
-    if (v('modal-div-detach')) body.date_detachement = v('modal-div-detach');
-    else body.date_detachement = null;
-    if (v('modal-div-paie')) body.date_paiement = v('modal-div-paie');
-    else body.date_paiement = null;
-    if (v('modal-div-notes')) body.notes = v('modal-div-notes');
-    else body.notes = null;
-
-    const r = await sbPatch('dividendes_calendrier', 'id=eq.' + encodeURIComponent(id), body);
-    if (r) {
-        if(msg){ msg.textContent = '✓ Modifié'; msg.className = 'msg ok'; }
-        closeModal('modal-dividende');
-        loadDividendes();
-    }
 }
 
 async function deleteDivRow(id) {
