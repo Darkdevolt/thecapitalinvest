@@ -1,5 +1,5 @@
 /* ══════════════════════════════════════════════════════
-   DIVIDENDES
+   DIVIDENDES — année = exercice bénéficiaire
 ══════════════════════════════════════════════════════ */
 async function loadDividendes() {
     const rows = await sbGet('dividendes_calendrier', 'select=*&order=annee.desc&limit=200');
@@ -18,9 +18,8 @@ function renderDivTable(data) {
     tb.innerHTML = data.map(function(r){
         return '<tr>' +
             '<td><input type="checkbox" class="row-check" data-id="' + r.id + '" onchange="toggleRow(\'' + r.id + '\',this)"></td>' +
-            '<td class="td-gold">' + r.ticker + '</td>' +
-            '<td>' + r.annee + '</td>' +
-            '<td class="td-muted">' + (r.exercice||'—') + '</td>' +
+            '<td class="td-gold">' + (r.ticker || '—') + '</td>' +
+            '<td>' + (r.annee || '—') + '</td>' +
             '<td class="r td-mono">' + fmt(r.montant) + '</td>' +
             '<td class="r" style="color:var(--green);font-family:var(--mono);">' + fmtPct(r.taux_rendement) + '</td>' +
             '<td class="td-muted">' + fmtDate(r.date_detachement) + '</td>' +
@@ -53,23 +52,23 @@ function filterDivTable() {
 }
 
 async function addDividende() {
-    const msg  = document.getElementById('div-msg');
+    const msg = document.getElementById('div-msg');
     const annee = pi('div-annee');
-    const exerciceVal = v('div-exercice').trim();
     const body = {
-        ticker: v('div-ticker'), annee: annee, montant: pf('div-montant'),
+        ticker: v('div-ticker'),
+        annee: annee,
+        montant: pf('div-montant'),
         taux_rendement: pf('div-tx'),
         statut: v('div-statut')
     };
     if (v('div-detach')) body.date_detachement = v('div-detach');
     if (v('div-paie')) body.date_paiement = v('div-paie');
     if (v('div-notes')) body.notes = v('div-notes');
-    body.exercice = exerciceVal || String(annee || new Date().getFullYear());
-    if (!body.ticker || !body.annee || body.montant == null || !body.exercice) { if(msg){ msg.textContent = 'Ticker, année, montant et exercice obligatoires'; msg.className = 'msg err'; } return; }
+    if (!body.ticker || !body.annee || body.montant == null) { if(msg){ msg.textContent = 'Ticker, année et montant obligatoires'; msg.className = 'msg err'; } return; }
     const r = await sbPost('dividendes_calendrier', body, 'ticker,annee');
     if (r) {
         if(msg){ msg.textContent = '✓ Enregistré'; msg.className = 'msg ok'; }
-        clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-exercice','div-notes']);
+        clearForm(['div-ticker','div-annee','div-montant','div-tx','div-detach','div-paie','div-notes']);
         loadDividendes();
     }
 }
@@ -85,22 +84,21 @@ function editDividende(row) {
     set('modal-div-detach', row.date_detachement ? row.date_detachement.split('T')[0] : '');
     set('modal-div-paie', row.date_paiement ? row.date_paiement.split('T')[0] : '');
     set('modal-div-statut', row.statut || 'confirmé');
-    set('modal-div-exercice', row.exercice || '');
     set('modal-div-notes', row.notes);
     openModal('modal-dividende');
 }
 
 async function saveDividende() {
-    const id  = v('modal-div-id');
+    const id = v('modal-div-id');
     const msg = document.getElementById('modal-div-msg');
     const body = {
         montant: pf('modal-div-montant'),
         taux_rendement: pf('modal-div-tx'),
         statut: v('modal-div-statut')
     };
+    if (v('modal-div-annee')) body.annee = pi('modal-div-annee');
     if (v('modal-div-detach')) body.date_detachement = v('modal-div-detach');
     if (v('modal-div-paie')) body.date_paiement = v('modal-div-paie');
-    if (v('modal-div-exercice')) body.exercice = v('modal-div-exercice');
     if (v('modal-div-notes')) body.notes = v('modal-div-notes');
     const r = await sbPatch('dividendes_calendrier', 'id=eq.' + id, body);
     if (r) {
