@@ -17,18 +17,32 @@ function extractRows(payload){
   }
   return [];
 }
+function normalizeRow(r,date_seance){
+  const ticker=String(r?.ticker||r?.symbol||r?.code||'').trim().toUpperCase();
+  return {
+    ticker,
+    nom:r?.nom||r?.name||null,
+    ouverture:r?.ouverture??r?.cours_ouverture??r?.open??null,
+    plus_haut:r?.plus_haut??r?.haut??r?.high??null,
+    plus_bas:r?.plus_bas??r?.bas??r?.low??null,
+    volume:r?.volume??r?.vol??null,
+    valeur:r?.valeur??r?.valeur_totale??r?.valeur_transigee??null,
+    cours:r?.cours??r?.cours_cloture??r?.cloture??r?.close??null,
+    variation:r?.variation??r?.variation_pct??r?.var??null,
+    date_seance
+  };
+}
 function mergeRows(brvmRows,sikaRows,date_seance){
   const map=new Map();
   for(const r of sikaRows||[]){
-    const tk=String(r?.ticker||'').trim().toUpperCase();
-    if(tk)map.set(tk,{...r,date_seance});
+    const row=normalizeRow(r,date_seance);
+    if(row.ticker&&row.cours!=null)map.set(row.ticker,row);
   }
   // BRVM remains authoritative whenever it provides a title. This preserves
-  // titles such as ABJC that are not always present in Sika's A-Z list.
+  // titles such as ABJC that may be absent from Sika's A-Z page.
   for(const r of brvmRows||[]){
-    const tk=String(r?.ticker||'').trim().toUpperCase();
-    if(!tk)continue;
-    map.set(tk,{...r,ticker:tk,date_seance});
+    const row=normalizeRow(r,date_seance);
+    if(row.ticker&&row.cours!=null)map.set(row.ticker,row);
   }
   return [...map.values()];
 }
@@ -56,7 +70,7 @@ export default async function handler(req,res){
    try{
      const raw=await sika();
      const date_seance=new Date().toISOString().slice(0,10);
-     const rows=raw.map(r=>({...r,date_seance}));
+     const rows=raw.map(r=>normalizeRow(r,date_seance));
      if(rows.length<40)throw new Error(`Sika Finance ne retourne que ${rows.length} cotations exploitables`);
      return res.status(200).json({success:true,source:'Sika Finance',data:{rows,count:rows.length,date_seance},attempts:attempts.concat([{source:'Sika Finance',ok:true,count:rows.length}])});
    }catch(fallbackError){
