@@ -23,13 +23,17 @@
     return url+separator+'_tc_ts='+Date.now();
   }
 
+  function isMarketData(endpoint){
+    return /^(\/api)?\/(marche|boc)(\/|\?|$)/i.test(String(endpoint||''));
+  }
+
   async function request(method,endpoint,body,options){
     const baseUrl=normalizeEndpoint(endpoint);
     const url=withFreshQuery(baseUrl,method);
     const opts=options||{};
     const token=getToken();
     const headers=Object.assign(
-      {'Accept':'application/json','Cache-Control':'no-cache'},
+      {'Accept':'application/json','Cache-Control':'no-cache','Pragma':'no-cache'},
       body!==undefined?{'Content-Type':'application/json'}:{},
       token?{'Authorization':'Bearer '+token}:{},
       opts.headers||{}
@@ -50,11 +54,15 @@
         const message=(data&&data.error)||(data&&data.message)||res.statusText||('HTTP '+res.status);
         throw new Error('HTTP '+res.status+' '+message);
       }
-      if(cacheKey&&window.cacheManager&&data&&typeof data==='object') window.cacheManager.setCache(cacheKey,data);
+      if(cacheKey&&window.cacheManager&&data&&typeof data==='object'&&!isMarketData(endpoint)) window.cacheManager.setCache(cacheKey,data);
       return data;
     }catch(err){
       clearTimeout(timeoutId);
-      if(method==='GET'&&cached){console.warn('[API] fallback cache:',endpoint);return cached;}
+      // Ne jamais afficher d'anciens cours/indices/BOC à la place des données actuelles.
+      if(method==='GET'&&cached&&!isMarketData(endpoint)){
+        console.warn('[API] fallback cache:',endpoint);
+        return cached;
+      }
       if(err.name==='AbortError') throw new Error('API timeout: '+endpoint);
       throw err;
     }
@@ -75,13 +83,6 @@
   window.apiGetApercu=()=>window.apiGet('/marche?type=apercu');
   window.apiGetDividendes=()=>window.apiGet('/marche?type=dividendes');
 
-  window.api={
-    get:window.apiGet,
-    post:window.apiPost,
-    put:window.apiPut,
-    patch:window.apiPatch,
-    delete:window.apiDelete
-  };
-
-  console.log('[FETCH] API client chargé, requêtes GET forcées fraîches');
+  window.api={get:window.apiGet,post:window.apiPost,put:window.apiPut,patch:window.apiPatch,delete:window.apiDelete};
+  console.log('[FETCH] API client chargé, données marché sans fallback cache');
 })();
