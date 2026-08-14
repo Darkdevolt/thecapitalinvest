@@ -1,4 +1,4 @@
-// UNIFIED DATA LOADER
+// UNIFIED DATA LOADER + GLOBAL NAVIGATION
 (function(){
   'use strict';
   var loading = null;
@@ -7,6 +7,28 @@
     if(typeof window.apiGet !== 'function') return Promise.reject(new Error('apiGet indisponible'));
     return window.apiGet(endpoint);
   }
+
+  // app.html appelle ces fonctions directement depuis les boutons du header.
+  // Elles doivent exister avant toute interaction utilisateur.
+  window.closeDropdowns = function(){
+    document.querySelectorAll('.nav-dropdown.open').forEach(function(dd){ dd.classList.remove('open'); });
+    document.querySelectorAll('.nav-dropdown-menu.open').forEach(function(menu){ menu.classList.remove('open'); });
+  };
+  window.toggleDropdown = function(id){
+    var target=document.getElementById(id);
+    if(!target) return;
+    var wasOpen=target.classList.contains('open');
+    window.closeDropdowns();
+    if(!wasOpen){
+      target.classList.add('open');
+      var menu=target.querySelector('.nav-dropdown-menu');
+      if(menu) menu.classList.add('open');
+    }
+  };
+  document.addEventListener('click',function(e){
+    if(!e.target.closest('.nav-dropdown')) window.closeDropdowns();
+  });
+
   window.loadAll = function(force){
     if(loading && !force) return loading;
     loading = Promise.allSettled([
