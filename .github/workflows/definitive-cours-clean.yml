@@ -10,30 +10,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Remove legacy Cours markup and loaders
+      - name: Remove every legacy Cours reference
         run: |
           python - <<'PY'
           from pathlib import Path
-          import re
           p=Path('public/admin.html')
           s=p.read_text(encoding='utf-8')
-          pattern=r'<div class="tab-panel(?: active)?" id="panel-cours">.*?(?=\n\s*<div class="tab-panel" id="panel-entreprises">)'
-          replacement='''<div class="tab-panel" id="panel-cours">\n        <div class="section-header">\n            <div>\n                <div class="section-title">Cours &amp; Historique <em>BRVM</em></div>\n            </div>\n        </div>\n    </div>\n\n    '''
-          ns,n=re.subn(pattern,replacement,s,flags=re.S)
-          if n!=1: raise SystemExit(f'Expected exactly one legacy panel replacement, got {n}')
-          s=ns
-          for tag in ('<script src="admin/js/historique.js"></script>','<script src="admin/js/cours-control.js"></script>','<script src="admin/js/cours-control-enhanced.js"></script>'):
+          exact=[
+            '<script src="admin/js/historique.js"></script>',
+            '<script src="admin/js/cours-control.js"></script>',
+            '<script src="admin/js/cours-control-enhanced.js"></script>',
+            '<link rel="stylesheet" href="admin/css/cours-control-enhanced.css">'
+          ]
+          for tag in exact:
               s=s.replace(tag+'\n','').replace(tag,'')
           p.write_text(s,encoding='utf-8')
           PY
-      - name: Remove legacy Cours files
-        run: |
           rm -f public/admin/js/cours-control.js public/admin/js/cours-control-enhanced.js public/admin/js/historique.js public/admin/js/cours-historique.js public/admin/js/historique-quality.js public/admin/css/cours-control-enhanced.css
-      - name: Commit definitive cleanup
+      - name: Commit
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
           git diff --cached --quiet && exit 0
-          git commit -m "fix(admin): definitively remove hidden legacy Cours UI [cours-cleaned]"
+          git commit -m "fix(admin): remove every legacy Cours reference [cours-cleaned]"
           git push
