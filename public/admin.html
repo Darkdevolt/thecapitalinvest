@@ -38,7 +38,6 @@
 <div class="admin-nav">
     <button class="admin-tab active" onclick="switchTab('dashboard',this)">Dashboard</button>
     <button class="admin-tab" onclick="switchTab('cours',this)">Cours &amp; Historique</button>
-    <button class="admin-tab" onclick="switchTab('historique',this)">Historique</button>
     <button class="admin-tab" onclick="switchTab('entreprises',this)">Entreprises</button>
     <button class="admin-tab" onclick="switchTab('financials',this)">Financials</button>
     <button class="admin-tab" onclick="switchTab('dividendes',this)">Dividendes</button>
@@ -147,83 +146,6 @@
                 </table>
             </div>
             <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
-        </div>
-    </div>
-
-    <div class="tab-panel" id="panel-historique">
-        <div class="section-header"><div class="section-title">Historique <em>cours</em></div></div>
-        <div class="info-box" style="margin-bottom:16px;"><strong>Colonnes :</strong> ticker · date_seance · <strong>cours_cloture</strong> · ouverture · plus_haut · plus_bas · volume · <strong>variation</strong></div>
-        <div class="sub-tabs">
-            <button class="sub-tab active" onclick="switchSubTab('hist','ligne',this)">Ligne unique</button>
-            <button class="sub-tab" onclick="switchSubTab('hist','bulk',this)">Import CSV</button>
-            <button class="sub-tab" onclick="switchSubTab('hist','view',this)">Consulter</button>
-        </div>
-        <div id="hist-panel-ligne">
-            <div class="card">
-                <div class="card-header"><span class="card-title">Ajouter un cours historique</span></div>
-                <div class="form-grid">
-                    <div class="field"><label>Ticker *</label><input type="text" id="h-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                    <div class="field"><label>Date séance *</label><input type="date" id="h-date"></div>
-                    <div class="field"><label>Cours clôture * <span style="color:var(--gold);font-size:9px;">→ "cours_cloture"</span></label><input type="number" id="h-cloture" placeholder="14500" step="any"></div>
-                    <div class="field"><label>Ouverture</label><input type="number" id="h-ouverture" placeholder="14400" step="any"></div>
-                    <div class="field"><label>Plus haut</label><input type="number" id="h-haut" placeholder="14600" step="any"></div>
-                    <div class="field"><label>Plus bas</label><input type="number" id="h-bas" placeholder="14350" step="any"></div>
-                    <div class="field"><label>Volume</label><input type="number" id="h-vol" placeholder="1200"></div>
-                    <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span> <button type="button" class="btn btn-outline btn-sm" style="margin-left:6px;font-size:10px;padding:2px 6px;" onclick="calcAutoVariationFromForm()">↻ Auto</button></label><input type="number" id="h-var" placeholder="0.69" step="any"></div>
-                </div>
-                <div class="actions-row">
-                    <button class="btn btn-primary" onclick="addHistorique()">Enregistrer</button>
-                    <span id="h-msg" class="msg"></span>
-                </div>
-            </div>
-        </div>
-        <div id="hist-panel-bulk" style="display:none;">
-            <div class="card">
-                <div class="card-header"><span class="card-title">Import CSV en masse</span></div>
-                <div style="padding:18px;">
-                    <div class="info-box" style="margin:0 0 12px;">
-                        <strong>Format CSV :</strong> ticker,date_seance,cours_cloture,ouverture,plus_haut,plus_bas,volume,variation<br>
-                        <span style="margin-top:4px;display:block;">Date YYYY-MM-DD. Max 500 lignes.</span>
-                    </div>
-                    <textarea class="csv-area" id="bulk-csv" placeholder="SNTS,2024-01-15,14500,14400,14600,14350,1200,0.69&#10;ECOBANK,2024-01-15,11250,11200,11300,11150,850,-0.44"></textarea>
-                </div>
-                <div class="actions-row">
-                    <button class="btn btn-primary" onclick="importBulk()">Importer</button>
-                    <button class="btn btn-outline btn-sm" onclick="parseBulkPreview()">Aperçu</button>
-                    <button class="btn btn-outline btn-sm" onclick="clearBulk()">Effacer</button>
-                    <span id="bulk-msg" class="msg"></span>
-                </div>
-                <div id="bulk-preview" style="display:none;padding:0 18px 14px;">
-                    <div class="progress-bar"><div class="progress-fill" id="bulk-progress" style="width:0%"></div></div>
-                    <div class="tw"><table id="bulk-preview-table" style="font-size:12px;">
-                        <thead><tr><th>Ticker</th><th>Date</th><th>Clôture</th><th>Vol.</th><th>Variation%</th><th>Statut</th></tr></thead>
-                        <tbody id="bulk-preview-tbody"></tbody>
-                    </table></div>
-                </div>
-            </div>
-        </div>
-        <div id="hist-panel-view" style="display:none;">
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">Consulter l'historique</span>
-                    <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                        <input type="text" id="hist-ticker-search" placeholder="Ex: SNTS" style="padding:5px 10px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;width:110px;" oninput="this.value=this.value.toUpperCase()">
-                        <input type="date" id="hist-date-from" style="padding:5px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;">
-                        <input type="date" id="hist-date-to"   style="padding:5px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:12px;">
-                        <button class="btn btn-primary btn-sm" onclick="loadHistoriqueTicker()">Charger</button>
-                    </div>
-                </div>
-                <div class="tw">
-                    <table>
-                        <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(histData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Clôture</th><th class="r">Ouverture</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Capitalisation</th><th></th></tr></thead>
-                        <tbody id="hist-tbody"><tr><td colspan="11"><div class="loading" style="padding:20px;">Entrez un ticker et cliquez Charger</div></td></tr></tbody>
-                    </table>
-                </div>
-                <div class="actions-row">
-                    <span id="hist-count" style="font-size:11px;color:var(--muted);"></span>
-                    <button class="btn btn-danger btn-sm" id="btn-del-all-hist" style="display:none;" onclick="deleteAllHistoriqueTicker()">🗑 Supprimer tout ce ticker</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -828,29 +750,6 @@
 </div>
 </div>
 
-<div class="inline-edit" id="modal-historique">
-    <div class="modal">
-        <div class="modal-title">Modifier le cours historique</div>
-        <div style="font-size:12px;color:var(--muted);margin-bottom:12px;" id="modal-hist-info"></div>
-        <input type="hidden" id="modal-hist-id">
-        <div class="form-grid" style="padding:0;grid-template-columns:1fr 1fr;">
-            <div class="field"><label>Ticker</label><input type="text" id="modal-hist-ticker" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
-            <div class="field"><label>Date séance</label><input type="text" id="modal-hist-date" readonly style="background:rgba(0,0,0,0.3);cursor:not-allowed;"></div>
-            <div class="field"><label>Cours clôture</label><input type="number" id="modal-hist-cloture" step="any" oninput="calcAutoVariationFromModal()"></div>
-            <div class="field"><label>Ouverture</label><input type="number" id="modal-hist-ouverture" step="any"></div>
-            <div class="field"><label>Plus haut</label><input type="number" id="modal-hist-haut" step="any"></div>
-            <div class="field"><label>Plus bas</label><input type="number" id="modal-hist-bas" step="any"></div>
-            <div class="field"><label>Volume</label><input type="number" id="modal-hist-vol"></div>
-            <div class="field"><label>Variation % <button type="button" class="btn btn-outline btn-sm" style="margin-left:8px;font-size:10px;padding:2px 6px;" onclick="calcAutoVariationFromModal()">↻ Auto</button></label><input type="number" id="modal-hist-var" step="any"></div>
-        </div>
-        <div class="modal-actions">
-            <button class="btn btn-outline btn-sm" onclick="closeModal('modal-historique')">Annuler</button>
-            <button class="btn btn-primary btn-sm" onclick="saveHistorique()">Enregistrer</button>
-        </div>
-        <span id="modal-hist-msg" class="msg" style="display:block;margin-top:8px;"></span>
-    </div>
-</div>
-
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="admin/js/config.js"></script>
@@ -877,7 +776,6 @@ init().catch(function(err){
 });
 </script>
 
-    <script src="admin/js/cours-control.js"></script>
-    <script src="admin/js/cours-control-enhanced.js"></script>
+    <script src="admin/js/cours-control-center.js"></script>
 </body>
 </html>
