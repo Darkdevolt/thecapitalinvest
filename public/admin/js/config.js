@@ -1,7 +1,8 @@
 const SK      = 'tc_session';
 const SB_URL  = 'https://otsiwiwlnowxeolbbgvm.supabase.co';
+// Use the active Supabase publishable key. Do not use service_role in browser code.
+const SB_ANON = 'sb_publishable_MhaI5b-kMmb5liIMOJ4P3Q_xGTsJAFJ';
 const SB_REST = SB_URL + '/rest/v1';
-const SB_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im90c2l3aWlnbm93xeolbbgvmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjY2MjgwODIsImV4cCI6MjA4MjIwNDA4Mn0.bIWFJZAm0acmc5Ogk2M-DjPafQCDN0vRE9Y5owma-LY';
 
 const INDICES_BRV = ['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT','BRVM FINANCE','BRVM DISTRIBUTION','BRVM INDUSTRIE','BRVM AGRICULTURE','BRVM SERVICES PUBLICS','BRVM AUTRES SECTEURS'];
 
@@ -104,7 +105,6 @@ const TEMPLATE_CONFIG = {
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',inject); else inject();
 })();
 
-/* Raccourci explicite vers le nouveau centre de suivi investisseur. */
 (function addTrackingShortcut(){
     function add(){
         var nav=document.querySelector('.admin-nav');
