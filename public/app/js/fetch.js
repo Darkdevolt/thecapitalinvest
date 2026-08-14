@@ -17,19 +17,26 @@
     return localStorage.getItem('tc_token')||localStorage.getItem('token')||'';
   }
 
+  function withFreshQuery(url,method){
+    if(method!=='GET') return url;
+    const separator=url.includes('?')?'&':'?';
+    return url+separator+'_tc_ts='+Date.now();
+  }
+
   async function request(method,endpoint,body,options){
-    const url=normalizeEndpoint(endpoint);
+    const baseUrl=normalizeEndpoint(endpoint);
+    const url=withFreshQuery(baseUrl,method);
     const opts=options||{};
     const token=getToken();
     const headers=Object.assign(
-      {'Accept':'application/json'},
+      {'Accept':'application/json','Cache-Control':'no-cache'},
       body!==undefined?{'Content-Type':'application/json'}:{},
       token?{'Authorization':'Bearer '+token}:{},
       opts.headers||{}
     );
     const controller=new AbortController();
     const timeoutId=setTimeout(()=>controller.abort(),15000);
-    const fetchOpts=Object.assign({},opts,{method,headers,signal:controller.signal});
+    const fetchOpts=Object.assign({},opts,{method,headers,signal:controller.signal,cache:'no-store'});
     if(body!==undefined) fetchOpts.body=typeof body==='string'?body:JSON.stringify(body);
 
     const cacheKey=method==='GET'?endpoint:null;
@@ -66,6 +73,7 @@
   window.apiGetFinancials=()=>window.apiGet('/marche?type=financials');
   window.apiGetBOC=()=>window.apiGet('/boc');
   window.apiGetApercu=()=>window.apiGet('/marche?type=apercu');
+  window.apiGetDividendes=()=>window.apiGet('/marche?type=dividendes');
 
   window.api={
     get:window.apiGet,
@@ -75,5 +83,5 @@
     delete:window.apiDelete
   };
 
-  console.log('[FETCH] API client chargé, CRUD HTTP complet');
+  console.log('[FETCH] API client chargé, requêtes GET forcées fraîches');
 })();
