@@ -24,9 +24,6 @@ jobs:
           s=ns
           for tag in ('<script src="admin/js/historique.js"></script>','<script src="admin/js/cours-control.js"></script>','<script src="admin/js/cours-control-enhanced.js"></script>'):
               s=s.replace(tag+'\n','').replace(tag,'')
-          x='<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>'
-          first=s.find(x); second=s.find(x,first+len(x))
-          if second!=-1: s=s[:second]+s[second+len(x):]
           p.write_text(s,encoding='utf-8')
           PY
       - name: Remove legacy Cours files
