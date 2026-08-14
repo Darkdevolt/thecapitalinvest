@@ -1,42 +1,30 @@
 name: Purge hidden legacy Cours elements
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 permissions:
   contents: write
 jobs:
   purge:
+    if: ${{ !contains(github.event.head_commit.message, 'delete remaining hidden legacy Cours markup') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Remove hidden/legacy Cours markup and assets
+      - name: Remove hidden legacy Cours markup
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           p=Path('public/admin.html')
           s=p.read_text(encoding='utf-8')
-
-          # Remove the obsolete explanatory legacy/archive block from the new
-          # Cours workspace. This is deletion, not CSS hiding.
           s=re.sub(r'\n\s*<div class="card" style="margin-bottom:16px;border-left:3px solid var\(--gold\);">.*?</div>\s*\n\s*<div class="info-box" style="margin-bottom:16px;">', '\n\n        <div class="info-box" style="margin-bottom:16px;">', s, count=1, flags=re.S)
-
-          # Remove any remaining hidden legacy panel if present in the HTML.
           s=re.sub(r'\n\s*<div[^>]+id="panel-historique"[^>]*>.*?</div>\s*', '\n', s, flags=re.S)
-
-          # Remove duplicate base tag accidentally left by earlier integration.
           s=s.replace('<base target="_blank">\n<base target="_blank">','<base target="_blank">')
-
-          # Remove obsolete legacy loader references if still present.
-          for tag in (
-              '<script src="admin/js/cours-control.js"></script>',
-              '<script src="admin/js/cours-control-enhanced.js"></script>',
-              '<script src="admin/js/cours-finalizer.js"></script>'
-          ):
+          for tag in ('<script src="admin/js/cours-control.js"></script>','<script src="admin/js/cours-control-enhanced.js"></script>','<script src="admin/js/cours-finalizer.js"></script>'):
               s=s.replace(tag+'\n','').replace(tag,'')
-
           p.write_text(s,encoding='utf-8')
           PY
-      - name: Commit
+      - name: Commit purge
         run: |
           git config user.name "The Capital Bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
