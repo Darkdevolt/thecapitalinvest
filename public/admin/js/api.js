@@ -12,7 +12,7 @@ async function refreshSession() {
         if (!r.ok || !data.access_token) return false;
         if (sess.data && sess.data.session) { sess.data.session.access_token=data.access_token; sess.data.session.refresh_token=data.refresh_token; sess.data.session.expires_at=data.expires_at; if(data.user)sess.data.user=data.user; }
         else if (sess.session) { sess.session.access_token=data.access_token; sess.session.refresh_token=data.refresh_token; sess.session.expires_at=data.expires_at; if(data.user)sess.user=data.user; }
-        else { sess.access_token=data.access_token; sess.refresh_token=data.refresh_token; sess.expires_at=data.expires_at; }
+        else { sess.access_token=data.access_token; sess.refresh_token=data.refresh_token; sess.expires_at=data.expires_at; if(data.user)sess.user=data.user; }
         localStorage.setItem(SK, JSON.stringify(sess)); TK=data.access_token; return true;
     } catch(e) { return false; }
 }
@@ -21,29 +21,43 @@ function sbHeaders(extra) { var base={apikey:SB_ANON,Authorization:'Bearer '+TK,
 async function sbGet(table,params){try{const url=SB_REST+'/'+table+(params?'?'+params:'');const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),10000);const r=await fetch(url,{headers:sbHeaders(),signal:ctrl.signal});clearTimeout(t);if(!r.ok){const e=await r.json().catch(()=>({}));toast((e&&e.message||'Erreur lecture')+' ['+table+']','err');return null;}return r.json();}catch(e){if(e.name!=='AbortError')toast('Réseau: '+e.message,'err');return null;}}
 async function sbCount(table,params){try{const clean=params?String(params).replace(/select=[^&]*/g,'').replace(/^&|&$/g,''):'';const url=SB_REST+'/'+table+'?select=*&limit=0'+(clean?'&'+clean:'');const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),8000);const r=await fetch(url,{headers:Object.assign({},sbHeaders(),{Prefer:'count=exact',Range:'0-0'}),signal:ctrl.signal});clearTimeout(t);if(!r.ok)return 0;const range=r.headers.get('content-range');return parseInt(range?range.split('/')[1]:'0')||0;}catch(e){return 0;}}
 
-/* Normalisation stricte des données importées avant envoi à PostgREST. */
 function normalizeNumeric(v) {
     if(v===null||v===undefined||v==='') return null;
     if(typeof v==='number') return Number.isFinite(v)?v:null;
     var s=String(v).trim().replace(/\u00a0/g,' ').replace(/\s+/g,'');
     s=s.replace(/%$/,'');
-    /* Supporte 1 234,56 / 1.234,56 / 1,234.56 / 1234.56 et symboles monétaires. */
     s=s.replace(/(?:FCFA|XOF|F CFA|CFA|€|\$)/gi,'');
     if(s.indexOf(',')>=0&&s.indexOf('.')>=0){ if(s.lastIndexOf(',')>s.lastIndexOf('.')) s=s.replace(/\./g,'').replace(',','.'); else s=s.replace(/,/g,''); }
     else if(s.indexOf(',')>=0) s=s.replace(',','.');
     var n=Number(s); return Number.isFinite(n)?n:null;
 }
+
+/*
+ * divident_calendrier.annee/exercice sont des colonnes entières dans la base.
+ * Le fichier Excel peut toutefois contenir un exercice comptable sous forme
+ * "2024-2025". On conserve l'année de début (2024) pour l'import, sans
+ * modifier le schéma Supabase.
+ */
+function normalizeExerciseYear(v) {
+    if(v===null||v===undefined||v==='') return null;
+    if(typeof v==='number' && Number.isFinite(v)) return Math.trunc(v);
+    var s=String(v).trim();
+    var range=s.match(/(19|20)\d{2}\s*[-–]\s*(19|20)\d{2}/);
+    if(range) return parseInt(range[0].slice(0,4),10);
+    var year=s.match(/(?:19|20)\d{2}/);
+    if(year) return parseInt(year[0],10);
+    var n=normalizeNumeric(s);
+    return n!==null ? Math.trunc(n) : null;
+}
+
 function normalizeDividendPayload(body){
     var arr=Array.isArray(body)?body:[body];
     arr=arr.map(function(x){
         var o=Object.assign({},x);
-        ['annee','montant','taux_rendement'].forEach(function(k){ if(o[k]!==undefined) o[k]=normalizeNumeric(o[k]); });
-        if(o.annee!==null&&o.annee!==undefined) o.annee=Math.trunc(Number(o.annee));
-        if(o.exercice!==undefined&&o.exercice!==null&&o.exercice!=='') {
-            var ex=String(o.exercice).trim();
-            var exNum=normalizeNumeric(ex);
-            o.exercice=exNum!==null?String(Math.trunc(exNum)):ex;
-        } else if(o.annee!==null&&o.annee!==undefined) o.exercice=String(o.annee);
+        if(o.annee!==undefined) o.annee=normalizeExerciseYear(o.annee);
+        ['montant','taux_rendement'].forEach(function(k){ if(o[k]!==undefined) o[k]=normalizeNumeric(o[k]); });
+        if(o.exercice!==undefined) o.exercice=normalizeExerciseYear(o.exercice);
+        else if(o.annee!==null&&o.annee!==undefined) o.exercice=Math.trunc(Number(o.annee));
         ['date_detachement','date_paiement'].forEach(function(k){
             if(o[k]!==undefined&&o[k]!==null&&o[k]!==''){
                 var d=String(o[k]).trim();
