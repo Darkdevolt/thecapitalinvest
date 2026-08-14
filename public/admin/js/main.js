@@ -337,6 +337,10 @@ const tabLoaders = {
     },
 
     cours:function(){
+        if(window.CoursControl && typeof window.CoursControl.init==='function'){
+            window.CoursControl.init();
+            return;
+        }
         if(typeof loadCours==='function')
             loadCours();
     },
