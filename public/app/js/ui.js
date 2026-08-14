@@ -1,94 +1,144 @@
-// ═══════════════════════════════════════
-// UI, Table Sort + Shared
-// ═══════════════════════════════════════
+// THE CAPITAL — UI / application data bootstrap
+//
+// This file must not use the old direct `sb()` client. The application data
+// layer is exposed by fetch.js through /api/* and apiGet().
+(function () {
+  'use strict';
 
-// ═══════════════════════════════════════
-// TABLE SORT
-// ═══════════════════════════════════════
-function sortTable(tbodyId, colIndex) {
-  const tbody = document.getElementById(tbodyId);
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-  const key = tbodyId + '-' + colIndex;
-  const dir = _sortState[key] === 'asc' ? 'desc' : 'asc';
-  _sortState[key] = dir;
-  rows.sort((a, b) => {
-    let av = a.cells[colIndex]?.textContent.trim() || '';
-    let bv = b.cells[colIndex]?.textContent.trim() || '';
-    const an = parseFloat(av.replace(/[^\d\-,.]/g, '').replace(',', '.'));
-    const bn = parseFloat(bv.replace(/[^\d\-,.]/g, '').replace(',', '.'));
-    if (!isNaN(an) && !isNaN(bn)) return dir === 'asc' ? an - bn : bn - an;
-    return dir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
-  });
-  rows.forEach(r => tbody.appendChild(r));
-}
+  if (window.__TC_UI_LOADED__) return;
+  window.__TC_UI_LOADED__ = true;
 
-// ═══════════════════════════════════════
-// LOAD, 100% SUPABASE, PAS DE DEMO
-// ═══════════════════════════════════════
-async function loadAll() {
-  try {
-    const results = await Promise.allSettled([
-      sb('cours_latest', {}),
-      sb('boc', { order: 'date_seance.desc', limit: 200 }),
-      sb('analyses', { order: 'date_analyse.desc', limit: 100 }),
-      sb('financials', { order: 'annee.desc,periode.desc', limit: 500 }),
-      sb('entreprises', { limit: 500 }),
-      sb('indices', { order: 'date_seance.desc', limit: 90 }),
-    ]);
+  window.populateTickerSelects = function populateTickerSelects() {
+    const byTicker = {};
+    (window.allCours || []).forEach(function (c) {
+      if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c;
+    });
+    const tickers = Object.keys(byTicker).sort();
+    const opts = tickers.map(function (t) {
+      return '<option value="' + escapeHtml(t) + '">' + escapeHtml(t) + '</option>';
+    }).join('');
 
-    if (results[0].status === 'fulfilled') allCours = results[0].value || [];
-    else toast('Erreur chargement cours: ' + results[0].reason, 'error');
+    const pf = document.getElementById('pfTicker');
+    if (pf) pf.innerHTML = '<option value="">Ticker...</option>' + opts;
 
-    if (results[1].status === 'fulfilled') allBoc = results[1].value || [];
-    else toast('Erreur chargement BOC: ' + results[1].reason, 'error');
+    const al = document.getElementById('alertTicker');
+    if (al) al.innerHTML = '<option value="">Ticker...</option>' + opts;
 
-    if (results[2].status === 'fulfilled') allAnalyses = results[2].value || [];
-    else toast('Erreur chargement analyses: ' + results[2].reason, 'error');
+    const fu = document.getElementById('fundTickerSelect');
+    if (fu) fu.innerHTML = '<option value="">Choisir un ticker...</option>' + opts;
+  };
 
-    if (results[3].status === 'fulfilled') allFinancials = results[3].value || [];
-    else toast('Erreur chargement financiers: ' + results[3].reason, 'error');
+  function unwrap(payload) {
+    if (payload && typeof payload === 'object' && Object.prototype.hasOwnProperty.call(payload, 'data')) {
+      return payload.data;
+    }
+    return payload;
+  }
 
-    if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
-    else toast('Erreur chargement entreprises: ' + results[4].reason, 'error');
-
-    if (results[5].status === 'fulfilled') allIndices = results[5].value || [];
-    else { 
-      allIndices = [];
-      toast('Erreur chargement indices: ' + results[5].reason, 'warn');
+  async function loadAll() {
+    if (typeof window.apiGet !== 'function') {
+      throw new Error('Client API indisponible');
     }
 
-    entMap = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
+    const requests = await Promise.allSettled([
+      window.apiGet('/marche?type=cours'),
+      window.apiGet('/marche?type=indices'),
+      window.apiGet('/marche?type=entreprises'),
+      window.apiGet('/marche?type=analyses'),
+      window.apiGet('/marche?type=financials'),
+      window.apiGet('/boc')
+    ]);
 
-    renderOverview();
-    renderTitres();
-    renderBoc();
-    renderAnalyses();
-    renderFinancials();
-    renderPublications();
-    populateTickerSelects();
-    atInit();
-    initGlobalSearch();
-    runScreener();
-    renderPortfolio();
-    renderAlerts();
-    parseHash();
-  } catch(e) {
-    toast('Erreur globale de chargement: ' + e.message, 'error');
+    const read = function (index, fallback) {
+      return requests[index].status === 'fulfilled' ? (unwrap(requests[index].value) || fallback) : fallback;
+    };
+
+    window.allCours = Array.isArray(read(0, [])) ? read(0, []) : [];
+    window.allIndices = Array.isArray(read(1, [])) ? read(1, []) : [];
+    window.allEntreprises = Array.isArray(read(2, [])) ? read(2, []) : [];
+    window.allAnalyses = Array.isArray(read(3, [])) ? read(3, []) : [];
+    window.allFinancials = Array.isArray(read(4, [])) ? read(4, []) : [];
+    window.allBoc = Array.isArray(read(5, [])) ? read(5, []) : [];
+
+    window.entMap = {};
+    window.allEntreprises.forEach(function (e) {
+      if (e && e.ticker) window.entMap[e.ticker] = e;
+    });
+
+    window.populateTickerSelects();
+
+    const errors = requests.filter(function (r) { return r.status === 'rejected'; });
+    if (errors.length) {
+      console.warn('[UI] Certains jeux de données n’ont pas pu être chargés:', errors.length);
+    }
+
+    console.log('[UI] Données chargées:', {
+      cours: window.allCours.length,
+      indices: window.allIndices.length,
+      entreprises: window.allEntreprises.length,
+      analyses: window.allAnalyses.length,
+      financials: window.allFinancials.length,
+      boc: window.allBoc.length
+    });
+
+    window.dispatchEvent(new CustomEvent('tc:dataready', {
+      detail: {
+        cours: window.allCours.length,
+        indices: window.allIndices.length,
+        entreprises: window.allEntreprises.length
+      }
+    }));
+
+    if (typeof window.nav === 'function') {
+      const hash = window.location.hash || '';
+      const map = {
+        '#titres': 'titres',
+        '#boc': 'boc',
+        '#marche': 'marche',
+        '#analyses': 'analyses',
+        '#analyse-technique': 'analyse-technique',
+        '#analyse-fondamentale': 'analyse-fondamentale',
+        '#screener': 'screener',
+        '#dividend-screener': 'dividend-screener',
+        '#portefeuille': 'portefeuille',
+        '#alertes': 'alertes',
+        '#financials': 'financials',
+        '#publications': 'publications',
+        '#formation': 'formation'
+      };
+      window.nav(map[hash] || 'overview', true);
+    } else if (typeof window.renderOverview === 'function') {
+      window.renderOverview();
+    }
+
+    if (typeof window.initGlobalSearch === 'function') {
+      try { window.initGlobalSearch(); } catch (e) { console.warn('[UI] recherche:', e); }
+    }
+
+    return {
+      cours: window.allCours,
+      indices: window.allIndices,
+      entreprises: window.allEntreprises,
+      analyses: window.allAnalyses,
+      financials: window.allFinancials,
+      boc: window.allBoc
+    };
   }
-}
 
-function populateTickerSelects() {
-  const byTicker = {};
-  allCours.forEach(c => { if (!byTicker[c.ticker]) byTicker[c.ticker] = c; });
-  const tickers = Object.keys(byTicker).sort();
-  const opts = tickers.map(t => `<option value="${t}">${t}</option>`).join('');
+  window.loadAll = loadAll;
 
-  const pf = document.getElementById('pfTicker');
-  if (pf) pf.innerHTML = '<option value="">Ticker...</option>' + opts;
+  function bootData() {
+    if (window.__TC_DATA_BOOTED__) return;
+    window.__TC_DATA_BOOTED__ = true;
+    loadAll().catch(function (error) {
+      console.error('[UI] Erreur globale de chargement:', error);
+      if (typeof window.toast === 'function') window.toast('Impossible de charger les données du marché', 'error');
+    });
+  }
 
-  const al = document.getElementById('alertTicker');
-  if (al) al.innerHTML = '<option value="">Ticker...</option>' + opts;
-
-  const fu = document.getElementById('fundTickerSelect');
-  if (fu) fu.innerHTML = '<option value="">Choisir un ticker...</option>' + opts;
-}
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootData, { once: true });
+  } else {
+    setTimeout(bootData, 0);
+  }
+})();
