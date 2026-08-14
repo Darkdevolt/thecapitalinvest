@@ -74,50 +74,11 @@
         <div class="section-header">
             <div>
                 <div class="section-title">Cours &amp; Historique <em>BRVM</em></div>
-                <div style="margin-top:6px;color:var(--muted);font-size:12px;max-width:820px;line-height:1.6;">Centre de contrôle des données de marché. Ici, vous gérez les cours récents et vous accédez à l’archive des séances historiques. Les contrôles de cohérence sont appliqués avant l’enregistrement.</div>
             </div>
-        </div>
-
-        <div class="info-box" style="margin-bottom:16px;"><strong>Données gérées :</strong> ticker · date · clôture · ouverture · plus haut · plus bas · volume · variation · capitalisation · +haut 52S · +bas 52S. Les deux dernières valeurs sont calculées automatiquement.</div>
-        <div class="card" style="margin-bottom:16px;">
-            <div class="card-header"><span class="card-title">Ajouter un cours</span><span style="font-size:11px;color:var(--muted);margin-left:auto;">Pour modifier une ligne existante, utilisez l’action de modification dans le tableau ci-dessous.</span></div>
-            <div class="form-grid">
-                <div class="field"><label>Ticker *</label><input type="text" id="c-ticker" placeholder="SNTS" oninput="this.value=this.value.toUpperCase()"></div>
-                <div class="field"><label>Date séance *</label><input type="date" id="c-date"></div>
-                <div class="field"><label>Cours clôture * (FCFA)</label><input type="number" id="c-cours" placeholder="14500" step="any"></div>
-                <div class="field"><label>Ouverture</label><input type="number" id="c-ouv" placeholder="14400" step="any"></div>
-                <div class="field"><label>Plus haut</label><input type="number" id="c-haut" placeholder="14600" step="any"></div>
-                <div class="field"><label>Plus bas</label><input type="number" id="c-bas" placeholder="14350" step="any"></div>
-                <div class="field"><label>Volume (titres)</label><input type="number" id="c-vol" placeholder="1200" step="1"></div>
-                <div class="field"><label>Variation % <span style="color:var(--gold);font-size:9px;">→ "variation"</span></label><input type="number" id="c-var" placeholder="0.69" step="any"></div>
-                <div class="field"><label>Capitalisation</label><input type="number" id="c-capi" placeholder="0" step="any"></div>
-               
-            </div>
-            <div class="actions-row">
-                <button class="btn btn-primary" onclick="addCours()">✓ Enregistrer le cours</button>
-                <button class="btn btn-outline btn-sm" onclick="clearForm(['c-ticker','c-date','c-cours','c-ouv','c-haut','c-bas','c-vol','c-var','c-capi'])">Effacer</button>
-                <span id="c-msg" class="msg"></span>
-            </div>
-        </div>
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title">Cours enregistrés — consulter &amp; modifier</span>
-                <div style="display:flex;gap:8px;align-items:center;margin-left:auto;">
-                    <input type="text" id="cours-filter" placeholder="Filtrer ticker..." style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;width:120px;" oninput="filterCoursTable()">
-                    <input type="date" id="cours-date-filter" style="padding:4px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:3px;font-size:11px;" oninput="filterCoursTable()">
-                    <button class="btn btn-outline btn-sm" onclick="loadCours()">↺</button>
-                </div>
-            </div>
-            <div style="padding:12px 18px 0;color:var(--muted);font-size:11px;line-height:1.55;">Utilisez les filtres pour retrouver une séance. <strong style="color:var(--cream);">Modifier</strong> ouvre les données de la ligne pour correction ; <strong style="color:var(--cream);">Supprimer</strong> retire définitivement la ligne. Les suppressions multiples demandent une confirmation.</div>
-            <div class="tw">
-                <table>
-                    <thead><tr><th><input type="checkbox" class="row-check" onchange="toggleAll(coursData.map(function(r){return r.id}),this)"></th><th>Ticker</th><th>Date</th><th class="r">Cours</th><th class="r">Ouv.</th><th class="r">+Haut</th><th class="r">+Bas</th><th class="r">Volume</th><th class="r">Variation%</th><th class="r">Val. totale</th><th class="r">+Haut 52S</th><th class="r">+Bas 52S</th><th></th></tr></thead>
-                    <tbody id="cours-tbody"><tr><td colspan="13"><div class="loading"><div class="spinner"></div></div></td></tr></tbody>
-                </table>
-            </div>
-            <div class="actions-row"><span id="cours-count" style="font-size:11px;color:var(--muted);"></span></div>
         </div>
     </div>
+
+    
 
     <div class="tab-panel" id="panel-entreprises">
         <div class="section-header"><div class="section-title">Entreprises <em>BRVM</em></div></div>
@@ -721,14 +682,13 @@
 </div>
 
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+
 <script src="admin/js/config.js"></script>
 <script src="admin/js/utils.js"></script>
 <script src="admin/js/api.js"></script>
 <script src="admin/js/main.js"></script>
 <script src="admin/js/dashboard.js"></script>
 <script src="admin/js/cours.js"></script>
-<script src="admin/js/historique.js"></script>
 <script src="admin/js/entreprises.js"></script>
 <script src="admin/js/financials.js"></script>
 <script src="admin/js/dividendes.js"></script>
@@ -747,7 +707,5 @@ init().catch(function(err){
 </script>
 
     <script src="admin/js/cours-control-center.js"></script>
-            <script src="admin/js/cours-control.js"></script>
-    <script src="admin/js/cours-control-enhanced.js"></script>
-</body>
+                </body>
 </html>
