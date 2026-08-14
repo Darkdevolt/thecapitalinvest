@@ -66,6 +66,48 @@ async function ensureSeanceGenerator(){
     });
 }
 
+/* ── ARCHIVE ADMIN ───────────────────────────────────────────
+   L'ancien module Historique reste fonctionnel, mais il n'est
+   plus présenté comme un onglet concurrent de Cours.
+   Il est déplacé dans un onglet Archive réservé à l'Admin.
+   Aucun contrôle de plan utilisateur n'est appliqué ici.
+   ─────────────────────────────────────────────────────────── */
+
+function ensureAdminArchive(){
+    var nav=document.querySelector('.admin-nav');
+    var historiqueBtn=nav
+        ? Array.from(nav.querySelectorAll('.admin-tab')).find(function(btn){
+            return /switchTab\(['"]historique['"]/.test(btn.getAttribute('onclick') || '');
+        })
+        : null;
+    var historiquePanel=document.getElementById('panel-historique');
+
+    if(!nav || !historiquePanel) return;
+
+    /* Le bouton Historique est supprimé du menu, pas simplement masqué. */
+    if(historiqueBtn) historiqueBtn.remove();
+
+    historiquePanel.id='panel-archive';
+    historiquePanel.dataset.adminArchive='true';
+
+    var title=historiquePanel.querySelector('.section-title');
+    if(title) title.innerHTML='Archive <em>cours historiques</em>';
+
+    var archiveBtn=nav.querySelector('.admin-tab[data-admin-archive="true"]');
+
+    if(!archiveBtn){
+        archiveBtn=document.createElement('button');
+        archiveBtn.type='button';
+        archiveBtn.className='admin-tab';
+        archiveBtn.dataset.adminArchive='true';
+        archiveBtn.textContent='Archive';
+        archiveBtn.addEventListener('click',function(){
+            switchTab('archive',archiveBtn);
+        });
+        nav.appendChild(archiveBtn);
+    }
+}
+
 /* ── INIT ───────────────────────────────────────────────────── */
 
 async function init() {
@@ -230,6 +272,8 @@ async function init() {
 
         hideLoadingScreen();
 
+        ensureAdminArchive();
+
         /*
          * IMPORTANT :
          * On charge ici le générateur existant.
@@ -297,7 +341,7 @@ const tabLoaders = {
             loadCours();
     },
 
-    historique:function(){
+    archive:function(){
         if(typeof loadHistoriqueTicker==='function')
             loadHistoriqueTicker();
     },
