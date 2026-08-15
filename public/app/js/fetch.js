@@ -75,5 +75,21 @@
     delete:window.apiDelete
   };
 
+  // Patch chargé dynamiquement pour éviter de modifier l'ordre des modules
+  // historiques de l'application. Il se réessaie jusqu'à ce que les vues
+  // Titres/Fiche aient exposé leurs fonctions globales.
+  function loadTitleFixes(){
+    if(document.getElementById('tc-title-fixes-script')) return;
+    const s=document.createElement('script');
+    s.id='tc-title-fixes-script';
+    s.src='/app/js/titres-navigation-fixes.js?v=20260815';
+    s.async=false;
+    s.onload=()=>console.log('[FETCH] Patch Titres/Fiche chargé');
+    s.onerror=()=>console.warn('[FETCH] Patch Titres/Fiche indisponible');
+    (document.head||document.documentElement).appendChild(s);
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',loadTitleFixes,{once:true});
+  else loadTitleFixes();
+
   console.log('[FETCH] API client chargé, CRUD HTTP complet');
 })();
