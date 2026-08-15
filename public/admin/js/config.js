@@ -105,21 +105,6 @@ const TEMPLATE_CONFIG = {
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',inject); else inject();
 })();
 
-(function addTrackingShortcut(){
-    function add(){
-        var nav=document.querySelector('.admin-nav');
-        if(!nav||nav.querySelector('[data-tc-suivi]')) return;
-        var b=document.createElement('button');
-        b.className='admin-tab';
-        b.dataset.tcSuivi='1';
-        b.textContent='Suivi investisseur';
-        b.title='Ouvrir le suivi des titres sélectionnés';
-        b.onclick=function(){window.location.href='app/suivi.html'};
-        nav.appendChild(b);
-    }
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',add); else add();
-})();
-
 (function loadDashboardOverviewModule(){
     function load(){
         if(document.getElementById('tc-dashboard-overview-script')) return;
