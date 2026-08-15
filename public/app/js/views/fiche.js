@@ -1,4 +1,67 @@
-// FICHE TITRE, données via API unique
+// FICHE TITRE — historique complet et chronologiquement fiable
+function ficheDateValue(value) {
+  if (value == null || value === '') return NaN;
+  if (typeof value === 'number') return value;
+  const raw = String(value).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    const t = Date.parse(raw);
+    return Number.isNaN(t) ? NaN : t;
+  }
+  const m = raw.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{4})$/);
+  if (m) return new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1])).getTime();
+  const t = Date.parse(raw);
+  return Number.isNaN(t) ? NaN : t;
+}
+
+function ficheSortHistory(arr) {
+  return (Array.isArray(arr) ? arr.slice() : []).sort((a, b) => {
+    const da = ficheDateValue(a?.date_seance);
+    const db = ficheDateValue(b?.date_seance);
+    if (Number.isNaN(da) && Number.isNaN(db)) return 0;
+    if (Number.isNaN(da)) return 1;
+    if (Number.isNaN(db)) return -1;
+    return da - db;
+  });
+}
+
+async function loadCompleteFicheHistorique(ticker) {
+  const pageSize = 1000;
+  const maxPages = 50;
+  const all = [];
+
+  for (let page = 0; page < maxPages; page++) {
+    const offset = page * pageSize;
+    const response = await window.apiGet(
+      `/marche?type=historique&ticker=${encodeURIComponent(ticker)}&limit=${pageSize}&offset=${offset}&_=${Date.now()}`
+    );
+    const payload = response && typeof response === 'object' && 'data' in response ? response.data : response;
+    const batch = Array.isArray(payload) ? payload : [];
+    if (!batch.length) break;
+    all.push(...batch);
+    if (batch.length < pageSize) break;
+  }
+
+  // Déduplication défensive : certaines anciennes importations peuvent contenir
+  // deux lignes pour la même séance. On garde la ligne ayant le même ticker/date
+  // mais la plus complète, sans inventer ni modifier de cours.
+  const byKey = new Map();
+  all.forEach(row => {
+    if (!row) return;
+    const key = `${String(row.ticker || ticker).trim().toUpperCase()}|${String(row.date_seance || '')}`;
+    const previous = byKey.get(key);
+    if (!previous) {
+      byKey.set(key, row);
+      return;
+    }
+    const score = value => value == null || value === '' ? 0 : 1;
+    const currentScore = Object.values(row).reduce((s, v) => s + score(v), 0);
+    const previousScore = Object.values(previous).reduce((s, v) => s + score(v), 0);
+    if (currentScore > previousScore) byKey.set(key, row);
+  });
+
+  return ficheSortHistory(Array.from(byKey.values()));
+}
+
 async function openFiche(ticker, from, noHash) {
   const normalizedTicker = String(ticker || '').trim().toUpperCase();
   if (!normalizedTicker) {
@@ -9,8 +72,6 @@ async function openFiche(ticker, from, noHash) {
   const previousView = from || 'titres';
   prevView = previousView;
 
-  // Afficher immédiatement la vue cible, sans attendre l'historique.
-  // Le hash est ensuite écrit au format attendu par parseHash().
   nav('fiche', true);
   if (!noHash) history.replaceState(null, '', '#fiche=' + encodeURIComponent(normalizedTicker));
   if (typeof updateBreadcrumb === 'function') updateBreadcrumb('fiche');
@@ -41,11 +102,10 @@ async function openFiche(ticker, from, noHash) {
   let ficheHistoriqueLocal = [];
   let latestCours = null;
   try {
-    const response = await window.apiGet(`/marche?type=historique&ticker=${encodeURIComponent(normalizedTicker)}&limit=1000&_=${Date.now()}`);
-    const histData = response && typeof response === 'object' && 'data' in response ? response.data : response;
-    ficheHistoriqueLocal = Array.isArray(histData)
-      ? histData.slice().sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance))
-      : [];
+    // Même chemin canonique que le reste de l'application, mais paginé par titre.
+    // Ainsi ABJC, STDC, BICB et tous les autres titres utilisent exactement la
+    // même logique et récupèrent toute leur série disponible.
+    ficheHistoriqueLocal = await loadCompleteFicheHistorique(normalizedTicker);
     latestCours = ficheHistoriqueLocal[ficheHistoriqueLocal.length - 1] || null;
     if (!ficheHistoriqueLocal.length && typeof toast === 'function') toast('Aucun historique disponible pour ' + normalizedTicker, 'warn');
   } catch(e) {
@@ -59,8 +119,6 @@ async function openFiche(ticker, from, noHash) {
   }
   const cours = latestCours || {};
 
-  // Une autre navigation peut avoir eu lieu pendant le chargement réseau.
-  // Dans ce cas, ne pas repeindre une autre vue avec les données de la fiche.
   const activeView = document.querySelector('.view.active');
   if (!activeView || activeView.id !== 'view-fiche') return false;
 
@@ -129,6 +187,6 @@ function showFinYear(idx,btn){
   document.getElementById('ficheFinBody').innerHTML=sections.map(([title,rows])=>{const valid=rows.filter(([,v])=>v!==', ');return valid.length?`<div style="margin-bottom:16px"><div class="fin-section-title">${title}</div>${valid.map(([l,v])=>`<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</div>`:'';}).join('')||'<div style="color:var(--dim);font-size:13px">Données comptables non renseignées.</div>';
 }
 function renderFicheChart(){
-  const data=(window.ficheHistorique||[]).slice(-ficheChartPeriod);if(!data.length)return;const labels=data.map(d=>new Date(d.date_seance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}));const vals=data.map(d=>d.cours_cloture||d.cours_normal||d.cours||0);if(ficheChartInst)ficheChartInst.destroy();ficheChartInst=new Chart(document.getElementById('chartFiche'),{type:'line',data:{labels,datasets:[mkDataset(vals)]},options:chartOpts});
+  const data=(window.ficheHistorique||[]).slice(-ficheChartPeriod);if(!data.length)return;const labels=data.map(d=>{const t=ficheDateValue(d.date_seance);return Number.isNaN(t)?String(d.date_seance||''):new Date(t).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'});});const vals=data.map(d=>d.cours_cloture??d.cours_normal??d.cours??0);if(ficheChartInst)ficheChartInst.destroy();ficheChartInst=new Chart(document.getElementById('chartFiche'),{type:'line',data:{labels,datasets:[mkDataset(vals)]},options:chartOpts});
 }
 function setChartPeriod(n,btn){ficheChartPeriod=n;document.querySelectorAll('#view-fiche .year-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFicheChart();}
