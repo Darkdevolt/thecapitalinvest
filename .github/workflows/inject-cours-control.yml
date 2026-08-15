@@ -2,6 +2,9 @@ name: Load unified Courses Control Center
 on:
   push:
     branches: [main]
+concurrency:
+  group: admin-course-control-injection
+  cancel-in-progress: false
 jobs:
   inject:
     if: ${{ !contains(github.event.head_commit.message, 'ci(admin): load unified Courses control center') }}
@@ -10,6 +13,8 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Ensure unified data-control scripts are loaded
         run: |
           python - <<'PY'
@@ -18,7 +23,6 @@ jobs:
           s=p.read_text(encoding='utf-8')
           marker='<script src="admin/js/cours.js"></script>'
           tags='''<script src="admin/js/data-quality.js"></script>\n<script src="admin/js/cours-control-center.js"></script>'''
-          # Remove legacy/orphan references first.
           s=s.replace('<script src="admin/js/cours-control-center.js"></script>','')
           s=s.replace('<script src="admin/js/data-quality.js"></script>','')
           if marker in s:
@@ -27,10 +31,36 @@ jobs:
               s=s.replace('</body>', tags+'\n</body>', 1)
           p.write_text(s,encoding='utf-8')
           PY
-      - name: Commit injection
+      - name: Commit and push with race-safe retry
         run: |
           git config user.name 'The Capital Bot'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add public/admin.html
-          git diff --cached --quiet || git commit -m 'ci(admin): load unified Courses control center'
-          git push
+          for attempt in 1 2 3 4 5; do
+            git add public/admin.html
+            if git diff --cached --quiet; then
+              echo 'Admin scripts already injected.'
+              exit 0
+            fi
+            git commit -m 'ci(admin): load unified Courses control center' || true
+            git fetch origin main
+            git rebase origin/main || { git rebase --abort; git reset --hard origin/main; git pull --rebase origin main; python - <<'PY'
+          from pathlib import Path
+          p=Path('public/admin.html')
+          s=p.read_text(encoding='utf-8')
+          marker='<script src="admin/js/cours.js"></script>'
+          tags='''<script src="admin/js/data-quality.js"></script>\n<script src="admin/js/cours-control-center.js"></script>'''
+          s=s.replace('<script src="admin/js/cours-control-center.js"></script>','').replace('<script src="admin/js/data-quality.js"></script>','')
+          if marker in s: s=s.replace(marker,marker+'\n'+tags,1)
+          p.write_text(s,encoding='utf-8')
+          PY
+          git add public/admin.html && git commit -m 'ci(admin): load unified Courses control center' || true; }
+            if git push origin HEAD:main; then exit 0; fi
+            echo "Push race on attempt $attempt; retrying..."
+            git reset --hard origin/main
+            python - <<'PY'
+          from pathlib import Path
+          p=Path('public/admin.html'); s=p.read_text(encoding='utf-8'); marker='<script src="admin/js/cours.js"></script>'; tags='''<script src="admin/js/data-quality.js"></script>\n<script src="admin/js/cours-control-center.js"></script>'''; s=s.replace('<script src="admin/js/cours-control-center.js"></script>','').replace('<script src="admin/js/data-quality.js"></script>',''); s=s.replace(marker,marker+'\n'+tags,1) if marker in s else s; p.write_text(s,encoding='utf-8')
+          PY
+            git add public/admin.html && git commit -m 'ci(admin): load unified Courses control center' || true
+          done
+          exit 1
