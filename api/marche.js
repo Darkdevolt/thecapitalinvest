@@ -76,9 +76,11 @@ async function latestIndices(){
   return q.data||[];
 }
 
-async function historique(ticker,limit,dateFrom,dateTo){
+async function historique(ticker,limit,dateFrom,dateTo,offset){
+  const safeLimit=Math.min(Math.max(Number(limit)||1000,1),1000);
+  const safeOffset=Math.max(Number(offset)||0,0);
   return query('historique',q=>{
-    q=q.order('date_seance',{ascending:false}).limit(limit);
+    q=q.order('date_seance',{ascending:false}).range(safeOffset,safeOffset+safeLimit-1);
     if(ticker)q=q.eq('ticker',ticker);
     if(dateFrom)q=q.gte('date_seance',dateFrom);
     if(dateTo)q=q.lte('date_seance',dateTo);
@@ -93,11 +95,12 @@ export default async function handler(req,res){
     const type=url.searchParams.get('type')||'cours';
     const ticker=(url.searchParams.get('ticker')||'').trim().toUpperCase();
     const limit=Math.min(Math.max(Number(url.searchParams.get('limit'))||30,1),1000);
+    const offset=Math.max(Number(url.searchParams.get('offset'))||0,0);
     let result;
     switch(type){
       case'cours':result=await latestCours();break;
       case'indices':result=await latestIndices();break;
-      case'historique':result=await historique(ticker,limit,url.searchParams.get('date_from'),url.searchParams.get('date_to'));break;
+      case'historique':result=await historique(ticker,limit,url.searchParams.get('date_from'),url.searchParams.get('date_to'),offset);break;
       case'entreprises':result=await query('entreprises',q=>q.eq('actif',true).order('ticker',{ascending:true}));break;
       case'financials':result=await query('financials',q=>q.order('validation_status',{ascending:true}).order('annee',{ascending:false}).limit(2000));break;
       case'analyses':result=await query('analyses',q=>q.order('date_analyse',{ascending:false}).limit(500));break;
