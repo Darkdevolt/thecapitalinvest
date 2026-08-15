@@ -5,9 +5,7 @@ const MIN_COMPLETE_QUOTES = 40;
 function json(res,status,payload){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');res.end(JSON.stringify(payload));}
 async function query(table,build){if(!db)throw new Error('Supabase non configuré');let q=db.from(table).select('*');if(typeof build==='function')q=build(q);return q;}
 
-// A historical session is only exposed as the live market snapshot when it is
-// sufficiently complete. This prevents a partial scraper/import (e.g. 16
-// tickers) from making most securities disappear or revert to stale values.
+// Canonical market source for current and historical courses.
 async function latestCours(){
   const latestDateQ=await query('historique',q=>q.select('date_seance').order('date_seance',{ascending:false}).limit(1));
   if(latestDateQ.error)throw latestDateQ.error;
@@ -25,13 +23,14 @@ async function latestCours(){
   const rows=(histQ.data||[]).map(r=>({
     id:r.id,ticker:r.ticker,date_seance:r.date_seance,
     cours:r.cours_cloture ?? r.cloture ?? r.cours_normal,
-    ouverture:r.cours_ouverture,plus_haut:r.plus_haut,plus_bas:r.plus_bas,
-    variation:r.variation,volume:r.volume,valeur_transigee:r.valeur_totale,
+    cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
+    ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
+    plus_haut:r.plus_haut,plus_bas:r.plus_bas,
+    variation:r.variation,volume:r.volume,
+    valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
     transactions:null,capitalisation:null,variation_pct:r.variation_pct ?? r.variation
   })).filter(r=>r.ticker&&r.cours!=null);
 
-  // If the newest historical session is partial, keep the last complete
-  // current snapshot instead of exposing an incomplete market to the app.
   if(rows.length < MIN_COMPLETE_QUOTES){
     return {data:fallbackRows,error:null,latestDate:fallbackDate,source:'cours_latest',ignoredHistoricalDate:latestDate,ignoredHistoricalCount:rows.length};
   }
@@ -41,8 +40,17 @@ async function latestCours(){
 async function latestIndices(){
   const q=await query('indices',q=>q.order('date_seance',{ascending:false}).limit(1000));
   if(q.error)throw q.error;
-  const rows=q.data||[];
-  return rows;
+  return q.data||[];
+}
+
+async function historique(ticker,limit,dateFrom,dateTo){
+  return query('historique',q=>{
+    q=q.order('date_seance',{ascending:false}).limit(limit);
+    if(ticker)q=q.eq('ticker',ticker);
+    if(dateFrom)q=q.gte('date_seance',dateFrom);
+    if(dateTo)q=q.lte('date_seance',dateTo);
+    return q;
+  });
 }
 
 export default async function handler(req,res){
@@ -56,11 +64,7 @@ export default async function handler(req,res){
     switch(type){
       case'cours':result=await latestCours();break;
       case'indices':result=await latestIndices();break;
-      case'historique':
-        if(!ticker)return json(res,400,{error:'ticker requis'});
-        result=await query('historique',q=>q.eq('ticker',ticker).order('date_seance',{ascending:false}).limit(limit));
-        if(!result.error&&Array.isArray(result.data))result.data.reverse();
-        break;
+      case'historique':result=await historique(ticker,limit,url.searchParams.get('date_from'),url.searchParams.get('date_to'));break;
       case'entreprises':result=await query('entreprises',q=>q.eq('actif',true).order('ticker',{ascending:true}));break;
       case'financials':result=await query('financials',q=>q.order('validation_status',{ascending:true}).order('annee',{ascending:false}).limit(2000));break;
       case'analyses':result=await query('analyses',q=>q.order('date_analyse',{ascending:false}).limit(500));break;
@@ -73,6 +77,8 @@ export default async function handler(req,res){
       default:return json(res,400,{error:`Type de données inconnu: ${type}`});
     }
     if(result?.error)throw result.error;
-    return json(res,200,result?.data||result||[]);
+    const data=result?.data||result||[];
+    if(type==='historique'&&Array.isArray(data))data.reverse();
+    return json(res,200,data);
   }catch(error){console.error('[API/MARCHE]',error);return json(res,500,{error:error.message||'Erreur serveur'});}
 }
