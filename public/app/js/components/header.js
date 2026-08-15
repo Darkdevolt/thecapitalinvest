@@ -33,4 +33,14 @@ function initHeader() {
     link.dataset.tcHeaderResponsive = cssHref;
     document.head.appendChild(link);
   }
+
+  // Load the compact 100% zoom layout after all existing application CSS.
+  const scaleHref = 'app/css/scale-100.css';
+  if (!document.querySelector(`link[data-tc-scale-100="${scaleHref}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = scaleHref;
+    link.dataset.tcScale100 = scaleHref;
+    document.head.appendChild(link);
+  }
 })();
