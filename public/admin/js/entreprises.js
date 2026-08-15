@@ -94,3 +94,37 @@ async function deleteEntreprise(ticker) {
     const ok = await sbDel('entreprises', 'ticker=eq.' + encodeURIComponent(ticker));
     if (ok) { toast('Entreprise supprimée'); loadEntreprises(); }
 }
+
+/* Référentiel des actions — utilisé par le contrôle Cours / Historique.
+   Affiche toujours le code central et le nom de l'entreprise, sans modifier les données de marché. */
+(function installMarketActionReference(){
+    'use strict';
+    var ID='tc-market-action-reference';
+    var loaded=false;
+    function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]})}
+    async function load(){
+        try{
+            var rows=await sbGet('entreprises','select=ticker,nom,secteur,compartiment&order=ticker.asc');
+            rows=(rows||[]).filter(function(r){return r&&r.ticker&&!isIndice(r.ticker);});
+            render(rows);
+        }catch(e){console.warn('[The Capital] Référentiel actions:',e);}
+    }
+    function render(rows){
+        var panels=[document.getElementById('panel-historique'),document.getElementById('panel-cours')];
+        panels.forEach(function(panel){
+            if(!panel)return;
+            var old=panel.querySelector('#'+ID); if(old)old.remove();
+            var card=document.createElement('div');card.id=ID;card.className='card';card.style.marginBottom='16px';
+            var options=rows.map(function(r){return '<option value="'+esc(r.ticker)+'">'+esc(r.ticker)+' — '+esc(r.nom||'')+'</option>';}).join('');
+            card.innerHTML='<div class="card-header"><span class="card-title">Référentiel des actions</span><span style="font-size:11px;color:var(--muted);margin-left:auto">'+rows.length+' sociétés · Code central + dénomination</span></div>'+
+              '<div style="padding:12px 18px 4px"><input id="tc-action-filter" type="search" placeholder="Rechercher une société ou un code…" list="tc-action-list" autocomplete="off" style="width:100%;padding:9px 10px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:4px;font-size:11px"><datalist id="tc-action-list">'+options+'</datalist></div>'+
+              '<div class="tw" style="max-height:280px;overflow:auto"><table><thead><tr><th>Code central</th><th>Entreprise</th><th>Secteur</th><th>Compartiment</th></tr></thead><tbody>'+rows.map(function(r){return '<tr data-search="'+esc((r.ticker+' '+(r.nom||'')+' '+(r.secteur||'')).toLowerCase())+'"><td class="td-gold">'+esc(r.ticker)+'</td><td>'+esc(r.nom||'—')+'</td><td class="td-muted">'+esc(r.secteur||'—')+'</td><td class="td-muted">'+esc(r.compartiment||'—')+'</td></tr>';}).join('')+'</tbody></table></div>';
+            panel.insertBefore(card,panel.firstElementChild&&panel.firstElementChild.classList.contains('section-header')?panel.children[1]:panel.firstChild);
+            var input=card.querySelector('#tc-action-filter');input.addEventListener('input',function(){var q=(this.value||'').toLowerCase().trim();card.querySelectorAll('tbody tr').forEach(function(tr){tr.style.display=!q||tr.dataset.search.indexOf(q)!==-1?'':'none';});});
+        });
+        loaded=true;
+    }
+    function ensure(){if(!loaded)load();}
+    document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('.admin-tab');if(b)setTimeout(ensure,80);});
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensure);else setTimeout(ensure,200);
+})();
