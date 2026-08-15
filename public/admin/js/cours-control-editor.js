@@ -1,5 +1,5 @@
 /* THE CAPITAL — Contrôle opérationnel Cours / Historique
-   Édition directe + contrôles de cohérence.
+   Édition directe + contrôles de cohérence + suppression ciblée.
    Portée STRICTE : cours et historique Admin uniquement.
 */
 (function(){
@@ -23,7 +23,7 @@
   }
 
   function esc(v){
-    return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#039;');
   }
 
   async function request(path,opt){
@@ -42,13 +42,13 @@
     if(document.getElementById(STYLE)) return;
     var s=document.createElement('style'); s.id=STYLE;
     s.textContent=''+
-      '.tc-control-edit{border:1px solid rgba(184,150,78,.48);background:rgba(184,150,78,.08);color:#d8bd78;border-radius:5px;padding:5px 9px;font:500 10px var(--mono,monospace);cursor:pointer;white-space:nowrap}.tc-control-edit:hover{background:rgba(184,150,78,.18);border-color:#b8964e}'+
+      '.tc-control-edit,.tc-control-delete{border:1px solid rgba(184,150,78,.48);background:rgba(184,150,78,.08);color:#d8bd78;border-radius:5px;padding:5px 9px;font:500 10px var(--mono,monospace);cursor:pointer;white-space:nowrap;margin-left:5px}.tc-control-edit:hover{background:rgba(184,150,78,.18);border-color:#b8964e}.tc-control-delete{border-color:rgba(210,100,90,.48);background:rgba(210,100,90,.07);color:#e58d84}.tc-control-delete:hover{background:rgba(210,100,90,.16);border-color:#e58d84}'+
       '.tc-control-modal{position:fixed;inset:0;z-index:11000;display:grid;place-items:center;padding:18px}.tc-control-modal-back{position:absolute;inset:0;background:rgba(5,4,3,.78);backdrop-filter:blur(4px)}'+
       '.tc-control-dialog{position:relative;width:min(780px,96vw);max-height:92vh;overflow:auto;background:#15110d;color:#f5f0e8;border:1px solid rgba(184,150,78,.45);border-radius:10px;box-shadow:0 28px 90px rgba(0,0,0,.62)}'+
       '.tc-control-head{display:flex;align-items:center;justify-content:space-between;padding:17px 20px;border-bottom:1px solid rgba(184,150,78,.18)}.tc-control-eyebrow{font:500 10px var(--mono,monospace);letter-spacing:.12em;color:#b8964e}.tc-control-title{font-size:17px;font-weight:600;margin-top:4px}.tc-control-meta{font:10px var(--mono,monospace);color:#8f8a82;margin-top:5px}.tc-control-close{border:0;background:none;color:#aaa;font-size:24px;cursor:pointer}'+
       '.tc-control-form{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;padding:20px}.tc-control-field{display:grid;gap:6px;font:500 10px var(--mono,monospace);color:#aaa}.tc-control-field input{width:100%;box-sizing:border-box;padding:9px 10px;border-radius:6px;border:1px solid rgba(184,150,78,.2);background:#0d0b09;color:#f5f0e8}.tc-control-field input:focus{outline:none;border-color:#b8964e;box-shadow:0 0 0 2px rgba(184,150,78,.1)}'+
       '.tc-control-checks{grid-column:1/-1;border:1px solid rgba(184,150,78,.16);border-radius:7px;padding:10px 12px;font-size:11px;line-height:1.55}.tc-control-check{display:flex;gap:8px;align-items:flex-start;margin:4px 0}.tc-control-check.ok{color:#9bc7a0}.tc-control-check.warn{color:#d8bd78}.tc-control-check.err{color:#e58d84}'+
-      '.tc-control-actions{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid rgba(184,150,78,.15)}.tc-control-msg{flex:1;color:#b8964e;font-size:11px;line-height:1.45}.tc-control-save{border:1px solid #b8964e;background:#b8964e;color:#17110d;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer}.tc-control-save:disabled{opacity:.55;cursor:not-allowed}.tc-control-cancel{border:1px solid rgba(184,150,78,.3);background:transparent;color:#ddd;border-radius:6px;padding:9px 14px;cursor:pointer}'+
+      '.tc-control-actions{grid-column:1/-1;display:flex;align-items:center;gap:8px;padding-top:10px;border-top:1px solid rgba(184,150,78,.15)}.tc-control-msg{flex:1;color:#b8964e;font-size:11px;line-height:1.45}.tc-control-save{border:1px solid #b8964e;background:#b8964e;color:#17110d;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer}.tc-control-save:disabled{opacity:.55;cursor:not-allowed}.tc-control-cancel{border:1px solid rgba(184,150,78,.3);background:transparent;color:#ddd;border-radius:6px;padding:9px 14px;cursor:pointer}.tc-control-delete-modal{border:1px solid rgba(210,100,90,.55);background:rgba(210,100,90,.10);color:#ef9a91;border-radius:6px;padding:9px 14px;font-weight:700;cursor:pointer}.tc-control-delete-modal:disabled{opacity:.55;cursor:not-allowed}'+
       '@media(max-width:700px){.tc-control-form{grid-template-columns:1fr 1fr}}@media(max-width:460px){.tc-control-form{grid-template-columns:1fr}.tc-control-dialog{width:98vw}.tc-control-actions{flex-wrap:wrap}}';
     document.head.appendChild(s);
   }
@@ -67,6 +67,23 @@
     return {ticker:ticker,date:date};
   }
 
+  function refreshAfterMutation(type){
+    if(typeof loadCours==='function'&&type==='cours') loadCours();
+    if(typeof loadHistoriqueTicker==='function'&&type==='historique') loadHistoriqueTicker();
+    if(window.CoursControl&&typeof CoursControl.refresh==='function') CoursControl.refresh();
+    setTimeout(function(){bind()},450);
+  }
+
+  async function deleteEntry(ticker,date,type,id){
+    var rows=await findRows(ticker,date);
+    var target=id?rows.find(function(x){return String(x.id)===String(id)}):rows[0];
+    if(!target) throw Error('Entrée introuvable. Rechargez le tableau puis réessayez.');
+    if(!window.confirm('SUPPRIMER CETTE ENTRÉE ?\n\n'+target.ticker+' · '+String(target.date_seance).slice(0,10)+'\nClôture : '+(target.cours_cloture==null?'—':target.cours_cloture)+'\n\nCette suppression est définitive pour cette ligne uniquement.')) return false;
+    await request('/historique?id=eq.'+encodeURIComponent(target.id),{method:'DELETE',headers:headers({Prefer:'return=minimal'})});
+    refreshAfterMutation(type);
+    return true;
+  }
+
   function addButton(tr,type){
     if(tr.querySelector('.tc-control-edit')) return;
     var id=rowIdentity(tr,type);
@@ -77,7 +94,12 @@
     b.type='button'; b.className='tc-control-edit'; b.textContent='Modifier'; b.title='Modifier et contrôler cette donnée';
     b.dataset.ticker=id.ticker; b.dataset.date=id.date;
     b.onclick=function(){openEditor(id.ticker,id.date,type)};
-    if(action && (action.querySelector('button') || cells.length>=10)) action.appendChild(b); else {var td=document.createElement('td');td.appendChild(b);tr.appendChild(td)}
+    if(action && (action.querySelector('button') || cells.length>=10)) action.appendChild(b); else {var td=document.createElement('td');td.appendChild(b);tr.appendChild(td);action=td}
+    var d=document.createElement('button');
+    d.type='button'; d.className='tc-control-delete'; d.textContent='Supprimer'; d.title='Supprimer uniquement cette cotation';
+    d.dataset.ticker=id.ticker; d.dataset.date=id.date;
+    d.onclick=async function(){d.disabled=true;try{await deleteEntry(id.ticker,id.date,type,null)}catch(e){alert('Suppression impossible : '+e.message);d.disabled=false}};
+    if(action) action.appendChild(d);
   }
 
   function bindTable(tbody,type){
@@ -127,9 +149,9 @@
     var m=document.createElement('div'); m.id=MODAL; m.className='tc-control-modal';
     m.innerHTML='<div class="tc-control-modal-back"></div><div class="tc-control-dialog"><div class="tc-control-head"><div><div class="tc-control-eyebrow">THE CAPITAL · '+(type==='cours'?'COURS PAV':'ARCHIVE HISTORIQUE')+'</div><div class="tc-control-title">Contrôle et modification</div><div class="tc-control-meta">'+esc(ticker)+' · '+esc(date)+'</div></div><button class="tc-control-close" type="button">×</button></div><form class="tc-control-form">'+
       makeField('Ticker','ticker','text',ticker,true)+makeField('Date séance','date_seance','date',date,true)+makeField('Clôture','cours_cloture','number','',true)+makeField('Ouverture','cours_ouverture','number','',false)+makeField('Plus haut','plus_haut','number','',false)+makeField('Plus bas','plus_bas','number','',false)+makeField('Volume','volume','number','',false)+makeField('Variation %','variation','number','',false)+makeField('Valeur totale','valeur_totale','number','',false)+
-      '<div class="tc-control-checks"><strong>Contrôle opérationnel</strong><div class="tc-control-check">Chargement des contrôles…</div></div><div class="tc-control-actions"><span class="tc-control-msg"></span><button type="button" class="tc-control-cancel">Annuler</button><button type="submit" class="tc-control-save">Enregistrer</button></div></form></div>';
+      '<div class="tc-control-checks"><strong>Contrôle opérationnel</strong><div class="tc-control-check">Chargement des contrôles…</div></div><div class="tc-control-actions"><span class="tc-control-msg"></span><button type="button" class="tc-control-cancel">Annuler</button><button type="button" class="tc-control-delete-modal">Supprimer cette entrée</button><button type="submit" class="tc-control-save">Enregistrer</button></div></form></div>';
     document.body.appendChild(m);
-    var form=m.querySelector('form'), checksBox=m.querySelector('.tc-control-checks'), msg=m.querySelector('.tc-control-msg'), save=m.querySelector('.tc-control-save');
+    var form=m.querySelector('form'), checksBox=m.querySelector('.tc-control-checks'), msg=m.querySelector('.tc-control-msg'), save=m.querySelector('.tc-control-save'), del=m.querySelector('.tc-control-delete-modal');
     m.querySelector('.tc-control-close').onclick=close; m.querySelector('.tc-control-cancel').onclick=close; m.querySelector('.tc-control-modal-back').onclick=close;
     try{
       var rows=await findRows(ticker,date);
@@ -141,8 +163,9 @@
       var checks=validation(readForm(form),previous,rows.length);
       checksBox.innerHTML='<strong>Contrôle opérationnel</strong>'+checks.map(function(x){return '<div class="tc-control-check '+x.c+'">'+(x.c==='ok'?'✓':x.c==='warn'?'⚠':'✕')+' '+esc(x.t)+'</div>'}).join('');
       form.oninput=function(){var c=validation(readForm(form),previous,rows.length);checksBox.innerHTML='<strong>Contrôle opérationnel</strong>'+c.map(function(x){return '<div class="tc-control-check '+x.c+'">'+(x.c==='ok'?'✓':x.c==='warn'?'⚠':'✕')+' '+esc(x.t)+'</div>'}).join('')};
-      form.onsubmit=async function(e){e.preventDefault();var d=readForm(form),c=validation(d,previous,rows.length),blocking=c.some(function(x){return x.c==='err'});if(blocking){msg.textContent='Correction requise avant enregistrement.';return}save.disabled=true;msg.textContent='Enregistrement…';try{var body={ticker:d.ticker,date_seance:d.date_seance,cours_cloture:d.cours_cloture,cours_ouverture:d.cours_ouverture,plus_haut:d.plus_haut,plus_bas:d.plus_bas,volume:d.volume,variation:d.variation,valeur_totale:d.valeur_totale};await request('/historique?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:headers({Prefer:'return=representation'}),body:JSON.stringify(body)});msg.textContent='✓ Modification enregistrée';setTimeout(function(){close();if(typeof loadCours==='function'&&type==='cours')loadCours();if(typeof loadHistoriqueTicker==='function'&&type==='historique')loadHistoriqueTicker();if(window.CoursControl&&typeof CoursControl.refresh==='function')CoursControl.refresh()},350)}catch(e){save.disabled=false;msg.textContent='Erreur : '+e.message}};
-    }catch(e){checksBox.innerHTML='<strong>Contrôle opérationnel</strong><div class="tc-control-check err">✕ '+esc(e.message)+'</div>';save.disabled=true;msg.textContent='Impossible de charger la donnée.'}
+      del.onclick=async function(){del.disabled=true;save.disabled=true;msg.textContent='Suppression…';try{var done=await deleteEntry(r.ticker,String(r.date_seance).slice(0,10),type,r.id);if(done){close();}}catch(e){del.disabled=false;save.disabled=false;msg.textContent='Erreur : '+e.message}};
+      form.onsubmit=async function(e){e.preventDefault();var d=readForm(form),c=validation(d,previous,rows.length),blocking=c.some(function(x){return x.c==='err'});if(blocking){msg.textContent='Correction requise avant enregistrement.';return}save.disabled=true;del.disabled=true;msg.textContent='Enregistrement…';try{var body={ticker:d.ticker,date_seance:d.date_seance,cours_cloture:d.cours_cloture,cours_ouverture:d.cours_ouverture,plus_haut:d.plus_haut,plus_bas:d.plus_bas,volume:d.volume,variation:d.variation,valeur_totale:d.valeur_totale};await request('/historique?id=eq.'+encodeURIComponent(r.id),{method:'PATCH',headers:headers({Prefer:'return=representation'}),body:JSON.stringify(body)});msg.textContent='✓ Modification enregistrée';setTimeout(function(){close();refreshAfterMutation(type)},350)}catch(e){save.disabled=false;del.disabled=false;msg.textContent='Erreur : '+e.message}};
+    }catch(e){checksBox.innerHTML='<strong>Contrôle opérationnel</strong><div class="tc-control-check err">✕ '+esc(e.message)+'</div>';save.disabled=true;del.disabled=true;msg.textContent='Impossible de charger la donnée.'}
   }
 
   function readForm(form){
