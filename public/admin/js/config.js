@@ -86,7 +86,7 @@ const TEMPLATE_CONFIG = {
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0);}); else setTimeout(load,0);
 })();
 
-(function loadCourseEditorModule(){
-    function load(){if(document.getElementById('tc-course-editor-script'))return;var s=document.createElement('script');s.id='tc-course-editor-script';s.src='js/cours-editor.js';s.defer=true;s.onerror=function(){console.warn('[cours] éditeur indisponible');};document.head.appendChild(s)}
+(function loadCourseControlEditorModule(){
+    function load(){if(document.getElementById('tc-course-control-editor-script'))return;var s=document.createElement('script');s.id='tc-course-control-editor-script';s.src='js/cours-control-editor.js?v=20260815';s.defer=true;s.onerror=function(){console.warn('[cours-control] éditeur indisponible');};document.head.appendChild(s)}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0)});else setTimeout(load,0)
 })();
