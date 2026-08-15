@@ -23,4 +23,14 @@ function initHeader() {
     script.dataset.tcModule = src;
     document.body.appendChild(script);
   });
+
+  // Load responsive header rules without modifying the existing HTML structure.
+  const cssHref = 'app/css/header-responsive.css';
+  if (!document.querySelector(`link[data-tc-header-responsive="${cssHref}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = cssHref;
+    link.dataset.tcHeaderResponsive = cssHref;
+    document.head.appendChild(link);
+  }
 })();
