@@ -1,22 +1,51 @@
-// THE CAPITAL, Analyse technique : pont de données historique
+// THE CAPITAL — Analyse technique : pont de données historique
 // UI/front-end uniquement. Utilise l'endpoint existant sans le modifier.
 (function(){
   'use strict';
   if(window.__atHistoryBridgeLoaded)return;
   window.__atHistoryBridgeLoaded=true;
 
+  const PAGE_SIZE=1000;
+  const MAX_PAGES=50;
   const norm=v=>String(v==null?'':v).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');
   const tickerOf=r=>String(r?.ticker||r?.symbol||r?.symbole||r?.code||r?.code_titre||r?.valeur||'').trim().toUpperCase();
   const priceOf=r=>{for(const k of ['cours','cours_cloture','cloture','close','prix','last','last_price','price']){const n=Number(String(r?.[k]??'').replace(/\s/g,'').replace(/,/g,'.'));if(Number.isFinite(n)&&n>0)return n}return 0};
 
   async function fetchHistory(ticker){
-    const q=encodeURIComponent(String(ticker||'').trim().toUpperCase());
-    const res=await fetch(`/api/marche?type=historique&ticker=${q}&limit=1000`,{method:'GET',credentials:'same-origin',cache:'no-store'});
-    if(!res.ok)throw new Error(`Historique HTTP ${res.status}`);
-    const data=await res.json();
-    if(!Array.isArray(data))throw new Error('Réponse historique invalide');
-    return data;
+    const canonical=String(ticker||'').trim().toUpperCase();
+    if(!canonical)return [];
+
+    const all=[];
+    for(let page=0;page<MAX_PAGES;page++){
+      const offset=page*PAGE_SIZE;
+      const q=encodeURIComponent(canonical);
+      const url=`/api/marche?type=historique&ticker=${q}&limit=${PAGE_SIZE}&offset=${offset}&_=${Date.now()}`;
+      const res=await fetch(url,{method:'GET',credentials:'same-origin',cache:'no-store'});
+      if(!res.ok)throw new Error(`Historique HTTP ${res.status}`);
+      const data=await res.json();
+      if(!Array.isArray(data))throw new Error('Réponse historique invalide');
+      if(!data.length)break;
+      all.push(...data);
+      if(data.length<PAGE_SIZE)break;
+    }
+
+    // Une même séance peut exister plusieurs fois dans d'anciens imports.
+    // On déduplique uniquement à clé ticker/date, sans altérer les valeurs.
+    const byKey=new Map();
+    all.forEach(row=>{
+      if(!row)return;
+      const key=`${tickerOf(row)||canonical}|${String(row.date_seance||row.date||'')}`;
+      if(!byKey.has(key))byKey.set(key,row);
+    });
+
+    const rows=Array.from(byKey.values());
+    rows.sort((a,b)=>String(a.date_seance||a.date||'').localeCompare(String(b.date_seance||b.date||'')));
+    return rows;
   }
+
+  // Exposé pour les autres modules (comparaison, indicateurs, etc.) afin que
+  // toute l'analyse technique utilise la même pagination complète.
+  window.tcLoadHistoryComplete=fetchHistory;
 
   async function resolveTickerHistory(requested){
     const current=(window.allCours||[]).find(r=>norm(tickerOf(r))===norm(requested)) ||
@@ -31,7 +60,7 @@
     return {ticker:candidates[0]||requested,rows:[]};
   }
 
-  function install(){
+  async function install(){
     if(typeof window.atLoadTicker!=='function')return false;
     if(window.atLoadTicker.__historyBridge)return true;
     const original=window.atLoadTicker;
