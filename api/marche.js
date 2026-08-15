@@ -46,16 +46,22 @@ async function latestCours(){
       if(!ticker || seen.has(ticker))continue;
       if(r.cours_cloture==null && r.cloture==null && r.cours_normal==null)continue;
       seen.add(ticker);
+      const variationPct=r.variation_pct ?? r.variation ?? null;
       rows.push({
         id:r.id,ticker,date_seance:r.date_seance,
         cours:r.cours_cloture ?? r.cloture ?? r.cours_normal,
         cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
         ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
         plus_haut:r.plus_haut,plus_bas:r.plus_bas,
-        variation:r.variation,volume:r.volume,
+        // variation = pourcentage : toutes les vues de l'application
+        // l'affichent comme un taux (%). La variation absolue reste disponible
+        // séparément pour les consommateurs qui en ont besoin.
+        variation:variationPct,
+        variation_pct:variationPct,
+        variation_abs:r.variation,
+        volume:r.volume,
         valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
-        transactions:null,capitalisation:null,
-        variation_pct:r.variation_pct ?? r.variation
+        transactions:null,capitalisation:null
       });
       if(!latestDate || String(r.date_seance||'')>String(latestDate))latestDate=r.date_seance;
     }
