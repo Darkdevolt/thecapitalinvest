@@ -1,0 +1,100 @@
+name: Admin session deletion patch
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch historique session deletion
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('public/admin/js/historique.js')
+          s = p.read_text(encoding='utf-8')
+
+          marker = "/* ══════════════════════════════════════════════════════\n   6. BULK BAR"
+          if 'async function deleteHistoriqueSeance(' not in s:
+              fn = r'''/* ══════════════════════════════════════════════════════
+   5B. SUPPRESSION D'UNE SÉANCE COMPLÈTE
+══════════════════════════════════════════════════════ */
+async function deleteHistoriqueSeance(dateSeance) {
+    const date = (dateSeance || _v('hist-session-date') || '').trim();
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date)) {
+        _toast('Sélectionnez une date de séance valide');
+        return;
+    }
+
+    if (!_confirm('ATTENTION : supprimer toute la séance du ' + date + ' ?\\n\\nToutes les actions enregistrées pour cette date seront supprimées. Cette opération est irréversible.')) return;
+
+    try {
+        const rows = await sbGet('historique', 'select=id,ticker&date_seance=eq.' + encodeURIComponent(date));
+        const count = Array.isArray(rows) ? rows.length : 0;
+        if (!count) {
+            _toast('Aucune donnée pour la séance du ' + date);
+            return;
+        }
+
+        const ok = await sbDel('historique', 'date_seance=eq.' + encodeURIComponent(date));
+        if (!ok) throw new Error('Suppression refusée');
+
+        _toast(count + ' ligne(s) supprimée(s) pour la séance du ' + date);
+        const input = $('hist-session-date');
+        if (input) input.value = '';
+        loadHistoriqueTicker();
+    } catch (e) {
+        console.error('[HIST] deleteHistoriqueSeance:', e);
+        _toast('Erreur lors de la suppression de la séance');
+    }
+}
+
+'''
+              s = s.replace(marker, fn + marker, 1)
+
+          old = ''''<span id="hist-bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+        '<button class="btn btn-danger btn-sm" onclick="runBulkDeleteHist()">🗑 Supprimer la sélection</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="histResetSelection();updateHistBulkCount();">↺ Tout désélectionner</button>' +
+        '</div>';'''
+          # Exact replacement without relying on quote style in the source.
+          target = ''''<span id="hist-bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+        '<button class="btn btn-danger btn-sm" onclick="runBulkDeleteHist()">🗑 Supprimer la sélection</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="histResetSelection();updateHistBulkCount();">↺ Tout désélectionner</button>' +
+        '</div>';'''
+          replacement = ''''<span id="hist-bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
+        '<button class="btn btn-danger btn-sm" onclick="runBulkDeleteHist()">🗑 Supprimer la sélection</button>' +
+        '<button class="btn btn-outline btn-sm" onclick="histResetSelection();updateHistBulkCount();">↺ Tout désélectionner</button>' +
+        '<span style="display:inline-flex;align-items:center;gap:6px;margin-left:8px;border-left:1px solid var(--border);padding-left:10px;">' +
+        '<input id="hist-session-date" type="date" title="Séance à supprimer" style="height:30px;min-width:145px;">' +
+        '<button class="btn btn-danger btn-sm" onclick="deleteHistoriqueSeance()">🗑 Supprimer la séance</button>' +
+        '</span>' +
+        '</div>';'''
+          if target in s:
+              s = s.replace(target, replacement, 1)
+          elif 'id="hist-session-date"' not in s:
+              raise SystemExit('bulk bar target not found')
+
+          expose = 'window.deleteHistoriqueSeance = deleteHistoriqueSeance;'
+          if expose not in s:
+              anchor = 'window.deleteAllHistoriqueTicker = deleteAllHistoriqueTicker;'
+              s = s.replace(anchor, anchor + '\n' + expose, 1)
+
+          p.write_text(s, encoding='utf-8')
+          PY
+      - name: Commit patch and remove temporary workflow
+        run: |
+          git config user.name "The Capital Bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/admin-session-delete.yml
+          git add public/admin/js/historique.js
+          git diff --cached --check
+          git diff --cached --quiet && exit 0 || true
+          git commit -m "feat(admin): delete complete historical trading sessions"
+          git push
