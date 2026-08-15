@@ -2,43 +2,69 @@ import { supabase, supabaseAdmin } from '../lib/supabase.js';
 
 const db = supabaseAdmin || supabase;
 
-function json(res,status,payload){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');res.end(JSON.stringify(payload));}
-async function query(table,build){if(!db)throw new Error('Supabase non configuré');let q=db.from(table).select('*');if(typeof build==='function')q=build(q);return q;}
+function json(res,status,payload){
+  res.statusCode=status;
+  res.setHeader('Content-Type','application/json; charset=utf-8');
+  res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma','no-cache');
+  res.setHeader('Expires','0');
+  res.end(JSON.stringify(payload));
+}
+
+async function query(table,build){
+  if(!db)throw new Error('Supabase non configuré');
+  let q=db.from(table).select('*');
+  if(typeof build==='function')q=build(q);
+  return q;
+}
 
 // SOURCE CANONIQUE : historique Supabase.
-// Tous les tickers suivent exactement le même chemin. On prend la dernière
-// observation réellement disponible POUR CHAQUE ticker, au lieu d'imposer
-// une date globale qui ferait disparaître les titres dont la dernière séance
-// est différente (ex. BICB vs ABJC).
+// Le projet Supabase peut limiter chaque réponse à 1 000 lignes. On pagine
+// explicitement l'historique afin que la dernière observation de chaque titre
+// soit réellement récupérée, même si le volume historique dépasse cette limite.
 async function latestCours(){
-  const q=await query('historique',q=>q
-    .order('date_seance',{ascending:false})
-    .order('ticker',{ascending:true})
-    .limit(5000));
-  if(q.error)throw q.error;
-
+  const PAGE_SIZE=1000;
+  const MAX_PAGES=50;
   const seen=new Set();
   const rows=[];
-  for(const r of (q.data||[])){
-    const ticker=String(r.ticker||'').trim().toUpperCase();
-    if(!ticker || seen.has(ticker))continue;
-    if(r.cours_cloture==null && r.cloture==null && r.cours_normal==null)continue;
-    seen.add(ticker);
-    rows.push({
-      id:r.id,ticker,date_seance:r.date_seance,
-      cours:r.cours_cloture ?? r.cloture ?? r.cours_normal,
-      cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
-      ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
-      plus_haut:r.plus_haut,plus_bas:r.plus_bas,
-      variation:r.variation,volume:r.volume,
-      valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
-      transactions:null,capitalisation:null,
-      variation_pct:r.variation_pct ?? r.variation
-    });
+  let from=0;
+  let latestDate=null;
+
+  for(let page=0;page<MAX_PAGES;page++){
+    const to=from+PAGE_SIZE-1;
+    const q=await query('historique',q=>q
+      .order('date_seance',{ascending:false})
+      .order('ticker',{ascending:true})
+      .range(from,to));
+    if(q.error)throw q.error;
+
+    const batch=q.data||[];
+    if(!batch.length)break;
+
+    for(const r of batch){
+      const ticker=String(r.ticker||'').trim().toUpperCase();
+      if(!ticker || seen.has(ticker))continue;
+      if(r.cours_cloture==null && r.cloture==null && r.cours_normal==null)continue;
+      seen.add(ticker);
+      rows.push({
+        id:r.id,ticker,date_seance:r.date_seance,
+        cours:r.cours_cloture ?? r.cloture ?? r.cours_normal,
+        cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
+        ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
+        plus_haut:r.plus_haut,plus_bas:r.plus_bas,
+        variation:r.variation,volume:r.volume,
+        valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
+        transactions:null,capitalisation:null,
+        variation_pct:r.variation_pct ?? r.variation
+      });
+      if(!latestDate || String(r.date_seance||'')>String(latestDate))latestDate=r.date_seance;
+    }
+
+    if(batch.length<PAGE_SIZE)break;
+    from+=PAGE_SIZE;
   }
 
   rows.sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker)));
-  const latestDate=rows.reduce((max,r)=>String(r.date_seance||'')>String(max||'')?r.date_seance:max,null);
   const dates={};
   rows.forEach(r=>{dates[r.date_seance]=(dates[r.date_seance]||0)+1;});
   return {data:rows,error:null,latestDate,source:'historique',dates};
@@ -75,7 +101,7 @@ export default async function handler(req,res){
       case'entreprises':result=await query('entreprises',q=>q.eq('actif',true).order('ticker',{ascending:true}));break;
       case'financials':result=await query('financials',q=>q.order('validation_status',{ascending:true}).order('annee',{ascending:false}).limit(2000));break;
       case'analyses':result=await query('analyses',q=>q.order('date_analyse',{ascending:false}).limit(500));break;
-      case'dividendes':result=await query('dividendes_calendrier',q=>q.order('exercice',{ascending:false}).order('annee',{ascending:false}).limit(2000));break;
+      case'dividendes':result=await query('dividendes_calendrier',q=>q.order('date_detachement',{ascending:true,nullsLast:true}).order('date_paiement',{ascending:true,nullsLast:true}).limit(2000));break;
       case'apercu':{
         const [cours,indices]=await Promise.all([latestCours(),latestIndices()]);
         return json(res,200,{success:true,cours:cours.data||[],indices:indices||[],cours_date:cours.latestDate||null,cours_source:cours.source||null,cours_dates:cours.dates||{}});
@@ -86,5 +112,8 @@ export default async function handler(req,res){
     const data=result?.data||result||[];
     if(type==='historique'&&Array.isArray(data))data.reverse();
     return json(res,200,data);
-  }catch(error){console.error('[API/MARCHE]',error);return json(res,500,{error:error.message||'Erreur serveur'});}
+  }catch(error){
+    console.error('[API/MARCHE]',error);
+    return json(res,500,{error:error.message||'Erreur serveur'});
+  }
 }
