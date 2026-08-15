@@ -1,8 +1,36 @@
-name: Legacy workflow disabled
+name: Load unified Courses Control Center
 on:
-  workflow_dispatch:
+  push:
+    branches: [main]
 jobs:
-  disabled:
+  inject:
+    if: ${{ !contains(github.event.head_commit.message, 'ci(admin): load unified Courses control center') }}
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - run: echo "Legacy injection disabled: CoursControl is now loaded explicitly from admin.html"
+      - uses: actions/checkout@v4
+      - name: Ensure unified data-control scripts are loaded
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('public/admin.html')
+          s=p.read_text(encoding='utf-8')
+          marker='<script src="admin/js/cours.js"></script>'
+          tags='''<script src="admin/js/data-quality.js"></script>\n<script src="admin/js/cours-control-center.js"></script>'''
+          # Remove legacy/orphan references first.
+          s=s.replace('<script src="admin/js/cours-control-center.js"></script>','')
+          s=s.replace('<script src="admin/js/data-quality.js"></script>','')
+          if marker in s:
+              s=s.replace(marker, marker+'\n'+tags, 1)
+          elif '</body>' in s:
+              s=s.replace('</body>', tags+'\n</body>', 1)
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Commit injection
+        run: |
+          git config user.name 'The Capital Bot'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/admin.html
+          git diff --cached --quiet || git commit -m 'ci(admin): load unified Courses control center'
+          git push
