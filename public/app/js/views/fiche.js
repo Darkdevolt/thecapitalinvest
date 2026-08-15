@@ -1,43 +1,122 @@
 // FICHE TITRE, données via API unique
 async function openFiche(ticker, from, noHash) {
-  prevView = from;
-  document.getElementById('ficheBackBtn').onclick = () => nav(from);
-  nav('fiche', noHash);
-  if (!noHash) history.replaceState(null, '', '#fiche=' + ticker);
-  const ent = allEntreprises.find(e => e.ticker === ticker) || {};
-  const fins = allFinancials.filter(f => f.ticker === ticker).sort((a,b) => b.annee - a.annee);
-  const ans = allAnalyses.filter(a => a.ticker === ticker);
+  const normalizedTicker = String(ticker || '').trim().toUpperCase();
+  if (!normalizedTicker) {
+    console.warn('[FICHE] Ticker vide, ouverture annulée.');
+    return false;
+  }
+
+  const previousView = from || 'titres';
+  prevView = previousView;
+
+  // Afficher immédiatement la vue cible, sans attendre l'historique.
+  // Le hash est ensuite écrit au format attendu par parseHash().
+  nav('fiche', true);
+  if (!noHash) history.replaceState(null, '', '#fiche=' + encodeURIComponent(normalizedTicker));
+  if (typeof updateBreadcrumb === 'function') updateBreadcrumb('fiche');
+  document.title = 'Fiche Titre, ' + normalizedTicker + ', The Capital';
+
+  const backBtn = document.getElementById('ficheBackBtn');
+  if (backBtn) backBtn.onclick = () => nav(previousView);
+
+  const view = document.getElementById('view-fiche');
+  if (view) {
+    document.querySelectorAll('.view').forEach(v => {
+      v.classList.remove('active');
+      v.style.display = 'none';
+    });
+    view.classList.add('active');
+    view.style.display = '';
+  }
+
+  const entreprises = Array.isArray(window.allEntreprises) ? window.allEntreprises : [];
+  const financials = Array.isArray(window.allFinancials) ? window.allFinancials : [];
+  const analyses = Array.isArray(window.allAnalyses) ? window.allAnalyses : [];
+  const ent = entreprises.find(e => String(e?.ticker || '').trim().toUpperCase() === normalizedTicker) || {};
+  const fins = financials
+    .filter(f => String(f?.ticker || '').trim().toUpperCase() === normalizedTicker)
+    .sort((a,b) => (b.annee || 0) - (a.annee || 0));
+  const ans = analyses.filter(a => String(a?.ticker || '').trim().toUpperCase() === normalizedTicker);
+
+  let ficheHistoriqueLocal = [];
   let latestCours = null;
   try {
-    const response = await window.apiGet(`/marche?type=historique&ticker=${encodeURIComponent(ticker)}`);
+    const response = await window.apiGet(`/marche?type=historique&ticker=${encodeURIComponent(normalizedTicker)}&limit=1000&_=${Date.now()}`);
     const histData = response && typeof response === 'object' && 'data' in response ? response.data : response;
-    ficheHistorique = Array.isArray(histData) ? histData.slice().sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance)) : [];
-    latestCours = ficheHistorique[ficheHistorique.length - 1] || null;
-    if (!ficheHistorique.length) toast('Aucun historique disponible pour ' + ticker, 'warn');
-  } catch(e) { ficheHistorique=[]; toast('Erreur historique '+ticker+': '+e.message,'warn'); }
-  const cours = latestCours || allCours.find(c=>c.ticker===ticker) || {};
-  document.getElementById('ficheTickerLabel').textContent=ticker;
-  document.getElementById('ficheCompany').textContent=ent.nom||ticker;
-  document.getElementById('ficheSector').textContent=ent.secteur||getSector(ticker);
-  document.getElementById('fichePays').textContent=ent.pays||'';
-  document.getElementById('fichePrice').textContent=fmt(cours.cours_cloture||cours.cours_normal||cours.cours);
-  document.getElementById('ficheMeta').textContent=`Dernière séance : ${fmtDate(cours.date_seance)} · Volume : ${fmt(cours.volume)}`;
-  const v=parseFloat(cours.variation); const cl=!isNaN(v)?(v>0?'var(--green)':v<0?'var(--red)':'var(--dim)'):'var(--dim)';
-  document.getElementById('ficheChange').innerHTML=!isNaN(v)?`<span style="color:${cl}">${v>0?'▲':v<0?'▼':'='} ${Math.abs(v).toFixed(2)}%</span>`:'';
-  const cp=parseFloat(cours.cours_cloture||cours.cours_normal||cours.cours), f0=fins[0];
-  document.getElementById('r-per').textContent=f0?.bpa&&cp&&f0.bpa>0?(cp/f0.bpa).toFixed(1)+'x':', ';
-  document.getElementById('r-rdt').textContent=f0?.dpa&&cp&&cp>0?((f0.dpa/cp)*100).toFixed(2)+'%':', ';
-  document.getElementById('r-pan').textContent=f0?.fonds_propres&&f0?.nombre_actions&&f0.nombre_actions>0&&cp?(cp/(f0.fonds_propres/f0.nombre_actions)).toFixed(2)+'x':', ';
-  document.getElementById('r-cap').textContent=f0?.nombre_actions&&cp?fmtM(cp*f0.nombre_actions):', ';
-  document.getElementById('ficheDesc').textContent=ent.description||'Aucune description disponible.';
-  const infoRows=[['Pays',ent.pays],['Secteur',ent.secteur||getSector(ticker)],['Bourse','BRVM'],['Devise','FCFA (XOF)'],['Nb. Actions',ent.nombre_actions?fmt(ent.nombre_actions):null]].filter(r=>r[1]);
-  document.getElementById('ficheInfo').innerHTML=infoRows.map(([k,v])=>`<div class="fin-row"><span class="fin-label">${k}</span><span class="fin-value">${v}</span></div>`).join('');
-  document.getElementById('ficheAnalyseList').innerHTML=ans.length?ans.slice(0,3).map(a=>renderAnalyseCard(a,true)).join(''):'<div style="color:var(--dim);font-size:13px">Aucune analyse disponible pour ce titre.</div>';
-  renderFicheFin(fins,cours); ficheChartPeriod=252; document.querySelectorAll('#view-fiche .year-tab').forEach((b,i)=>b.classList.toggle('active',i===0)); renderFicheChart();
+    ficheHistoriqueLocal = Array.isArray(histData)
+      ? histData.slice().sort((a,b) => new Date(a.date_seance) - new Date(b.date_seance))
+      : [];
+    latestCours = ficheHistoriqueLocal[ficheHistoriqueLocal.length - 1] || null;
+    if (!ficheHistoriqueLocal.length && typeof toast === 'function') toast('Aucun historique disponible pour ' + normalizedTicker, 'warn');
+  } catch(e) {
+    ficheHistoriqueLocal = [];
+    if (typeof toast === 'function') toast('Erreur historique ' + normalizedTicker + ': ' + e.message, 'warn');
+  }
+
+  if (!latestCours) {
+    const fallback = Array.isArray(window.allCours) ? window.allCours : [];
+    latestCours = fallback.find(c => String(c?.ticker || '').trim().toUpperCase() === normalizedTicker) || null;
+  }
+  const cours = latestCours || {};
+
+  // Une autre navigation peut avoir eu lieu pendant le chargement réseau.
+  // Dans ce cas, ne pas repeindre une autre vue avec les données de la fiche.
+  const activeView = document.querySelector('.view.active');
+  if (!activeView || activeView.id !== 'view-fiche') return false;
+
+  const setText = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = value == null ? '' : String(value);
+  };
+
+  setText('ficheTickerLabel', '◈ ' + normalizedTicker);
+  setText('ficheCompany', ent.nom || normalizedTicker);
+  setText('ficheSector', ent.secteur || (typeof getSector === 'function' ? getSector(normalizedTicker) : ''));
+  setText('fichePays', ent.pays || '');
+  setText('fichePrice', fmt(cours.cours_cloture || cours.cours_normal || cours.cours));
+  setText('ficheMeta', `Dernière séance : ${fmtDate(cours.date_seance)} · Volume : ${fmt(cours.volume)}`);
+
+  const v = parseFloat(cours.variation);
+  const cl = !isNaN(v) ? (v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--dim)') : 'var(--dim)';
+  const changeEl = document.getElementById('ficheChange');
+  if (changeEl) changeEl.innerHTML = !isNaN(v)
+    ? `<span style="color:${cl}">${v > 0 ? '▲' : v < 0 ? '▼' : '='} ${Math.abs(v).toFixed(2)}%</span>`
+    : '';
+
+  const cp = parseFloat(cours.cours_cloture || cours.cours_normal || cours.cours);
+  const f0 = fins[0];
+  setText('r-per', f0?.bpa && cp && f0.bpa > 0 ? (cp / f0.bpa).toFixed(1) + 'x' : ', ');
+  setText('r-rdt', f0?.dpa && cp && cp > 0 ? ((f0.dpa / cp) * 100).toFixed(2) + '%' : ', ');
+  setText('r-pan', f0?.fonds_propres && f0?.nombre_actions && f0.nombre_actions > 0 && cp ? (cp / (f0.fonds_propres / f0.nombre_actions)).toFixed(2) + 'x' : ', ');
+  setText('r-cap', f0?.nombre_actions && cp ? fmtM(cp * f0.nombre_actions) : ', ');
+  setText('ficheDesc', ent.description || 'Aucune description disponible.');
+
+  const infoRows = [
+    ['Pays', ent.pays],
+    ['Secteur', ent.secteur || (typeof getSector === 'function' ? getSector(normalizedTicker) : '')],
+    ['Bourse', 'BRVM'],
+    ['Devise', 'FCFA (XOF)'],
+    ['Nb. Actions', ent.nombre_actions ? fmt(ent.nombre_actions) : null]
+  ].filter(r => r[1]);
+  const infoEl = document.getElementById('ficheInfo');
+  if (infoEl) infoEl.innerHTML = infoRows.map(([k,v]) => `<div class="fin-row"><span class="fin-label">${k}</span><span class="fin-value">${v}</span></div>`).join('');
+
+  const analyseEl = document.getElementById('ficheAnalyseList');
+  if (analyseEl) analyseEl.innerHTML = ans.length
+    ? ans.slice(0,3).map(a => renderAnalyseCard(a,true)).join('')
+    : '<div style="color:var(--dim);font-size:13px">Aucune analyse disponible pour ce titre.</div>';
+
+  window.ficheHistorique = ficheHistoriqueLocal;
+  renderFicheFin(fins, cours);
+  ficheChartPeriod = 252;
+  document.querySelectorAll('#view-fiche .year-tab').forEach((b,i) => b.classList.toggle('active', i === 0));
+  renderFicheChart();
+  return true;
 }
 
 function renderFicheFin(fins,cours){
   const tabs=document.getElementById('fichYearTabs'),body=document.getElementById('ficheFinBody');
+  if(!tabs||!body)return;
   if(!fins.length){tabs.innerHTML='';body.innerHTML='<div style="color:var(--dim);font-size:13px">Données financières non disponibles.</div>';return;}
   tabs.innerHTML=fins.map((f,i)=>`<button class="year-tab ${i===0?'active':''}" onclick="showFinYear(${i},this)">${f.annee}${f.periode&&f.periode!=='annuel'?' '+f.periode:''}</button>`).join('');
   window._ficheFins=fins;window._ficheCours=cours;showFinYear(0,null);
@@ -50,6 +129,6 @@ function showFinYear(idx,btn){
   document.getElementById('ficheFinBody').innerHTML=sections.map(([title,rows])=>{const valid=rows.filter(([,v])=>v!==', ');return valid.length?`<div style="margin-bottom:16px"><div class="fin-section-title">${title}</div>${valid.map(([l,v])=>`<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</div>`:'';}).join('')||'<div style="color:var(--dim);font-size:13px">Données comptables non renseignées.</div>';
 }
 function renderFicheChart(){
-  const data=ficheHistorique.slice(-ficheChartPeriod);if(!data.length)return;const labels=data.map(d=>new Date(d.date_seance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}));const vals=data.map(d=>d.cours_cloture||d.cours_normal||d.cours||0);if(ficheChartInst)ficheChartInst.destroy();ficheChartInst=new Chart(document.getElementById('chartFiche'),{type:'line',data:{labels,datasets:[mkDataset(vals)]},options:chartOpts});
+  const data=(window.ficheHistorique||[]).slice(-ficheChartPeriod);if(!data.length)return;const labels=data.map(d=>new Date(d.date_seance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}));const vals=data.map(d=>d.cours_cloture||d.cours_normal||d.cours||0);if(ficheChartInst)ficheChartInst.destroy();ficheChartInst=new Chart(document.getElementById('chartFiche'),{type:'line',data:{labels,datasets:[mkDataset(vals)]},options:chartOpts});
 }
 function setChartPeriod(n,btn){ficheChartPeriod=n;document.querySelectorAll('#view-fiche .year-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderFicheChart();}
