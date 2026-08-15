@@ -93,17 +93,35 @@ function normalizeRows(data) {
 
 async function validateLimit(rows) {
   const violations = [];
+  const sessionDate = rows[0]?.date_seance;
+  let previousSessionDate = null;
+
+  // Only compare a reported BRVM variation with our calculated variation
+  // when the stored previous close belongs to the immediately preceding
+  // market session. Illiquid titles may legitimately have no row for that
+  // session; comparing against an older close creates false positives and
+  // can block an otherwise valid full-session import.
+  if (sessionDate) {
+    const previousRows = await db(`historique?select=date_seance&date_seance=lt.${encodeURIComponent(sessionDate)}&order=date_seance.desc&limit=1`);
+    previousSessionDate = previousRows[0]?.date_seance || null;
+  }
+
   for (const row of rows) {
     const prevRows = await db(`historique?select=cours_cloture,cloture,date_seance&ticker=eq.${encodeURIComponent(row.ticker)}&date_seance=lt.${encodeURIComponent(row.date_seance)}&order=date_seance.desc&limit=1`);
+    const prevDate = prevRows[0]?.date_seance || null;
     const prev = Number(prevRows[0]?.cours_cloture ?? prevRows[0]?.cloture);
     const close = Number(row.cours_cloture);
     const reported = row.variation == null ? null : Number(row.variation);
     const computed = Number.isFinite(prev) && prev > 0 && Number.isFinite(close) ? ((close - prev) / prev) * 100 : null;
     const effective = Number.isFinite(reported) ? reported : computed;
+
+    // Keep the hard safety check on the BRVM-reported variation.
     if (Number.isFinite(effective) && Math.abs(effective) > 7.5 + 1e-9) {
       violations.push({ ticker: row.ticker, date: row.date_seance, variation: effective, previous_close: Number.isFinite(prev) ? prev : null, close });
     }
-    if (Number.isFinite(reported) && Number.isFinite(computed) && Math.abs(reported - computed) > 0.25) {
+
+    // Do not compare against a stale close from an older session.
+    if (prevDate === previousSessionDate && Number.isFinite(reported) && Number.isFinite(computed) && Math.abs(reported - computed) > 0.25) {
       violations.push({ ticker: row.ticker, date: row.date_seance, variation: reported, computed_variation: computed, type: 'variation_incoherente' });
     }
   }
