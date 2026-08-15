@@ -59,11 +59,6 @@ async function deleteHistoriqueSeance(dateSeance) {
 '''
               s = s.replace(marker, fn + marker, 1)
 
-          old = ''''<span id="hist-bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
-        '<button class="btn btn-danger btn-sm" onclick="runBulkDeleteHist()">🗑 Supprimer la sélection</button>' +
-        '<button class="btn btn-outline btn-sm" onclick="histResetSelection();updateHistBulkCount();">↺ Tout désélectionner</button>' +
-        '</div>';'''
-          # Exact replacement without relying on quote style in the source.
           target = ''''<span id="hist-bulk-count" style="font-size:12px;color:var(--muted);">0 sélectionné(s)</span>' +
         '<button class="btn btn-danger btn-sm" onclick="runBulkDeleteHist()">🗑 Supprimer la sélection</button>' +
         '<button class="btn btn-outline btn-sm" onclick="histResetSelection();updateHistBulkCount();">↺ Tout désélectionner</button>' +
