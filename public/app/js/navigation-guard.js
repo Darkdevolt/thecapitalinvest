@@ -1,6 +1,5 @@
 // THE CAPITAL — Navigation Guard
-// Centralise une navigation prévisible : historique des écrans, retour contextuel,
-// liens SPA et bouton précédent du navigateur.
+// Centralise une navigation prévisible : historique des écrans, liens SPA et bouton précédent du navigateur.
 (function () {
   'use strict';
   if (window.__TC_NAV_GUARD__) return;
@@ -44,7 +43,7 @@
   function ensureStyle() {
     if (document.getElementById('tc-nav-guard-style')) return;
     var s = document.createElement('style'); s.id = 'tc-nav-guard-style';
-    s.textContent = '.tc-nav-context{display:flex;align-items:center;gap:9px;margin:0 0 14px;min-height:32px}.tc-nav-back{border:1px solid var(--border2,rgba(184,150,78,.2));background:var(--surface,#13110c);color:var(--cream,#f5f0e8);border-radius:7px;padding:7px 11px;font:500 11px var(--sans,Arial);cursor:pointer}.tc-nav-back:hover{border-color:var(--gold,#b8964e);color:var(--gold,#b8964e)}.tc-nav-trail{font:500 11px var(--sans,Arial);color:var(--dim,#777);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tc-nav-trail strong{color:var(--cream,#f5f0e8);font-weight:500}.tc-nav-home{border:0;background:none;color:var(--dim,#777);font-size:11px;cursor:pointer;padding:0}.tc-nav-home:hover{color:var(--gold,#b8964e)}';
+    s.textContent = '.tc-nav-context{display:flex;align-items:center;gap:8px;margin:0 0 18px;padding:8px 0 10px;min-height:32px;border-bottom:1px solid var(--border2,rgba(184,150,78,.08));position:relative;z-index:2}.tc-nav-trail{font:500 11px var(--sans,Arial);color:var(--dim,#777);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tc-nav-trail strong{color:var(--cream,#f5f0e8);font-weight:500}.tc-nav-home{border:0;background:none;color:var(--dim,#777);font-size:11px;cursor:pointer;padding:0}.tc-nav-home:hover{color:var(--gold,#b8964e)}';
     document.head.appendChild(s);
   }
 
@@ -93,15 +92,12 @@
 
     var box = document.createElement('div');
     box.id = 'tc-nav-context'; box.className = 'tc-nav-context';
-    var back = document.createElement('button');
-    back.type = 'button'; back.className = 'tc-nav-back'; back.textContent = '← Retour';
-    back.addEventListener('click', goBack);
     var home = document.createElement('button');
     home.type = 'button'; home.className = 'tc-nav-home'; home.textContent = 'Accueil';
     home.addEventListener('click', function () { writeStack([]); navigate('overview', true); });
     var trail = document.createElement('div'); trail.className = 'tc-nav-trail';
     trail.innerHTML = '<span>' + label(parent) + '</span>  /  <strong>' + label(v) + '</strong>';
-    box.appendChild(back); box.appendChild(home); box.appendChild(trail);
+    box.appendChild(home); box.appendChild(trail);
     main.insertBefore(box, main.firstChild);
   }
 
