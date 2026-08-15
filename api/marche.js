@@ -1,40 +1,47 @@
 import { supabase, supabaseAdmin } from '../lib/supabase.js';
 
 const db = supabaseAdmin || supabase;
-const MIN_COMPLETE_QUOTES = 40;
+
 function json(res,status,payload){res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','no-store, no-cache, must-revalidate, proxy-revalidate');res.setHeader('Pragma','no-cache');res.setHeader('Expires','0');res.end(JSON.stringify(payload));}
 async function query(table,build){if(!db)throw new Error('Supabase non configuré');let q=db.from(table).select('*');if(typeof build==='function')q=build(q);return q;}
 
-// Canonical market source for current and historical courses.
+// SOURCE CANONIQUE : historique Supabase.
+// Tous les tickers suivent exactement le même chemin. On prend la dernière
+// observation réellement disponible POUR CHAQUE ticker, au lieu d'imposer
+// une date globale qui ferait disparaître les titres dont la dernière séance
+// est différente (ex. BICB vs ABJC).
 async function latestCours(){
-  const latestDateQ=await query('historique',q=>q.select('date_seance').order('date_seance',{ascending:false}).limit(1));
-  if(latestDateQ.error)throw latestDateQ.error;
-  const latestDate=latestDateQ.data?.[0]?.date_seance||null;
+  const q=await query('historique',q=>q
+    .order('date_seance',{ascending:false})
+    .order('ticker',{ascending:true})
+    .limit(5000));
+  if(q.error)throw q.error;
 
-  const fallbackQ=await query('cours_latest',q=>q.order('ticker',{ascending:true}).limit(1000));
-  if(fallbackQ.error)throw fallbackQ.error;
-  const fallbackRows=fallbackQ.data||[];
-  const fallbackDate=fallbackRows.reduce((max,r)=>String(r.date_seance||'')>String(max||'')?r.date_seance:max,null);
-
-  if(!latestDate){return {data:fallbackRows,error:null,latestDate:fallbackDate,source:'cours_latest'};}
-
-  const histQ=await query('historique',q=>q.eq('date_seance',latestDate).order('ticker',{ascending:true}).limit(1000));
-  if(histQ.error)throw histQ.error;
-  const rows=(histQ.data||[]).map(r=>({
-    id:r.id,ticker:r.ticker,date_seance:r.date_seance,
-    cours:r.cours_cloture ?? r.cloture ?? r.cours_normal,
-    cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
-    ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
-    plus_haut:r.plus_haut,plus_bas:r.plus_bas,
-    variation:r.variation,volume:r.volume,
-    valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
-    transactions:null,capitalisation:null,variation_pct:r.variation_pct ?? r.variation
-  })).filter(r=>r.ticker&&r.cours!=null);
-
-  if(rows.length < MIN_COMPLETE_QUOTES){
-    return {data:fallbackRows,error:null,latestDate:fallbackDate,source:'cours_latest',ignoredHistoricalDate:latestDate,ignoredHistoricalCount:rows.length};
+  const seen=new Set();
+  const rows=[];
+  for(const r of (q.data||[])){
+    const ticker=String(r.ticker||'').trim().toUpperCase();
+    if(!ticker || seen.has(ticker))continue;
+    if(r.cours_cloture==null && r.cloture==null && r.cours_normal==null)continue;
+    seen.add(ticker);
+    rows.push({
+      id:r.id,ticker,date_seance:r.date_seance,
+      cours:r.cours_cloture ?? r.cloture ?? r.cours_normal,
+      cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
+      ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
+      plus_haut:r.plus_haut,plus_bas:r.plus_bas,
+      variation:r.variation,volume:r.volume,
+      valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
+      transactions:null,capitalisation:null,
+      variation_pct:r.variation_pct ?? r.variation
+    });
   }
-  return {data:rows,error:null,latestDate,source:'historique'};
+
+  rows.sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker)));
+  const latestDate=rows.reduce((max,r)=>String(r.date_seance||'')>String(max||'')?r.date_seance:max,null);
+  const dates={};
+  rows.forEach(r=>{dates[r.date_seance]=(dates[r.date_seance]||0)+1;});
+  return {data:rows,error:null,latestDate,source:'historique',dates};
 }
 
 async function latestIndices(){
@@ -71,8 +78,7 @@ export default async function handler(req,res){
       case'dividendes':result=await query('dividendes_calendrier',q=>q.order('exercice',{ascending:false}).order('annee',{ascending:false}).limit(2000));break;
       case'apercu':{
         const [cours,indices]=await Promise.all([latestCours(),latestIndices()]);
-        if(cours.error)throw cours.error;
-        return json(res,200,{success:true,cours:cours.data||[],indices:indices||[],cours_date:cours.latestDate||cours.data?.[0]?.date_seance||null,cours_source:cours.source||null});
+        return json(res,200,{success:true,cours:cours.data||[],indices:indices||[],cours_date:cours.latestDate||null,cours_source:cours.source||null,cours_dates:cours.dates||{}});
       }
       default:return json(res,400,{error:`Type de données inconnu: ${type}`});
     }
