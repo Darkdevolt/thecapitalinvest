@@ -29,8 +29,6 @@
       if(data.length<PAGE_SIZE)break;
     }
 
-    // Une même séance peut exister plusieurs fois dans d'anciens imports.
-    // On déduplique uniquement à clé ticker/date, sans altérer les valeurs.
     const byKey=new Map();
     all.forEach(row=>{
       if(!row)return;
@@ -43,8 +41,7 @@
     return rows;
   }
 
-  // Exposé pour les autres modules (comparaison, indicateurs, etc.) afin que
-  // toute l'analyse technique utilise la même pagination complète.
+  // Source historique complète partagée par l'analyse technique et la comparaison.
   window.tcLoadHistoryComplete=fetchHistory;
 
   async function resolveTickerHistory(requested){
@@ -60,7 +57,7 @@
     return {ticker:candidates[0]||requested,rows:[]};
   }
 
-  async function install(){
+  function install(){
     if(typeof window.atLoadTicker!=='function')return false;
     if(window.atLoadTicker.__historyBridge)return true;
     const original=window.atLoadTicker;
@@ -79,8 +76,6 @@
         }
       }catch(e){console.warn('[AT DATA] bridge',e)}
       const ok=await original();
-      // Si l'original a refusé l'historique alors que le cours courant existe,
-      // ne jamais perdre le cours affiché dans les autres vues.
       if(!ok && window.AT && !window.AT.hist.length){
         const row=(window.allCours||[]).find(r=>norm(tickerOf(r))===norm(requested));
         const px=priceOf(row);
