@@ -57,6 +57,25 @@ jobs:
               raise SystemExit('Tableau Cours attendu introuvable')
           s = s.replace(marker, replacement, 1)
 
+          # Force the browser to fetch the current control bundle instead of a cached copy.
+          s = s.replace(
+              '<link rel="stylesheet" href="admin/css/cours-control.css">',
+              '<link rel="stylesheet" href="admin/css/cours-control.css?v=20260815-1428">',
+              1
+          )
+          s = s.replace(
+              '<script src="admin/js/cours-control.js"></script>',
+              '<script src="admin/js/cours-control.js?v=20260815-1428"></script>',
+              1
+          )
+
+          # Boot the controller explicitly after the authenticated Admin init completes.
+          old_boot = '''<script>\ninit().catch(function(err){\n    console.error('Fatal init error:', err);\n    hideLoadingScreen();\n    showFatalError('Erreur fatale', err.message || 'Erreur inconnue');\n});\n</script>'''
+          new_boot = '''<script>\ninit().then(function(){\n    setTimeout(function(){\n        if(window.CoursControl && typeof window.CoursControl.init === 'function'){\n            window.CoursControl.init();\n        }\n    },0);\n}).catch(function(err){\n    console.error('Fatal init error:', err);\n    hideLoadingScreen();\n    showFatalError('Erreur fatale', err.message || 'Erreur inconnue');\n});\n</script>'''
+          if old_boot not in s:
+              raise SystemExit('Bloc init attendu introuvable')
+          s = s.replace(old_boot, new_boot, 1)
+
           p.write_text(s, encoding='utf-8')
           PY
 
@@ -66,5 +85,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add public/admin.html
           git diff --cached --quiet && echo 'No changes' && exit 0
-          git commit -m 'feat(admin): clarify Cours & Historique controls'
+          git commit -m 'fix(admin): force-load and boot Cours control'
           git push
