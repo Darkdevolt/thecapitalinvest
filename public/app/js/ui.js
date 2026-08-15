@@ -2,9 +2,6 @@
 // UI, Table Sort + Shared
 // ═══════════════════════════════════════
 
-// ═══════════════════════════════════════
-// TABLE SORT
-// ═══════════════════════════════════════
 function sortTable(tbodyId, colIndex) {
   const tbody = document.getElementById(tbodyId);
   const rows = Array.from(tbody.querySelectorAll('tr'));
@@ -23,21 +20,23 @@ function sortTable(tbodyId, colIndex) {
 }
 
 // ═══════════════════════════════════════
-// LOAD, 100% SUPABASE, PAS DE DEMO
+// LOAD — marché via API canonique, autres données Supabase
 // ═══════════════════════════════════════
 async function loadAll() {
   try {
     const results = await Promise.allSettled([
-      sb('cours_latest', {}),
+      window.apiGet('/marche?type=cours'),
       sb('boc', { order: 'date_seance.desc', limit: 200 }),
       sb('analyses', { order: 'date_analyse.desc', limit: 100 }),
       sb('financials', { order: 'annee.desc,periode.desc', limit: 500 }),
       sb('entreprises', { limit: 500 }),
-      sb('indices', { order: 'date_seance.desc', limit: 90 }),
+      window.apiGet('/marche?type=indices'),
     ]);
 
-    if (results[0].status === 'fulfilled') allCours = results[0].value || [];
-    else toast('Erreur chargement cours: ' + results[0].reason, 'error');
+    if (results[0].status === 'fulfilled') {
+      const payload = results[0].value;
+      allCours = Array.isArray(payload) ? payload : (payload?.data || payload?.cours || []);
+    } else toast('Erreur chargement cours: ' + results[0].reason, 'error');
 
     if (results[1].status === 'fulfilled') allBoc = results[1].value || [];
     else toast('Erreur chargement BOC: ' + results[1].reason, 'error');
@@ -51,8 +50,10 @@ async function loadAll() {
     if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
     else toast('Erreur chargement entreprises: ' + results[4].reason, 'error');
 
-    if (results[5].status === 'fulfilled') allIndices = results[5].value || [];
-    else { 
+    if (results[5].status === 'fulfilled') {
+      const payload = results[5].value;
+      allIndices = Array.isArray(payload) ? payload : (payload?.data || payload?.indices || []);
+    } else {
       allIndices = [];
       toast('Erreur chargement indices: ' + results[5].reason, 'warn');
     }
