@@ -80,10 +80,10 @@ async function historique(ticker,limit,dateFrom,dateTo,offset){
   const safeLimit=Math.min(Math.max(Number(limit)||1000,1),1000);
   const safeOffset=Math.max(Number(offset)||0,0);
   return query('historique',q=>{
-    q=q.order('date_seance',{ascending:false}).range(safeOffset,safeOffset+safeLimit-1);
     if(ticker)q=q.eq('ticker',ticker);
     if(dateFrom)q=q.gte('date_seance',dateFrom);
     if(dateTo)q=q.lte('date_seance',dateTo);
+    q=q.order('date_seance',{ascending:false}).range(safeOffset,safeOffset+safeLimit-1);
     return q;
   });
 }
