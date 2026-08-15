@@ -20,7 +20,7 @@ function sortTable(tbodyId, colIndex) {
 }
 
 // ═══════════════════════════════════════
-// LOAD — marché via API canonique, autres données Supabase
+// LOAD — marché via la source canonique historique Supabase
 // ═══════════════════════════════════════
 async function loadAll() {
   try {
