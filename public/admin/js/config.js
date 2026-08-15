@@ -104,3 +104,17 @@ const TEMPLATE_CONFIG = {
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0);});
     else setTimeout(load,0);
 })();
+
+(function loadCoursHistoryEntryDeleteModule(){
+    function load(){
+        if(document.getElementById('tc-cours-history-entry-delete-script')) return;
+        var s=document.createElement('script');
+        s.id='tc-cours-history-entry-delete-script';
+        s.src='js/cours-history-entry-delete.js?v=20260815-1458';
+        s.defer=true;
+        s.onerror=function(){console.warn('[cours-history-delete] module indisponible');};
+        document.head.appendChild(s);
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0);});
+    else setTimeout(load,0);
+})();
