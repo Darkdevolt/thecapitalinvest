@@ -71,50 +71,22 @@ const TEMPLATE_CONFIG = {
     }
 };
 
-/* ═══════════════════════════════════════════════════════════════
-   ADMIN UX HARDENING
-   Objectif : empêcher les champs de se chevaucher, stabiliser les
-   grilles de formulaires et améliorer l'utilisation sur mobile/tablette.
-   Aucun changement de données ni de logique métier.
-═══════════════════════════════════════════════════════════════ */
 (function adminUXHardening(){
     function inject(){
         if(document.getElementById('tc-admin-ux-hardening')) return;
-        var style=document.createElement('style');
-        style.id='tc-admin-ux-hardening';
-        style.textContent=`
-            .form-grid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px 14px;align-items:start}
-            .form-grid .field{min-width:0;width:100%}
-            .form-grid .field label{line-height:1.35;min-height:28px;display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px}
-            .form-grid .field input,.form-grid .field select,.form-grid .field textarea{min-width:0;max-width:100%;width:100%;box-sizing:border-box}
-            .form-grid .field input[type=number]{font-family:var(--mono)}
-            .actions-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 18px 18px;min-height:42px}
-            .actions-row .msg{min-width:0;flex:1 1 220px;line-height:1.4}
-            .card-header{flex-wrap:wrap}
-            .card-header>div:last-child{min-width:0;max-width:100%}
-            .tw{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
-            .tw table{min-width:max-content}
-            .info-box{line-height:1.55}
-            .sub-tabs{align-items:center}
-            .admin-nav{scrollbar-width:thin}
-            @media(max-width:900px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main{padding-left:16px;padding-right:16px}}
-            @media(max-width:600px){.form-grid{grid-template-columns:1fr;gap:12px}.form-grid .field label{min-height:0}.actions-row{padding-left:14px;padding-right:14px}.btn{max-width:100%}.topbar{padding-left:14px;padding-right:14px}.topbar-user{display:none}}
-        `;
+        var style=document.createElement('style'); style.id='tc-admin-ux-hardening';
+        style.textContent=`.form-grid{grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px 14px;align-items:start}.form-grid .field{min-width:0;width:100%}.form-grid .field label{line-height:1.35;min-height:28px;display:flex;align-items:flex-start;flex-wrap:wrap;gap:4px}.form-grid .field input,.form-grid .field select,.form-grid .field textarea{min-width:0;max-width:100%;width:100%;box-sizing:border-box}.form-grid .field input[type=number]{font-family:var(--mono)}.actions-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:0 18px 18px;min-height:42px}.actions-row .msg{min-width:0;flex:1 1 220px;line-height:1.4}.card-header{flex-wrap:wrap}.card-header>div:last-child{min-width:0;max-width:100%}.tw{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}.tw table{min-width:max-content}.info-box{line-height:1.55}.sub-tabs{align-items:center}.admin-nav{scrollbar-width:thin}@media(max-width:900px){.form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.main{padding-left:16px;padding-right:16px}}@media(max-width:600px){.form-grid{grid-template-columns:1fr;gap:12px}.form-grid .field label{min-height:0}.actions-row{padding-left:14px;padding-right:14px}.btn{max-width:100%}.topbar{padding-left:14px;padding-right:14px}.topbar-user{display:none}}`;
         document.head.appendChild(style);
     }
     if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',inject); else inject();
 })();
 
 (function loadDashboardOverviewModule(){
-    function load(){
-        if(document.getElementById('tc-dashboard-overview-script')) return;
-        var s=document.createElement('script');
-        s.id='tc-dashboard-overview-script';
-        s.src='js/dashboard-overview.js';
-        s.defer=true;
-        s.onerror=function(){console.warn('[dashboard] module indisponible');};
-        document.head.appendChild(s);
-    }
-    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0);});
-    else setTimeout(load,0);
+    function load(){if(document.getElementById('tc-dashboard-overview-script')) return;var s=document.createElement('script');s.id='tc-dashboard-overview-script';s.src='js/dashboard-overview.js';s.defer=true;s.onerror=function(){console.warn('[dashboard] module indisponible');};document.head.appendChild(s);}
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0);}); else setTimeout(load,0);
+})();
+
+(function loadCourseEditorModule(){
+    function load(){if(document.getElementById('tc-course-editor-script'))return;var s=document.createElement('script');s.id='tc-course-editor-script';s.src='js/cours-editor.js';s.defer=true;s.onerror=function(){console.warn('[cours] éditeur indisponible');};document.head.appendChild(s)}
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(load,0)});else setTimeout(load,0)
 })();
