@@ -43,14 +43,16 @@
     document.head.appendChild(s);
   }
 
-  // Plusieurs anciennes vues avaient leur propre bouton « ← Retour ».
-  // Le guard est désormais l’unique gestionnaire du contexte de navigation.
+  // Supprime uniquement les vrais contrôles Retour, jamais leur conteneur.
+  // L'ancienne implémentation parcourait div/span et pouvait supprimer un
+  // bloc parent contenant à la fois le bouton Retour et des liens de page.
   function removeLegacyBackControls(){
-    var nodes=document.querySelectorAll('button,a,[role="button"],div,span');
+    var nodes=document.querySelectorAll('button,a,[role="button"]');
     nodes.forEach(function(el){
       if(el.id==='tc-nav-context'||el.closest('#tc-nav-context'))return;
       var text=(el.textContent||'').replace(/\s+/g,' ').trim();
-      if(text==='← Retour'||text==='Retour'||text.indexOf('← Retour')===0){
+      var isBack = text==='← Retour' || text==='Retour' || /^←\s*Retour(?:\s*)$/.test(text);
+      if(isBack){
         el.setAttribute('data-tc-legacy-back','1');
         el.remove();
       }
@@ -87,7 +89,6 @@
     home.addEventListener('click',function(){writeStack([]);navigate('overview',true);});
     var trail=document.createElement('div');trail.className='tc-nav-trail';trail.innerHTML='<span>'+label(parent)+'</span>  /  <strong>'+label(v)+'</strong>';
     box.appendChild(home);box.appendChild(trail);main.insertBefore(box,main.firstChild);
-    removeLegacyBackControls();
   }
   function wrapNav(){
     if(wrapped||typeof window.nav!=='function')return false;
