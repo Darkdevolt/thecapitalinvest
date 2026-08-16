@@ -3,15 +3,14 @@
  */
 (function(){
   'use strict';
-  var ROOT='tc-seances-crud';
-  var loadedDate='';
-  var rows=[];
+  var ROOT='tc-seances-crud', loadedDate='', rows=[];
+  // Colonnes réellement utilisées par la table historique dans le projet.
   var fields=[
     ['ticker','Ticker','text'],['date_seance','Date séance','date'],['cours_cloture','Clôture','number'],
     ['cours_ouverture','Ouverture','number'],['plus_haut','Plus haut','number'],['plus_bas','Plus bas','number'],
-    ['volume','Volume','number'],['variation','Variation %','number'],['valeur_totale','Valeur totale','number'],
-    ['plus_haut_52','Plus haut 52s','number'],['plus_bas_52','Plus bas 52s','number']
+    ['volume','Volume','number'],['variation','Variation %','number'],['valeur_totale','Valeur totale','number']
   ];
+  var SELECT='id,ticker,date_seance,cours_cloture,cours_ouverture,plus_haut,plus_bas,volume,variation,valeur_totale';
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
   function auth(extra){return Object.assign({apikey:SB_ANON,Authorization:'Bearer '+TK,Accept:'application/json','Content-Type':'application/json'},extra||{});}
   function toastMsg(msg,type){if(typeof toast==='function')toast(msg,type||'ok');else alert(msg);}
@@ -19,21 +18,21 @@
   async function request(path,opt){var r=await fetch(SB_REST+path,opt||{}),t=await r.text();if(!r.ok)throw Error('HTTP '+r.status+' — '+t.slice(0,300));try{return t?JSON.parse(t):[];}catch(e){return [];}}
   async function tickers(){var p=await request('/entreprises?select=ticker,actif&order=ticker.asc',{headers:auth()});return Array.from(new Set((Array.isArray(p)?p:[]).map(function(x){return String(x.ticker||'').trim();}).filter(Boolean)));}
   function validate(data){
-    if(!data.ticker) return 'Ticker obligatoire.';
-    if(!/^\d{4}-\d{2}-\d{2}$/.test(data.date_seance)) return 'Date de séance invalide.';
-    if(n(data.cours_cloture)==null||n(data.cours_cloture)<0) return 'Cours de clôture obligatoire et positif.';
-    if(n(data.plus_bas)!=null&&n(data.plus_haut)!=null&&n(data.plus_bas)>n(data.plus_haut)) return 'Plus bas supérieur au plus haut.';
-    if(n(data.cours_ouverture)!=null&&n(data.plus_haut)!=null&&n(data.cours_ouverture)>n(data.plus_haut)) return 'Ouverture supérieure au plus haut.';
-    if(n(data.cours_ouverture)!=null&&n(data.plus_bas)!=null&&n(data.cours_ouverture)<n(data.plus_bas)) return 'Ouverture inférieure au plus bas.';
-    if(n(data.cours_cloture)!=null&&n(data.plus_haut)!=null&&n(data.cours_cloture)>n(data.plus_haut)) return 'Clôture supérieure au plus haut.';
-    if(n(data.cours_cloture)!=null&&n(data.plus_bas)!=null&&n(data.cours_cloture)<n(data.plus_bas)) return 'Clôture inférieure au plus bas.';
-    if(n(data.volume)!=null&&n(data.volume)<0) return 'Volume négatif.';
+    if(!data.ticker)return 'Ticker obligatoire.';
+    if(!/^\d{4}-\d{2}-\d{2}$/.test(data.date_seance))return 'Date de séance invalide.';
+    if(n(data.cours_cloture)==null||n(data.cours_cloture)<0)return 'Cours de clôture obligatoire et positif.';
+    if(n(data.plus_bas)!=null&&n(data.plus_haut)!=null&&n(data.plus_bas)>n(data.plus_haut))return 'Plus bas supérieur au plus haut.';
+    if(n(data.cours_ouverture)!=null&&n(data.plus_haut)!=null&&n(data.cours_ouverture)>n(data.plus_haut))return 'Ouverture supérieure au plus haut.';
+    if(n(data.cours_ouverture)!=null&&n(data.plus_bas)!=null&&n(data.cours_ouverture)<n(data.plus_bas))return 'Ouverture inférieure au plus bas.';
+    if(n(data.cours_cloture)!=null&&n(data.plus_haut)!=null&&n(data.cours_cloture)>n(data.plus_haut))return 'Clôture supérieure au plus haut.';
+    if(n(data.cours_cloture)!=null&&n(data.plus_bas)!=null&&n(data.cours_cloture)<n(data.plus_bas))return 'Clôture inférieure au plus bas.';
+    if(n(data.volume)!=null&&n(data.volume)<0)return 'Volume négatif.';
     return '';
   }
   function formValues(form){var d={};fields.forEach(function(f){var el=form.querySelector('[name="'+f[0]+'"]');if(el){var v=el.value.trim();d[f[0]]=f[2]==='number'?n(v):v;}});return d;}
   function formHtml(data,tickers){data=data||{};return '<form data-crud-form><div class="form-grid">'+fields.map(function(f){var val=data[f[0]]==null?'':data[f[0]];if(f[0]==='ticker')return '<div class="field"><label>Ticker</label><select class="input" name="ticker" required><option value="">Sélectionner…</option>'+tickers.map(function(t){return '<option value="'+esc(t)+'" '+(String(val)===t?'selected':'')+'>'+esc(t)+'</option>';}).join('')+'</select></div>';return '<div class="field"><label>'+f[1]+'</label><input class="input" name="'+f[0]+'" type="'+f[2]+'" step="any" value="'+esc(val)+'" '+(f[0]==='date_seance'?'required':'')+'></div>';}).join('')+'</div><div class="actions-row"><button class="btn btn-primary" type="submit">💾 Enregistrer</button><button class="btn btn-outline" type="button" data-crud-cancel>Annuler</button><span data-crud-form-status style="font-size:11px;color:var(--muted)"></span></div></form>';}
   function render(){var root=document.getElementById(ROOT);if(!root)return;var body=root.querySelector('[data-crud-body]');body.innerHTML=rows.map(function(r){return '<tr><td><strong>'+esc(r.ticker)+'</strong></td><td>'+esc(String(r.date_seance).slice(0,10))+'</td><td class="r">'+esc(r.cours_cloture)+'</td><td class="r">'+esc(r.cours_ouverture)+'</td><td class="r">'+esc(r.plus_haut)+'</td><td class="r">'+esc(r.plus_bas)+'</td><td class="r">'+esc(r.volume)+'</td><td class="r">'+esc(r.variation)+'</td><td><div class="tc-session-actions"><button class="btn btn-outline btn-sm" data-crud-edit="'+esc(r.id)+'">✏️ Modifier</button><button class="btn btn-outline btn-sm" data-crud-delete="'+esc(r.id)+'">🗑 Supprimer</button></div></td></tr>';}).join('')||'<tr><td colspan="9"><div class="empty-state">Aucun cours pour cette séance.</div></td></tr>';body.querySelectorAll('[data-crud-edit]').forEach(function(b){b.onclick=function(){openForm(rows.find(function(r){return String(r.id)===String(b.dataset.crudEdit);}));};});body.querySelectorAll('[data-crud-delete]').forEach(function(b){b.onclick=function(){del(b.dataset.crudDelete);};});}
-  async function loadDate(d){loadedDate=d;var status=document.querySelector('#'+ROOT+' [data-crud-status]');if(status)status.textContent='Chargement…';try{rows=await request('/historique?select=id,ticker,date_seance,cours_cloture,cours_ouverture,plus_haut,plus_bas,volume,variation,valeur_totale,plus_haut_52,plus_bas_52&date_seance=eq.'+encodeURIComponent(d)+'&order=ticker.asc',{headers:auth()});if(!Array.isArray(rows))rows=[];render();if(status)status.textContent=rows.length+' cours chargés pour '+d+'.';}catch(e){if(status)status.textContent=e.message;}}
+  async function loadDate(d){loadedDate=d;var status=document.querySelector('#'+ROOT+' [data-crud-status]');if(status)status.textContent='Chargement…';try{rows=await request('/historique?select='+encodeURIComponent(SELECT)+'&date_seance=eq.'+encodeURIComponent(d)+'&order=ticker.asc',{headers:auth()});if(!Array.isArray(rows))rows=[];render();if(status)status.textContent=rows.length+' cours chargés pour '+d+'.';}catch(e){if(status)status.textContent=e.message;}}
   async function openForm(row){var root=document.getElementById(ROOT),formBox=root.querySelector('[data-crud-form-box]');var ts=[];try{ts=await tickers();}catch(e){toastMsg('Impossible de charger les tickers : '+e.message,'err');return;}formBox.innerHTML='<div class="info-box" style="margin-bottom:12px"><strong>'+(row?'Modifier le cours':'Ajouter un cours')+'</strong> — la date doit être celle de la séance sélectionnée.</div>'+formHtml(row||{date_seance:loadedDate},ts);formBox.style.display='block';formBox.querySelector('[data-crud-cancel]').onclick=function(){formBox.style.display='none';};formBox.querySelector('[data-crud-form]').onsubmit=function(ev){ev.preventDefault();saveRow(row);};formBox.scrollIntoView({behavior:'smooth',block:'nearest'});}
   async function saveRow(existing){var form=document.querySelector('#'+ROOT+' [data-crud-form]');var data=formValues(form);if(data.date_seance!==loadedDate){toastMsg('Le cours doit appartenir à la séance '+loadedDate+'.','err');return;}var err=validate(data);if(err){toastMsg(err,'err');return;}var status=form.querySelector('[data-crud-form-status]');status.textContent='Enregistrement…';try{if(existing){await request('/historique?id=eq.'+encodeURIComponent(existing.id),{method:'PATCH',headers:auth({'Prefer':'return=representation'}),body:JSON.stringify(data)});toastMsg('Cours '+data.ticker+' modifié.','ok');}else{var dup=rows.some(function(r){return String(r.ticker).trim()===data.ticker&&String(r.date_seance).slice(0,10)===data.date_seance;});if(dup){toastMsg('Ce ticker existe déjà dans cette séance.','err');return;}await request('/historique',{method:'POST',headers:auth({'Prefer':'return=representation'}),body:JSON.stringify(data)});toastMsg('Cours '+data.ticker+' ajouté à la séance.','ok');}document.querySelector('#'+ROOT+' [data-crud-form-box]').style.display='none';await loadDate(loadedDate);}catch(e){status.textContent='';toastMsg('Enregistrement impossible : '+e.message,'err');}}
   async function del(id){var r=rows.find(function(x){return String(x.id)===String(id);});if(!r)return;if(!confirm('Supprimer le cours '+r.ticker+' du '+loadedDate+' ?'))return;try{await request('/historique?id=eq.'+encodeURIComponent(id),{method:'DELETE',headers:auth({'Prefer':'return=representation'})});toastMsg('Cours '+r.ticker+' supprimé.','ok');await loadDate(loadedDate);}catch(e){toastMsg('Suppression impossible : '+e.message,'err');}}
