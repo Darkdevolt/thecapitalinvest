@@ -67,6 +67,59 @@ async function getRows(ticker) {
   return data || [];
 }
 
+// For the current year, the course is dynamic but the latest available BPA is
+// valid until a newer BPA is published. The database history function correctly
+// selects the latest course for the current year, but it intentionally joins BPA
+// by the same fiscal year. This fallback keeps 2026 calculable with the most
+// recent available annual BPA (2025 today), without changing closed-year rows.
+async function applyCurrentYearBpaFallback(rows, ticker) {
+  const currentYear = new Date().getUTCFullYear();
+  const currentRows = rows.filter(row => Number(row.annee) === currentYear);
+  if (!currentRows.length || !db) return rows;
+
+  let query = db
+    .from('financials')
+    .select('id,ticker,annee,periode,bpa,validation_status,updated_at')
+    .eq('ticker', ticker)
+    .lte('annee', currentYear)
+    .not('bpa', 'is', null);
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const candidates = (data || [])
+    .filter(row => row.periode == null || String(row.periode).toLowerCase() === 'annuel')
+    .filter(row => Number.isFinite(Number(row.bpa)) && Number(row.bpa) !== 0)
+    .sort((a, b) => {
+      const yearDiff = Number(b.annee) - Number(a.annee);
+      if (yearDiff) return yearDiff;
+      const validatedDiff = Number(String(b.validation_status || '').toLowerCase() === 'validated') - Number(String(a.validation_status || '').toLowerCase() === 'validated');
+      if (validatedDiff) return validatedDiff;
+      return String(b.updated_at || '').localeCompare(String(a.updated_at || '')) || Number(b.id || 0) - Number(a.id || 0);
+    });
+
+  if (!candidates.length) return rows;
+
+  return rows.map(row => {
+    if (Number(row.annee) !== currentYear || row.bpa != null) return row;
+    const bpa = Number(candidates[0].bpa);
+    const course = Number(row.cours_reference);
+    const per = bpa > 0 && Number.isFinite(course) ? course / bpa : null;
+    return {
+      ...row,
+      bpa,
+      per,
+      raison: per == null ? (bpa < 0 ? 'BPA négatif' : 'BPA nul') : null
+    };
+  });
+}
+
+async function prepareRows(ticker) {
+  const rows = await getRows(ticker);
+  if (!ticker) return rows;
+  return applyCurrentYearBpaFallback(rows, ticker);
+}
+
 export default async function handler(req, res) {
   if (!db) return json(res, 500, { error: 'Supabase non configuré' });
 
@@ -75,11 +128,10 @@ export default async function handler(req, res) {
     const ticker = normalizeTicker(url.searchParams.get('ticker'));
 
     if (req.method === 'GET') {
-      // Normal read: the DB function only refreshes the current year and the
-      // immediately previous year when history already exists. On first access,
-      // it backfills all years for the requested ticker.
+      // Normal read: closed years remain fixed on their last session of the
+      // respective year; the current year is refreshed on every read.
       await refresh(ticker || null, false);
-      const rows = await getRows(ticker || null);
+      const rows = await prepareRows(ticker || null);
       return json(res, 200, {
         success: true,
         ticker: ticker || null,
@@ -99,7 +151,7 @@ export default async function handler(req, res) {
       const requestedTicker = normalizeTicker(body.ticker || ticker);
       const full = body.full !== false;
       const refreshed = await refresh(requestedTicker || null, full);
-      const rows = await getRows(requestedTicker || null);
+      const rows = await prepareRows(requestedTicker || null);
       return json(res, 200, {
         success: true,
         ticker: requestedTicker || null,
