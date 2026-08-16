@@ -19,13 +19,9 @@ async function query(table,build){
 }
 
 // SOURCE CANONIQUE : historique Supabase.
-// IMPORTANT : "Cours" représente UNE séance de marché, pas le dernier cours
-// disponible indépendamment pour chaque ticker. L'ancienne logique pouvait donc
-// mélanger, par exemple, un titre au 13/08 avec un autre au 07/08.
-// On détermine d'abord la date de séance la plus récente, puis on ne retourne
-// que les lignes de cette date. Les titres absents de cette séance restent
-// absents : ils doivent être contrôlés dans l'Admin, pas remplacés par une
-// ancienne observation.
+// "Cours" représente UNE séance de marché, pas le dernier cours disponible
+// indépendamment pour chaque ticker. L'ancienne logique pouvait donc mélanger
+// par exemple un titre au 13/08 avec un autre au 07/08.
 async function latestCours(){
   const PAGE_SIZE=1000;
   const MAX_PAGES=50;
@@ -57,7 +53,8 @@ async function latestCours(){
     for(const r of batch){
       const ticker=String(r.ticker||'').trim().toUpperCase();
       if(!ticker)continue;
-      if(r.cours_cloture==null && r.cloture==null && r.cours_normal==null)continue;
+      // Ne pas masquer une ligne incomplète : l'Admin doit pouvoir la voir
+      // et la corriger dans la séance concernée.
       const variationPct=r.variation_pct ?? r.variation ?? null;
       rows.push({
         id:r.id,ticker,date_seance:r.date_seance,
