@@ -8,11 +8,12 @@
   'use strict';
   var ID='tc-seances-globales';
   var STORE='tc_global_sessions_v2';
-  var EXPECTED_INDICES=(window.INDICES_BRV||['BRVM10','BRVM COMPOSITE','BRVM PRESTIGE','BRVM TRANSPORT','BRVM FINANCE','BRVM DISTRIBUTION','BRVM INDUSTRIE','BRVM AGRICULTURE','BRVM SERVICES PUBLICS','BRVM AUTRES SECTEURS']).map(function(x){return String(x).trim();});
+  var EXPECTED_INDICES=['BRVM-COMPOSITE','BRVM-30','BRVM-PRESTIGE'];
   var S={hist:[],indices:[],tickers:[],sessions:[]};
   function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
   function num(v){var n=Number(v);return Number.isFinite(n)?n:null;}
   function date(v){return String(v||'').slice(0,10);}
+  function indexKey(v){var raw=String(v||'').trim().toUpperCase().replace(/[^A-Z0-9]/g,'');if(raw==='BRVMC'||raw.indexOf('COMPOSITE')>=0)return 'BRVM-COMPOSITE';if(raw.indexOf('30')>=0)return 'BRVM-30';if(raw.indexOf('PRESTIGE')>=0)return 'BRVM-PRESTIGE';return raw;}
   function weekend(d){var x=new Date(d+'T00:00:00').getDay();return x===0||x===6;}
   function fmt(d){try{return new Date(d+'T00:00:00').toLocaleDateString('fr-FR',{weekday:'short',day:'2-digit',month:'2-digit',year:'numeric'});}catch(e){return d;}}
   function auth(){return {apikey:SB_ANON,Authorization:'Bearer '+TK,Accept:'application/json'};}
@@ -42,7 +43,7 @@
       var h=S.hist.filter(function(r){return date(r.date_seance)===d;});
       var i=S.indices.filter(function(r){return date(r.date_seance)===d;});
       var ht=new Set(h.map(function(r){return String(r.ticker||'').trim();}).filter(Boolean));
-      var ix=new Set(i.map(function(r){return String(r.indice||'').trim();}).filter(Boolean));
+      var ix=new Set(i.map(function(r){return indexKey(r.indice);}).filter(Boolean));
       var dupH=h.length-ht.size,dupI=i.length-ix.size,invalid=0;
       h.forEach(function(r){var c=num(r.cours_cloture),o=num(r.cours_ouverture),hi=num(r.plus_haut),lo=num(r.plus_bas),v=num(r.volume),vr=num(r.variation);if(c==null||c<0)invalid++;if(hi!=null&&lo!=null&&lo>hi)invalid++;if(o!=null&&hi!=null&&o>hi)invalid++;if(o!=null&&lo!=null&&o<lo)invalid++;if(c!=null&&hi!=null&&c>hi)invalid++;if(c!=null&&lo!=null&&c<lo)invalid++;if(v!=null&&v<0)invalid++;if(vr!=null&&Math.abs(vr)>7.5)invalid++;});
       var missingTitles=S.tickers.filter(function(t){return !ht.has(t);});
