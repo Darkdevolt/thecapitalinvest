@@ -67,24 +67,20 @@ async function getRows(ticker) {
   return data || [];
 }
 
-// For the current year, the course is dynamic but the latest available BPA is
-// valid until a newer BPA is published. The database history function correctly
-// selects the latest course for the current year, but it intentionally joins BPA
-// by the same fiscal year. This fallback keeps 2026 calculable with the most
-// recent available annual BPA (2025 today), without changing closed-year rows.
+// A current-year PER is a CURRENT valuation multiple, not a forecast PER.
+// Until a new annual BPA is published, it uses the latest available annual BPA.
+// Closed years keep their own year-end course and matching annual BPA.
 async function applyCurrentYearBpaFallback(rows, ticker) {
   const currentYear = new Date().getUTCFullYear();
   const currentRows = rows.filter(row => Number(row.annee) === currentYear);
   if (!currentRows.length || !db) return rows;
 
-  let query = db
+  const { data, error } = await db
     .from('financials')
     .select('id,ticker,annee,periode,bpa,validation_status,updated_at')
     .eq('ticker', ticker)
     .lte('annee', currentYear)
     .not('bpa', 'is', null);
-
-  const { data, error } = await query;
   if (error) throw error;
 
   const candidates = (data || [])
@@ -100,24 +96,58 @@ async function applyCurrentYearBpaFallback(rows, ticker) {
 
   if (!candidates.length) return rows;
 
+  const reference = candidates[0];
+  const bpa = Number(reference.bpa);
+  const referenceYear = Number(reference.annee);
+
   return rows.map(row => {
     if (Number(row.annee) !== currentYear || row.bpa != null) return row;
-    const bpa = Number(candidates[0].bpa);
     const course = Number(row.cours_reference);
     const per = bpa > 0 && Number.isFinite(course) ? course / bpa : null;
     return {
       ...row,
       bpa,
       per,
+      bpa_reference_year: referenceYear,
+      per_type: 'courant',
+      per_label: 'PER courant',
+      bpa_reference_label: `BPA de référence : exercice ${referenceYear}`,
+      cours_reference_label: 'Dernier cours disponible',
       raison: per == null ? (bpa < 0 ? 'BPA négatif' : 'BPA nul') : null
+    };
+  });
+}
+
+function decorateRows(rows) {
+  const currentYear = new Date().getUTCFullYear();
+  return rows.map(row => {
+    const year = Number(row.annee);
+    const isCurrent = year === currentYear;
+    if (isCurrent) {
+      return {
+        ...row,
+        per_type: row.per_type || 'courant',
+        per_label: row.per_label || 'PER courant',
+        bpa_reference_year: Number(row.bpa_reference_year || year),
+        bpa_reference_label: row.bpa_reference_label || `BPA de référence : exercice ${Number(row.bpa_reference_year || year)}`,
+        cours_reference_label: row.cours_reference_label || 'Dernier cours disponible'
+      };
+    }
+    return {
+      ...row,
+      per_type: 'historique',
+      per_label: `PER historique ${year}`,
+      bpa_reference_year: year,
+      bpa_reference_label: `BPA : exercice ${year}`,
+      cours_reference_label: `Cours de clôture ${year}`
     };
   });
 }
 
 async function prepareRows(ticker) {
   const rows = await getRows(ticker);
-  if (!ticker) return rows;
-  return applyCurrentYearBpaFallback(rows, ticker);
+  if (!ticker) return decorateRows(rows);
+  return decorateRows(await applyCurrentYearBpaFallback(rows, ticker));
 }
 
 export default async function handler(req, res) {
@@ -128,14 +158,20 @@ export default async function handler(req, res) {
     const ticker = normalizeTicker(url.searchParams.get('ticker'));
 
     if (req.method === 'GET') {
-      // Normal read: closed years remain fixed on their last session of the
-      // respective year; the current year is refreshed on every read.
+      // Closed years stay fixed on their last session. The current year is
+      // refreshed on every read and uses the latest available annual BPA.
       await refresh(ticker || null, false);
       const rows = await prepareRows(ticker || null);
+      const currentYear = new Date().getUTCFullYear();
+      const currentRow = rows.find(row => Number(row.annee) === currentYear) || null;
       return json(res, 200, {
         success: true,
         ticker: ticker || null,
-        current_year: new Date().getUTCFullYear(),
+        current_year: currentYear,
+        current_per_type: 'courant',
+        current_per_label: 'PER courant',
+        current_bpa_reference_year: currentRow?.bpa_reference_year || null,
+        current_course_date: currentRow?.date_cours_reference || null,
         rows
       });
     }
