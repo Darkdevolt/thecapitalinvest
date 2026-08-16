@@ -97,7 +97,9 @@
       loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8', function () {
         loadScript('app/js/views/user-data-patch.js?v=7', function () {
           loadScript('app/js/views/fundamental-ratios.js?v=1', function () {
-            renderAfterData();
+            loadScript('app/js/views/fundamental-data-filters.js?v=20260816', function () {
+              renderAfterData();
+            });
           });
         });
       });
