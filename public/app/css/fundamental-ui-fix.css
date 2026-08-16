@@ -1,0 +1,5 @@
+/* Final control usability overrides */
+#view-analyse-fondamentale .tc-fund-security{padding-left:38px}
+#view-analyse-fondamentale #fundTickerSelect{position:static!important;opacity:1!important;pointer-events:auto!important;width:118px!important;height:30px!important;min-width:118px!important;margin-left:8px!important;padding:0 8px!important;border:0!important;border-left:1px solid rgba(255,255,255,.08)!important;border-radius:8px!important;background:rgba(201,162,39,.08)!important;color:var(--gold-light)!important;font:700 11px var(--mono)!important;outline:0!important}
+#view-analyse-fondamentale #fundTickerSelect option{background:#211c18;color:var(--cream)}
+@media(max-width:600px){#view-analyse-fondamentale #fundTickerSelect{width:96px!important;min-width:96px!important}.tc-fund-security #tcFundSearch{min-width:0}}
