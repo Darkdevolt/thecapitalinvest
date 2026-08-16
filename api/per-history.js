@@ -67,6 +67,23 @@ async function getRows(ticker) {
   return data || [];
 }
 
+function ageDays(value) {
+  if (!value) return null;
+  const time = new Date(value).getTime();
+  if (!Number.isFinite(time)) return null;
+  return Math.max(0, Math.floor((Date.now() - time) / 86400000));
+}
+
+function ageLabel(days) {
+  if (!Number.isFinite(days)) return null;
+  if (days < 30) return `${days} jour${days === 1 ? '' : 's'}`;
+  const months = Math.floor(days / 30.4375);
+  if (months < 12) return `${months} mois`;
+  const years = Math.floor(months / 12);
+  const remainingMonths = months % 12;
+  return `${years} an${years === 1 ? '' : 's'}${remainingMonths ? ` et ${remainingMonths} mois` : ''}`;
+}
+
 // A current-year PER is a CURRENT valuation multiple, not a forecast PER.
 // Until a new annual BPA is published, it uses the latest available annual BPA.
 // Closed years keep their own year-end course and matching annual BPA.
@@ -85,7 +102,7 @@ async function applyCurrentYearBpaFallback(rows, ticker) {
 
   const candidates = (data || [])
     .filter(row => row.periode == null || String(row.periode).toLowerCase() === 'annuel')
-    .filter(row => Number.isFinite(Number(row.bpa)) && Number(row.bpa) !== 0)
+    .filter(row => Number.isFinite(Number(row.bpa)))
     .sort((a, b) => {
       const yearDiff = Number(b.annee) - Number(a.annee);
       if (yearDiff) return yearDiff;
@@ -99,6 +116,7 @@ async function applyCurrentYearBpaFallback(rows, ticker) {
   const reference = candidates[0];
   const bpa = Number(reference.bpa);
   const referenceYear = Number(reference.annee);
+  const bpaUpdatedAt = reference.updated_at || null;
 
   return rows.map(row => {
     if (Number(row.annee) !== currentYear || row.bpa != null) return row;
@@ -109,12 +127,16 @@ async function applyCurrentYearBpaFallback(rows, ticker) {
       bpa,
       per,
       bpa_reference_year: referenceYear,
+      bpa_reference_updated_at: bpaUpdatedAt,
+      bpa_age_days: ageDays(bpaUpdatedAt),
+      bpa_age_label: ageLabel(ageDays(bpaUpdatedAt)),
       per_type: 'courant',
       per_label: 'PER courant',
       bpa_reference_label: `BPA de référence : exercice ${referenceYear}`,
       cours_reference_label: 'Dernier cours disponible',
+      per_status: bpa > 0 ? 'calculable' : (bpa < 0 ? 'deficitaire' : 'bpa_nul'),
       raison: per == null
-        ? (bpa < 0 ? 'BPA négatif' : 'BPA nul')
+        ? (bpa < 0 ? 'N/A — société déficitaire' : 'N/A — BPA nul')
         : `PER courant · BPA de référence : exercice ${referenceYear} · Dernier cours disponible`
     };
   });
@@ -125,24 +147,43 @@ function decorateRows(rows) {
   return rows.map(row => {
     const year = Number(row.annee);
     const isCurrent = year === currentYear;
+    const bpa = Number(row.bpa);
+    const hasBpa = Number.isFinite(bpa);
+    const invalidBpa = !hasBpa || bpa <= 0;
+    const safePer = invalidBpa ? null : (Number.isFinite(Number(row.per)) ? Number(row.per) : null);
+    const bpaAge = ageDays(row.bpa_reference_updated_at || row.updated_at);
+
     if (isCurrent) {
+      const referenceYear = Number(row.bpa_reference_year || year);
       return {
         ...row,
+        per: safePer,
         per_type: row.per_type || 'courant',
         per_label: row.per_label || 'PER courant',
-        bpa_reference_year: Number(row.bpa_reference_year || year),
-        bpa_reference_label: row.bpa_reference_label || `BPA de référence : exercice ${Number(row.bpa_reference_year || year)}`,
+        bpa_reference_year: referenceYear,
+        bpa_reference_updated_at: row.bpa_reference_updated_at || row.updated_at || null,
+        bpa_age_days: row.bpa_age_days ?? bpaAge,
+        bpa_age_label: row.bpa_age_label || ageLabel(row.bpa_age_days ?? bpaAge),
+        bpa_reference_label: row.bpa_reference_label || `BPA de référence : exercice ${referenceYear}`,
         cours_reference_label: row.cours_reference_label || 'Dernier cours disponible',
-        raison: row.raison || `PER courant · BPA de référence : exercice ${Number(row.bpa_reference_year || year)} · Dernier cours disponible`
+        per_status: row.per_status || (invalidBpa ? (hasBpa && bpa < 0 ? 'deficitaire' : 'bpa_nul') : 'calculable'),
+        raison: row.raison || (invalidBpa
+          ? (hasBpa && bpa < 0 ? 'N/A — société déficitaire' : 'N/A — BPA nul')
+          : `PER courant · BPA de référence : exercice ${referenceYear} · Dernier cours disponible`)
       };
     }
     return {
       ...row,
+      per: safePer,
       per_type: 'historique',
       per_label: `PER historique ${year}`,
       bpa_reference_year: year,
       bpa_reference_label: `BPA : exercice ${year}`,
-      cours_reference_label: `Cours de clôture ${year}`
+      cours_reference_label: `Cours de clôture ${year}`,
+      per_status: row.per_status || (invalidBpa ? (hasBpa && bpa < 0 ? 'deficitaire' : 'bpa_nul') : 'calculable'),
+      raison: row.raison || (invalidBpa
+        ? (hasBpa && bpa < 0 ? 'N/A — société déficitaire' : 'N/A — BPA nul')
+        : null)
     };
   });
 }
@@ -174,6 +215,9 @@ export default async function handler(req, res) {
         current_per_type: 'courant',
         current_per_label: 'PER courant',
         current_bpa_reference_year: currentRow?.bpa_reference_year || null,
+        current_bpa_age_days: currentRow?.bpa_age_days ?? null,
+        current_bpa_age_label: currentRow?.bpa_age_label || null,
+        current_per_status: currentRow?.per_status || null,
         current_course_date: currentRow?.date_cours_reference || null,
         rows
       });
