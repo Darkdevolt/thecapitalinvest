@@ -66,6 +66,8 @@
   window.apiGetFinancials=()=>window.apiGet('/marche?type=financials');
   window.apiGetBOC=()=>window.apiGet('/boc');
   window.apiGetApercu=()=>window.apiGet('/marche?type=apercu');
+  window.apiGetPerHistory=(ticker)=>window.apiGet('/per-history?ticker='+encodeURIComponent(String(ticker||'').trim().toUpperCase()));
+  window.apiRefreshPerHistory=(ticker,full)=>window.apiPost('/per-history',{ticker:String(ticker||'').trim().toUpperCase(),full:full!==false});
 
   window.api={
     get:window.apiGet,
@@ -88,8 +90,25 @@
     s.onerror=()=>console.warn('[FETCH] Patch Titres/Fiche indisponible');
     (document.head||document.documentElement).appendChild(s);
   }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',loadTitleFixes,{once:true});
-  else loadTitleFixes();
+
+  function loadPerHistory(){
+    if(document.getElementById('tc-per-history-script')) return;
+    const s=document.createElement('script');
+    s.id='tc-per-history-script';
+    s.src='/app/js/views/per-history.js?v=20260816';
+    s.async=false;
+    s.onload=()=>console.log('[FETCH] Historique PER chargé');
+    s.onerror=()=>console.warn('[FETCH] Historique PER indisponible');
+    (document.head||document.documentElement).appendChild(s);
+  }
+
+  if(document.readyState==='loading'){
+    document.addEventListener('DOMContentLoaded',loadTitleFixes,{once:true});
+    document.addEventListener('DOMContentLoaded',loadPerHistory,{once:true});
+  }else{
+    loadTitleFixes();
+    loadPerHistory();
+  }
 
   console.log('[FETCH] API client chargé, CRUD HTTP complet');
 })();
