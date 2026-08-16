@@ -113,7 +113,9 @@ async function applyCurrentYearBpaFallback(rows, ticker) {
       per_label: 'PER courant',
       bpa_reference_label: `BPA de référence : exercice ${referenceYear}`,
       cours_reference_label: 'Dernier cours disponible',
-      raison: per == null ? (bpa < 0 ? 'BPA négatif' : 'BPA nul') : null
+      raison: per == null
+        ? (bpa < 0 ? 'BPA négatif' : 'BPA nul')
+        : `PER courant · BPA de référence : exercice ${referenceYear} · Dernier cours disponible`
     };
   });
 }
@@ -130,7 +132,8 @@ function decorateRows(rows) {
         per_label: row.per_label || 'PER courant',
         bpa_reference_year: Number(row.bpa_reference_year || year),
         bpa_reference_label: row.bpa_reference_label || `BPA de référence : exercice ${Number(row.bpa_reference_year || year)}`,
-        cours_reference_label: row.cours_reference_label || 'Dernier cours disponible'
+        cours_reference_label: row.cours_reference_label || 'Dernier cours disponible',
+        raison: row.raison || `PER courant · BPA de référence : exercice ${Number(row.bpa_reference_year || year)} · Dernier cours disponible`
       };
     }
     return {
