@@ -1,4 +1,5 @@
 // THE CAPITAL — Historical PER
+// Public app presentation: Simple by default, Pro for detailed calculation context.
 // Uses the centralized /api/per-history endpoint. No market or financial values are invented client-side.
 (function(){
   'use strict';
@@ -6,9 +7,11 @@
   const cache = window.__tcPerHistoryCache || (window.__tcPerHistoryCache = new Map());
   let activeTicker = '';
   let observerStarted = false;
+  let chartInstance = null;
+  let displayMode = 'simple';
 
   function esc(value){
-    return String(value == null ? '' : value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    return String(value == null ? '' : value).replace(/[&<>\"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
   }
 
   function num(value){
@@ -31,16 +34,6 @@
     return n == null ? '—' : n.toFixed(2) + 'x';
   }
 
-  function statusLabel(row){
-    if(row.statut === 'definitif') return '<span class="tc-per-status tc-per-status-final">Définitif</span>';
-    if(row.statut === 'en_cours') return '<span class="tc-per-status tc-per-status-current">En cours</span>';
-    return '<span class="tc-per-status tc-per-status-missing">Non calculable</span>';
-  }
-
-  function reason(row){
-    return row.raison ? `<span class="tc-per-reason">${esc(row.raison)}</span>` : '';
-  }
-
   function injectStyles(){
     if(document.getElementById('tc-per-history-css')) return;
     const s=document.createElement('style');
@@ -51,29 +44,36 @@
       #tc-per-history-card .tc-per-kicker{font:9px var(--mono);letter-spacing:1.6px;color:var(--gold);text-transform:uppercase}
       #tc-per-history-card .tc-per-title{font:700 18px var(--serif);margin-top:4px;color:var(--cream)}
       #tc-per-history-card .tc-per-note{font-size:10px;line-height:1.5;color:var(--dim);margin-top:5px;max-width:760px}
-      #tc-per-history-card .tc-per-current{font:500 11px var(--mono);color:var(--gold);white-space:nowrap}
       #tc-per-history-card .tc-per-body{padding:0 18px 18px}
-      #tc-per-history-card .tc-per-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0}
-      #tc-per-history-card .tc-per-kpi{border:1px solid var(--border);padding:10px;border-radius:4px}
-      #tc-per-history-card .tc-per-kpi span{display:block;font-size:8px;text-transform:uppercase;color:var(--dim);letter-spacing:.06em}
-      #tc-per-history-card .tc-per-kpi strong{display:block;margin-top:5px;font:600 15px var(--mono);color:var(--cream)}
-      #tc-per-history-card .tc-per-chart{height:240px;margin:12px 0 18px}
+      #tc-per-history-card .tc-per-toolbar{display:flex;justify-content:flex-end;align-items:center;margin:12px 0 4px}
+      #tc-per-history-card .tc-per-switch{display:inline-flex;align-items:center;padding:2px;border:1px solid var(--border);border-radius:5px;background:rgba(255,255,255,.02)}
+      #tc-per-history-card .tc-per-switch button{appearance:none;border:0;background:transparent;color:var(--dim);font:600 9px var(--mono);letter-spacing:.05em;padding:7px 11px;border-radius:3px;cursor:pointer;transition:all .15s ease}
+      #tc-per-history-card .tc-per-switch button:hover{color:var(--cream)}
+      #tc-per-history-card .tc-per-switch button.active{background:var(--gold);color:#171310}
+      #tc-per-history-card .tc-per-simple-intro{font-size:10px;line-height:1.5;color:var(--dim);margin:12px 0 14px}
+      #tc-per-history-card .tc-per-chart{height:250px;margin:10px 0 18px}
       #tc-per-history-card .tc-per-chart canvas{width:100%!important;height:100%!important}
       #tc-per-history-card .tc-per-table-wrap{overflow:auto;border:1px solid var(--border);border-radius:4px}
-      #tc-per-history-card table{width:100%;min-width:760px;border-collapse:collapse}
-      #tc-per-history-card th,#tc-per-history-card td{padding:9px 8px;border-bottom:1px solid var(--border);font-size:10px;text-align:right;vertical-align:middle}
+      #tc-per-history-card table{width:100%;min-width:420px;border-collapse:collapse}
+      #tc-per-history-card th,#tc-per-history-card td{padding:9px 10px;border-bottom:1px solid var(--border);font-size:10px;text-align:right;vertical-align:middle}
       #tc-per-history-card th:first-child,#tc-per-history-card td:first-child{text-align:left}
       #tc-per-history-card th{font-size:8px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);font-weight:600}
       #tc-per-history-card tr:last-child td{border-bottom:0}
       #tc-per-history-card .tc-per-year{font:600 11px var(--mono);color:var(--cream)}
+      #tc-per-history-card .tc-per-value{font:600 11px var(--mono);color:var(--cream)}
+      #tc-per-history-card .tc-per-pro-note{font-size:9px;line-height:1.5;color:var(--dim);margin:12px 0 0}
       #tc-per-history-card .tc-per-status{display:inline-block;padding:3px 6px;border:1px solid var(--border);border-radius:3px;font-size:8px;white-space:nowrap}
       #tc-per-history-card .tc-per-status-final{color:var(--green);border-color:rgba(143,206,154,.35)}
       #tc-per-history-card .tc-per-status-current{color:var(--gold);border-color:rgba(184,150,78,.4)}
       #tc-per-history-card .tc-per-status-missing{color:var(--red);border-color:rgba(239,119,112,.35)}
       #tc-per-history-card .tc-per-reason{display:block;color:var(--dim);font-size:8px;margin-top:3px;white-space:normal}
       #tc-per-history-card .tc-per-empty{padding:20px 4px;color:var(--dim);font-size:10px}
-      #tc-per-history-card .tc-per-foot{margin-top:12px;color:var(--dim);font-size:9px;line-height:1.5}
-      @media(max-width:650px){#tc-per-history-card .tc-per-head{flex-direction:column}#tc-per-history-card .tc-per-summary{grid-template-columns:1fr 1fr}#tc-per-history-card .tc-per-chart{height:200px}}
+      @media(max-width:650px){
+        #tc-per-history-card .tc-per-head{flex-direction:column}
+        #tc-per-history-card .tc-per-toolbar{justify-content:flex-start}
+        #tc-per-history-card .tc-per-chart{height:210px}
+        #tc-per-history-card table{min-width:380px}
+      }
     `;
     document.head.appendChild(s);
   }
@@ -132,7 +132,37 @@
     });
   }
 
-  function render(ticker,rows){
+  function destroyChart(){
+    if(chartInstance && typeof chartInstance.destroy==='function'){
+      try{ chartInstance.destroy(); }catch(_e){}
+    }
+    chartInstance=null;
+  }
+
+  function renderChart(calculable){
+    const canvas=document.getElementById('tcPerHistoryChart');
+    if(!canvas || calculable.length<1 || typeof Chart!=='function') return;
+    destroyChart();
+    chartInstance=new Chart(canvas,{type:'line',data:{labels:calculable.map(r=>r.annee),datasets:[{label:'PER',data:calculable.map(r=>Number(r.per)),tension:.25,fill:false,borderColor:'rgba(184,150,78,.9)',pointBackgroundColor:'rgba(184,150,78,1)',pointRadius:3,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' PER : '+Number(ctx.parsed.y).toFixed(2)+'x'}}},scales:{x:{ticks:{color:'rgba(255,255,255,.55)',font:{size:9}},grid:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'rgba(255,255,255,.55)',font:{size:9},callback:v=>v+'x'},grid:{color:'rgba(255,255,255,.06)'}}}}});
+  }
+
+  function statusLabel(row){
+    if(row.statut === 'definitif') return '<span class="tc-per-status tc-per-status-final">Définitif</span>';
+    if(row.statut === 'en_cours') return '<span class="tc-per-status tc-per-status-current">En cours</span>';
+    return '<span class="tc-per-status tc-per-status-missing">Non calculable</span>';
+  }
+
+  function reason(row){
+    return row.raison ? `<span class="tc-per-reason">${esc(row.raison)}</span>` : '';
+  }
+
+  function setMode(mode,rows){
+    displayMode=mode==='pro'?'pro':'simple';
+    try{ localStorage.setItem('tc-per-display-mode',displayMode); }catch(_e){}
+    renderCard(tickerFromFiche(),rows);
+  }
+
+  function renderCard(ticker,rows){
     injectStyles();
     const view=document.getElementById('view-fiche');
     if(!view) return;
@@ -145,47 +175,63 @@
 
     const sorted=rows.slice().sort((a,b)=>Number(a.annee)-Number(b.annee));
     const calculable=sorted.filter(r=>num(r.per)!=null);
-    const current=sorted.find(r=>r.statut==='en_cours') || null;
-    const definitive=sorted.filter(r=>r.statut==='definitif').length;
-    const missing=sorted.filter(r=>r.statut==='non_calculable').length;
+    const mode=displayMode;
 
-    let html=`<div class="tc-per-head"><div><div class="tc-per-kicker">VALORISATION · HISTORIQUE</div><div class="tc-per-title">Historique du PER</div><div class="tc-per-note">PER = cours de référence / BPA de l'exercice. Les années clôturées utilisent la dernière séance réellement disponible de leur année. L'année en cours utilise le dernier cours disponible et reste dynamique.</div></div>${current?`<div class="tc-per-current">${esc(current.annee)} · ${statusLabel(current)}</div>`:''}</div><div class="tc-per-body">`;
-    html+=`<div class="tc-per-summary"><div class="tc-per-kpi"><span>Années calculées</span><strong>${calculable.length}</strong></div><div class="tc-per-kpi"><span>Définitives</span><strong>${definitive}</strong></div><div class="tc-per-kpi"><span>Non calculables</span><strong>${missing}</strong></div></div>`;
+    let html=`<div class="tc-per-head"><div><div class="tc-per-kicker">VALORISATION · HISTORIQUE</div><div class="tc-per-title">Évolution du PER</div></div></div><div class="tc-per-body">`;
+    html+=`<div class="tc-per-toolbar"><div class="tc-per-switch" role="group" aria-label="Affichage de l'historique du PER"><button type="button" data-per-mode="simple" class="${mode==='simple'?'active':''}">SIMPLE</button><button type="button" data-per-mode="pro" class="${mode==='pro'?'active':''}">PRO</button></div></div>`;
 
-    if(calculable.length>1){
-      html+=`<div class="tc-per-chart"><canvas id="tcPerHistoryChart"></canvas></div>`;
-    }
-
-    if(!sorted.length){
-      html+='<div class="tc-per-empty">Aucune année ne peut être affichée avec les données actuellement disponibles.</div>';
+    if(mode==='simple'){
+      html+=`<div class="tc-per-simple-intro">Visualisez simplement l'évolution du PER au fil des exercices.</div>`;
+      if(calculable.length>0) html+=`<div class="tc-per-chart"><canvas id="tcPerHistoryChart"></canvas></div>`;
+      if(calculable.length===0){
+        html+='<div class="tc-per-empty">Historique du PER indisponible avec les données actuellement disponibles.</div>';
+      }else{
+        html+=`<div class="tc-per-table-wrap"><table><thead><tr><th>Année</th><th>PER</th></tr></thead><tbody>`;
+        calculable.forEach(row=>{ html+=`<tr><td><span class="tc-per-year">${esc(row.annee)}</span></td><td><strong class="tc-per-value">${fmtPer(row.per)}</strong></td></tr>`; });
+        html+='</tbody></table></div>';
+      }
     }else{
-      html+=`<div class="tc-per-table-wrap"><table><thead><tr><th>Année</th><th>Date cours</th><th>Cours de référence</th><th>BPA</th><th>PER</th><th>Statut</th></tr></thead><tbody>`;
-      sorted.forEach(row=>{
-        html+=`<tr><td><span class="tc-per-year">${esc(row.annee)}</span>${reason(row)}</td><td>${esc(row.date_cours_reference||'—')}</td><td>${fmtPrice(row.cours_reference)}</td><td>${fmtBpa(row.bpa)}</td><td><strong>${fmtPer(row.per)}</strong></td><td>${statusLabel(row)}</td></tr>`;
-      });
-      html+='</tbody></table></div>';
+      const current=sorted.find(r=>r.statut==='en_cours') || null;
+      html+=`<div class="tc-per-simple-intro">Vue détaillée destinée à l'analyse : cours de référence, BPA et règles de calcul historiques.</div>`;
+      if(calculable.length>0) html+=`<div class="tc-per-chart"><canvas id="tcPerHistoryChart"></canvas></div>`;
+      if(!sorted.length){
+        html+='<div class="tc-per-empty">Aucune année ne peut être affichée avec les données actuellement disponibles.</div>';
+      }else{
+        html+=`<div class="tc-per-table-wrap"><table><thead><tr><th>Année</th><th>Date cours</th><th>Cours de référence</th><th>BPA</th><th>PER</th><th>Statut</th></tr></thead><tbody>`;
+        sorted.forEach(row=>{
+          html+=`<tr><td><span class="tc-per-year">${esc(row.annee)}</span>${reason(row)}</td><td>${esc(row.date_cours_reference||'—')}</td><td>${fmtPrice(row.cours_reference)}</td><td>${fmtBpa(row.bpa)}</td><td><strong>${fmtPer(row.per)}</strong></td><td>${statusLabel(row)}</td></tr>`;
+        });
+        html+='</tbody></table></div>';
+      }
+      if(current) html+=`<div class="tc-per-pro-note">L'exercice ${esc(current.annee)} est traité comme exercice en cours et reste dynamique jusqu'à la clôture de l'exercice.</div>`;
     }
 
-    html+='<div class="tc-per-foot">Les années sans BPA valide ou sans cours de référence ne produisent pas de faux PER. Les données historiques proviennent des cours et états financiers déjà présents dans The Capital.</div></div>';
+    html+='</div>';
     card.innerHTML=html;
+    renderChart(calculable);
 
-    const canvas=document.getElementById('tcPerHistoryChart');
-    if(canvas && calculable.length>1 && typeof Chart==='function'){
-      const labels=calculable.map(r=>r.annee);
-      const values=calculable.map(r=>Number(r.per));
-      new Chart(canvas,{type:'line',data:{labels,datasets:[{label:'PER',data:values,tension:.25,fill:false,borderColor:'rgba(184,150,78,.9)',pointBackgroundColor:'rgba(184,150,78,1)',pointRadius:3,borderWidth:1.5}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>' PER : '+Number(ctx.parsed.y).toFixed(2)+'x'}}},scales:{x:{ticks:{color:'rgba(255,255,255,.55)',font:{size:9}},grid:{color:'rgba(255,255,255,.06)'}},y:{ticks:{color:'rgba(255,255,255,.55)',font:{size:9},callback:v=>v+'x'},grid:{color:'rgba(255,255,255,.06)'}}}}});
-    }
+    card.querySelectorAll('[data-per-mode]').forEach(button=>{
+      button.addEventListener('click',()=>setMode(button.getAttribute('data-per-mode'),rows));
+    });
 
     updateCurrentPerSelectors(rows);
   }
 
+  function restoreMode(){
+    try{
+      const saved=localStorage.getItem('tc-per-display-mode');
+      if(saved==='pro' || saved==='simple') displayMode=saved;
+    }catch(_e){}
+  }
+
   async function refresh(){
     const ticker=tickerFromFiche();
-    if(!ticker || ticker===activeTicker && document.getElementById('tc-per-history-card')) return;
+    if(!ticker) return;
+    if(ticker===activeTicker && document.getElementById('tc-per-history-card')) return;
     activeTicker=ticker;
     try{
       const rows=await load(ticker);
-      if(ticker===tickerFromFiche()) render(ticker,rows);
+      if(ticker===tickerFromFiche()) renderCard(ticker,rows);
     }catch(error){
       console.warn('[PER] Impossible de charger l\'historique',error);
       const view=document.getElementById('view-fiche');
@@ -200,6 +246,7 @@
   function watch(){
     if(observerStarted) return;
     observerStarted=true;
+    restoreMode();
     const root=document.body;
     if(!root) return;
     const observer=new MutationObserver(()=>{
