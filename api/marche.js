@@ -19,21 +19,34 @@ async function query(table,build){
 }
 
 // SOURCE CANONIQUE : historique Supabase.
-// Le projet Supabase peut limiter chaque réponse à 1 000 lignes. On pagine
-// explicitement l'historique afin que la dernière observation de chaque titre
-// soit réellement récupérée, même si le volume historique dépasse cette limite.
+// IMPORTANT : "Cours" représente UNE séance de marché, pas le dernier cours
+// disponible indépendamment pour chaque ticker. L'ancienne logique pouvait donc
+// mélanger, par exemple, un titre au 13/08 avec un autre au 07/08.
+// On détermine d'abord la date de séance la plus récente, puis on ne retourne
+// que les lignes de cette date. Les titres absents de cette séance restent
+// absents : ils doivent être contrôlés dans l'Admin, pas remplacés par une
+// ancienne observation.
 async function latestCours(){
   const PAGE_SIZE=1000;
   const MAX_PAGES=50;
-  const seen=new Set();
+
+  const latest=await query('historique',q=>q
+    .select('date_seance')
+    .not('date_seance','is',null)
+    .order('date_seance',{ascending:false})
+    .limit(1));
+  if(latest.error)throw latest.error;
+
+  const latestDate=latest.data?.[0]?.date_seance||null;
+  if(!latestDate)return {data:[],error:null,latestDate:null,source:'historique',dates:{}};
+
   const rows=[];
   let from=0;
-  let latestDate=null;
 
   for(let page=0;page<MAX_PAGES;page++){
     const to=from+PAGE_SIZE-1;
     const q=await query('historique',q=>q
-      .order('date_seance',{ascending:false})
+      .eq('date_seance',latestDate)
       .order('ticker',{ascending:true})
       .range(from,to));
     if(q.error)throw q.error;
@@ -43,9 +56,8 @@ async function latestCours(){
 
     for(const r of batch){
       const ticker=String(r.ticker||'').trim().toUpperCase();
-      if(!ticker || seen.has(ticker))continue;
+      if(!ticker)continue;
       if(r.cours_cloture==null && r.cloture==null && r.cours_normal==null)continue;
-      seen.add(ticker);
       const variationPct=r.variation_pct ?? r.variation ?? null;
       rows.push({
         id:r.id,ticker,date_seance:r.date_seance,
@@ -53,9 +65,6 @@ async function latestCours(){
         cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
         ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
         plus_haut:r.plus_haut,plus_bas:r.plus_bas,
-        // variation = pourcentage : toutes les vues de l'application
-        // l'affichent comme un taux (%). La variation absolue reste disponible
-        // séparément pour les consommateurs qui en ont besoin.
         variation:variationPct,
         variation_pct:variationPct,
         variation_abs:r.variation,
@@ -63,7 +72,6 @@ async function latestCours(){
         valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
         transactions:null,capitalisation:null
       });
-      if(!latestDate || String(r.date_seance||'')>String(latestDate))latestDate=r.date_seance;
     }
 
     if(batch.length<PAGE_SIZE)break;
@@ -71,9 +79,13 @@ async function latestCours(){
   }
 
   rows.sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker)));
-  const dates={};
-  rows.forEach(r=>{dates[r.date_seance]=(dates[r.date_seance]||0)+1;});
-  return {data:rows,error:null,latestDate,source:'historique',dates};
+  return {
+    data:rows,
+    error:null,
+    latestDate,
+    source:'historique',
+    dates:{[latestDate]:rows.length}
+  };
 }
 
 async function latestIndices(){
