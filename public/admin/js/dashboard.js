@@ -14,4 +14,5 @@
     }
     load('admin/js/dashboard-overview.js?v=20260814-unified', 'dashboard-overview');
     load('admin/js/cours-historique.js?v=20260814-unified', 'cours-historique');
+    load('admin/js/session-manager.js?v=20260816-session-coherence', 'session-manager');
 })();
