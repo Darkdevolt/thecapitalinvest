@@ -88,19 +88,11 @@
   }
 
   function loadRuntimeLayers() {
-    // Navigation is a core layer: it must be available before users start moving between views.
     loadScript('app/js/navigation-guard.js?v=1');
-
-    // Dashboard market-data/UI patch: loaded dynamically so the core HTML and
-    // existing views remain untouched while the fixes are independently cache-busted.
     loadScript('app/js/overview-fixes.js?v=1');
-
-    // The technical experience is independent: it must never wait for
-    // portfolio/fundamental enhancements before becoming interactive.
+    loadScript('app/js/dashboard-indices.js?v=20260816');
     loadStyle('app/css/technique-experience.css?v=2');
     loadScript('app/js/views/technique/experience.js?v=3');
-
-    // Optional enhancements remain non-blocking for the application core.
     loadScript('app/js/views/portefeuille/portfolio-store.js?v=9', function () {
       loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8', function () {
         loadScript('app/js/views/user-data-patch.js?v=7', function () {
@@ -165,29 +157,23 @@
     if (!requireAuth()) return;
     normalizeDocument();
     console.log('[INIT] Session authentifiée, démarrage The Capital');
-
-    // CORE: always start the application before optional enhancements.
     if (typeof window.initApp !== 'function') {
       console.error('[INIT] initApp manquant, main.js doit être chargé avant init.js');
       document.body.classList.remove('init-hidden');
       return;
     }
-
     try { window.initApp(); } catch (e) { console.error('[INIT] initApp:', e); }
     if (typeof window.initSidebar === 'function') {
       try { window.initSidebar(); } catch (e) { console.warn('[INIT] sidebar:', e); }
     }
-
     ensureSuiviNavigation();
     setTimeout(ensureSuiviNavigation, 0);
-
     if (typeof window.initUserDataLayer === 'function') {
       try { window.initUserDataLayer(); } catch (e) { console.warn('[INIT] user data:', e); }
     }
     if (window.marketsModule && typeof window.marketsModule.loadData === 'function') {
       try { window.marketsModule.loadData(); } catch (e) { console.warn('[INIT] marketsModule:', e); }
     }
-
     document.body.classList.remove('init-hidden');
     renderAfterData();
     setTimeout(loadRuntimeLayers, 0);
