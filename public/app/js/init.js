@@ -93,13 +93,18 @@
     loadScript('app/js/dashboard-indices.js?v=20260816');
     loadStyle('app/css/technique-experience.css?v=2');
     loadScript('app/js/views/technique/experience.js?v=3');
+    loadStyle('app/css/fundamental-ui-redesign.css?v=20260816');
     loadScript('app/js/views/portefeuille/portfolio-store.js?v=9', function () {
       loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8', function () {
         loadScript('app/js/views/user-data-patch.js?v=7', function () {
           loadScript('app/js/views/fundamental-ratios.js?v=1', function () {
             loadScript('app/js/views/fundamental-data-filters.js?v=20260816', function () {
               loadScript('app/js/views/fundamental-mode-cleanup.js?v=20260816', function () {
-                renderAfterData();
+                loadScript('app/js/views/fundamental-pro-enhancement.js?v=20260816', function () {
+                  loadScript('app/js/views/fundamental-ui-redesign.js?v=20260816', function () {
+                    renderAfterData();
+                  });
+                });
               });
             });
           });
