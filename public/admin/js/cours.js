@@ -1,42 +1,10 @@
-/* THE CAPITAL — Cours & Historique bootstrap */
+/* THE CAPITAL — bootstrap Cours & Historique. */
 (function(){
 'use strict';
 window.CoursLegacy={retired:true};
-
-/* Never let the duplicate admin base target force the Admin into a new tab. */
-document.querySelectorAll('base[target="_blank"]').forEach(function(base){ base.remove(); });
-
-/* The session calendar is deliberately mounted after CoursControl has built
-   #panel-cours.  A MutationObserver keeps it present if the control center
-   replaces the panel HTML during initialisation or refresh. */
-function ensureTracking(){
-    if(!document.getElementById('panel-cours')) return;
-    if(!document.querySelector('script[data-tc-session-tracking]')){
-        var s=document.createElement('script');
-        s.src='admin/js/cours-control-tracking.js?v=20260816-2';
-        s.async=false;
-        s.setAttribute('data-tc-session-tracking','1');
-        document.head.appendChild(s);
-    }
-}
-
-function startTrackingGuard(){
-    ensureTracking();
-    var panel=document.getElementById('panel-cours');
-    if(panel && window.MutationObserver){
-        var observer=new MutationObserver(function(){
-            if(!document.getElementById('tc-session-tracking')) ensureTracking();
-        });
-        observer.observe(panel,{childList:true});
-    }
-    setTimeout(ensureTracking,500);
-    setTimeout(ensureTracking,1500);
-    setTimeout(ensureTracking,3000);
-}
-
-if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',startTrackingGuard);
-}else{
-    startTrackingGuard();
-}
+document.querySelectorAll('base[target="_blank"]').forEach(function(base){base.remove();});
+function loadTracker(done){if(window.CoursSessionTracking){done();return;}var existing=document.querySelector('script[data-tc-session-tracking]');if(existing){existing.addEventListener('load',done,{once:true});return;}var s=document.createElement('script');s.src='admin/js/cours-control-tracking.js?v=20260816-3';s.async=false;s.setAttribute('data-tc-session-tracking','1');s.onload=done;s.onerror=function(){console.error('[cours] Impossible de charger le tracking officiel des séances.');};document.head.appendChild(s);}
+function mountAfterInit(){loadTracker(function(){if(window.CoursSessionTracking)window.CoursSessionTracking.mount();});}
+function hook(){if(!window.CoursControl||typeof window.CoursControl.init!=='function'){setTimeout(hook,25);return;}if(window.CoursControl.__trackingLifecycleHooked)return;var original=window.CoursControl.init;window.CoursControl.init=function(){var result=original.apply(this,arguments);mountAfterInit();return result;};window.CoursControl.__trackingLifecycleHooked=true;}
+hook();
 })();
