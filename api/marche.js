@@ -18,43 +18,36 @@ async function query(table,build){
   return q;
 }
 
-// SOURCE CANONIQUE : historique Supabase.
-// "Cours" représente UNE séance de marché, pas le dernier cours disponible
-// indépendamment pour chaque ticker. L'ancienne logique pouvait donc mélanger
-// par exemple un titre au 13/08 avec un autre au 07/08.
-async function latestCours(){
+// Une séance de marché est une unité globale : les cours ET les indices
+// doivent appartenir à la même date de référence. On ne mélange jamais
+// plusieurs dates pour construire l'état courant du marché.
+async function latestSessionDate(){
+  const [h,i]=await Promise.all([
+    query('historique',q=>q.select('date_seance').not('date_seance','is',null).order('date_seance',{ascending:false}).limit(1)),
+    query('indices',q=>q.select('date_seance').not('date_seance','is',null).order('date_seance',{ascending:false}).limit(1))
+  ]);
+  if(h.error)throw h.error;
+  if(i.error)throw i.error;
+  const dates=[h.data?.[0]?.date_seance,i.data?.[0]?.date_seance].filter(Boolean).sort().reverse();
+  return dates[0]||null;
+}
+
+async function latestCours(sessionDate=null){
   const PAGE_SIZE=1000;
   const MAX_PAGES=50;
-
-  const latest=await query('historique',q=>q
-    .select('date_seance')
-    .not('date_seance','is',null)
-    .order('date_seance',{ascending:false})
-    .limit(1));
-  if(latest.error)throw latest.error;
-
-  const latestDate=latest.data?.[0]?.date_seance||null;
+  const latestDate=sessionDate||await latestSessionDate();
   if(!latestDate)return {data:[],error:null,latestDate:null,source:'historique',dates:{}};
 
   const rows=[];
   let from=0;
-
   for(let page=0;page<MAX_PAGES;page++){
-    const to=from+PAGE_SIZE-1;
-    const q=await query('historique',q=>q
-      .eq('date_seance',latestDate)
-      .order('ticker',{ascending:true})
-      .range(from,to));
+    const q=await query('historique',q=>q.eq('date_seance',latestDate).order('ticker',{ascending:true}).range(from,from+PAGE_SIZE-1));
     if(q.error)throw q.error;
-
     const batch=q.data||[];
     if(!batch.length)break;
-
     for(const r of batch){
       const ticker=String(r.ticker||'').trim().toUpperCase();
       if(!ticker)continue;
-      // Ne pas masquer une ligne incomplète : l'Admin doit pouvoir la voir
-      // et la corriger dans la séance concernée.
       const variationPct=r.variation_pct ?? r.variation ?? null;
       rows.push({
         id:r.id,ticker,date_seance:r.date_seance,
@@ -62,33 +55,24 @@ async function latestCours(){
         cours_cloture:r.cours_cloture ?? r.cloture ?? r.cours_normal,
         ouverture:r.cours_ouverture,cours_ouverture:r.cours_ouverture,
         plus_haut:r.plus_haut,plus_bas:r.plus_bas,
-        variation:variationPct,
-        variation_pct:variationPct,
-        variation_abs:r.variation,
-        volume:r.volume,
-        valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
+        variation:variationPct,variation_pct:variationPct,variation_abs:r.variation,
+        volume:r.volume,valeur_transigee:r.valeur_totale,valeur_totale:r.valeur_totale,
         transactions:null,capitalisation:null
       });
     }
-
     if(batch.length<PAGE_SIZE)break;
     from+=PAGE_SIZE;
   }
-
   rows.sort((a,b)=>String(a.ticker).localeCompare(String(b.ticker)));
-  return {
-    data:rows,
-    error:null,
-    latestDate,
-    source:'historique',
-    dates:{[latestDate]:rows.length}
-  };
+  return {data:rows,error:null,latestDate,source:'historique',dates:{[latestDate]:rows.length}};
 }
 
-async function latestIndices(){
-  const q=await query('indices',q=>q.order('date_seance',{ascending:false}).limit(1000));
+async function latestIndices(sessionDate=null){
+  const latestDate=sessionDate||await latestSessionDate();
+  if(!latestDate)return {data:[],error:null,latestDate:null,source:'indices',dates:{}};
+  const q=await query('indices',q=>q.eq('date_seance',latestDate).order('nom',{ascending:true}).limit(1000));
   if(q.error)throw q.error;
-  return q.data||[];
+  return {data:q.data||[],error:null,latestDate,source:'indices',dates:{[latestDate]:(q.data||[]).length}};
 }
 
 async function historique(ticker,limit,dateFrom,dateTo,offset){
@@ -121,8 +105,9 @@ export default async function handler(req,res){
       case'analyses':result=await query('analyses',q=>q.order('date_analyse',{ascending:false}).limit(500));break;
       case'dividendes':result=await query('dividendes_calendrier',q=>q.order('date_detachement',{ascending:true,nullsLast:true}).order('date_paiement',{ascending:true,nullsLast:true}).limit(2000));break;
       case'apercu':{
-        const [cours,indices]=await Promise.all([latestCours(),latestIndices()]);
-        return json(res,200,{success:true,cours:cours.data||[],indices:indices||[],cours_date:cours.latestDate||null,cours_source:cours.source||null,cours_dates:cours.dates||{}});
+        const sessionDate=await latestSessionDate();
+        const [cours,indices]=await Promise.all([latestCours(sessionDate),latestIndices(sessionDate)]);
+        return json(res,200,{success:true,cours:cours.data||[],indices:indices.data||[],session_date:sessionDate,cours_date:cours.latestDate||null,indices_date:indices.latestDate||null,cours_source:cours.source||null,indices_source:indices.source||null,cours_dates:cours.dates||{},indices_dates:indices.dates||{}});
       }
       default:return json(res,400,{error:`Type de données inconnu: ${type}`});
     }
