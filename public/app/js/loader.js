@@ -44,4 +44,13 @@
       window.allCours=[];window.allIndices=[];window.allIndicesLatest=[];window.entMap={};window.allEntreprises=[];window.allAnalyses=[];
     }
   };
+
+  // Load the isolated historical PER patch only after every application script
+  // is loaded, so it can safely wrap the financials view without replacing it.
+  window.addEventListener('load',function(){
+    var script=document.createElement('script');
+    script.src='app/js/views/financials-per.js?v=1';
+    script.async=false;
+    document.head.appendChild(script);
+  });
 })();
