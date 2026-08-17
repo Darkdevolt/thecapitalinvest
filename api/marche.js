@@ -111,7 +111,12 @@ async function historiqueIndices(limit=30, dateFrom=null, dateTo=null){
   });
   const sessions=[...new Set(rows.map(r=>String(r.date_seance||'')).filter(Boolean))].slice(-safeLimit);
   const allowed=new Set(sessions);
-  return {data:rows.filter(r=>allowed.has(String(r.date_seance||''))),error:null,source:'indices',sessions:sessions.length};
+  const data=rows.filter(r=>allowed.has(String(r.date_seance||''))).map(r=>
+    String(r.indice||'').trim().toUpperCase()==='BRVM COMPOSITE'
+      ? {...r,indice:'BRVM C'}
+      : r
+  );
+  return {data,error:null,source:'indices',sessions:sessions.length};
 }
 
 async function historique(ticker,limit,dateFrom,dateTo,offset){
