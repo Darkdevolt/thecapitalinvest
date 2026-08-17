@@ -2,9 +2,10 @@
   window.loadAll=async function(){
     console.log('[LOADER] Chargement...');
     try{
-      const [coursRes,indicesRes,entRes,analysesRes]=await Promise.allSettled([
+      const [coursRes,indicesRes,indicesHistoryRes,entRes,analysesRes]=await Promise.allSettled([
         window.apiGetCours(),
         window.apiGetIndices(),
+        window.apiGetIndicesHistory(30),
         window.apiGetEntreprises(),
         window.apiGetAnalyses()
       ]);
@@ -14,23 +15,33 @@
       }else{window.allCours=[];console.error('[LOADER] Cours:',coursRes.reason);}
 
       if(indicesRes.status==='fulfilled'){
-        const d=indicesRes.value;window.allIndices=d?.data||d||[];
-      }else{window.allIndices=[];}
+        const d=indicesRes.value;window.allIndicesLatest=d?.data||d||[];
+      }else{window.allIndicesLatest=[];}
+
+      if(indicesHistoryRes.status==='fulfilled'){
+        const d=indicesHistoryRes.value;window.allIndices=d?.data||d||[];
+        // Fallback to the latest-session payload if historical loading fails.
+        if(!window.allIndices.length) window.allIndices=window.allIndicesLatest.slice();
+      }else{
+        window.allIndices=window.allIndicesLatest.slice();
+        console.error('[LOADER] Historique indices:',indicesHistoryRes.reason);
+      }
 
       if(entRes.status==='fulfilled'){
         const d=entRes.value;const ents=d?.data||d||[];
-        window.entMap={};ents.forEach(e=>{if(e.ticker)window.entMap[e.ticker]=e;});
-      }else{window.entMap={};}
+        window.entMap={};window.allEntreprises=ents;
+        ents.forEach(e=>{if(e.ticker)window.entMap[e.ticker]=e;});
+      }else{window.entMap={};window.allEntreprises=[];}
 
       if(analysesRes.status==='fulfilled'){
         const d=analysesRes.value;window.allAnalyses=d?.data||d||[];
       }else{window.allAnalyses=[];}
 
-      console.log('[LOADER] OK - Cours:',window.allCours.length,'| Indices:',window.allIndices.length,'| Ent:',Object.keys(window.entMap).length);
+      console.log('[LOADER] OK - Cours:',window.allCours.length,'| Indices:',window.allIndices.length,'| Indices latest:',window.allIndicesLatest.length,'| Ent:',Object.keys(window.entMap).length);
       window.dispatchEvent(new CustomEvent('tc:dataready',{detail:{cours:window.allCours.length,indices:window.allIndices.length}}));
     }catch(e){
       console.error('[LOADER] Erreur:',e);
-      window.allCours=[];window.allIndices=[];window.entMap={};window.allAnalyses=[];
+      window.allCours=[];window.allIndices=[];window.allIndicesLatest=[];window.entMap={};window.allEntreprises=[];window.allAnalyses=[];
     }
   };
 })();
