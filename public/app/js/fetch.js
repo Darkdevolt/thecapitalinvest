@@ -61,6 +61,7 @@
 
   window.apiGetCours=()=>window.apiGet('/marche?type=cours');
   window.apiGetIndices=()=>window.apiGet('/marche?type=indices');
+  window.apiGetIndicesHistory=(limit=30)=>window.apiGet('/marche?type=indices_historique&limit='+encodeURIComponent(limit));
   window.apiGetEntreprises=()=>window.apiGet('/marche?type=entreprises');
   window.apiGetAnalyses=()=>window.apiGet('/marche?type=analyses');
   window.apiGetFinancials=()=>window.apiGet('/marche?type=financials');
@@ -75,9 +76,6 @@
     delete:window.apiDelete
   };
 
-  // Patch chargé dynamiquement pour éviter de modifier l'ordre des modules
-  // historiques de l'application. Il se réessaie jusqu'à ce que les vues
-  // Titres/Fiche aient exposé leurs fonctions globales.
   function loadTitleFixes(){
     if(document.getElementById('tc-title-fixes-script')) return;
     const s=document.createElement('script');
