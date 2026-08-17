@@ -18,9 +18,6 @@ async function query(table,build){
   return q;
 }
 
-// Une séance de marché est une unité globale : les cours ET les indices
-// doivent appartenir à la même date de référence. On ne mélange jamais
-// plusieurs dates pour construire l'état courant du marché.
 async function latestSessionDate(){
   const [h,i]=await Promise.all([
     query('historique',q=>q.select('date_seance').not('date_seance','is',null).order('date_seance',{ascending:false}).limit(1)),
@@ -75,6 +72,26 @@ async function latestIndices(sessionDate=null){
   return {data:q.data||[],error:null,latestDate,source:'indices',dates:{[latestDate]:(q.data||[]).length}};
 }
 
+async function historiqueIndices(limit=30, dateFrom=null, dateTo=null){
+  const safeLimit=Math.min(Math.max(Number(limit)||30,1),1000);
+  const q=await query('indices',q=>{
+    if(dateFrom)q=q.gte('date_seance',dateFrom);
+    if(dateTo)q=q.lte('date_seance',dateTo);
+    return q.order('date_seance',{ascending:false}).order('nom',{ascending:true}).limit(safeLimit*20);
+  });
+  if(q.error)throw q.error;
+
+  // The frontend needs all index rows for the requested sessions, not only
+  // the latest session. Keep the DB rows intact and sort chronologically.
+  const rows=(q.data||[]).slice().sort((a,b)=>{
+    const d=String(a.date_seance||'').localeCompare(String(b.date_seance||''));
+    return d!==0?d:String(a.nom||a.indice||'').localeCompare(String(b.nom||b.indice||''));
+  });
+  const sessions=[...new Set(rows.map(r=>String(r.date_seance||'')).filter(Boolean))].slice(-safeLimit);
+  const allowed=new Set(sessions);
+  return {data:rows.filter(r=>allowed.has(String(r.date_seance||''))),error:null,source:'indices',sessions:sessions.length};
+}
+
 async function historique(ticker,limit,dateFrom,dateTo,offset){
   const safeLimit=Math.min(Math.max(Number(limit)||1000,1),1000);
   const safeOffset=Math.max(Number(offset)||0,0);
@@ -99,6 +116,7 @@ export default async function handler(req,res){
     switch(type){
       case'cours':result=await latestCours();break;
       case'indices':result=await latestIndices();break;
+      case'indices_historique':result=await historiqueIndices(limit,url.searchParams.get('date_from'),url.searchParams.get('date_to'));break;
       case'historique':result=await historique(ticker,limit,url.searchParams.get('date_from'),url.searchParams.get('date_to'),offset);break;
       case'entreprises':result=await query('entreprises',q=>q.eq('actif',true).order('ticker',{ascending:true}));break;
       case'financials':result=await query('financials',q=>q.order('validation_status',{ascending:true}).order('annee',{ascending:false}).limit(2000));break;
