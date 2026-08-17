@@ -16,6 +16,12 @@
   ],
   "rewrites":[
     {"source":"/app.html","destination":"/app/app.html"},
+    {"source":"/titres","destination":"/app/app.html#titres"},
+    {"source":"/marche","destination":"/app/app.html#marche"},
+    {"source":"/analyses","destination":"/app/app.html#analyses"},
+    {"source":"/screener","destination":"/app/app.html#screener"},
+    {"source":"/financials","destination":"/app/app.html#financials"},
+    {"source":"/titre/:ticker","destination":"/app/app.html#fiche=:ticker"},
     {"source":"/api/signup-otp","destination":"https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2"}
   ],
   "headers":[{"source":"/api/(.*)","headers":[{"key":"Access-Control-Allow-Origin","value":"*"},{"key":"Access-Control-Allow-Methods","value":"GET, POST, PUT, DELETE, PATCH, OPTIONS"},{"key":"Access-Control-Allow-Headers","value":"Content-Type, Authorization, X-Requested-With, X-Cron-Secret"},{"key":"Access-Control-Max-Age","value":"86400"},{"key":"Cache-Control","value":"no-store"}]}]
