@@ -67,9 +67,31 @@ async function latestCours(sessionDate=null){
 async function latestIndices(sessionDate=null){
   const latestDate=sessionDate||await latestSessionDate();
   if(!latestDate)return {data:[],error:null,latestDate:null,source:'indices',dates:{}};
-  const q=await query('indices',q=>q.eq('date_seance',latestDate).order('nom',{ascending:true}).limit(1000));
+
+  // The production schema uses `indice`, not `nom`. Keep the DB untouched and
+  // normalize the payload expected by the dashboard from the real columns.
+  const q=await query('indices',q=>q.eq('date_seance',latestDate).order('indice',{ascending:true}).limit(1000));
   if(q.error)throw q.error;
-  return {data:q.data||[],error:null,latestDate,source:'indices',dates:{[latestDate]:(q.data||[]).length}};
+
+  const data=(q.data||[]).map(r=>{
+    const valeur=r.valeur;
+    const variationPct=r.variation_pct ?? null;
+    const rawVariation=r.variation ?? null;
+    const numericValue=Number(valeur);
+    const numericPct=Number(variationPct);
+    const variation=rawVariation!=null
+      ? rawVariation
+      : (Number.isFinite(numericValue)&&Number.isFinite(numericPct) ? numericValue*numericPct/100 : null);
+    return {
+      ...r,
+      indice:String(r.indice||'').trim(),
+      valeur:r.valeur,
+      variation,
+      variation_pct:variationPct
+    };
+  });
+
+  return {data,error:null,latestDate,source:'indices',dates:{[latestDate]:data.length}};
 }
 
 async function historiqueIndices(limit=30, dateFrom=null, dateTo=null){
@@ -77,7 +99,7 @@ async function historiqueIndices(limit=30, dateFrom=null, dateTo=null){
   const q=await query('indices',q=>{
     if(dateFrom)q=q.gte('date_seance',dateFrom);
     if(dateTo)q=q.lte('date_seance',dateTo);
-    return q.order('date_seance',{ascending:false}).order('nom',{ascending:true}).limit(safeLimit*20);
+    return q.order('date_seance',{ascending:false}).order('indice',{ascending:true}).limit(safeLimit*20);
   });
   if(q.error)throw q.error;
 
