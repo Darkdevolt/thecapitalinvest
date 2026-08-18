@@ -1,6 +1,8 @@
 /*
  * Admin Dashboard — single active implementation.
  * Loads the unified Dashboard and the unified Cours & Historique control center.
+ * Session management is provided by seances-globales.js to avoid duplicate
+ * controls and exhaustive history loading at Admin startup.
  */
 (function () {
     'use strict';
@@ -14,5 +16,5 @@
     }
     load('admin/js/dashboard-overview.js?v=20260814-unified', 'dashboard-overview');
     load('admin/js/cours-historique.js?v=20260814-unified', 'cours-historique');
-    load('admin/js/session-manager.js?v=20260816-session-coherence', 'session-manager');
+    load('admin/js/seances-calendrier.js?v=20260818-calendar', 'seances-calendrier');
 })();

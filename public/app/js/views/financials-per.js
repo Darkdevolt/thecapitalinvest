@@ -6,11 +6,30 @@
   if (typeof originalOpenFinDetail !== 'function') return;
 
   async function fetchHistoricalRows(ticker) {
-    const response = await window.apiGet(
-      '/marche?type=historique&ticker=' + encodeURIComponent(String(ticker).toUpperCase()) + '&limit=1000'
-    );
-    const rows = Array.isArray(response) ? response : (response?.data || []);
-    return rows
+    const all = [];
+    const pageSize = 1000;
+    let offset = 0;
+
+    // Historical PER needs the full available price history, not only the
+    // first 1,000 rows. Pagination is kept local to this isolated module.
+    while (true) {
+      const response = await window.apiGet(
+        '/marche?type=historique&ticker=' + encodeURIComponent(String(ticker).toUpperCase()) +
+        '&limit=' + pageSize + '&offset=' + offset
+      );
+      const rows = Array.isArray(response) ? response : (response?.data || []);
+      if (!Array.isArray(rows) || rows.length === 0) break;
+
+      all.push(...rows);
+      if (rows.length < pageSize) break;
+
+      offset += pageSize;
+      if (offset > 1000000) {
+        throw new Error('Historique trop volumineux pour le calcul du PER.');
+      }
+    }
+
+    return all
       .map(r => ({
         date: String(r.date_seance || r.date || '').slice(0, 10),
         close: Number(r.cours_cloture ?? r.cours ?? r.cloture)
@@ -75,10 +94,10 @@
           ${rows.map(r => `
             <tr>
               <td><strong>${r.year}</strong></td>
-              <td>${r.sessionDate || ', '}</td>
-              <td>${r.close != null ? fmt(r.close) + ' FCFA' : ', '}</td>
-              <td>${r.bpa != null ? fmt(r.bpa) + ' FCFA' : ', '}</td>
-              <td>${r.per != null ? r.per.toFixed(2) + 'x' : ', '}</td>
+              <td>${r.sessionDate || '—'}</td>
+              <td>${r.close != null ? fmt(r.close) + ' FCFA' : '—'}</td>
+              <td>${r.bpa != null ? fmt(r.bpa) + ' FCFA' : '—'}</td>
+              <td>${r.per != null ? r.per.toFixed(2) + 'x' : '—'}</td>
             </tr>`).join('')}
         </tbody>
       </table>`;
