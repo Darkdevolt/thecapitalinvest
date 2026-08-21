@@ -21,7 +21,12 @@ var HOLIDAYS={
  '2026-12-25':'Fête de Noël'
 };
 
-function cleanDate(v){return String(v||'').slice(0,10)}
+function cleanDate(v){
+ var s=String(v||'').trim();
+ if(/^\d{4}-\d{2}-\d{2}/.test(s))return s.slice(0,10);
+ var m=s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+ return m?m[3]+'-'+m[2]+'-'+m[1]:s.slice(0,10);
+}
 function isHoliday(v){return !!HOLIDAYS[cleanDate(v)]}
 function auth(){return {apikey:window.SB_ANON,Authorization:'Bearer '+window.TK,Accept:'application/json','Content-Type':'application/json'}}
 function rest(){return window.SB_REST}
@@ -34,9 +39,6 @@ function tableFromUrl(url){var m=String(url||'').match(/\/rest\/v1\/([^?/#]+)/);
 function queryParam(url,name){try{return new URL(url,location.href).searchParams.get(name)}catch(e){return null}}
 function idFromUrl(url){var m=String(url||'').match(/(?:^|[?&])id=eq\.([^&]+)/);return m?decodeURIComponent(m[1]):null}
 
-/* Exclut les entreprises inactives uniquement pour la requête de référentiel
- * utilisée par le calendrier. Les autres écrans continuent à recevoir les
- * données complètes de la table entreprises. */
 function patchEntrepriseResponse(response){
  return response.clone().json().then(function(rows){
    if(!Array.isArray(rows))return response;
@@ -64,14 +66,7 @@ async function findMutationDate(url,body){
 async function invalidateValidation(date,table,method){
  if(!date)return;
  try{
-   var payload={action:'SESSION_VALIDATION_OVERRIDE_REMOVED',detail:JSON.stringify({
-     session_date:date,
-     reason:'Donnée de séance modifiée après validation',
-     source:'session-integrity-hardening',
-     table:table,
-     method:method,
-     invalidated_at:new Date().toISOString()
-   })};
+   var payload={action:'SESSION_VALIDATION_OVERRIDE_REMOVED',detail:JSON.stringify({session_date:date,reason:'Donnée de séance modifiée après validation',source:'session-integrity-hardening',table:table,method:method,invalidated_at:new Date().toISOString()})};
    await originalFetch(rest()+'/admin_log',{method:'POST',headers:auth(),body:JSON.stringify(payload)});
  }catch(e){console.warn('[The Capital] Impossible d’invalider la validation de séance',e)}
  setTimeout(function(){
@@ -88,13 +83,8 @@ if(!window.__TC_SESSION_INTEGRITY_FETCH__){
    var url=typeof input==='string'?input:(input&&input.url)||'';
    var method=((init&&init.method)||(typeof input!=='string'&&input&&input.method)||'GET').toUpperCase();
    var table=tableFromUrl(url);
-
    var response=await originalFetch(input,init);
-
-   if(isEntrepriseReference(url) && response.ok){
-     return patchEntrepriseResponse(response);
-   }
-
+   if(isEntrepriseReference(url) && response.ok)return patchEntrepriseResponse(response);
    if((table==='historique'||table==='indices') && method!=='GET' && response.ok){
      var date=await findMutationDate(url,init&&init.body);
      if(date)invalidateValidation(date,table,method);
