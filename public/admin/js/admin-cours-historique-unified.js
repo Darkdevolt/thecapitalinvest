@@ -1,62 +1,27 @@
-/* THE CAPITAL — Navigation unifiée Cours & Historique
- * Point d'entrée unique pour les actions d'une séance.
- * Le calendrier appelle directement cette API : aucun intercepteur global
- * et aucun routage par position d'onglet.
- */
-(function () {
-    'use strict';
-
-    function exactTabButton(name) {
-        var nav = document.querySelector('.admin-nav');
-        if (!nav) return null;
-        return Array.from(nav.querySelectorAll('.admin-tab')).find(function (btn) {
-            var onclick = btn.getAttribute('onclick') || '';
-            return new RegExp("switchTab\\(['\\\"]" + name + "['\\\"]").test(onclick) ||
-                btn.getAttribute('data-admin-tab') === name;
-        }) || null;
-    }
-
-    function openTab(name) {
-        var panel = document.getElementById('panel-' + name);
-        if (!panel || typeof window.switchTab !== 'function') return false;
-        window.switchTab(name, exactTabButton(name));
-        return true;
-    }
-
-    function openCoursForDate(date) {
-        var f = document.getElementById('cours-date-filter');
-        if (f) {
-            f.value = date || '';
-            f.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        if (!openTab('cours')) return false;
-        window.setTimeout(function () {
-            if (typeof window.loadCours === 'function') window.loadCours();
-        }, 50);
-        return true;
-    }
-
-    function openHistoriqueForDate(date) {
-        var from = document.getElementById('hist-date-from');
-        var to = document.getElementById('hist-date-to');
-        if (from) from.value = date || '';
-        if (to) to.value = date || '';
-        if (!openTab('historique')) return false;
-        window.setTimeout(function () {
-            var panel = document.getElementById('panel-historique');
-            var sub = panel && panel.querySelector('.sub-tab:nth-child(3)');
-            if (sub && typeof window.switchSubTab === 'function') {
-                window.switchSubTab('hist', 'view', sub);
-            }
-            if (typeof window.loadHistoriqueTicker === 'function') window.loadHistoriqueTicker();
-        }, 50);
-        return true;
-    }
-
-    window.TCAdminNavigation = {
-        openCoursForDate: openCoursForDate,
-        openArchiveForDate: openHistoriqueForDate,
-        openHistoriqueForDate: openHistoriqueForDate,
-        openTab: openTab
-    };
+(function(){
+  var s=document.currentScript;
+  if(!s) return;
+  var name=(s.src.split('/').pop()||'').split('?')[0];
+  var folders={
+    'api.js':'core','config.js':'core','main.js':'core','utils.js':'core',
+    'admin-cours-historique-unified.js':'historique',
+    'analyses.js':'analyses',
+    'boc-admin.js':'boc','boc-importer.js':'boc',
+    'clientele-advanced.js':'utilisateurs',
+    'cours.js':'cours','cours-control.js':'cours','cours-control-editor.js':'cours','cours-historique.js':'historique','cours-history-entry-delete.js':'historique',
+    'dashboard.js':'dashboard','dashboard-overview.js':'dashboard',
+    'diagnostic.js':'diagnostic',
+    'dividendes.js':'dividendes',
+    'entreprises.js':'entreprises',
+    'financials.js':'financials',
+    'historique.js':'historique','historique-quality.js':'historique','historique-session-delete.js':'seances',
+    'import.js':'imports',
+    'indices.js':'indices',
+    'scraper.js':'scraper',
+    'seance.js':'seances','seances-annuel.js':'seances','seances-crud.js':'seances','seances-details.js':'seances','seances-globales-actions.js':'seances','seances-globales.js':'seances','seances-integrity-hardening.js':'seances',
+    'utilisateurs.js':'utilisateurs'
+  };
+  var folder=folders[name];
+  if(!folder) return;
+  document.write('<script src="admin/js/'+folder+'/'+name+'"><\\/script>');
 })();
