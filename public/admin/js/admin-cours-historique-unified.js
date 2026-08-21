@@ -1,8 +1,6 @@
 /* THE CAPITAL — Navigation unifiée Cours & Historique
- * Correction P0/P1 : aucune navigation par position DOM.
- * Ce module est volontairement non destructif : il conserve les modules
- * métier existants mais impose un point d'entrée unique pour les actions
- * d'une séance vers Cours ou Archive.
+ * Point d'entrée unique pour les actions d'une séance vers Cours ou Archive.
+ * Aucune navigation par position DOM et aucun intercepteur de clic global.
  */
 (function () {
     'use strict';
@@ -20,8 +18,7 @@
     function openTab(name) {
         var panel = document.getElementById('panel-' + name);
         if (!panel || typeof window.switchTab !== 'function') return false;
-        var button = exactTabButton(name);
-        window.switchTab(name, button);
+        window.switchTab(name, exactTabButton(name));
         return true;
     }
 
@@ -53,40 +50,6 @@
         }, 50);
         return true;
     }
-
-    /*
-     * seances-details.js historically attached handlers directly to the
-     * modal buttons and selected tabs with tabs[1]/tabs[2]. We intercept
-     * those actions in capture phase and route them to explicit tab names.
-     */
-    document.addEventListener('click', function (event) {
-        var coursButton = event.target.closest && event.target.closest('[data-manage-cours]');
-        if (coursButton) {
-            var modal = coursButton.closest('#tc-session-details-modal');
-            var dateNode = modal && modal.querySelector('.card-header [style*="font:11px"]');
-            var date = dateNode ? dateNode.textContent.trim() : '';
-            if (date && openCoursForDate(date)) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                var existing = document.getElementById('tc-session-details-modal');
-                if (existing) existing.remove();
-                return;
-            }
-        }
-
-        var histButton = event.target.closest && event.target.closest('[data-manage-hist]');
-        if (histButton) {
-            var hmodal = histButton.closest('#tc-session-details-modal');
-            var hdateNode = hmodal && hmodal.querySelector('.card-header [style*="font:11px"]');
-            var hdate = hdateNode ? hdateNode.textContent.trim() : '';
-            if (hdate && openArchiveForDate(hdate)) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                var hm = document.getElementById('tc-session-details-modal');
-                if (hm) hm.remove();
-            }
-        }
-    }, true);
 
     window.TCAdminNavigation = {
         openCoursForDate: openCoursForDate,
