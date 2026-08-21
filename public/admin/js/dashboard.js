@@ -1,28 +1,27 @@
-/*
- * Admin Dashboard — unified implementations only.
- *
- * Cours & Historique owns one session manager:
- *   - cours-historique.js / cours-control.js for market data
- *   - seances-globales.js for the session calendar + validation state
- *   - admin-cours-historique-unified.js for explicit navigation
- *   - seances-integrity-hardening.js for market-calendar integrity rules
- *
- * The former calendar/details/override overlays are intentionally not loaded here.
- */
-(function () {
-    'use strict';
-
-    function load(src, id) {
-        if (document.querySelector('script[data-tc-module="' + id + '"]')) return;
-        var script = document.createElement('script');
-        script.src = src;
-        script.async = false;
-        script.setAttribute('data-tc-module', id);
-        document.head.appendChild(script);
-    }
-
-    load('admin/js/dashboard-overview.js?v=20260814-unified', 'dashboard-overview');
-    load('admin/js/cours-historique.js?v=20260814-unified', 'cours-historique');
-    load('admin/js/admin-cours-historique-unified.js?v=20260821-unified', 'admin-cours-historique-unified');
-    load('admin/js/seances-integrity-hardening.js?v=20260821-integrity', 'seances-integrity-hardening');
+(function(){
+  var s=document.currentScript;
+  if(!s) return;
+  var name=(s.src.split('/').pop()||'').split('?')[0];
+  var folders={
+    'api.js':'core','config.js':'core','main.js':'core','utils.js':'core',
+    'admin-cours-historique-unified.js':'historique',
+    'analyses.js':'analyses',
+    'boc-admin.js':'boc','boc-importer.js':'boc',
+    'clientele-advanced.js':'utilisateurs',
+    'cours.js':'cours','cours-control.js':'cours','cours-control-editor.js':'cours','cours-historique.js':'historique','cours-history-entry-delete.js':'historique',
+    'dashboard.js':'dashboard','dashboard-overview.js':'dashboard',
+    'diagnostic.js':'diagnostic',
+    'dividendes.js':'dividendes',
+    'entreprises.js':'entreprises',
+    'financials.js':'financials',
+    'historique.js':'historique','historique-quality.js':'historique','historique-session-delete.js':'seances',
+    'import.js':'imports',
+    'indices.js':'indices',
+    'scraper.js':'scraper',
+    'seance.js':'seances','seances-annuel.js':'seances','seances-crud.js':'seances','seances-details.js':'seances','seances-globales-actions.js':'seances','seances-globales.js':'seances','seances-integrity-hardening.js':'seances',
+    'utilisateurs.js':'utilisateurs'
+  };
+  var folder=folders[name];
+  if(!folder) return;
+  document.write('<script src="admin/js/'+folder+'/'+name+'"><\\/script>');
 })();
