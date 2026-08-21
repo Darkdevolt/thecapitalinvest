@@ -6,6 +6,7 @@
  *   - seances-globales.js for the session calendar + validation state
  *   - seances-details.js for session details
  *   - admin-cours-historique-unified.js for explicit navigation
+ *   - seances-integrity-hardening.js for market-calendar integrity rules
  *
  * The former calendar/override overlays are intentionally not loaded here.
  */
@@ -25,4 +26,5 @@
     load('admin/js/cours-historique.js?v=20260814-unified', 'cours-historique');
     load('admin/js/seances-details.js?v=20260821-unified', 'seances-details');
     load('admin/js/admin-cours-historique-unified.js?v=20260821-unified', 'admin-cours-historique-unified');
+    load('admin/js/seances-integrity-hardening.js?v=20260821-integrity', 'seances-integrity-hardening');
 })();
