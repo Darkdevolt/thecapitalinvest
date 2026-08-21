@@ -22,10 +22,7 @@ jobs:
           root="public/admin/js"
           move() {
             src="$root/$1"; dst="$root/$2"
-            if [ -f "$src" ]; then
-              mkdir -p "$(dirname "$dst")"
-              git mv "$src" "$dst"
-            fi
+            if [ -f "$src" ]; then mkdir -p "$(dirname "$dst")"; git mv "$src" "$dst"; fi
           }
           move api.js core/api.js
           move config.js core/config.js
@@ -59,11 +56,16 @@ jobs:
           move utils.js core/utils.js
           python3 - <<'PY'
           from pathlib import Path
-          replacements = {
-            'admin/js/api.js':'admin/js/core/api.js','admin/js/config.js':'admin/js/core/config.js','admin/js/main.js':'admin/js/core/main.js','admin/js/utils.js':'admin/js/core/utils.js','admin/js/dashboard-overview.js':'admin/js/dashboard/dashboard-overview.js','admin/js/dashboard.js':'admin/js/dashboard/dashboard.js','admin/js/cours.js':'admin/js/cours/cours.js','admin/js/cours-control.js':'admin/js/cours/cours-control.js','admin/js/cours-control-editor.js':'admin/js/cours/cours-control-editor.js','admin/js/cours-history-entry-delete.js':'admin/js/historique/cours-history-entry-delete.js','admin/js/historique.js':'admin/js/historique/historique.js','admin/js/historique-session-delete.js':'admin/js/seances/historique-session-delete.js','admin/js/seance.js':'admin/js/seances/seance.js','admin/js/seances-globales.js':'admin/js/seances/seances-globales.js','admin/js/seances-annuel.js':'admin/js/seances/seances-annuel.js','admin/js/seances-crud.js':'admin/js/seances/seances-crud.js','admin/js/seances-integrity-hardening.js':'admin/js/seances/seances-integrity-hardening.js','admin/js/admin-cours-historique-unified.js':'admin/js/seances/admin-cours-historique-unified.js','admin/js/analyses.js':'admin/js/analyses/analyses.js','admin/js/boc-admin.js':'admin/js/boc/boc-admin.js','admin/js/boc-importer.js':'admin/js/boc/boc-importer.js','admin/js/diagnostic.js':'admin/js/diagnostic/diagnostic.js','admin/js/entreprises.js':'admin/js/entreprises/entreprises.js','admin/js/financials.js':'admin/js/financials/financials.js','admin/js/dividendes.js':'admin/js/dividendes/dividendes.js','admin/js/utilisateurs.js':'admin/js/utilisateurs/utilisateurs.js','admin/js/clientele-advanced.js':'admin/js/utilisateurs/clientele-advanced.js','admin/js/indices.js':'admin/js/indices/indices.js','admin/js/scraper.js':'admin/js/scraper/scraper.js','admin/js/import.js':'admin/js/imports/import.js'}
-          exts={'.html','.js','.css','.md','.json','.yml','.yaml'}
+          replacements={
+          'admin/js/api.js':'admin/js/core/api.js','admin/js/config.js':'admin/js/core/config.js','admin/js/main.js':'admin/js/core/main.js','admin/js/utils.js':'admin/js/core/utils.js',
+          'admin/js/dashboard-overview.js':'admin/js/dashboard/dashboard-overview.js','admin/js/dashboard.js':'admin/js/dashboard/dashboard.js',
+          'admin/js/cours.js':'admin/js/cours/cours.js','admin/js/cours-control.js':'admin/js/cours/cours-control.js','admin/js/cours-control-editor.js':'admin/js/cours/cours-control-editor.js',
+          'admin/js/cours-history-entry-delete.js':'admin/js/historique/cours-history-entry-delete.js','admin/js/historique.js':'admin/js/historique/historique.js','admin/js/historique-session-delete.js':'admin/js/seances/historique-session-delete.js',
+          'admin/js/seance.js':'admin/js/seances/seance.js','admin/js/seances-globales.js':'admin/js/seances/seances-globales.js','admin/js/seances-annuel.js':'admin/js/seances/seances-annuel.js','admin/js/seances-crud.js':'admin/js/seances/seances-crud.js','admin/js/seances-integrity-hardening.js':'admin/js/seances/seances-integrity-hardening.js','admin/js/admin-cours-historique-unified.js':'admin/js/seances/admin-cours-historique-unified.js',
+          'admin/js/analyses.js':'admin/js/analyses/analyses.js','admin/js/boc-admin.js':'admin/js/boc/boc-admin.js','admin/js/boc-importer.js':'admin/js/boc/boc-importer.js','admin/js/diagnostic.js':'admin/js/diagnostic/diagnostic.js',
+          'admin/js/entreprises.js':'admin/js/entreprises/entreprises.js','admin/js/financials.js':'admin/js/financials/financials.js','admin/js/dividendes.js':'admin/js/dividendes/dividendes.js','admin/js/utilisateurs.js':'admin/js/utilisateurs/utilisateurs.js','admin/js/clientele-advanced.js':'admin/js/utilisateurs/clientele-advanced.js','admin/js/indices.js':'admin/js/indices/indices.js','admin/js/scraper.js':'admin/js/scraper/scraper.js','admin/js/import.js':'admin/js/imports/import.js'}
           for p in Path('.').rglob('*'):
-            if not p.is_file() or p.suffix.lower() not in exts or '.git' in p.parts: continue
+            if not p.is_file() or p.suffix.lower() not in {'.html','.js','.css','.md','.json','.yml','.yaml'} or '.git' in p.parts: continue
             try: s=p.read_text(encoding='utf-8')
             except Exception: continue
             old=s
@@ -72,12 +74,9 @@ jobs:
           PY
           python3 - <<'PY'
           from pathlib import Path
-          fixes={'public/admin/js/core/main.js':{"s.src='js/clientele-advanced.js'":"s.src='utilisateurs/clientele-advanced.js'","s.src='js/seance.js'":"s.src='seances/seance.js"}}
-          for name,reps in fixes.items():
-            p=Path(name)
-            if not p.exists(): continue
-            s=p.read_text(encoding='utf-8')
-            for a,b in reps.items(): s=s.replace(a,b)
+          p=Path('public/admin/js/core/main.js')
+          if p.exists():
+            s=p.read_text(encoding='utf-8').replace("s.src='js/clientele-advanced.js'","s.src='utilisateurs/clientele-advanced.js'").replace("s.src='js/seance.js'","s.src='seances/seance.js'")
             p.write_text(s,encoding='utf-8')
           PY
           git config user.name "github-actions[bot]"
