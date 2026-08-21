@@ -20,23 +20,76 @@ function sortTable(tbodyId, colIndex) {
 }
 
 // ═══════════════════════════════════════
+// STATUT DE SÉANCE — source canonique de publication
+// Une séance incomplète n'est jamais utilisée comme séance publique courante.
+// ═══════════════════════════════════════
+let marketSessionStatus = null;
+
+async function loadMarketSessionStatus() {
+  try {
+    const status = await window.apiGet('/session-status');
+    marketSessionStatus = status || null;
+    renderMarketSessionStatus(status);
+    return status;
+  } catch (e) {
+    console.warn('[SESSION] Impossible de contrôler la séance:', e);
+    renderMarketSessionStatus(null, e.message);
+    return null;
+  }
+}
+
+function renderMarketSessionStatus(status, errorMessage) {
+  let el = document.getElementById('tc-market-session-status');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'tc-market-session-status';
+    el.style.cssText = 'margin:12px 0 18px;padding:12px 16px;border:1px solid var(--border,#333);border-radius:6px;font-size:12px;line-height:1.5;';
+    const target = document.querySelector('main') || document.querySelector('.main') || document.body;
+    target.prepend(el);
+  }
+
+  if (errorMessage) {
+    el.textContent = 'Données de marché : contrôle de séance temporairement indisponible.';
+    return;
+  }
+  if (!status) return;
+
+  const latest = status.latest_status || {};
+  if (status.confirmed && status.confirmed_date) {
+    const currentIsConfirmed = latest.date === status.confirmed_date && latest.complete;
+    el.innerHTML = '<strong style="color:var(--gold,#d8bd78)">✓ SÉANCE '+(currentIsConfirmed?'CONFIRMÉE':'CONFIRMÉE DE RÉFÉRENCE')+'</strong> · '+status.confirmed_date+' · données complètes et contrôlées.' +
+      (currentIsConfirmed ? '' : ' La dernière séance détectée ('+(latest.date||'—')+') n’est pas encore complète ; les données affichées restent celles de la dernière séance confirmée.');
+    return;
+  }
+  el.innerHTML = '<strong>⚠ DONNÉES DE MARCHÉ EN ATTENTE DE CONFIRMATION</strong> · '+(latest.date||'Aucune séance disponible')+'. La séance courante présente encore des éléments manquants ou incohérents.';
+}
+
+// ═══════════════════════════════════════
 // LOAD — marché via la source canonique historique Supabase
 // ═══════════════════════════════════════
 async function loadAll() {
   try {
     const results = await Promise.allSettled([
-      window.apiGet('/marche?type=cours'),
+      window.apiGet('/session-status'),
       sb('boc', { order: 'date_seance.desc', limit: 200 }),
       sb('analyses', { order: 'date_analyse.desc', limit: 100 }),
       sb('financials', { order: 'annee.desc,periode.desc', limit: 500 }),
       sb('entreprises', { limit: 500 }),
-      window.apiGet('/marche?type=indices'),
     ]);
 
-    if (results[0].status === 'fulfilled') {
-      const payload = results[0].value;
-      allCours = Array.isArray(payload) ? payload : (payload?.data || payload?.cours || []);
-    } else toast('Erreur chargement cours: ' + results[0].reason, 'error');
+    const sessionResult = results[0];
+    if (sessionResult.status === 'fulfilled') {
+      marketSessionStatus = sessionResult.value || null;
+      renderMarketSessionStatus(marketSessionStatus);
+      const payload = sessionResult.value || {};
+      allCours = Array.isArray(payload.cours) ? payload.cours : [];
+      allIndices = Array.isArray(payload.indices) ? payload.indices : [];
+    } else {
+      allCours = [];
+      allIndices = [];
+      renderMarketSessionStatus(null, String(sessionResult.reason || ''));
+      toast('Erreur contrôle séance: ' + sessionResult.reason, 'error');
+    }
 
     if (results[1].status === 'fulfilled') allBoc = results[1].value || [];
     else toast('Erreur chargement BOC: ' + results[1].reason, 'error');
@@ -49,14 +102,6 @@ async function loadAll() {
 
     if (results[4].status === 'fulfilled') allEntreprises = results[4].value || [];
     else toast('Erreur chargement entreprises: ' + results[4].reason, 'error');
-
-    if (results[5].status === 'fulfilled') {
-      const payload = results[5].value;
-      allIndices = Array.isArray(payload) ? payload : (payload?.data || payload?.indices || []);
-    } else {
-      allIndices = [];
-      toast('Erreur chargement indices: ' + results[5].reason, 'warn');
-    }
 
     entMap = Object.fromEntries(allEntreprises.map(e => [e.ticker, e]));
 

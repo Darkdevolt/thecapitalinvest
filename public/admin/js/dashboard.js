@@ -18,4 +18,5 @@
     load('admin/js/cours-historique.js?v=20260814-unified', 'cours-historique');
     load('admin/js/seances-calendrier.js?v=20260818-calendar', 'seances-calendrier');
     load('admin/js/seances-validation-override.js?v=20260818-gap-validation', 'seances-validation-override');
+    load('admin/js/session-intelligence.js?v=20260821-smart-session', 'session-intelligence');
 })();
