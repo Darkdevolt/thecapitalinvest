@@ -1,27 +1,48 @@
-/* THE CAPITAL — Actions des séances globales
- * Ajoute les actions de séance et persiste les validations manuelles.
- * Utilise admin_log existant : aucun changement de schéma Supabase.
- */
-(function(){
+/* Compatibility loader during admin JS architecture migration. */
+(function () {
   'use strict';
-  var STYLE_ID='tc-global-session-actions-style',BTN_CLASS='tc-global-delete-session',STORE='tc_global_sessions_v4';
-  function auth(){return {apikey:SB_ANON,Authorization:'Bearer '+TK,Accept:'application/json','Content-Type':'application/json'};}
-  function json(v){try{return JSON.parse(v);}catch(e){return null;}}
-  function overrides(){try{return JSON.parse(localStorage.getItem(STORE)||'{}')||{};}catch(e){return {};}}
-  function writeLocal(a){try{localStorage.setItem(STORE,JSON.stringify(a));}catch(e){console.warn('[session-persistence] localStorage',e);}}
-  function detail(date,reason){return 'SESSION_VALIDATION_OVERRIDE|'+date+'|'+String(reason||'Validation manuelle');}
-  function removal(date){return 'SESSION_VALIDATION_OVERRIDE_REMOVED|'+date;}
-  async function persistOverride(date,reason){var r=await fetch(SB_REST+'/admin_log',{method:'POST',headers:Object.assign(auth(),{'Prefer':'return=minimal'}),body:JSON.stringify({action:'SESSION_VALIDATION_OVERRIDE',detail:detail(date,reason)})}),t=await r.text();if(!r.ok)throw Error('Persistance validation — HTTP '+r.status+' — '+t.slice(0,220));}
-  async function removeOverride(date){var r=await fetch(SB_REST+'/admin_log',{method:'POST',headers:Object.assign(auth(),{'Prefer':'return=minimal'}),body:JSON.stringify({action:'SESSION_VALIDATION_OVERRIDE_REMOVED',detail:removal(date)})}),t=await r.text();if(!r.ok)throw Error('Suppression validation — HTTP '+r.status+' — '+t.slice(0,220));}
-  async function loadServerOverrides(){var u=SB_REST+'/admin_log?select=action,detail,created_at&action=in.(SESSION_VALIDATION_OVERRIDE,SESSION_VALIDATION_OVERRIDE_REMOVED)&order=created_at.desc&limit=5000',r=await fetch(u,{headers:auth()}),t=await r.text();if(!r.ok)throw Error('Lecture validations — HTTP '+r.status+' — '+t.slice(0,220));var rows=json(t)||[],state={};rows.forEach(function(x){var p=String(x.detail||'').split('|'),date=p[1];if(!date||state[date])return;if(x.action==='SESSION_VALIDATION_OVERRIDE_REMOVED'){state[date]={removed:true,at:x.created_at};return;}state[date]={at:x.created_at,reason:p.slice(2).join('|')||'Validation manuelle'};});var out={};Object.keys(state).forEach(function(date){if(!state[date].removed)out[date]={at:state[date].at,reason:state[date].reason};});return out;}
-  async function hydrate(){try{var server=await loadServerOverrides(),local=overrides(),merged=Object.assign({},local,server);Object.keys(local).forEach(function(k){if(!server[k])delete merged[k];});window.__tcSessionHydrating=true;writeLocal(merged);window.__tcSessionOverridesLast=merged;window.__tcSessionHydrating=false;return true;}catch(e){window.__tcSessionHydrating=false;console.warn('[session-persistence] hydration impossible, fonctionnement local conservé',e);return false;}}
-  function installPersistenceBridge(){if(window.__tcSessionPersistenceBridge)return;var originalSet=Storage.prototype.setItem;Storage.prototype.setItem=function(key,value){originalSet.call(this,key,value);if(this===localStorage&&key===STORE&&!window.__tcSessionHydrating){var next=json(value)||{},prev=window.__tcSessionOverridesLast||{};window.__tcSessionOverridesLast=next;Object.keys(next).forEach(function(date){if(!prev[date]||prev[date].at!==next[date].at)persistOverride(date,next[date].reason).catch(function(e){console.error('[session-persistence]',e);});});Object.keys(prev).forEach(function(date){if(!next[date])removeOverride(date).catch(function(e){console.error('[session-persistence]',e);});});}};window.__tcSessionPersistenceBridge=true;}
-  async function initPersistence(){installPersistenceBridge();await hydrate();}
-  async function deleteDate(table,date){var url=SB_REST+'/'+table+'?date_seance=eq.'+encodeURIComponent(date),r=await fetch(url,{method:'DELETE',headers:Object.assign(auth(),{'Prefer':'return=representation'})}),text=await r.text();if(!r.ok)throw Error(table+' — HTTP '+r.status+' — '+text.slice(0,220));try{return text?JSON.parse(text):[];}catch(e){return [];}}
-  async function removeSession(date,button){if(!date||button.dataset.busy==='1')return;if(!window.confirm('Supprimer la séance du '+date+' ?\n\nCette action supprimera tous les cours ET tous les indices de cette date.'))return;if(!window.confirm('CONFIRMATION FINALE\n\nSupprimer définitivement toute la séance '+date+' ?'))return;button.dataset.busy='1';button.disabled=true;button.textContent='Suppression…';try{var h=await deleteDate('historique',date),i=await deleteDate('indices',date),a=overrides();delete a[date];writeLocal(a);button.textContent='✓ Supprimée';button.style.opacity='.65';var msg='Séance '+date+' supprimée : '+(Array.isArray(h)?h.length:0)+' cours et '+(Array.isArray(i)?i.length:0)+' indices.';if(typeof toast==='function')toast(msg,'ok');else alert(msg);setTimeout(function(){if(window.SeancesGlobales&&typeof window.SeancesGlobales.refresh==='function')window.SeancesGlobales.refresh();else location.reload();},400);}catch(e){console.error('[seances-globales-actions]',e);button.dataset.busy='0';button.disabled=false;button.textContent='✕ Supprimer';if(typeof toast==='function')toast('Suppression impossible : '+e.message,'err');else alert('Suppression impossible : '+e.message);}}
-  function style(){if(document.getElementById(STYLE_ID))return;var s=document.createElement('style');s.id=STYLE_ID;s.textContent='.'+BTN_CLASS+'{color:#e58d84!important;border-color:rgba(210,100,90,.55)!important;background:transparent}.'+BTN_CLASS+':hover{background:rgba(210,100,90,.10)!important}.tc-session-actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center}';document.head.appendChild(s);}
-  function decorate(){var root=document.getElementById('tc-seances-globales');if(!root)return;root.querySelectorAll('tbody tr').forEach(function(tr){if(tr.querySelector('.'+BTN_CLASS))return;var view=tr.querySelector('[data-g-view]');if(!view)return;var date=view.getAttribute('data-g-view'),actions=tr.lastElementChild;if(!actions)return;var b=document.createElement('button');b.type='button';b.className='btn btn-outline btn-sm '+BTN_CLASS;b.textContent='✕ Supprimer séance';b.title='Supprimer tous les cours et indices de cette séance';b.addEventListener('click',function(){removeSession(date,b);});actions.appendChild(b);});}
-  function init(){style();decorate();var root=document.getElementById('tc-seances-globales');if(root&&!root.__tcDeleteObserver){var obs=new MutationObserver(function(){decorate();});obs.observe(root,{childList:true,subtree:true});root.__tcDeleteObserver=obs;}setTimeout(decorate,300);setTimeout(decorate,1000);initPersistence();}
-  function boot(){init();if(!document.getElementById('tc-seances-globales'))setTimeout(boot,500);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+  var map = {
+    'admin-cours-historique-unified.js':'historique/admin-cours-historique-unified.js',
+    'analyses.js':'analyses/analyses.js',
+    'api.js':'core/api.js',
+    'boc-admin.js':'boc/boc-admin.js',
+    'boc-importer.js':'boc/boc-importer.js',
+    'clientele-advanced.js':'utilisateurs/clientele-advanced.js',
+    'config.js':'core/config.js',
+    'cours.js':'cours/cours.js',
+    'cours-control.js':'cours/cours-control.js',
+    'cours-control-editor.js':'cours/cours-control-editor.js',
+    'cours-historique.js':'cours/cours-historique.js',
+    'cours-history-entry-delete.js':'cours/cours-history-entry-delete.js',
+    'dashboard.js':'dashboard/dashboard.js',
+    'dashboard-overview.js':'dashboard/dashboard-overview.js',
+    'diagnostic.js':'diagnostic/diagnostic.js',
+    'dividendes.js':'dividendes/dividendes.js',
+    'entreprises.js':'entreprises/entreprises.js',
+    'financials.js':'financials/financials.js',
+    'historique.js':'historique/historique.js',
+    'historique-quality.js':'historique/historique-quality.js',
+    'historique-session-delete.js':'historique/historique-session-delete.js',
+    'import.js':'imports/import.js',
+    'indices.js':'indices/indices.js',
+    'main.js':'core/main.js',
+    'scraper.js':'scraper/scraper.js',
+    'seance.js':'seances/seance.js',
+    'seances-annuel.js':'seances/seances-annuel.js',
+    'seances-crud.js':'seances/seances-crud.js',
+    'seances-details.js':'seances/seances-details.js',
+    'seances-globales-actions.js':'seances/seances-globales-actions.js',
+    'seances-globales.js':'seances/seances-globales.js',
+    'seances-integrity-hardening.js':'seances/seances-integrity-hardening.js',
+    'utilisateurs.js':'utilisateurs/utilisateurs.js',
+    'utils.js':'core/utils.js'
+  };
+  var current = (document.currentScript && document.currentScript.src || '').split('/').pop();
+  var target = map[current];
+  if (!target) return;
+  var base = (document.currentScript.src || '').split('/public/admin/js/')[0] + '/public/admin/js/';
+  var s = document.createElement('script');
+  s.src = base + target;
+  s.async = false;
+  document.head.appendChild(s);
 })();

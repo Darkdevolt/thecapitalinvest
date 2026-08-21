@@ -1,62 +1,48 @@
-/* THE CAPITAL — Navigation unifiée Cours & Historique
- * Point d'entrée unique pour les actions d'une séance.
- * Le calendrier appelle directement cette API : aucun intercepteur global
- * et aucun routage par position d'onglet.
- */
+/* Compatibility loader during admin JS architecture migration. */
 (function () {
-    'use strict';
-
-    function exactTabButton(name) {
-        var nav = document.querySelector('.admin-nav');
-        if (!nav) return null;
-        return Array.from(nav.querySelectorAll('.admin-tab')).find(function (btn) {
-            var onclick = btn.getAttribute('onclick') || '';
-            return new RegExp("switchTab\\(['\\\"]" + name + "['\\\"]").test(onclick) ||
-                btn.getAttribute('data-admin-tab') === name;
-        }) || null;
-    }
-
-    function openTab(name) {
-        var panel = document.getElementById('panel-' + name);
-        if (!panel || typeof window.switchTab !== 'function') return false;
-        window.switchTab(name, exactTabButton(name));
-        return true;
-    }
-
-    function openCoursForDate(date) {
-        var f = document.getElementById('cours-date-filter');
-        if (f) {
-            f.value = date || '';
-            f.dispatchEvent(new Event('input', { bubbles: true }));
-        }
-        if (!openTab('cours')) return false;
-        window.setTimeout(function () {
-            if (typeof window.loadCours === 'function') window.loadCours();
-        }, 50);
-        return true;
-    }
-
-    function openHistoriqueForDate(date) {
-        var from = document.getElementById('hist-date-from');
-        var to = document.getElementById('hist-date-to');
-        if (from) from.value = date || '';
-        if (to) to.value = date || '';
-        if (!openTab('historique')) return false;
-        window.setTimeout(function () {
-            var panel = document.getElementById('panel-historique');
-            var sub = panel && panel.querySelector('.sub-tab:nth-child(3)');
-            if (sub && typeof window.switchSubTab === 'function') {
-                window.switchSubTab('hist', 'view', sub);
-            }
-            if (typeof window.loadHistoriqueTicker === 'function') window.loadHistoriqueTicker();
-        }, 50);
-        return true;
-    }
-
-    window.TCAdminNavigation = {
-        openCoursForDate: openCoursForDate,
-        openArchiveForDate: openHistoriqueForDate,
-        openHistoriqueForDate: openHistoriqueForDate,
-        openTab: openTab
-    };
+  'use strict';
+  var map = {
+    'admin-cours-historique-unified.js':'historique/admin-cours-historique-unified.js',
+    'analyses.js':'analyses/analyses.js',
+    'api.js':'core/api.js',
+    'boc-admin.js':'boc/boc-admin.js',
+    'boc-importer.js':'boc/boc-importer.js',
+    'clientele-advanced.js':'utilisateurs/clientele-advanced.js',
+    'config.js':'core/config.js',
+    'cours.js':'cours/cours.js',
+    'cours-control.js':'cours/cours-control.js',
+    'cours-control-editor.js':'cours/cours-control-editor.js',
+    'cours-historique.js':'cours/cours-historique.js',
+    'cours-history-entry-delete.js':'cours/cours-history-entry-delete.js',
+    'dashboard.js':'dashboard/dashboard.js',
+    'dashboard-overview.js':'dashboard/dashboard-overview.js',
+    'diagnostic.js':'diagnostic/diagnostic.js',
+    'dividendes.js':'dividendes/dividendes.js',
+    'entreprises.js':'entreprises/entreprises.js',
+    'financials.js':'financials/financials.js',
+    'historique.js':'historique/historique.js',
+    'historique-quality.js':'historique/historique-quality.js',
+    'historique-session-delete.js':'historique/historique-session-delete.js',
+    'import.js':'imports/import.js',
+    'indices.js':'indices/indices.js',
+    'main.js':'core/main.js',
+    'scraper.js':'scraper/scraper.js',
+    'seance.js':'seances/seance.js',
+    'seances-annuel.js':'seances/seances-annuel.js',
+    'seances-crud.js':'seances/seances-crud.js',
+    'seances-details.js':'seances/seances-details.js',
+    'seances-globales-actions.js':'seances/seances-globales-actions.js',
+    'seances-globales.js':'seances/seances-globales.js',
+    'seances-integrity-hardening.js':'seances/seances-integrity-hardening.js',
+    'utilisateurs.js':'utilisateurs/utilisateurs.js',
+    'utils.js':'core/utils.js'
+  };
+  var current = (document.currentScript && document.currentScript.src || '').split('/').pop();
+  var target = map[current];
+  if (!target) return;
+  var base = (document.currentScript.src || '').split('/public/admin/js/')[0] + '/public/admin/js/';
+  var s = document.createElement('script');
+  s.src = base + target;
+  s.async = false;
+  document.head.appendChild(s);
 })();
