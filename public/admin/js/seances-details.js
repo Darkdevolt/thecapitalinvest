@@ -31,8 +31,18 @@ async function load(date){
   if(idx.length){html+='<div style="margin-top:20px;font-weight:600">Indices de la séance</div><div class="tw" style="margin-top:8px"><table><thead><tr><th>Indice</th><th class="r">Valeur</th><th class="r">Variation</th><th class="r">Variation %</th></tr></thead><tbody>'+idx.map(function(r){return '<tr><td>'+esc(r.indice)+'</td><td class="r">'+num(r.valeur)+'</td><td class="r">'+num(r.variation)+'</td><td class="r">'+num(r.variation_pct)+'</td></tr>'}).join('')+'</tbody></table></div>'}
   body.innerHTML=html;
   body.querySelector('[data-refresh-details]').onclick=function(){load(date)};
-  body.querySelector('[data-manage-cours]').onclick=function(){var f=document.getElementById('cours-date-filter');if(f)f.value=date;if(typeof switchTab==='function'){var tabs=document.querySelectorAll('.admin-tab');switchTab('cours',tabs[1]||null)}if(typeof loadCours==='function')setTimeout(loadCours,100);close()};
-  body.querySelector('[data-manage-hist]').onclick=function(){var from=document.getElementById('hist-date-from'),to=document.getElementById('hist-date-to');if(from)from.value=date;if(to)to.value=date;var sub=document.querySelector('#panel-historique .sub-tab:nth-child(3)');if(typeof switchTab==='function'){var tabs=document.querySelectorAll('.admin-tab');switchTab('historique',tabs[2]||null)}if(sub&&typeof switchSubTab==='function')switchSubTab('hist','view',sub);setTimeout(function(){if(typeof loadHistoriqueTicker==='function')loadHistoriqueTicker()},100);close()};
+  body.querySelector('[data-manage-cours]').onclick=function(){
+    if(window.TCAdminNavigation&&typeof window.TCAdminNavigation.openCoursForDate==='function'){
+      window.TCAdminNavigation.openCoursForDate(date);
+    }
+    close();
+  };
+  body.querySelector('[data-manage-hist]').onclick=function(){
+    if(window.TCAdminNavigation&&typeof window.TCAdminNavigation.openArchiveForDate==='function'){
+      window.TCAdminNavigation.openArchiveForDate(date);
+    }
+    close();
+  };
  }catch(e){body.innerHTML='<div class="tc-alert hard"><strong>Impossible de charger les détails.</strong><br>'+esc(e.message)+'</div><button class="btn btn-outline btn-sm" data-close>Fermer</button>';body.querySelector('[data-close]').onclick=close}
 }
 function intercept(e){var b=e.target.closest&&e.target.closest('[data-view]');if(!b)return;e.preventDefault();e.stopImmediatePropagation();var d=b.getAttribute('data-view');if(d)openModal(d)}
