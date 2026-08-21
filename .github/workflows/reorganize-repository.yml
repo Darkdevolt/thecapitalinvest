@@ -1,0 +1,88 @@
+name: Reorganize repository structure
+on:
+  workflow_dispatch:
+  push:
+    branches: ["refactor/reorganize-repository"]
+    paths:
+      - '.github/workflows/reorganize-repository.yml'
+permissions:
+  contents: write
+jobs:
+  reorganize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: refactor/reorganize-repository
+          fetch-depth: 0
+      - name: Reorganize Admin modules
+        shell: bash
+        run: |
+          set -euo pipefail
+          root="public/admin/js"
+          move() {
+            src="$root/$1"; dst="$root/$2"
+            if [ -f "$src" ]; then
+              mkdir -p "$(dirname "$dst")"
+              git mv "$src" "$dst"
+            fi
+          }
+          move api.js core/api.js
+          move config.js core/config.js
+          move main.js core/main.js
+          move dashboard-overview.js dashboard/dashboard-overview.js
+          move dashboard.js dashboard/dashboard.js
+          move cours.js cours/cours.js
+          move cours-control.js cours/cours-control.js
+          move cours-control-editor.js cours/cours-control-editor.js
+          move cours-history-entry-delete.js historique/cours-history-entry-delete.js
+          move historique.js historique/historique.js
+          move historique-session-delete.js seances/historique-session-delete.js
+          move seance.js seances/seance.js
+          move seances-globales.js seances/seances-globales.js
+          move seances-annuel.js seances/seances-annuel.js
+          move seances-crud.js seances/seances-crud.js
+          move seances-integrity-hardening.js seances/seances-integrity-hardening.js
+          move admin-cours-historique-unified.js seances/admin-cours-historique-unified.js
+          move analyses.js analyses/analyses.js
+          move boc-admin.js boc/boc-admin.js
+          move boc-importer.js boc/boc-importer.js
+          move diagnostic.js diagnostic/diagnostic.js
+          move entreprises.js entreprises/entreprises.js
+          move financials.js financials/financials.js
+          move dividendes.js dividendes/dividendes.js
+          move utilisateurs.js utilisateurs/utilisateurs.js
+          move indices.js indices/indices.js
+          move scraper.js scraper/scraper.js
+          move import.js imports/import.js
+          move clientele-advanced.js utilisateurs/clientele-advanced.js
+          move utils.js core/utils.js
+          python3 - <<'PY'
+          from pathlib import Path
+          replacements = {
+            'admin/js/api.js':'admin/js/core/api.js','admin/js/config.js':'admin/js/core/config.js','admin/js/main.js':'admin/js/core/main.js','admin/js/utils.js':'admin/js/core/utils.js','admin/js/dashboard-overview.js':'admin/js/dashboard/dashboard-overview.js','admin/js/dashboard.js':'admin/js/dashboard/dashboard.js','admin/js/cours.js':'admin/js/cours/cours.js','admin/js/cours-control.js':'admin/js/cours/cours-control.js','admin/js/cours-control-editor.js':'admin/js/cours/cours-control-editor.js','admin/js/cours-history-entry-delete.js':'admin/js/historique/cours-history-entry-delete.js','admin/js/historique.js':'admin/js/historique/historique.js','admin/js/historique-session-delete.js':'admin/js/seances/historique-session-delete.js','admin/js/seance.js':'admin/js/seances/seance.js','admin/js/seances-globales.js':'admin/js/seances/seances-globales.js','admin/js/seances-annuel.js':'admin/js/seances/seances-annuel.js','admin/js/seances-crud.js':'admin/js/seances/seances-crud.js','admin/js/seances-integrity-hardening.js':'admin/js/seances/seances-integrity-hardening.js','admin/js/admin-cours-historique-unified.js':'admin/js/seances/admin-cours-historique-unified.js','admin/js/analyses.js':'admin/js/analyses/analyses.js','admin/js/boc-admin.js':'admin/js/boc/boc-admin.js','admin/js/boc-importer.js':'admin/js/boc/boc-importer.js','admin/js/diagnostic.js':'admin/js/diagnostic/diagnostic.js','admin/js/entreprises.js':'admin/js/entreprises/entreprises.js','admin/js/financials.js':'admin/js/financials/financials.js','admin/js/dividendes.js':'admin/js/dividendes/dividendes.js','admin/js/utilisateurs.js':'admin/js/utilisateurs/utilisateurs.js','admin/js/clientele-advanced.js':'admin/js/utilisateurs/clientele-advanced.js','admin/js/indices.js':'admin/js/indices/indices.js','admin/js/scraper.js':'admin/js/scraper/scraper.js','admin/js/import.js':'admin/js/imports/import.js'}
+          exts={'.html','.js','.css','.md','.json','.yml','.yaml'}
+          for p in Path('.').rglob('*'):
+            if not p.is_file() or p.suffix.lower() not in exts or '.git' in p.parts: continue
+            try: s=p.read_text(encoding='utf-8')
+            except Exception: continue
+            old=s
+            for a,b in replacements.items(): s=s.replace(a,b)
+            if s!=old: p.write_text(s,encoding='utf-8')
+          PY
+          python3 - <<'PY'
+          from pathlib import Path
+          fixes={'public/admin/js/core/main.js':{"s.src='js/clientele-advanced.js'":"s.src='utilisateurs/clientele-advanced.js'","s.src='js/seance.js'":"s.src='seances/seance.js"}}
+          for name,reps in fixes.items():
+            p=Path(name)
+            if not p.exists(): continue
+            s=p.read_text(encoding='utf-8')
+            for a,b in reps.items(): s=s.replace(a,b)
+            p.write_text(s,encoding='utf-8')
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "refactor: reorganize repository modules [skip ci]"
+          git push origin HEAD:refactor/reorganize-repository
