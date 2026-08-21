@@ -1,28 +1,48 @@
-/*
- * Admin Dashboard — unified implementations only.
- *
- * Cours & Historique owns one session manager:
- *   - cours-historique.js / cours-control.js for market data
- *   - seances-globales.js for the session calendar + validation state
- *   - admin-cours-historique-unified.js for explicit navigation
- *   - seances-integrity-hardening.js for market-calendar integrity rules
- *
- * The former calendar/details/override overlays are intentionally not loaded here.
- */
+/* Compatibility loader during admin JS architecture migration. */
 (function () {
-    'use strict';
-
-    function load(src, id) {
-        if (document.querySelector('script[data-tc-module="' + id + '"]')) return;
-        var script = document.createElement('script');
-        script.src = src;
-        script.async = false;
-        script.setAttribute('data-tc-module', id);
-        document.head.appendChild(script);
-    }
-
-    load('admin/js/dashboard-overview.js?v=20260814-unified', 'dashboard-overview');
-    load('admin/js/cours-historique.js?v=20260814-unified', 'cours-historique');
-    load('admin/js/admin-cours-historique-unified.js?v=20260821-unified', 'admin-cours-historique-unified');
-    load('admin/js/seances-integrity-hardening.js?v=20260821-integrity', 'seances-integrity-hardening');
+  'use strict';
+  var map = {
+    'admin-cours-historique-unified.js':'historique/admin-cours-historique-unified.js',
+    'analyses.js':'analyses/analyses.js',
+    'api.js':'core/api.js',
+    'boc-admin.js':'boc/boc-admin.js',
+    'boc-importer.js':'boc/boc-importer.js',
+    'clientele-advanced.js':'utilisateurs/clientele-advanced.js',
+    'config.js':'core/config.js',
+    'cours.js':'cours/cours.js',
+    'cours-control.js':'cours/cours-control.js',
+    'cours-control-editor.js':'cours/cours-control-editor.js',
+    'cours-historique.js':'cours/cours-historique.js',
+    'cours-history-entry-delete.js':'cours/cours-history-entry-delete.js',
+    'dashboard.js':'dashboard/dashboard.js',
+    'dashboard-overview.js':'dashboard/dashboard-overview.js',
+    'diagnostic.js':'diagnostic/diagnostic.js',
+    'dividendes.js':'dividendes/dividendes.js',
+    'entreprises.js':'entreprises/entreprises.js',
+    'financials.js':'financials/financials.js',
+    'historique.js':'historique/historique.js',
+    'historique-quality.js':'historique/historique-quality.js',
+    'historique-session-delete.js':'historique/historique-session-delete.js',
+    'import.js':'imports/import.js',
+    'indices.js':'indices/indices.js',
+    'main.js':'core/main.js',
+    'scraper.js':'scraper/scraper.js',
+    'seance.js':'seances/seance.js',
+    'seances-annuel.js':'seances/seances-annuel.js',
+    'seances-crud.js':'seances/seances-crud.js',
+    'seances-details.js':'seances/seances-details.js',
+    'seances-globales-actions.js':'seances/seances-globales-actions.js',
+    'seances-globales.js':'seances/seances-globales.js',
+    'seances-integrity-hardening.js':'seances/seances-integrity-hardening.js',
+    'utilisateurs.js':'utilisateurs/utilisateurs.js',
+    'utils.js':'core/utils.js'
+  };
+  var current = (document.currentScript && document.currentScript.src || '').split('/').pop();
+  var target = map[current];
+  if (!target) return;
+  var base = (document.currentScript.src || '').split('/public/admin/js/')[0] + '/public/admin/js/';
+  var s = document.createElement('script');
+  s.src = base + target;
+  s.async = false;
+  document.head.appendChild(s);
 })();
