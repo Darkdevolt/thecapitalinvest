@@ -1,7 +1,7 @@
 /* THE CAPITAL — Navigation unifiée Cours & Historique
- * Point d'entrée unique pour les actions d'une séance vers Cours ou Historique.
- * Les boutons legacy du calendrier sont également routés ici afin qu'aucune
- * implémentation concurrente ne puisse reprendre la navigation.
+ * Point d'entrée unique pour les actions d'une séance.
+ * Le calendrier appelle directement cette API : aucun intercepteur global
+ * et aucun routage par position d'onglet.
  */
 (function () {
     'use strict';
@@ -52,54 +52,6 @@
         }, 50);
         return true;
     }
-
-    function modalDate(button) {
-        var modal = button && button.closest && button.closest('.tc-session-modal, #tc-session-details-modal');
-        if (!modal) return '';
-        var node = modal.querySelector('.tc-session-modal-head [style*="font:11px"], .card-header [style*="font:11px"]');
-        return node ? node.textContent.trim() : '';
-    }
-
-    /*
-     * The central calendar still contains legacy data-day/data-manage/data-hist
-     * handlers in its internal implementation. Capture those actions here so
-     * they all use the same explicit routing API and never tabs[1]/tabs[2].
-     */
-    document.addEventListener('click', function (event) {
-        var day = event.target.closest && event.target.closest('[data-day]');
-        if (day) {
-            var date = day.getAttribute('data-day');
-            if (date && typeof window.tcOpenSessionDetails === 'function') {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                window.tcOpenSessionDetails(date);
-                return;
-            }
-        }
-
-        var coursButton = event.target.closest && event.target.closest('[data-manage-cours], [data-manage]');
-        if (coursButton) {
-            var dateCours = modalDate(coursButton);
-            if (dateCours && openCoursForDate(dateCours)) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                var modalCours = coursButton.closest('.tc-session-modal, #tc-session-details-modal');
-                if (modalCours) modalCours.remove();
-                return;
-            }
-        }
-
-        var histButton = event.target.closest && event.target.closest('[data-manage-hist], [data-hist]');
-        if (histButton) {
-            var dateHist = modalDate(histButton);
-            if (dateHist && openHistoriqueForDate(dateHist)) {
-                event.preventDefault();
-                event.stopImmediatePropagation();
-                var modalHist = histButton.closest('.tc-session-modal, #tc-session-details-modal');
-                if (modalHist) modalHist.remove();
-            }
-        }
-    }, true);
 
     window.TCAdminNavigation = {
         openCoursForDate: openCoursForDate,
