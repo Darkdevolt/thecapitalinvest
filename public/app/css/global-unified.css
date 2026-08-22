@@ -1,0 +1,71 @@
+/* THE CAPITAL — Global UI consistency layer
+   Presentation only. Intentionally does not alter data, APIs or business logic. */
+:root{
+ --tc-radius:10px;--tc-radius-lg:12px;--tc-gap:16px;
+ --tc-line:rgba(184,150,78,.14);--tc-line-soft:rgba(184,150,78,.075);
+ --tc-panel:rgba(22,19,13,.96);--tc-panel-alt:rgba(26,22,16,.96);
+}
+
+/* PAGE STRUCTURE */
+.main{max-width:1540px;margin:0 auto;padding:26px 30px 52px;position:relative;z-index:1}
+.view>.page-header{margin:0 0 22px;padding:0 0 17px;border-bottom:1px solid var(--tc-line-soft)}
+.view>.page-header h1{font-family:var(--serif);font-size:28px;line-height:1.2;font-weight:500;letter-spacing:-.01em}
+.view>.page-header p{margin-top:6px;font-size:12px;color:var(--muted)}
+
+/* ALL PRIMARY PANELS */
+.view .card,.view .stat-card,.view .fiche-hero,.view .boc-card,.view .analyse-card,.view .portf-item,.view .portf-kpi,.view .alert-card{
+ background:linear-gradient(180deg,var(--tc-panel-alt),var(--tc-panel));
+ border:1px solid var(--tc-line);border-radius:var(--tc-radius);box-shadow:0 7px 22px rgba(0,0,0,.12)
+}
+.view .card:hover,.view .stat-card:hover,.view .boc-card:hover,.view .analyse-card:hover,.view .portf-kpi:hover{border-color:rgba(184,150,78,.25);box-shadow:0 12px 30px rgba(0,0,0,.18)}
+.view .card-header{min-height:50px;padding:14px 18px;background:rgba(184,150,78,.018);border-bottom:1px solid var(--tc-line-soft)}
+.view .card-title{font-size:10px;font-weight:600;letter-spacing:.12em;color:var(--muted)}
+.view .card-body{padding:18px}
+
+/* CONSISTENT GRIDS */
+.grid-2,.grid-3,.grid-4,.grid-5,.grid-7030,.session-grid,.portf-summary,.portf-kpi-grid{gap:14px;margin-bottom:18px}
+.stat-card,.portf-item,.portf-kpi{padding:18px}
+.stat-label,.portf-item-label,.portf-kpi-label{font-size:9px;letter-spacing:.13em;color:var(--dim)}
+.stat-value,.portf-item-value,.portf-kpi-value{font-family:var(--mono);font-size:21px;line-height:1.1}
+
+/* TABLES */
+.table-wrap{border:1px solid var(--tc-line-soft);border-radius:var(--tc-radius);background:rgba(10,8,4,.16)}
+thead th{height:40px;padding:9px 13px;background:rgba(184,150,78,.025);border-bottom:1px solid var(--tc-line);font-size:9px;letter-spacing:.11em}
+tbody td{padding:10px 13px}
+tbody tr{border-bottom:1px solid rgba(184,150,78,.05)}
+tbody tr:hover{background:rgba(184,150,78,.035)}
+
+/* FORMS / FILTERS */
+.search-bar{gap:8px;padding-bottom:16px}
+.search-input,.filter-btn,.portf-form input,.portf-form select,.screener-filters input,.screener-filters select{
+ min-height:38px;padding:8px 12px;border-radius:7px;background:rgba(22,19,13,.88);border:1px solid var(--tc-line);font-size:12px
+}
+.search-input:focus,.portf-form input:focus,.portf-form select:focus,.screener-filters input:focus,.screener-filters select:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,150,78,.06)}
+.filter-btn{font-size:10px;letter-spacing:.07em;text-transform:uppercase}
+
+/* DETAIL / ANALYSIS */
+.fiche-hero{padding:24px;margin-bottom:18px}.fiche-company{font-size:27px}.fiche-price{font-size:32px}
+.analyse-card{padding:18px;margin-bottom:12px}.analyse-title{font-size:14px}.analyse-text{font-size:12px;line-height:1.65}
+.boc-card{overflow:hidden}.boc-header{padding:15px 17px 12px}.boc-body{padding:11px 17px 14px}
+.alert-card{padding:15px 18px;margin-bottom:10px}
+
+/* TAGS / BUTTONS */
+.pill{padding:3px 8px;border-radius:999px;font-size:10px}.sector-tag{font-size:9px;border-radius:5px}
+.back-btn{border-radius:7px;padding:8px 13px;font-size:10px}
+.year-tab{border-radius:999px;padding:5px 11px;font-size:10px}
+
+/* CHARTS */
+.chart-container{height:230px}.chart-container.tall{height:320px}.chart-container.xl{height:400px}
+
+/* NAVIGATION */
+.nav-item{margin:2px 8px;padding:9px 10px;border-radius:7px;font-size:11px}
+.nav-item.active{background:rgba(184,150,78,.09);border:1px solid rgba(184,150,78,.11)}
+.nav-dropdown-menu{border:1px solid var(--tc-line);border-radius:10px;box-shadow:0 14px 34px rgba(0,0,0,.3)}
+.nav-dropdown-item{border-radius:7px;margin:3px 5px}
+
+/* EMPTY STATES */
+.empty-state{padding:50px 20px;border:1px dashed var(--tc-line-soft);border-radius:var(--tc-radius);background:rgba(184,150,78,.01)}
+.empty-title{font-size:17px}.empty-text{font-size:12px}
+
+@media(max-width:1100px){.main{padding:22px 20px 46px}.view>.page-header h1{font-size:26px}}
+@media(max-width:700px){.main{padding:18px 12px 34px}.view>.page-header{margin-bottom:17px;padding-bottom:13px}.view>.page-header h1{font-size:23px}.view>.page-header p{font-size:11px}.card-header{padding:12px 14px}.card-body{padding:14px}.stat-card,.portf-item,.portf-kpi{padding:15px}.stat-value,.portf-item-value,.portf-kpi-value{font-size:19px}.chart-container{height:200px}.chart-container.tall{height:260px}.chart-container.xl{height:300px}}
