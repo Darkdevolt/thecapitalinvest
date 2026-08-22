@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Diagnostic — The Capital</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+:root{--bg:#0b0b0a;--panel:#121210;--line:rgba(255,255,255,.09);--gold:#b8964e;--cream:#f2eee4;--muted:#9a978f;--green:#4ade80;--red:#f87171;--orange:#f59e0b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--cream);font:14px/1.6 system-ui,Arial,sans-serif}
+.wrap{max-width:1080px;margin:auto;padding:28px 18px 70px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:32px}
+.brand{font:700 18px Georgia,serif;letter-spacing:4px}.brand span{color:var(--gold)}
+.back{color:var(--muted);text-decoration:none;font-size:13px}
+h1{font:600 26px Georgia,serif;margin:0 0 6px}
+.lead{color:var(--muted);margin:0 0 26px;max-width:70ch}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;margin-bottom:18px}
+.card h2{font:600 14px system-ui;margin:0;padding:13px 16px;border-bottom:1px solid var(--line);letter-spacing:.5px}
+.card-body{padding:16px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:9px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.6px}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:600}
+.ok{background:rgba(74,222,128,.13);color:var(--green)}
+.vide{background:rgba(245,158,11,.13);color:var(--orange)}
+.ko{background:rgba(248,113,113,.13);color:var(--red)}
+.sections{color:var(--muted);font-size:12px}
+.stats{display:flex;gap:26px;flex-wrap:wrap}
+.stat strong{display:block;font:600 26px Georgia,serif;color:var(--gold)}
+.stat span{color:var(--muted);font-size:12px}
+button{background:var(--gold);border:0;color:#1a1408;padding:9px 16px;border-radius:6px;cursor:pointer;font-weight:600}
+.msg{color:var(--muted);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">THE <span>·</span> CAPITAL</div>
+    <a class="back" href="admin.html">← Administration</a>
+  </header>
+
+  <h1>Diagnostic d'exploitation</h1>
+  <p class="lead">Cette page répond à une seule question : chaque section de l'application
+  a-t-elle réellement des données derrière elle ? Une section peut être parfaitement codée
+  et rester vide parce que la table n'existe pas, parce qu'une règle RLS en interdit la
+  lecture, ou parce qu'aucune donnée n'a encore été chargée. Ces trois cas sont distingués
+  ci-dessous.</p>
+
+  <div class="card">
+    <h2>Synthèse</h2>
+    <div class="card-body"><div id="synthese" class="msg">Chargement…</div></div>
+  </div>
+
+  <div class="card">
+    <h2>Configuration serveur</h2>
+    <div class="card-body"><div id="config" class="msg">—</div></div>
+  </div>
+
+  <div class="card">
+    <h2>État des tables</h2>
+    <div id="tables"><div class="card-body msg">—</div></div>
+  </div>
+
+  <button type="button" id="reload">Relancer le diagnostic</button>
+</div>
+
+<script src="js/env.js"></script>
+<script>
+const TAGS = { ok:['ok','Données présentes'], vide:['vide','Vide'], absente:['ko','Table absente'],
+               interdite:['ko','Lecture refusée (RLS)'], erreur:['ko','Erreur'] };
+
+function esc(v){const d=document.createElement('div');d.textContent=v==null?'':String(v);return d.innerHTML;}
+
+async function charger(){
+  const token = TC_ENV.getToken();
+  if(!token){ location.replace('login.html?redirect='+encodeURIComponent(location.pathname)); return; }
+
+  document.getElementById('synthese').textContent='Analyse en cours…';
+  let data;
+  try{
+    const r = await fetch('/api/health',{headers:{Authorization:'Bearer '+token},cache:'no-store'});
+    data = await r.json();
+    if(!r.ok || !data.success){
+      document.getElementById('synthese').innerHTML =
+        '<span class="tag ko">Échec</span> '+esc(data.error||data.message||('HTTP '+r.status));
+      return;
+    }
+  }catch(e){
+    document.getElementById('synthese').innerHTML='<span class="tag ko">Échec</span> '+esc(e.message);
+    return;
+  }
+
+  const s = data.synthese;
+  document.getElementById('synthese').innerHTML =
+    '<div class="stats">'
+    + '<div class="stat"><strong>'+s.tables_avec_donnees+'</strong><span>tables alimentées</span></div>'
+    + '<div class="stat"><strong>'+s.tables_vides+'</strong><span>tables vides</span></div>'
+    + '<div class="stat"><strong>'+s.tables_en_erreur+'</strong><span>tables inaccessibles</span></div>'
+    + '</div>'
+    + (s.sections_sans_donnees.length
+        ? '<p style="margin:18px 0 0">Sections qui ne peuvent rien afficher aujourd\'hui : <strong>'
+          + s.sections_sans_donnees.map(esc).join(', ') + '</strong></p>'
+        : '<p style="margin:18px 0 0;color:var(--green)">Toutes les sections disposent de données.</p>');
+
+  const c = data.configuration;
+  document.getElementById('config').innerHTML =
+    '<table><tr><td>Connexion Supabase</td><td>'+(c.supabase?'<span class="tag ok">active</span>':'<span class="tag ko">absente</span>')+'</td></tr>'
+    + '<tr><td>CRON_SECRET (traitement automatique BRVM)</td><td>'
+    + (c.cron_secret?'<span class="tag ok">défini</span>':'<span class="tag vide">non défini — le cron reste inactif</span>')+'</td></tr>'
+    + '<tr><td>Origines autorisées (CORS)</td><td>'+esc(c.origines_autorisees)
+    + (c.origines_autorisees==='*'?' <span class="tag vide">à restreindre en production</span>':'')+'</td></tr>'
+    + '<tr><td>Moteur The Capital AI</td><td>'
+    + (c.moteur_ia?'<span class="tag ok">configuré</span>':'<span class="tag vide">OPENAI_API_KEY absente</span>')+'</td></tr></table>';
+
+  const lignes = Object.entries(data.tables).map(([nom,t])=>{
+    const [cls,label] = TAGS[t.etat] || ['ko',t.etat];
+    return '<tr><td><code>'+esc(nom)+'</code></td>'
+      + '<td><span class="tag '+cls+'">'+esc(label)+'</span></td>'
+      + '<td>'+(t.lignes!=null?t.lignes.toLocaleString('fr-FR'):'—')+'</td>'
+      + '<td class="sections">'+esc((t.sections||[]).join(', '))
+      + (t.message?'<br>'+esc(t.message):'')+'</td></tr>';
+  }).join('');
+  document.getElementById('tables').innerHTML =
+    '<table><thead><tr><th>Table</th><th>État</th><th>Lignes</th><th>Sections concernées</th></tr></thead><tbody>'
+    + lignes + '</tbody></table>';
+}
+
+document.getElementById('reload').addEventListener('click', charger);
+charger();
+</script>
+</body>
+</html>
