@@ -1,0 +1,143 @@
+/* THE CAPITAL — Analyse technique — UI moderne
+   Cette feuille devient la couche visuelle de référence de l'analyse technique.
+   UI uniquement : aucune API, endpoint, donnée ou logique métier modifiée. */
+
+#view-analyse-technique{--at-accent:#b8964e;--at-radius:12px}
+#view-analyse-technique .at-wrap{height:calc(100vh - var(--header-h) - 28px);min-height:620px;border:1px solid rgba(184,150,78,.18);border-radius:16px;background:var(--bg);box-shadow:0 18px 55px rgba(0,0,0,.16);overflow:hidden;display:flex;flex-direction:column}
+#view-analyse-technique .at-toolbar{height:auto;min-height:58px;padding:9px 12px;gap:8px;background:linear-gradient(180deg,var(--surface),var(--card));border-bottom:1px solid var(--border2);align-items:center}
+#view-analyse-technique .at-tb-group{padding:0 9px;border-right:1px solid var(--border2);gap:4px}
+#view-analyse-technique .at-tb-group:first-child{padding-left:0;min-width:250px}
+#view-analyse-technique .at-tb-label{font-size:8px;letter-spacing:.13em}
+#view-analyse-technique .at-btn{min-height:32px;padding:6px 10px;border-radius:7px;font-size:10px}
+#view-analyse-technique .at-btn.on{box-shadow:inset 0 0 0 1px rgba(184,150,78,.08)}
+#view-analyse-technique .at-select{min-height:34px;width:100%;font-size:11px;border-radius:8px;background:var(--card)}
+#view-analyse-technique .at-ticker-picker{width:100%;display:grid;grid-template-columns:minmax(140px,1fr) 150px;gap:7px;align-items:center}
+#view-analyse-technique .at-ticker-search{width:100%;height:34px;box-sizing:border-box;padding:0 11px;border:1px solid var(--border2);border-radius:8px;background:var(--card);color:var(--cream);outline:none;font:500 10px var(--mono)}
+#view-analyse-technique .at-ticker-search:focus{border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,150,78,.08)}
+#view-analyse-technique .at-ticker-meta{grid-column:1/-1;font:500 9px var(--mono);color:var(--dim);min-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view-analyse-technique .at-drawtb{min-height:42px;padding:5px 12px;background:var(--surface);border-bottom:1px solid var(--border2);gap:4px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+#view-analyse-technique .at-drawtb::-webkit-scrollbar{display:none}
+#view-analyse-technique .draw-status{font-size:9px;max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#view-analyse-technique .at-body{background:var(--bg);display:flex;flex:1;min-height:0}
+#view-analyse-technique .at-left{width:46px;padding:10px 0;background:var(--surface);border-right:1px solid var(--border2);gap:5px}
+#view-analyse-technique .at-tool{width:32px;height:32px;border-radius:8px;font-family:var(--mono);font-size:11px}
+#view-analyse-technique .at-center{background:var(--bg);display:flex;flex-direction:column;flex:1;min-width:0;min-height:0}
+#view-analyse-technique .at-ohlc{min-height:42px;padding:6px 12px;gap:16px;background:var(--surface)}
+#view-analyse-technique .ohlc-item{gap:5px}
+#view-analyse-technique .ohlc-lbl{font-size:8px;letter-spacing:.08em}
+#view-analyse-technique .ohlc-v{font-size:10px}
+#view-analyse-technique .at-chart-main{background:radial-gradient(circle at 50% 30%,rgba(184,150,78,.035),transparent 55%);flex:1;position:relative;min-height:0}
+#view-analyse-technique .at-chart-main canvas{position:absolute;inset:0;width:100%;height:100%}
+#view-analyse-technique .at-sub{position:relative;background:var(--bg);border-top:1px solid var(--border2);flex-shrink:0}
+#view-analyse-technique .at-sub canvas{position:absolute;inset:0;width:100%!important;height:100%!important}
+#view-analyse-technique .at-right{width:230px;background:var(--surface);border-left:1px solid var(--border2);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
+#view-analyse-technique .at-rp-title{padding:10px 12px 7px;font-size:8px;letter-spacing:.13em;color:var(--dim)}
+#view-analyse-technique .at-sig-row{padding:7px 12px}
+#view-analyse-technique .at-sig-label{font-size:10px}
+#view-analyse-technique .sig-badge{min-width:55px;text-align:center;padding:4px 7px;border-radius:5px}
+#view-analyse-technique .at-ind-item,#view-analyse-technique .at-wl-item{padding:8px 12px}
+#view-analyse-technique .at-add-ind{padding:10px 12px;font-weight:600}
+#view-analyse-technique .at-bottom{height:28px;padding:0 12px;background:var(--surface)}
+#view-analyse-technique .at-bb-item{font-size:8px}
+
+/* Données/overlays du moteur technique */
+#view-analyse-technique #atAggInfo{position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(10,8,4,.85);border:1px solid rgba(184,150,78,.2);border-radius:6px;padding:4px 12px;font-size:11px;color:var(--dim);z-index:10;backdrop-filter:blur(4px);pointer-events:none}
+#view-analyse-technique #atTooltip{position:absolute;background:rgba(10,8,4,.95);border:1px solid rgba(184,150,78,.25);border-radius:10px;padding:12px;color:var(--cream);font:12px 'DM Sans',sans-serif;z-index:100;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.5);min-width:160px;max-width:220px;backdrop-filter:blur(8px)}
+#view-analyse-technique #atDrawStatus{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(10,8,4,.9);border:1px solid rgba(184,150,78,.3);border-radius:6px;padding:6px 14px;font-size:12px;color:var(--gold);z-index:10;backdrop-filter:blur(4px);animation:atPulse 2s ease-in-out infinite}
+#view-analyse-technique #cvOverlay{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:5}
+#view-analyse-technique #atWrap{transition:opacity .18s ease,transform .18s ease}
+@keyframes atPulse{0%,100%{opacity:.8}50%{opacity:1}}
+
+/* Navigation graphique */
+#view-analyse-technique .at-nav-bar{position:absolute;bottom:12px;left:50%;transform:translateX(-50%);display:flex;gap:4px;background:rgba(10,8,4,.88);border:1px solid rgba(184,150,78,.22);border-radius:10px;padding:6px;z-index:50;backdrop-filter:blur(8px);box-shadow:0 8px 24px rgba(0,0,0,.2)}
+#view-analyse-technique .at-nav-btn{background:transparent;border:0;color:var(--cream);width:34px;height:32px;border-radius:6px;cursor:pointer;font:600 12px var(--mono);display:flex;align-items:center;justify-content:center}
+#view-analyse-technique .at-nav-btn:hover{background:rgba(184,150,78,.15);color:var(--gold)}
+#view-analyse-technique .at-nav-sep{width:1px;background:rgba(184,150,78,.15);margin:4px 2px}
+#view-analyse-technique .at-tool-hline{cursor:row-resize!important}
+#view-analyse-technique .at-tool-trend{cursor:crosshair!important}
+#view-analyse-technique .at-tool-text{cursor:text!important}
+
+/* Mode clair — palette institutionnelle, pas de thème blanc agressif */
+#view-analyse-technique.at-light{--at-light-bg:#f5f6f7;--at-light-surface:#fff;--at-light-card:#fbfcfd;--at-light-border:#dfe3e8;--at-light-border2:#e9ecef;--at-light-text:#17202a;--at-light-muted:#5d6875;--at-light-gold:#8b6a2b;--at-light-green:#167a45;--at-light-red:#b4232f;background:var(--at-light-bg);color:var(--at-light-text)}
+#view-analyse-technique.at-light .at-wrap,#view-analyse-technique.at-light .at-center,#view-analyse-technique.at-light .at-body,#view-analyse-technique.at-light .at-chart-main{background:var(--at-light-bg);color:var(--at-light-text)}
+#view-analyse-technique.at-light .at-toolbar,#view-analyse-technique.at-light .at-drawtb,#view-analyse-technique.at-light .at-left,#view-analyse-technique.at-light .at-right,#view-analyse-technique.at-light .at-ohlc,#view-analyse-technique.at-light .at-bottom{background:var(--at-light-surface);color:var(--at-light-text);border-color:var(--at-light-border)}
+#view-analyse-technique.at-light .at-sub{background:#fafbfc;border-color:var(--at-light-border2)}
+#view-analyse-technique.at-light .at-btn{color:#52606d}
+#view-analyse-technique.at-light .at-btn:hover{background:#f0f2f4;color:var(--at-light-text);border-color:#ccd2d8}
+#view-analyse-technique.at-light .at-btn.on{background:#f4eee2;color:var(--at-light-gold);border-color:#d7c39b}
+#view-analyse-technique.at-light .at-select,#view-analyse-technique.at-light .at-ticker-search{background:#fff;color:var(--at-light-text);border-color:#ccd2d8}
+#view-analyse-technique.at-light .at-ticker-meta,#view-analyse-technique.at-light .at-tb-label,#view-analyse-technique.at-light .ohlc-lbl,#view-analyse-technique.at-light .at-rp-title,#view-analyse-technique.at-light .at-sig-label,#view-analyse-technique.at-light .at-ind-name,#view-analyse-technique.at-light .at-wl-chg,#view-analyse-technique.at-light .at-bb-item{color:var(--at-light-muted)}
+#view-analyse-technique.at-light .at-ticker-search:focus{border-color:var(--at-light-gold);box-shadow:0 0 0 3px rgba(139,106,43,.1)}
+#view-analyse-technique.at-light .at-tool{color:#687481}
+#view-analyse-technique.at-light .at-tool:hover,#view-analyse-technique.at-light .at-tool.on{background:#f4eee2;color:var(--at-light-gold);border-color:#d7c39b}
+#view-analyse-technique.at-light .at-ind-item:hover,#view-analyse-technique.at-light .at-wl-item:hover{background:#f7f8f9}
+#view-analyse-technique.at-light .at-wl-ticker,#view-analyse-technique.at-light .at-ind-choice-name,#view-analyse-technique.at-light .at-ind-modal-title{color:var(--at-light-text)}
+#view-analyse-technique.at-light .at-crosshair-tooltip{background:#fff;color:var(--at-light-text);border-color:#ccd2d8;box-shadow:0 10px 30px rgba(25,35,45,.12)}
+#view-analyse-technique.at-light .sig-b{background:#eaf7ef;color:var(--at-light-green);border-color:#b9e2c9}
+#view-analyse-technique.at-light .sig-s{background:#fcedef;color:var(--at-light-red);border-color:#edc0c6}
+#view-analyse-technique.at-light .sig-n{background:#f7f0e3;color:var(--at-light-gold);border-color:#dfcda9}
+#view-analyse-technique.at-light .at-chart-main{background-image:linear-gradient(rgba(30,40,50,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(30,40,50,.035) 1px,transparent 1px);background-size:48px 32px}
+#view-analyse-technique.at-light .at-nav-bar{background:rgba(255,255,255,.94);border-color:#dfe3e8;box-shadow:0 8px 24px rgba(25,35,45,.12)}
+#view-analyse-technique.at-light .at-nav-btn{color:#25313d}
+#view-analyse-technique.at-light #atAggInfo,#view-analyse-technique.at-light #atTooltip,#view-analyse-technique.at-light #atDrawStatus{background:rgba(255,255,255,.96);color:#344250;border-color:#dfe3e8;box-shadow:0 8px 24px rgba(25,35,45,.12)}
+
+/* Commutateur clair/sombre */
+#view-analyse-technique .at-theme-toggle{display:inline-flex;align-items:center;gap:7px;margin-left:auto;padding:5px 8px;border:1px solid var(--border2);border-radius:999px;background:var(--card);color:var(--dim);font:600 9px var(--sans);cursor:pointer;white-space:nowrap;flex-shrink:0}
+#view-analyse-technique .at-theme-toggle .at-switch{width:30px;height:17px;border-radius:99px;background:rgba(184,150,78,.18);border:1px solid var(--border2);position:relative;transition:.2s}
+#view-analyse-technique .at-theme-toggle .at-switch:after{content:"";position:absolute;width:13px;height:13px;top:1px;left:1px;border-radius:50%;background:var(--dim);transition:.2s}
+#view-analyse-technique.at-light .at-theme-toggle{background:#fff;border-color:#d7dde3;color:#596673}
+#view-analyse-technique.at-light .at-theme-toggle .at-switch{background:#d9c8a5;border-color:#cbb88e}
+#view-analyse-technique.at-light .at-theme-toggle .at-switch:after{left:14px;background:#8b6a2b}
+
+/* Focus graphique */
+#view-analyse-technique .chart-zone-focus{position:fixed!important;inset:0;z-index:1000;height:100vh!important;background:var(--bg);padding:0}
+#view-analyse-technique .chart-zone-focus .card{border-radius:0;border:0;height:100vh!important}
+#view-analyse-technique .focus-exit-btn{position:fixed;top:16px;right:16px;z-index:1001;padding:8px 16px;background:var(--surface);border:1px solid var(--border);border-radius:8px;color:var(--cream);font-size:12px;cursor:pointer}
+
+@media(max-width:1100px){
+  #view-analyse-technique .at-right{width:200px}
+  #view-analyse-technique .at-tb-group{padding:0 6px}
+  #view-analyse-technique .at-tb-group:first-child{min-width:220px}
+}
+@media(max-width:760px){
+  #view-analyse-technique .at-wrap{height:calc(100dvh - var(--header-h) - 16px);min-height:0;border-radius:12px}
+  #view-analyse-technique .at-toolbar{min-height:0;padding:8px;display:grid;grid-template-columns:1fr auto;gap:7px;overflow:visible}
+  #view-analyse-technique .at-tb-group{border:0;padding:0;overflow-x:auto;scrollbar-width:none}
+  #view-analyse-technique .at-tb-group::-webkit-scrollbar{display:none}
+  #view-analyse-technique .at-tb-group:first-child{grid-column:1/-1;min-width:0}
+  #view-analyse-technique .at-ticker-picker{grid-template-columns:minmax(0,1fr)!important}
+  #view-analyse-technique .at-ticker-meta{font-size:8px!important}
+  #view-analyse-technique .at-toolbar .at-tb-group:last-child{grid-column:1/-1;margin:0;display:flex}
+  #view-analyse-technique .at-toolbar .at-tb-group:nth-child(2),#view-analyse-technique .at-toolbar .at-tb-group:nth-child(3),#view-analyse-technique .at-toolbar .at-tb-group:nth-child(4){grid-column:1/-1}
+  #view-analyse-technique .at-toolbar .at-tb-group:nth-child(5){display:flex;overflow-x:auto}
+  #view-analyse-technique .at-theme-toggle{margin-left:auto}
+  #view-analyse-technique .at-drawtb{padding:5px 8px}
+  #view-analyse-technique .at-body{position:relative}
+  #view-analyse-technique .at-left{display:none}
+  #view-analyse-technique .at-right{position:absolute;left:0;right:0;bottom:0;width:auto;height:44px;z-index:20;border-left:0;border-top:1px solid var(--border2);display:flex;flex-direction:row;overflow:hidden;transition:height .2s}
+  #view-analyse-technique .at-right:focus-within{height:48%}
+  #view-analyse-technique .at-right>div{display:none}
+  #view-analyse-technique .at-right>div:first-child{display:flex;flex-direction:row;align-items:center;overflow-x:auto;min-width:100%;background:var(--surface)}
+  #view-analyse-technique .at-right .at-rp-title{padding:0 10px;white-space:nowrap;border:0}
+  #view-analyse-technique .at-right .at-sig-row{padding:5px 7px;border:0;gap:4px;flex-direction:column;min-width:70px}
+  #view-analyse-technique .at-sig-label{font-size:7px!important}
+  #view-analyse-technique .sig-badge{font-size:8px!important;padding:3px 5px!important;min-width:48px!important}
+  #view-analyse-technique .at-ohlc{gap:8px;padding:6px 8px;overflow-x:auto;flex-wrap:nowrap;white-space:nowrap}
+  #view-analyse-technique .at-chart-main{min-height:260px}
+  #view-analyse-technique .at-sub{min-height:55px}
+  #view-analyse-technique .at-bottom{display:none}
+  #view-analyse-technique .at-theme-toggle{font-size:8px}
+  #view-analyse-technique .at-nav-bar{bottom:50px;max-width:calc(100% - 20px);overflow-x:auto}
+}
+@media(max-width:390px){
+  #view-analyse-technique .at-toolbar .at-btn{padding:6px 8px;font-size:9px}
+  #view-analyse-technique .at-ohlc .ohlc-item:nth-of-type(n+5){display:none}
+  #view-analyse-technique .at-chart-main{min-height:230px}
+  #view-analyse-technique .at-theme-toggle span:first-child{display:none}
+}
+@media(max-width:360px){
+  #view-analyse-technique .at-toolbar{padding:6px}
+  #view-analyse-technique .at-ticker-search,#view-analyse-technique .at-select{height:32px!important;min-height:32px!important}
+  #view-analyse-technique .at-chart-main{min-height:210px!important}
+  #view-analyse-technique .at-nav-btn{width:30px;height:30px}
+}
