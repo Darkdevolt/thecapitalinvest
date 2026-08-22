@@ -1,28 +1,56 @@
 {
-  "$schema":"https://openapi.vercel.sh/vercel.json",
-  "version":2,
-  "buildCommand":"npm run build",
-  "crons":[{"path":"/api/process-brvm","schedule":"5 16 * * 1-5"}],
-  "redirects":[
-    {"source":"/","destination":"/index.html","permanent":false},
-    {"source":"/landing-v4.html","destination":"/","permanent":true},
-    {"source":"/features.html","destination":"/#fonctionnalites","permanent":true},
-    {"source":"/platform.html","destination":"/#fonctionnalites","permanent":true},
-    {"source":"/markets.html","destination":"/#marches","permanent":true},
-    {"source":"/pricing.html","destination":"/#tarifs","permanent":true},
-    {"source":"/about.html","destination":"/#a-propos","permanent":true},
-    {"source":"/contact.html","destination":"/#contact","permanent":true},
-    {"source":"/app/app.html","destination":"/app.html","permanent":true}
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "version": 2,
+  "buildCommand": "npm run build",
+
+  "crons": [
+    { "path": "/api/process-brvm", "schedule": "5 16 * * 1-5" }
   ],
-  "rewrites":[
-    {"source":"/app.html","destination":"/app/app.html"},
-    {"source":"/titres","destination":"/app/app.html#titres"},
-    {"source":"/marche","destination":"/app/app.html#marche"},
-    {"source":"/analyses","destination":"/app/app.html#analyses"},
-    {"source":"/screener","destination":"/app/app.html#screener"},
-    {"source":"/financials","destination":"/app/app.html#financials"},
-    {"source":"/titre/:ticker","destination":"/app/app.html#fiche=:ticker"},
-    {"source":"/api/signup-otp","destination":"https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2"}
+
+  "redirects": [
+    { "source": "/landing-v4.html", "destination": "/", "permanent": true },
+    { "source": "/features.html", "destination": "/#fonctionnalites", "permanent": true },
+    { "source": "/platform.html", "destination": "/#fonctionnalites", "permanent": true },
+    { "source": "/markets.html", "destination": "/#marches", "permanent": true },
+    { "source": "/pricing.html", "destination": "/#tarifs", "permanent": true },
+    { "source": "/about.html", "destination": "/#a-propos", "permanent": true },
+    { "source": "/contact.html", "destination": "/#contact", "permanent": true },
+    { "source": "/app/app.html", "destination": "/app.html", "permanent": true }
   ],
-  "headers":[{"source":"/api/(.*)","headers":[{"key":"Access-Control-Allow-Origin","value":"*"},{"key":"Access-Control-Allow-Methods","value":"GET, POST, PUT, DELETE, PATCH, OPTIONS"},{"key":"Access-Control-Allow-Headers","value":"Content-Type, Authorization, X-Requested-With, X-Cron-Secret"},{"key":"Access-Control-Max-Age","value":"86400"},{"key":"Cache-Control","value":"no-store"}]}]
+
+  "rewrites": [
+    { "source": "/app.html", "destination": "/app/app.html" },
+    { "source": "/titres", "destination": "/app/app.html#titres" },
+    { "source": "/marche", "destination": "/app/app.html#marche" },
+    { "source": "/analyses", "destination": "/app/app.html#analyses" },
+    { "source": "/screener", "destination": "/app/app.html#screener" },
+    { "source": "/financials", "destination": "/app/app.html#financials" },
+    { "source": "/titre/:ticker", "destination": "/app/app.html#fiche=:ticker" },
+    { "source": "/api/signup-otp", "destination": "https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2" }
+  ],
+
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=()" }
+      ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store" }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
+      ]
+    }
+  ]
 }

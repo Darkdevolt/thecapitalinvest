@@ -1,0 +1,19 @@
+{
+  "name": "thecapitalinvest",
+  "version": "1.1.0",
+  "description": "The Capital - Plateforme d'investissement BRVM",
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "vercel dev",
+    "build": "node scripts/check-assets.mjs",
+    "check": "node scripts/check-assets.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "license": "ISC"
+}
