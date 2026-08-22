@@ -52,6 +52,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<link rel="stylesheet" href="/app/css/overview-insights.css">
 <link rel="stylesheet" href="/app/css/variables.css">
 <link rel="stylesheet" href="/app/css/base.css">
 <link rel="stylesheet" href="/app/css/components.css">
@@ -165,11 +166,11 @@
           <div><div>Recommandations</div><div class="item-desc">Avis d'analystes</div></div>
         </div>
         <div class="nav-dropdown-item" id="nav-comparison" onclick="nav('comparison');closeDropdowns()">
-          <span class="icon">⚖</span>
+          <span class="icon">⇄</span>
           <div><div>Comparateur</div><div class="item-desc">Confronter 2 à 4 sociétés</div></div>
         </div>
         <div class="nav-dropdown-item" id="nav-dividend-screener" onclick="nav('dividend-screener');closeDropdowns()">
-          <span class="icon">💰</span>
+          <span class="icon">◇</span>
           <div><div>Screener Dividendes</div><div class="item-desc">Rendement et croissance</div></div>
         </div>
         <div class="nav-dropdown-item" id="nav-analyse-technique" onclick="nav('analyse-technique');closeDropdowns()">
@@ -250,6 +251,16 @@
     <div class="stat-card"><div class="stat-label">BRVM 30</div><div class="stat-value" id="idx-30">, </div><div class="stat-change" id="idx-30-chg">, </div></div>
     <div class="stat-card"><div class="stat-label">BRVM Prestige</div><div class="stat-value" id="idx-prestige">, </div><div class="stat-change" id="idx-prestige-chg">, </div></div>
   </div>
+
+  <!-- Blocs d'enrichissement du tableau de bord (app/js/views/overview-insights.js).
+       Chacun s'efface de lui-même si ses données ne sont pas disponibles. -->
+  <div id="tciPortfolio"></div>
+  <div class="tci-row tci-row-2">
+    <div id="tciBreadth"></div>
+    <div id="tciActivity"></div>
+  </div>
+  <div id="tciWatch" class="tci-row"></div>
+
   <div class="grid-7030">
     <div class="card">
       <div class="card-header"><div class="card-title">BRVM Composite, 30 séances</div><div style="font-family:var(--mono);font-size:11px;color:var(--dim)" id="lastSession"></div></div>
@@ -1360,6 +1371,7 @@
 <script src="/app/js/search.js?v=5"></script>
 <script src="/app/js/views/marche.js"></script>
 <script src="/app/js/views/overview.js?v=5"></script>
+<script src="/app/js/views/overview-insights.js"></script>
 <script src="/app/js/views/titres.js?v=5"></script>
 <script src="/app/js/views/fiche.js?v=5"></script>
 <script src="/app/js/views/boc.js?v=5"></script>
