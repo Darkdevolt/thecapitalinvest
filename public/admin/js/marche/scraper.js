@@ -18,11 +18,49 @@ function renderScraperControls(){var mode=getMode(),m=document.getElementById('t
 async function requestScraper(){var token=getAdminToken(),headers={'Content-Type':'application/json','Accept':'application/json','X-Requested-With':'XMLHttpRequest'};if(token)headers.Authorization='Bearer '+token;var urls=['/api/scrape-brvm'];var lastError=null;for(var i=0;i<urls.length;i++){var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},50000);try{var r=await fetch(urls[i],{method:'POST',headers:headers,body:'{}',credentials:'same-origin',cache:'no-store',signal:controller.signal});clearTimeout(timer);var d=await r.json().catch(function(){return {};});if(!r.ok)throw new Error(d.error||('HTTP '+r.status));return d;}catch(e){clearTimeout(timer);lastError=e;}}throw lastError||new Error('Impossible de joindre le scraper');}
 function extractRows(d){var candidates=[d&&d.data&&d.data.rows,d&&d.rows,Array.isArray(d&&d.data)?d.data:null,d&&d.data&&d.data.data&&d.data.data.rows];for(var i=0;i<candidates.length;i++)if(Array.isArray(candidates[i])&&candidates[i].length)return candidates[i];return [];}
 function normalizeRow(r,date){var ticker=String(r&&(r.ticker||r.symbol||r.code||'')).trim().toUpperCase(),cours=r&&(r.cours_cloture!=null?r.cours_cloture:(r.cours!=null?r.cours:(r.close!=null?r.close:r.cloture)));return{ticker:ticker,date_seance:r&&r.date_seance||date,cours_cloture:n(cours),cours_ouverture:n(r&&(r.cours_ouverture!=null?r.cours_ouverture:(r.ouverture!=null?r.ouverture:r.open))),plus_haut:n(r&&(r.plus_haut!=null?r.plus_haut:(r.haut!=null?r.haut:r.high))),plus_bas:n(r&&(r.plus_bas!=null?r.plus_bas:(r.bas!=null?r.bas:r.low))),volume:n(r&&r.volume),variation:n(r&&(r.variation!=null?r.variation:(r.variation_pct!=null?r.variation_pct:r.var))),valeur_totale:n(r&&(r.valeur_totale!=null?r.valeur_totale:(r.valeur!=null?r.valeur:r.valeur_transigee))),capitalisation:n(r&&r.capitalisation)};}
-function buildPending(d){var rows=extractRows(d),date=(d&&d.date_seance)||(d&&d.data&&d.data.date_seance)||new Date().toISOString().slice(0,10),normalized=rows.map(function(r){return normalizeRow(r,date);}).filter(function(r){return r.ticker&&r.cours_cloture!==null;});normalized=Array.from(new Map(normalized.map(function(r){return [r.ticker,r];})).values());var indices=(d&&d.indices)||(d&&d.data&&d.data.indices)||[];return{source:d.source||'BRVM',date_seance:date,rows:normalized,indices:Array.isArray(indices)?indices:[],received_at:new Date().toISOString(),count:normalized.length};}
-function renderPreview(p){var box=document.getElementById('tc-scraper-preview'),body=document.getElementById('tc-preview-body'),summary=document.getElementById('tc-preview-summary'),count=document.getElementById('tc-preview-count'),actions=document.getElementById('tc-preview-actions');if(!box||!body)return;if(!p||!p.rows||!p.rows.length){box.style.display='none';return;}box.style.display='block';count.textContent=p.count+' titres';summary.innerHTML='<strong>Séance '+esc(p.date_seance)+'</strong> · Source : '+esc(p.source)+' · '+p.count+' cotations exploitables · '+(p.indices?p.indices.length:0)+' indices. '+(getMode()==='manual'?'⚠️ Rien n’est écrit dans Supabase avant validation.':'✓ Mode automatique actif.');body.innerHTML=p.rows.map(function(r){return '<tr><td class="td-gold">'+esc(r.ticker)+'</td><td>'+esc(r.date_seance)+'</td><td class="r td-mono">'+fmt(r.cours_cloture)+'</td><td class="r">'+fmt(r.cours_ouverture)+'</td><td class="r">'+fmt(r.plus_haut)+'</td><td class="r">'+fmt(r.plus_bas)+'</td><td class="r">'+fmt(r.volume)+'</td><td class="r">'+fmtPct(r.variation)+'</td><td class="r">'+fmt(r.valeur_totale)+'</td></tr>';}).join('');actions.style.display=getMode()==='manual'?'flex':'none';}
+function buildPending(d){var rows=extractRows(d),date=(d&&d.date_seance)||(d&&d.data&&d.data.date_seance)||new Date().toISOString().slice(0,10),normalized=rows.map(function(r){return normalizeRow(r,date);}).filter(function(r){return r.ticker&&r.cours_cloture!==null;});normalized=Array.from(new Map(normalized.map(function(r){return [r.ticker,r];})).values());var indices=(d&&d.indices)||(d&&d.data&&d.data.indices)||[];return{source:d.source||'BRVM',date_seance:date,date_detectee:date,rows:normalized,indices:Array.isArray(indices)?indices:[],received_at:new Date().toISOString(),count:normalized.length};}
+function renderPreview(p){var box=document.getElementById('tc-scraper-preview'),body=document.getElementById('tc-preview-body'),summary=document.getElementById('tc-preview-summary'),count=document.getElementById('tc-preview-count'),actions=document.getElementById('tc-preview-actions');if(!box||!body)return;if(!p||!p.rows||!p.rows.length){box.style.display='none';return;}box.style.display='block';count.textContent=p.count+' titres';summary.innerHTML='<div class="tc-session-date">'+'<label for="tc-session-date-input">Date de séance</label>'+'<input type="date" id="tc-session-date-input" value="'+esc(p.date_seance||'')+'" max="'+new Date().toISOString().slice(0,10)+'">'+(p.date_detectee&&p.date_detectee!==p.date_seance   ?'<span class="tc-session-date-warn">modifiée — détectée : '+esc(p.date_detectee)+'</span>'   :'<span class="tc-session-date-hint">détectée automatiquement, modifiable</span>')+'</div>'+'Source : '+esc(p.source)+' · '+p.count+' cotations exploitables · '+(p.indices?p.indices.length:0)+' indices. '+(getMode()==='manual'?'Rien n’est écrit dans Supabase avant validation.':'Mode automatique actif.');var di=document.getElementById('tc-session-date-input');if(di)di.addEventListener('change',function(){applySessionDate(this.value);});body.innerHTML=p.rows.map(function(r){return '<tr><td class="td-gold">'+esc(r.ticker)+'</td><td>'+esc(r.date_seance)+'</td><td class="r td-mono">'+fmt(r.cours_cloture)+'</td><td class="r">'+fmt(r.cours_ouverture)+'</td><td class="r">'+fmt(r.plus_haut)+'</td><td class="r">'+fmt(r.plus_bas)+'</td><td class="r">'+fmt(r.volume)+'</td><td class="r">'+fmtPct(r.variation)+'</td><td class="r">'+fmt(r.valeur_totale)+'</td></tr>';}).join('');actions.style.display=getMode()==='manual'?'flex':'none';}
 function savePending(p){scraperPending=p;try{localStorage.setItem(SCRAPER_PENDING_KEY,JSON.stringify(p));}catch(e){}renderPreview(p);}
 function clearPending(){scraperPending=null;try{localStorage.removeItem(SCRAPER_PENDING_KEY);}catch(e){}var b=document.getElementById('tc-scraper-preview');if(b)b.style.display='none';}
 function loadPending(){try{var p=JSON.parse(localStorage.getItem(SCRAPER_PENDING_KEY)||'null');if(p&&Array.isArray(p.rows)){scraperPending=p;renderPreview(p);}}catch(e){}}
+/**
+ * Réaffecte la date de séance à l'ensemble du lot en attente.
+ *
+ * La date provient du bandeau de brvm.org. Elle est juste dans le cas normal,
+ * mais fausse dès que la page est consultée en différé, que le bandeau n'a pas
+ * été mis à jour, ou qu'une séance est rattrapée après coup. Comme elle sert de
+ * clé de conflit à l'écriture (ticker + date_seance), une date erronée écrase
+ * la mauvaise séance — d'où la possibilité de la corriger avant validation.
+ *
+ * La correction s'applique au lot, à chaque cotation et à chaque indice : les
+ * trois doivent rester cohérents, sinon l'écriture se scinde sur deux dates.
+ */
+function applySessionDate(valeur){
+  var p=scraperPending;
+  if(!p)return;
+  var msg=document.getElementById('tc-preview-msg');
+  var d=String(valeur||'').trim();
+  var aujourdhui=new Date().toISOString().slice(0,10);
+  if(!/^20\d{2}-\d{2}-\d{2}$/.test(d)||isNaN(Date.parse(d))){
+    if(msg){msg.textContent='Date invalide — format attendu AAAA-MM-JJ.';msg.className='msg err';}
+    renderPreview(p);
+    return;
+  }
+  if(d>aujourdhui){
+    if(msg){msg.textContent='Une séance ne peut pas être datée dans le futur.';msg.className='msg err';}
+    renderPreview(p);
+    return;
+  }
+  if(d===p.date_seance)return;
+  if(!p.date_detectee)p.date_detectee=p.date_seance;
+  p.date_seance=d;
+  (p.rows||[]).forEach(function(r){r.date_seance=d;});
+  (p.indices||[]).forEach(function(x){x.date_seance=d;});
+  savePending(p);
+  appendLogSafe('Date de séance fixée au '+d+(p.date_detectee!==d?' (détectée : '+p.date_detectee+')':''),'ok');
+  if(msg){msg.textContent='Date de séance fixée au '+d+'. Les '+(p.rows?p.rows.length:0)+' cotations seront écrites sous cette date.';msg.className='msg ok';}
+}
+window.tcApplySessionDate=applySessionDate;
 function coursePayload(p){return p.rows.map(function(r){return{ticker:r.ticker,date_seance:r.date_seance,cours:r.cours_cloture,cloture:r.cours_cloture,cours_cloture:r.cours_cloture,cours_ouverture:r.cours_ouverture,ouverture:r.cours_ouverture,plus_haut:r.plus_haut,plus_bas:r.plus_bas,volume:r.volume,variation:r.variation,variation_pct:r.variation,valeur_totale:r.valeur_totale,capitalisation:r.capitalisation};});}
 function historiquePayload(p){return p.rows.map(function(r){return{ticker:r.ticker,date_seance:r.date_seance,cloture:r.cours_cloture,cours_cloture:r.cours_cloture,cours_ouverture:r.cours_ouverture,variation:r.variation,variation_pct:r.variation,volume:r.volume,valeur_totale:r.valeur_totale};});}
 async function transferToSupabase(p){if(!p||!p.rows||!p.rows.length)throw new Error('Aucune donnée à transférer');var cp=coursePayload(p),hp=historiquePayload(p);var c=await sbPost('cours',cp,'ticker,date_seance');if(!c)throw new Error('Échec de mise à jour de cours');var h=await sbPost('historique',hp,'ticker,date_seance');if(!h)throw new Error('Échec de mise à jour de historique');if(p.indices&&p.indices.length){var ip=p.indices.map(function(x){return{indice:x.indice,date_seance:x.date_seance||p.date_seance,valeur:n(x.valeur),variation:n(x.variation),variation_pct:n(x.variation_pct!=null?x.variation_pct:x.variation)};});var ix=await sbPost('indices',ip,'indice,date_seance');if(!ix)throw new Error('Échec de mise à jour de indices');}return{courses:cp.length,historique:hp.length,indices:p.indices?p.indices.length:0};}
