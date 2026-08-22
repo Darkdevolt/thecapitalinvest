@@ -1,0 +1,184 @@
+/**
+ * THE CAPITAL — Styles des blocs d'enrichissement du tableau de bord.
+ *
+ * Namespace `tci-` pour n'entrer en conflit avec aucune règle existante.
+ * Les couleurs sont reprises des variables du thème : aucune valeur en dur
+ * qui divergerait le jour où la charte évolue.
+ */
+
+.tci-row {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+@media (min-width: 900px) {
+  .tci-row-2 { grid-template-columns: 1fr 1fr; }
+}
+
+.tci-card {
+  background: var(--panel, #121210);
+  border: 1px solid var(--border, rgba(255, 255, 255, .09));
+  border-radius: 10px;
+  padding: 16px 18px;
+}
+
+.tci-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.tci-title {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .4px;
+  color: var(--text, #f2eee4);
+}
+.tci-sub {
+  font-size: 11px;
+  color: var(--dim, #9a978f);
+  margin-left: auto;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+/* ─── Métriques ─────────────────────────────────────────────────────────── */
+
+.tci-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 14px;
+}
+.tci-metric { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tci-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: .7px;
+  color: var(--dim, #9a978f);
+}
+.tci-value {
+  font: 600 21px/1.15 var(--serif, Georgia, serif);
+  color: var(--text, #f2eee4);
+  font-variant-numeric: tabular-nums;
+}
+.tci-unit {
+  font-size: 11px;
+  color: var(--dim, #9a978f);
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+.tci-value.pos, .tci-unit.pos, .tci-val.pos { color: var(--green, #4ade80); }
+.tci-value.neg, .tci-unit.neg, .tci-val.neg { color: var(--red, #f87171); }
+.tci-value.neu, .tci-unit.neu, .tci-val.neu { color: var(--dim, #9a978f); }
+.tci-val { font-family: var(--mono, ui-monospace, monospace); font-size: 12px; font-weight: 600; }
+
+/* ─── Contributeurs ─────────────────────────────────────────────────────── */
+
+.tci-contribs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, .09));
+}
+.tci-contrib { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.tci-contrib-label { color: var(--dim, #9a978f); font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px; }
+.tci-contrib-ticker { font-weight: 600; font-family: var(--mono, ui-monospace, monospace); }
+
+/* ─── Largeur de marché ─────────────────────────────────────────────────── */
+
+.tci-bar {
+  display: flex;
+  height: 9px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, .05);
+}
+.tci-bar span { display: block; height: 100%; transition: width .35s ease; }
+.tci-bar .pos { background: var(--green, #4ade80); }
+.tci-bar .neu { background: rgba(255, 255, 255, .18); }
+.tci-bar .neg { background: var(--red, #f87171); }
+
+.tci-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 10px;
+  font-size: 11.5px;
+  color: var(--dim, #9a978f);
+}
+.tci-legend i {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 2px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.tci-legend i.pos { background: var(--green, #4ade80); }
+.tci-legend i.neu { background: rgba(255, 255, 255, .18); }
+.tci-legend i.neg { background: var(--red, #f87171); }
+
+.tci-reading {
+  margin-top: 12px;
+  padding-top: 11px;
+  border-top: 1px solid var(--border, rgba(255, 255, 255, .09));
+  font-size: 12.5px;
+  color: var(--text, #f2eee4);
+}
+
+/* ─── Liste de suivi ────────────────────────────────────────────────────── */
+
+.tci-watch { display: flex; flex-direction: column; }
+.tci-watch-row {
+  display: grid;
+  grid-template-columns: 62px 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 6px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border, rgba(255, 255, 255, .07));
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+.tci-watch-row:last-child { border-bottom: 0; }
+.tci-watch-row:hover { background: rgba(255, 255, 255, .035); }
+.tci-watch-tick { font-family: var(--mono, ui-monospace, monospace); font-weight: 600; font-size: 12px; }
+.tci-watch-name {
+  font-size: 12px;
+  color: var(--dim, #9a978f);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tci-watch-cours {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── État vide ─────────────────────────────────────────────────────────── */
+
+.tci-empty { text-align: center; padding: 26px 18px; }
+.tci-empty-title { font: 600 14px var(--serif, Georgia, serif); margin-bottom: 6px; }
+.tci-empty-text {
+  font-size: 12.5px;
+  color: var(--dim, #9a978f);
+  max-width: 42ch;
+  margin: 0 auto 16px;
+  line-height: 1.55;
+}
+.tci-btn {
+  background: var(--gold, #b8964e);
+  border: 0;
+  color: #1a1408;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.tci-btn:hover { filter: brightness(1.08); }
