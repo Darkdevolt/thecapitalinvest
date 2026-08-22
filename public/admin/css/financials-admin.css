@@ -1,0 +1,120 @@
+/** THE CAPITAL — Saisie SYSCOHADA, Excel et documents. Namespace `fin-`. */
+
+.fin-corps { padding: 16px 18px; }
+.fin-sep { border-top: 1px solid var(--border, rgba(255,255,255,.09)); }
+.fin-note {
+  font-size: 12.5px; line-height: 1.65; color: var(--muted, #9a978f);
+  max-width: 86ch; margin: 0 0 14px;
+}
+
+/* ─── Métadonnées ───────────────────────────────────────────────────────── */
+.fin-meta {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px; margin-bottom: 20px; padding-bottom: 18px;
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.09));
+}
+.fin-meta-champ { display: flex; flex-direction: column; gap: 4px; }
+.fin-meta-champ label, .fin-poste label {
+  font-size: 11px; color: var(--muted, #9a978f);
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.fin-meta-champ label em { color: var(--gold, #b8964e); font-style: normal; }
+
+.fin-input {
+  background: rgba(255,255,255,.05);
+  border: 1px solid var(--border, rgba(255,255,255,.16));
+  border-radius: 5px; color: var(--text, #f2eee4);
+  padding: 6px 9px; font-size: 13px; width: 100%;
+}
+.fin-input:focus { outline: 1px solid var(--gold, #b8964e); border-color: var(--gold, #b8964e); }
+.fin-num { font-family: var(--mono, ui-monospace, monospace); text-align: right; }
+
+/* ─── États ─────────────────────────────────────────────────────────────── */
+.fin-etat {
+  border: 1px solid var(--border, rgba(255,255,255,.09));
+  border-radius: 8px; margin-bottom: 12px;
+  background: var(--surface, rgba(255,255,255,.02));
+}
+.fin-etat summary {
+  padding: 11px 14px; cursor: pointer; list-style: none;
+  display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+}
+.fin-etat summary::-webkit-details-marker { display: none; }
+.fin-etat summary:hover { background: rgba(255,255,255,.03); }
+.fin-etat-titre { font-size: 13px; font-weight: 600; color: var(--gold, #b8964e); }
+.fin-etat-resume { font-size: 11.5px; color: var(--muted, #9a978f); }
+
+.fin-postes {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 10px 20px; padding: 6px 14px 16px;
+}
+.fin-poste { display: grid; grid-template-columns: 1fr 150px; align-items: center; gap: 10px; }
+.fin-poste label { text-transform: none; font-size: 12.5px; letter-spacing: 0; }
+
+/* Hiérarchie : sous-totaux et soldes de gestion se distinguent des postes. */
+.fin-n1 label { color: var(--text, #f2eee4); font-weight: 600; }
+.fin-n2 label { color: var(--gold, #b8964e); font-weight: 700; }
+.fin-n1 .fin-input, .fin-n2 .fin-input { border-color: rgba(184,150,78,.4); }
+
+.fin-aide, .fin-calc {
+  display: inline-block; width: 15px; height: 15px; line-height: 15px;
+  text-align: center; border-radius: 50%; font-size: 10px; cursor: help;
+  background: rgba(255,255,255,.09); color: var(--muted, #9a978f); margin-left: 5px;
+}
+.fin-calc { background: rgba(184,150,78,.18); color: var(--gold, #b8964e); }
+
+/* ─── Contrôles ─────────────────────────────────────────────────────────── */
+.fin-controles { margin: 16px 0 0; }
+.fin-ok, .fin-ok-inline {
+  background: rgba(74,222,128,.07); border: 1px solid rgba(74,222,128,.25);
+  border-radius: 7px; padding: 11px 14px; font-size: 12.5px; color: var(--green, #4ade80);
+}
+.fin-ok-inline { display: inline-block; margin: 10px 0; }
+.fin-ecarts {
+  background: rgba(184,150,78,.08); border: 1px solid rgba(184,150,78,.3);
+  border-radius: 7px; padding: 12px 15px; font-size: 12.5px;
+}
+.fin-ecarts p { color: var(--muted, #9a978f); margin: 6px 0 10px; line-height: 1.6; }
+.fin-ecarts ul { margin: 0; padding-left: 18px; }
+.fin-ecarts li { margin-bottom: 5px; line-height: 1.55; }
+.fin-warn { color: var(--gold, #b8964e); font-weight: 600; margin: 12px 0 6px; }
+
+.fin-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; align-items: center; }
+
+/* ─── Import ────────────────────────────────────────────────────────────── */
+.fin-apercu {
+  background: var(--surface, rgba(255,255,255,.02));
+  border: 1px solid var(--border, rgba(255,255,255,.12));
+  border-radius: 8px; padding: 14px 16px; margin-top: 14px; font-size: 12.5px;
+}
+.fin-apercu-liste { display: flex; flex-wrap: wrap; gap: 7px; margin: 10px 0; }
+.fin-chip {
+  background: rgba(184,150,78,.14); color: var(--gold, #b8964e);
+  padding: 3px 10px; border-radius: 20px; font-size: 11.5px;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+.fin-apercu ul { margin: 0 0 12px; padding-left: 18px; }
+.fin-apercu li { margin-bottom: 4px; line-height: 1.5; }
+
+/* ─── Documents ─────────────────────────────────────────────────────────── */
+.fin-doc-form {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px; align-items: center; margin-bottom: 12px;
+}
+.fin-check { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted, #9a978f); }
+
+.fin-docs { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-top: 12px; }
+.fin-docs th {
+  text-align: left; padding: 8px 10px; font-size: 10.5px; font-weight: 500;
+  text-transform: uppercase; letter-spacing: .6px; color: var(--muted, #9a978f);
+  border-bottom: 1px solid var(--border, rgba(255,255,255,.12));
+}
+.fin-docs td { padding: 8px 10px; border-bottom: 1px solid var(--border, rgba(255,255,255,.06)); }
+.fin-docs a { color: var(--gold, #b8964e); }
+.fin-taille { color: var(--muted, #9a978f); font-size: 11px; }
+.fin-suppr {
+  background: none; border: 1px solid rgba(248,113,113,.4); color: var(--red, #f87171);
+  padding: 3px 10px; border-radius: 5px; font-size: 11px; cursor: pointer;
+}
+.fin-suppr:hover { background: rgba(248,113,113,.1); }
+.fin-vide { font-size: 12.5px; color: var(--muted, #9a978f); padding: 12px 0; }
