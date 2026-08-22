@@ -61,9 +61,60 @@ function applySessionDate(valeur){
   if(msg){msg.textContent='Date de séance fixée au '+d+'. Les '+(p.rows?p.rows.length:0)+' cotations seront écrites sous cette date.';msg.className='msg ok';}
 }
 window.tcApplySessionDate=applySessionDate;
+/**
+ * Introspection du schéma réel.
+ *
+ * L'écriture échouait sur « Could not find the 'cours_cloture' column of
+ * 'cours' » : le scraper envoyait un jeu de colonnes figé, supposé identique
+ * pour `cours` et `historique`, alors que les deux tables ont divergé. PostgREST
+ * rejette la requête entière dès qu'une seule colonne est inconnue, et ne
+ * signale que la première — corriger à l'aveugle demandait autant d'essais que
+ * de colonnes en trop.
+ *
+ * La liste des colonnes est donc lue à la source, dans la description OpenAPI
+ * que PostgREST expose à la racine de l'API, puis mise en cache pour la session.
+ * Le lot est filtré sur cette liste : ce qui n'existe pas n'est pas envoyé.
+ */
+var schemaCache=null;
+async function loadSchema(){
+  if(schemaCache)return schemaCache;
+  try{
+    var r=await fetch(SB_REST+'/',{headers:sbHeaders({Accept:'application/openapi+json'}),cache:'no-store'});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    var spec=await r.json();
+    var defs=spec&&(spec.definitions||(spec.components&&spec.components.schemas))||{};
+    schemaCache={};
+    Object.keys(defs).forEach(function(t){
+      var props=defs[t]&&defs[t].properties;
+      if(props)schemaCache[t]=Object.keys(props);
+    });
+    return schemaCache;
+  }catch(e){
+    console.warn('[scraper] Introspection du schéma impossible :',e&&e.message);
+    schemaCache={};
+    return schemaCache;
+  }
+}
+
+/** Retire des lignes toute colonne absente de la table visée. */
+function fitToSchema(table,rows){
+  var cols=schemaCache&&schemaCache[table];
+  if(!cols||!cols.length)return {rows:rows,ignorees:[]};
+  var set={};cols.forEach(function(c){set[c]=true;});
+  var ignorees={};
+  var filtrees=rows.map(function(row){
+    var out={};
+    Object.keys(row).forEach(function(k){
+      if(set[k])out[k]=row[k];else ignorees[k]=true;
+    });
+    return out;
+  });
+  return {rows:filtrees,ignorees:Object.keys(ignorees)};
+}
+
 function coursePayload(p){return p.rows.map(function(r){return{ticker:r.ticker,date_seance:r.date_seance,cours:r.cours_cloture,cloture:r.cours_cloture,cours_cloture:r.cours_cloture,cours_ouverture:r.cours_ouverture,ouverture:r.cours_ouverture,plus_haut:r.plus_haut,plus_bas:r.plus_bas,volume:r.volume,variation:r.variation,variation_pct:r.variation,valeur_totale:r.valeur_totale,capitalisation:r.capitalisation};});}
 function historiquePayload(p){return p.rows.map(function(r){return{ticker:r.ticker,date_seance:r.date_seance,cloture:r.cours_cloture,cours_cloture:r.cours_cloture,cours_ouverture:r.cours_ouverture,variation:r.variation,variation_pct:r.variation,volume:r.volume,valeur_totale:r.valeur_totale};});}
-async function transferToSupabase(p){if(!p||!p.rows||!p.rows.length)throw new Error('Aucune donnée à transférer');var cp=coursePayload(p),hp=historiquePayload(p);var c=await sbPost('cours',cp,'ticker,date_seance');if(!c)throw new Error('Échec de mise à jour de cours');var h=await sbPost('historique',hp,'ticker,date_seance');if(!h)throw new Error('Échec de mise à jour de historique');if(p.indices&&p.indices.length){var ip=p.indices.map(function(x){return{indice:x.indice,date_seance:x.date_seance||p.date_seance,valeur:n(x.valeur),variation:n(x.variation),variation_pct:n(x.variation_pct!=null?x.variation_pct:x.variation)};});var ix=await sbPost('indices',ip,'indice,date_seance');if(!ix)throw new Error('Échec de mise à jour de indices');}return{courses:cp.length,historique:hp.length,indices:p.indices?p.indices.length:0};}
+async function transferToSupabase(p){if(!p||!p.rows||!p.rows.length)throw new Error('Aucune donnée à transférer');await loadSchema();['cours','historique','indices'].forEach(function(t){var c=schemaCache&&schemaCache[t];if(c)appendLogSafe('Colonnes de « '+t+' » : '+c.join(', '),'info');else appendLogSafe('Schéma de « '+t+' » non lisible — envoi sans filtrage.','warn');});var fc=fitToSchema('cours',coursePayload(p)),fh=fitToSchema('historique',historiquePayload(p));if(fc.ignorees.length)appendLogSafe('Colonnes absentes de « cours », non transmises : '+fc.ignorees.join(', '),'warn');if(fh.ignorees.length)appendLogSafe('Colonnes absentes de « historique », non transmises : '+fh.ignorees.join(', '),'warn');var cp=fc.rows,hp=fh.rows;var c=await sbPost('cours',cp,'ticker,date_seance');if(!c)throw new Error('Échec de mise à jour de cours');var h=await sbPost('historique',hp,'ticker,date_seance');if(!h)throw new Error('Échec de mise à jour de historique');if(p.indices&&p.indices.length){var ip=p.indices.map(function(x){return{indice:x.indice,date_seance:x.date_seance||p.date_seance,valeur:n(x.valeur),variation:n(x.variation),variation_pct:n(x.variation_pct!=null?x.variation_pct:x.variation)};});var fi=fitToSchema('indices',ip);if(fi.ignorees.length)appendLogSafe('Colonnes absentes de « indices », non transmises : '+fi.ignorees.join(', '),'warn');var ix=await sbPost('indices',fi.rows,'indice,date_seance');if(!ix)throw new Error('Échec de mise à jour de indices');}return{courses:cp.length,historique:hp.length,indices:p.indices?p.indices.length:0};}
 async function validatePendingSession(){var p=scraperPending;if(!p)return;var msg=document.getElementById('tc-preview-msg');if(msg){msg.textContent='Validation et transfert en cours...';msg.className='msg info';}try{var result=await transferToSupabase(p);appendLogSafe('✓ Séance '+p.date_seance+' validée : '+result.courses+' cours, '+result.historique+' historiques, '+result.indices+' indices transférés.','ok');if(msg){msg.textContent='✓ Base mise à jour : '+result.courses+' cours';msg.className='msg ok';}clearPending();if(typeof loadCours==='function')loadCours();if(typeof toast==='function')toast('Séance validée — base mise à jour','ok');}catch(e){if(msg){msg.textContent='Erreur : '+e.message;msg.className='msg err';}appendLogSafe('Échec validation : '+e.message,'err');}}
 function rejectPendingSession(){if(!scraperPending)return;clearPending();appendLogSafe('Séance rejetée — aucune donnée écrite dans Supabase.','info');if(typeof toast==='function')toast('Séance rejetée','info');}
 window.runScraper=async function(){ensureUi();var msg=document.getElementById('scraper-msg');if(msg){msg.textContent='Scraper en cours...';msg.className='msg info';}appendLogSafe('Lancement du scraper BRVM — récupération uniquement, aucune écriture Supabase...','info');try{var d=await requestScraper(),p=buildPending(d);if(!p.rows.length)throw new Error('Le scraper n’a retourné aucune cotation exploitable');savePending(p);appendLogSafe('✓ '+p.count+' titres récupérés pour la séance '+p.date_seance,'ok');if(getMode()==='auto'){appendLogSafe('Mode automatique actif — transfert de la séance vers Supabase...','info');await validatePendingSession();if(msg){msg.textContent='✓ Séance récupérée et transférée automatiquement';msg.className='msg ok';}}else{appendLogSafe('Mode manuel — séance en attente de validation Admin.','info');if(msg){msg.textContent='✓ Séance prête à être vérifiée';msg.className='msg ok';}}}catch(e){console.error('[scraper]',e);appendLogSafe('Échec du scraping : '+(e.message||e),'err');if(msg){msg.textContent='Erreur scraper : '+(e.message||e);msg.className='msg err';}}};
