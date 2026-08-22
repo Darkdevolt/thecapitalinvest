@@ -1,0 +1,211 @@
+/**
+ * Lecture des données de marché (public).
+ *
+ * CORRECTIFS :
+ *  - la « dernière séance » est désormais calculée table par table. La version
+ *    précédente prenait le maximum global entre `historique` et `indices` puis
+ *    filtrait `historique` sur cette date : dès que les indices d'une séance
+ *    étaient publiés avant les cours (cas courant), la liste des cours revenait
+ *    vide alors que des données récentes existaient ;
+ *  - `variation_abs` ne recopie plus la variation en pourcentage. Les deux
+ *    colonnes de la base reçoivent aujourd'hui la même valeur ; exposer l'une
+ *    comme un montant en FCFA affichait un pourcentage déguisé ;
+ *  - l'historique des indices est borné par une vraie liste de séances au lieu
+ *    d'une multiplication approximative (limit × 20) qui pouvait tronquer la
+ *    séance la plus ancienne ;
+ *  - le message d'erreur technique n'est plus renvoyé au client.
+ */
+import { supabase, supabaseAdmin } from '../lib/supabase.js';
+import { json, fail, applyCors, requestUrl } from '../lib/http.js';
+import { rateLimited } from '../lib/middleware.js';
+
+const db = supabaseAdmin || supabase;
+const PAGE_SIZE = 1000;
+const MAX_PAGES = 50;
+
+function table(name, build) {
+  if (!db) throw new Error('Supabase non configuré');
+  let q = db.from(name).select('*');
+  if (typeof build === 'function') q = build(q);
+  return q;
+}
+
+/** Dernière date de séance réellement disponible dans une table donnée. */
+async function latestDateFor(name) {
+  const { data, error } = await db.from(name)
+    .select('date_seance').not('date_seance', 'is', null)
+    .order('date_seance', { ascending: false }).limit(1);
+  if (error) throw error;
+  return data?.[0]?.date_seance || null;
+}
+
+/**
+ * Les deux colonnes `variation` et `variation_pct` contiennent aujourd'hui la
+ * même grandeur (un pourcentage). Tant qu'elles sont identiques, aucune
+ * variation absolue fiable ne peut être déduite : on renvoie null plutôt qu'un
+ * pourcentage présenté comme un montant.
+ */
+function splitVariation(row) {
+  const pct = row.variation_pct ?? row.variation ?? null;
+  const raw = row.variation ?? null;
+  const abs = (raw != null && pct != null && Number(raw) === Number(pct)) ? null : raw;
+  return { pct, abs };
+}
+
+async function latestCours(sessionDate = null) {
+  const latestDate = sessionDate || await latestDateFor('historique');
+  if (!latestDate) return { data: [], latestDate: null, source: 'historique', dates: {} };
+
+  const rows = [];
+  let from = 0;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { data, error } = await table('historique', q =>
+      q.eq('date_seance', latestDate).order('ticker', { ascending: true })
+        .range(from, from + PAGE_SIZE - 1));
+    if (error) throw error;
+    const batch = data || [];
+    if (!batch.length) break;
+    for (const r of batch) {
+      const ticker = String(r.ticker || '').trim().toUpperCase();
+      if (!ticker) continue;
+      const { pct, abs } = splitVariation(r);
+      const close = r.cours_cloture ?? r.cloture ?? r.cours_normal ?? null;
+      rows.push({
+        id: r.id, ticker, date_seance: r.date_seance,
+        cours: close, cours_cloture: close,
+        ouverture: r.cours_ouverture, cours_ouverture: r.cours_ouverture,
+        plus_haut: r.plus_haut, plus_bas: r.plus_bas,
+        variation: pct, variation_pct: pct, variation_abs: abs,
+        volume: r.volume, valeur_transigee: r.valeur_totale, valeur_totale: r.valeur_totale,
+        transactions: null, capitalisation: null
+      });
+    }
+    if (batch.length < PAGE_SIZE) break;
+    from += PAGE_SIZE;
+  }
+  rows.sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)));
+  return { data: rows, latestDate, source: 'historique', dates: { [latestDate]: rows.length } };
+}
+
+async function latestIndices(sessionDate = null) {
+  const latestDate = sessionDate || await latestDateFor('indices');
+  if (!latestDate) return { data: [], latestDate: null, source: 'indices', dates: {} };
+
+  // Le schéma de production utilise `indice`, pas `nom`.
+  const { data, error } = await table('indices', q =>
+    q.eq('date_seance', latestDate).order('indice', { ascending: true }).limit(PAGE_SIZE));
+  if (error) throw error;
+
+  const rows = (data || []).map(r => {
+    const { pct } = splitVariation(r);
+    const value = Number(r.valeur);
+    const pctNum = Number(pct);
+    // Une variation absolue reste déductible ici : valeur × pourcentage.
+    const variation = (Number.isFinite(value) && Number.isFinite(pctNum))
+      ? value * pctNum / 100 : null;
+    return { ...r, indice: String(r.indice || '').trim(), valeur: r.valeur, variation, variation_pct: pct };
+  });
+  return { data: rows, latestDate, source: 'indices', dates: { [latestDate]: rows.length } };
+}
+
+/** Historique des indices sur les N dernières séances réellement présentes. */
+async function historiqueIndices(limit = 30, dateFrom = null, dateTo = null) {
+  const safeLimit = Math.min(Math.max(Number(limit) || 30, 1), 365);
+
+  // 1) Identifier les séances concernées, sans supposer un nombre d'indices.
+  let dateQuery = db.from('indices').select('date_seance').not('date_seance', 'is', null);
+  if (dateFrom) dateQuery = dateQuery.gte('date_seance', dateFrom);
+  if (dateTo) dateQuery = dateQuery.lte('date_seance', dateTo);
+  const { data: dateRows, error: dateError } = await dateQuery
+    .order('date_seance', { ascending: false }).limit(safeLimit * 40);
+  if (dateError) throw dateError;
+
+  const sessions = [...new Set((dateRows || []).map(r => r.date_seance).filter(Boolean))]
+    .sort().reverse().slice(0, safeLimit).sort();
+  if (!sessions.length) return { data: [], source: 'indices', sessions: 0 };
+
+  // 2) Récupérer toutes les lignes de ces séances, sans troncature partielle.
+  const { data, error } = await table('indices', q =>
+    q.in('date_seance', sessions)
+      .order('date_seance', { ascending: true })
+      .order('indice', { ascending: true }));
+  if (error) throw error;
+
+  const rows = (data || []).map(r =>
+    String(r.indice || '').trim().toUpperCase() === 'BRVM COMPOSITE' ? { ...r, indice: 'BRVM C' } : r);
+  return { data: rows, source: 'indices', sessions: sessions.length };
+}
+
+async function historique(ticker, limit, dateFrom, dateTo, offset) {
+  const safeLimit = Math.min(Math.max(Number(limit) || PAGE_SIZE, 1), PAGE_SIZE);
+  const safeOffset = Math.max(Number(offset) || 0, 0);
+  return table('historique', q => {
+    if (ticker) q = q.eq('ticker', ticker);
+    if (dateFrom) q = q.gte('date_seance', dateFrom);
+    if (dateTo) q = q.lte('date_seance', dateTo);
+    return q.order('date_seance', { ascending: false }).range(safeOffset, safeOffset + safeLimit - 1);
+  });
+}
+
+export default async function handler(req, res) {
+  applyCors(req, res, { scope: 'public', methods: 'GET,OPTIONS' });
+  if (req.method === 'OPTIONS') { res.statusCode = 204; return res.end(); }
+  if (req.method !== 'GET') return fail(res, 405, 'Méthode non autorisée.', 'METHOD_NOT_ALLOWED');
+  if (rateLimited(req, res, 'marche')) return;
+  if (!db) return fail(res, 503, 'Service temporairement indisponible.', 'SERVICE_UNAVAILABLE');
+
+  try {
+    const url = requestUrl(req);
+    const type = url.searchParams.get('type') || 'cours';
+    const ticker = (url.searchParams.get('ticker') || '').trim().toUpperCase();
+    const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 30, 1), PAGE_SIZE);
+    const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
+    const dateFrom = url.searchParams.get('date_from');
+    const dateTo = url.searchParams.get('date_to');
+
+    let result;
+    switch (type) {
+      case 'cours': result = await latestCours(); break;
+      case 'indices': result = await latestIndices(); break;
+      case 'indices_historique': result = await historiqueIndices(limit, dateFrom, dateTo); break;
+      case 'historique': result = await historique(ticker, limit, dateFrom, dateTo, offset); break;
+      case 'entreprises':
+        result = await table('entreprises', q => q.eq('actif', true).order('ticker', { ascending: true }));
+        break;
+      case 'financials':
+        result = await table('financials', q => q
+          .order('validation_status', { ascending: true })
+          .order('annee', { ascending: false }).limit(2000));
+        break;
+      case 'analyses':
+        result = await table('analyses', q => q.order('date_analyse', { ascending: false }).limit(500));
+        break;
+      case 'dividendes':
+        result = await table('dividendes_calendrier', q => q
+          .order('date_detachement', { ascending: true, nullsLast: true })
+          .order('date_paiement', { ascending: true, nullsLast: true }).limit(2000));
+        break;
+      case 'apercu': {
+        const [cours, indices] = await Promise.all([latestCours(), latestIndices()]);
+        const sessionDate = [cours.latestDate, indices.latestDate].filter(Boolean).sort().reverse()[0] || null;
+        return json(res, 200, {
+          success: true,
+          cours: cours.data || [], indices: indices.data || [],
+          session_date: sessionDate,
+          cours_date: cours.latestDate || null, indices_date: indices.latestDate || null,
+          cours_source: cours.source || null, indices_source: indices.source || null,
+          cours_dates: cours.dates || {}, indices_dates: indices.dates || {}
+        });
+      }
+      default:
+        return fail(res, 400, `Type de données inconnu : ${type}`, 'UNKNOWN_TYPE');
+    }
+
+    if (result?.error) throw result.error;
+    const data = result?.data || result || [];
+    if (type === 'historique' && Array.isArray(data)) data.reverse();
+    return json(res, 200, data);
+  } catch (error) {
+    return fail(res, 500, 'Erreur serveur.', 'MARCHE_ERROR', error);
+  }
+}
