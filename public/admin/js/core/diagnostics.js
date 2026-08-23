@@ -55,6 +55,17 @@
         }
     };
 
+    /*
+     * Respect the native HTML `hidden` contract even when a component CSS
+     * declares an explicit display value (for example #boot { display:flex }).
+     * Without this guard, the admin boot overlay can remain painted above the
+     * fully initialized dashboard although element.hidden === true.
+     */
+    const hiddenStyle = document.createElement('style');
+    hiddenStyle.id = 'tc-hidden-fix';
+    hiddenStyle.textContent = '[hidden] { display: none !important; }';
+    (document.head || document.documentElement).appendChild(hiddenStyle);
+
     w.addEventListener('error', function (e) {
         push('javascript', e.message || 'Erreur JavaScript', {
             file: e.filename,
