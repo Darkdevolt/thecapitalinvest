@@ -45,6 +45,9 @@
       .tc-calendar-info{min-width:0;}
       .tc-calendar-ticker{font-family:var(--mono);font-size:11px;color:var(--cream);font-weight:600;}
       .tc-calendar-desc{font-size:11px;color:var(--dim);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+      .tc-calendar-nature{font-size:8px;letter-spacing:.08em;text-transform:uppercase;padding:2px 5px;border-radius:3px;margin-left:5px;vertical-align:middle;}
+      .tc-calendar-nature.tc-dividende{background:rgba(184,150,78,.14);color:var(--gold);}
+      .tc-calendar-nature.tc-coupon{background:rgba(96,165,250,.14);color:#60A5FA;}
       .tc-calendar-badge{font-size:9px;padding:3px 6px;border:1px solid var(--border2);border-radius:999px;color:var(--muted);white-space:nowrap;text-transform:uppercase;}
       .tc-calendar-empty{padding:20px 8px;text-align:center;color:var(--dim);font-size:12px;}
       #coursCount{white-space:nowrap;}
@@ -100,9 +103,22 @@
     if(dividendPromise)return dividendPromise;
     dividendPromise=(async()=>{
       try{
-        const response=await window.apiGet('/marche?type=dividendes&_='+Date.now());
-        const data=normalizePayload(response);
-        window.allDividendes=Array.isArray(data)?data:[];
+        const [divRes,coupRes]=await Promise.allSettled([
+          window.apiGet('/marche?type=dividendes&_='+Date.now()),
+          window.apiGet('/marche?type=coupons&_='+Date.now())
+        ]);
+        if(divRes.status==='fulfilled'){
+          const d=normalizePayload(divRes.value);
+          window.allDividendes=Array.isArray(d)?d:[];
+        }
+        // La table des coupons peut ne pas exister encore : son absence ne
+        // doit jamais priver le calendrier de ses dividendes.
+        if(coupRes.status==='fulfilled'){
+          const c=normalizePayload(coupRes.value);
+          window.allCoupons=Array.isArray(c)?c:[];
+        }else{
+          window.allCoupons=Array.isArray(window.allCoupons)?window.allCoupons:[];
+        }
         lastDividendAt=Date.now();
       }catch(err){
         console.warn('[OVERVIEW FIX] Calendrier indisponible:',err.message||err);
@@ -114,31 +130,92 @@
     return dividendPromise;
   }
 
+  /**
+   * Normalise dividendes et coupons en une seule liste d'échéances.
+   *
+   * Les deux tables sont volontairement distinctes : un coupon est
+   * contractuel, périodique et exprimé sur un nominal, là où un dividende
+   * est discrétionnaire et rapporté à l'action. Seul l'affichage les réunit,
+   * et il ne connaît que quatre champs : date, instrument, nature, montant.
+   */
+  function echeances(){
+    const liste=[];
+    (Array.isArray(window.allDividendes)?window.allDividendes:[]).forEach(row=>{
+      liste.push({
+        instrument:String(row?.ticker||'—'),
+        nature:'dividende',
+        montant:row?.montant!=null?row.montant:row?.montant_net,
+        detach:formatCalendarDate(row?.date_detachement||row?.ex_date),
+        pay:formatCalendarDate(row?.date_paiement),
+        statut:String(row?.statut||'confirmé'),
+        detail:row?.annee?('exercice '+row.annee):''
+      });
+    });
+    (Array.isArray(window.allCoupons)?window.allCoupons:[]).forEach(row=>{
+      const rang=row?.numero_coupon!=null?('coupon n°'+row.numero_coupon):'coupon';
+      const taux=row?.taux_facial!=null?(' · '+row.taux_facial+' %'):'';
+      liste.push({
+        instrument:String(row?.code||row?.isin||'—'),
+        nature:'coupon',
+        montant:row?.montant_brut!=null?row.montant_brut:row?.montant_net,
+        detach:formatCalendarDate(row?.date_detachement),
+        pay:formatCalendarDate(row?.date_paiement),
+        statut:String(row?.statut||'prévisionnel'),
+        detail:rang+taux
+      });
+    });
+    return liste;
+  }
+
   function renderRealCalendar(){
-    const container=document.getElementById('pubFeed');
+    // La carte « Actualités marché » affichait les trois dernières lignes de
+    // la table analyses en utilisant une colonne `titre` qui n'existe pas :
+    // trois tuiles identiques sans information. Le calendrier prend sa place.
+    const container=document.getElementById('newsFeed')||document.getElementById('pubFeed');
     if(!container)return;
-    const data=Array.isArray(window.allDividendes)?window.allDividendes:[];
     const now=Date.now();
-    const dated=data.map(row=>{
-      const detach=formatCalendarDate(row?.date_detachement);
-      const pay=formatCalendarDate(row?.date_paiement);
-      const next=[detach,pay].filter(Boolean).filter(d=>d.time>=now).sort((a,b)=>a.time-b.time)[0]||detach||pay;
-      return {row,detach,pay,next};
-    }).filter(x=>x.next)
-      .sort((a,b)=>a.next.time-b.next.time)
-      .slice(0,5);
 
-    const fallback=data.map(row=>({row,detach:formatCalendarDate(row?.date_detachement),pay:formatCalendarDate(row?.date_paiement),next:formatCalendarDate(row?.date_detachement)||formatCalendarDate(row?.date_paiement)}))
-      .filter(x=>x.next).slice(0,5);
-    const items=dated.length?dated:fallback;
+    const avec=e=>{
+      const next=[e.detach,e.pay].filter(Boolean).filter(d=>d.time>=now).sort((a,b)=>a.time-b.time)[0];
+      return next?Object.assign({},e,{next}):null;
+    };
+    const liste=echeances();
+    const avenir=liste.map(avec).filter(Boolean).sort((a,b)=>a.next.time-b.next.time).slice(0,5);
 
-    const head=`<div class="tc-calendar-head"><div><div class="eyebrow">CALENDRIER MARCHÉ</div><div class="card-title">Prochaines dates</div></div><span class="tc-calendar-status">${items.length?items.length+' échéance'+(items.length>1?'s':''):'Aucune donnée'}</span></div>`;
-    if(!items.length){container.innerHTML=head+'<div class="tc-calendar-empty">Aucune date de détachement ou de paiement renseignée.</div>';return;}
-    container.innerHTML=head+items.map(({row,next,detach,pay})=>{
-      const ticker=String(row?.ticker||'—');
-      const statut=String(row?.statut||'confirmé');
-      const desc=detach&&pay?`Détachement ${detach.day} ${detach.month} · Paiement ${pay.day} ${pay.month}`:detach?`Détachement ${detach.day} ${detach.month}`:`Paiement ${pay.day} ${pay.month}`;
-      return `<div class="tc-calendar-item"><div class="tc-calendar-date"><strong>${next.day}</strong>${next.month}</div><div class="tc-calendar-info"><div class="tc-calendar-ticker">${escapeHtml(ticker)}</div><div class="tc-calendar-desc">${escapeHtml(desc)} · ${escapeHtml(fmt(row?.montant))} FCFA</div></div><span class="tc-calendar-badge">${escapeHtml(statut)}</span></div>`;
+    // Aucune échéance future : on montre les dernières passées plutôt qu'une
+    // carte vide, en le disant clairement.
+    const passees=liste
+      .map(e=>{const next=[e.pay,e.detach].filter(Boolean).sort((a,b)=>b.time-a.time)[0];return next?Object.assign({},e,{next}):null;})
+      .filter(Boolean).sort((a,b)=>b.next.time-a.next.time).slice(0,5);
+
+    const items=avenir.length?avenir:passees;
+    const futur=avenir.length>0;
+
+    const nbCoupons=items.filter(x=>x.nature==='coupon').length;
+    const statut=items.length
+      ? items.length+' échéance'+(items.length>1?'s':'')+(nbCoupons?' · '+nbCoupons+' coupon'+(nbCoupons>1?'s':''):'')
+      : 'Aucune donnée';
+
+    const head='<div class="tc-calendar-head"><div><div class="eyebrow">CALENDRIER MARCHÉ</div>'
+      +'<div class="card-title">'+(futur?'Prochaines échéances':'Dernières échéances')+'</div></div>'
+      +'<span class="tc-calendar-status">'+statut+'</span></div>';
+
+    if(!items.length){
+      container.innerHTML=head+'<div class="tc-calendar-empty">Aucune date de détachement ou de paiement renseignée.</div>';
+      return;
+    }
+
+    container.innerHTML=head+items.map(e=>{
+      const parts=[];
+      if(e.detach)parts.push('Détachement '+e.detach.day+' '+e.detach.month);
+      if(e.pay)parts.push('Paiement '+e.pay.day+' '+e.pay.month);
+      if(e.detail)parts.push(e.detail);
+      const montant=e.montant!=null?(' · '+fmt(e.montant)+' FCFA'):'';
+      return '<div class="tc-calendar-item"><div class="tc-calendar-date"><strong>'+e.next.day+'</strong>'+e.next.month+'</div>'
+        +'<div class="tc-calendar-info"><div class="tc-calendar-ticker">'+escapeHtml(e.instrument)
+        +' <span class="tc-calendar-nature tc-'+e.nature+'">'+(e.nature==='coupon'?'coupon':'dividende')+'</span></div>'
+        +'<div class="tc-calendar-desc">'+escapeHtml(parts.join(' · '))+escapeHtml(montant)+'</div></div>'
+        +'<span class="tc-calendar-badge">'+escapeHtml(e.statut)+'</span></div>';
     }).join('');
   }
 
