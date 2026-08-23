@@ -4,6 +4,16 @@
 // recherche/tri, meilleure/pire position, P&L réalisé.
 // ═══════════════════════════════════════════════════════
 
+// resetEmptyState() lit et détruit quatre instances de graphiques qui
+// n'étaient déclarées nulle part dans le dépôt : la simple lecture levait
+// « pfValueChartInst is not defined » et interrompait le rendu du
+// portefeuille à chaque appel. Les déclarer suffit — rien ne les alimente
+// aujourd'hui, la boucle de destruction les ignore donc sans effet.
+var pfValueChartInst = window.pfValueChartInst || null;
+var pfSectorChartInst = window.pfSectorChartInst || null;
+var pfGeoChartInst = window.pfGeoChartInst || null;
+var pfPLChartInst = window.pfPLChartInst || null;
+
 let _pfRenderPending = false;
 let _pfPeriodTimeout = null;
 
