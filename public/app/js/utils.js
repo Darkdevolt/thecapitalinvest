@@ -116,11 +116,23 @@
     BOAM: 'Divers', ECOC: 'Divers'
   };
 
+  // Le référentiel administré fait foi.
+  //
+  // components.js proposait déjà une lecture de entMap[ticker].secteur, mais
+  // sous la garde `if (typeof window.getSector === 'undefined')` — or utils.js
+  // est chargé avant et définissait déjà la fonction. La garde échouait donc
+  // systématiquement et la table ci-dessus, écrite à la main, l'emportait sur
+  // la table entreprises. D'où des secteurs jamais saisis dans l'admin.
+  //
+  // L'ordre est désormais : fiche société, puis table de repli, puis « Divers ».
   window.getSector = function(t) {
     if (!t) return 'Divers';
-    // Recherche exacte d'abord
+
+    const ref = (typeof entMap !== 'undefined' && entMap) ? entMap[t] : null;
+    if (ref && ref.secteur && String(ref.secteur).trim()) return String(ref.secteur).trim();
+
+    // Repli pour les tickers dont la fiche société n'a pas encore de secteur.
     if (SECTORS[t]) return SECTORS[t];
-    // Recherche par préfixe (ordre décroissant pour éviter match partiel)
     const keys = Object.keys(SECTORS).sort((a, b) => b.length - a.length);
     for (const k of keys) {
       if (t.startsWith(k)) return SECTORS[k];
