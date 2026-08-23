@@ -129,14 +129,18 @@
          a besoin d'au moins deux seances pour comparer, et restait donc vide.
          Mille lignes couvrent une vingtaine de seances sur 47 valeurs. Charge
          en seconde vague : son absence ne retarde jamais l'affichage. */
-      fetchOrEmpty('/marche?type=historique&limit=1000',function(d){window.allCoursHistory=Array.isArray(d)?d:[];renderCurrentView();},[])
+      fetchOrEmpty('/marche?type=historique&limit=1000',function(d){window.allCoursHistory=Array.isArray(d)?d:[];renderCurrentView();},[]),
+      /* Coupons obligataires. Tant que la table n'existe pas, la route renvoie
+         un tableau vide : le calendrier n'affiche alors que les dividendes. */
+      fetchOrEmpty('/marche?type=coupons',function(d){window.allCoupons=Array.isArray(d)?d:[];renderCurrentView();},[])
     ]);
     ensureTechnicalReady();renderCurrentView();ensureFundamentalReady();
     console.log('[APP LOAD] Cours:',(window.allCours||[]).length,
       '| Indices série:',(window.allIndicesHistory||[]).length,
       '| Indices dernier état:',(window.allIndicesLatest||[]).length,
       '| Dividendes:',(window.allDividendes||[]).length,
-      '| Historique cours:',(window.allCoursHistory||[]).length);
+      '| Historique cours:',(window.allCoursHistory||[]).length,
+      '| Coupons:',(window.allCoupons||[]).length);
     window.dispatchEvent(new CustomEvent('tc:dataready',{detail:{
       cours:(window.allCours||[]).length,indices:(window.allIndices||[]).length
     }}));
