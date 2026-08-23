@@ -38,6 +38,7 @@
 
       .tc-calendar-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px;}
       .tc-calendar-status{font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap;}
+      .tc-calendar-body{display:block!important;padding:0 4px;}
       .tc-calendar-item{display:grid;grid-template-columns:54px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid rgba(184,150,78,.06);}
       .tc-calendar-item:last-child{border-bottom:0;}
       .tc-calendar-date{font-family:var(--mono);font-size:11px;color:var(--gold);text-align:center;line-height:1.2;}
@@ -173,6 +174,13 @@
     // trois tuiles identiques sans information. Le calendrier prend sa place.
     const container=document.getElementById('newsFeed')||document.getElementById('pubFeed');
     if(!container)return;
+
+    /* #newsFeed est declare en grille (dashboard-news-grid) pour afficher des
+       tuiles d'actualites cote a cote. Nos echeances sont des lignes : on
+       neutralise la grille, sinon elles se rangent horizontalement. */
+    container.classList.remove('dashboard-news-grid');
+    container.classList.add('tc-calendar-body');
+
     const now=Date.now();
 
     const avec=e=>{
@@ -196,9 +204,20 @@
       ? items.length+' échéance'+(items.length>1?'s':'')+(nbCoupons?' · '+nbCoupons+' coupon'+(nbCoupons>1?'s':''):'')
       : 'Aucune donnée';
 
-    const head='<div class="tc-calendar-head"><div><div class="eyebrow">CALENDRIER MARCHÉ</div>'
-      +'<div class="card-title">'+(futur?'Prochaines échéances':'Dernières échéances')+'</div></div>'
-      +'<span class="tc-calendar-status">'+statut+'</span></div>';
+    /* Le bloc parent porte deja un entete « Actualites marche ». On le
+       reintitule plutot que d'en ajouter un second au-dessous. */
+    const bloc=container.closest('.dashboard-news')||container.parentElement;
+    if(bloc){
+      const eyebrow=bloc.querySelector('.eyebrow');
+      const titre=bloc.querySelector('.card-title');
+      if(eyebrow)eyebrow.textContent='CALENDRIER MARCHÉ';
+      if(titre)titre.textContent=(futur?'Prochaines échéances':'Dernières échéances')
+        +(statut?' · '+statut:'');
+    }
+    const head=bloc&&bloc.querySelector('.eyebrow')?''
+      :'<div class="tc-calendar-head"><div><div class="eyebrow">CALENDRIER MARCHÉ</div>'
+        +'<div class="card-title">'+(futur?'Prochaines échéances':'Dernières échéances')+'</div></div>'
+        +'<span class="tc-calendar-status">'+statut+'</span></div>';
 
     if(!items.length){
       container.innerHTML=head+'<div class="tc-calendar-empty">Aucune date de détachement ou de paiement renseignée.</div>';
