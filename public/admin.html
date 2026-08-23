@@ -8,10 +8,56 @@
 <link rel="icon" href="/assets/the-capital-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/admin/css/admin.css?v=2026082201">
 </head>
 <body>
 <div id="boot"><img src="/assets/the-capital-logo.png" alt=""><div class="wordmark">THE <span>·</span> CAPITAL</div><div class="spinner"></div><p id="boot-msg">Vérification de la session…</p></div>
 <div id="shell" hidden><header class="topbar"><button class="rail-toggle" id="rail-toggle" aria-label="Afficher le menu">☰</button><a class="brand" href="/index.html"><img src="/assets/the-capital-logo.png" alt="The Capital"><span><span class="brand-text">THE <span>·</span> CAPITAL</span><span class="brand-sub">Poste d'administration</span></span></a><button class="health-chip" id="health-chip" title="Ouvrir le diagnostic de la base"><span class="health-dot busy" id="health-dot"></span><span class="health-text" id="health-text">Contrôle de la base…</span></button><div class="topbar-right"><button class="kbd-hint" id="palette-open" title="Aller à une section">⌘K</button><span class="admin-badge">Admin</span><span class="topbar-user" id="who"></span><button class="btn btn-outline btn-sm" id="logout">Déconnexion</button></div></header><nav class="rail" id="rail" aria-label="Sections d'administration"><div id="rail-groups"></div><div class="rail-foot"><button class="btn btn-outline btn-sm" id="refresh-all">↺ Tout recharger</button></div></nav><main class="stage" id="stage"></main></div><div id="toasts" aria-live="polite"></div><div id="palette"><div class="palette-box"><input type="text" id="palette-input" placeholder="Aller à…" autocomplete="off" spellcheck="false"><div class="palette-list" id="palette-list"></div></div></div><div class="overlay" id="modal-host"><div class="modal"><div class="modal-head"><div class="modal-title" id="modal-title">—</div><div class="modal-sub" id="modal-sub"></div></div><div id="modal-body"></div><div class="modal-foot"><span class="msg" id="modal-msg"></span><button class="btn btn-outline btn-sm" id="modal-cancel">Annuler</button><button class="btn btn-primary btn-sm" id="modal-save">Enregistrer</button></div></div></div>
-<script>(function(){var script=document.createElement('script');script.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';script.async=true;script.onerror=function(){console.warn('[TC] Moteur Excel indisponible : le reste de l’administration reste accessible.');};document.head.appendChild(script);})();</script><script src="/js/env.js"></script><script src="/admin/js/core/config.js?v=2026082201"></script><script src="/admin/js/core/utils.js?v=2026082201"></script><script src="/admin/js/core/api.js?v=2026082201"></script><script src="/admin/js/core/app.js?v=2026082201"></script><script src="/admin/js/modules/dashboard.js?v=2026082201"></script><script src="/admin/js/modules/cours.js?v=2026082201"></script><script src="/admin/js/modules/indices.js?v=2026082201"></script><script src="/admin/js/modules/scraper.js?v=2026082201"></script><script src="/admin/js/modules/boc.js?v=2026082201"></script><script src="/admin/js/modules/entreprises.js?v=2026082201"></script><script src="/admin/js/financials/financials-schema.js?v=2026082201"></script><script src="/admin/js/financials/financials-excel.js?v=2026082201"></script><script src="/admin/js/modules/financials.js?v=2026082201"></script><script src="/admin/js/modules/dividendes.js?v=2026082201"></script><script src="/admin/js/modules/analyses.js?v=2026082201"></script><script src="/admin/js/modules/reporting.js?v=2026082201"></script><script src="/admin/js/modules/utilisateurs.js?v=2026082201"></script><script src="/admin/js/modules/import.js?v=2026082201"></script><script src="/admin/js/modules/diagnostic.js?v=2026082201"></script><script>TC.boot();</script></body></html>
+<script src="/admin/js/core/diagnostics.js?v=2026082301"></script>
+<script>(function(){var script=document.createElement('script');script.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';script.async=true;script.onerror=function(){if(window.TC_DIAG)TC_DIAG.push('resource','Moteur Excel indisponible');};document.head.appendChild(script);})();</script><script src="/js/env.js"></script><script src="/admin/js/core/config.js?v=2026082201"></script><script src="/admin/js/core/utils.js?v=2026082201"></script><script src="/admin/js/core/api.js?v=2026082201"></script><script src="/admin/js/core/app.js?v=2026082201"></script><script src="/admin/js/modules/dashboard.js?v=2026082201"></script><script src="/admin/js/modules/cours.js?v=2026082201"></script><script src="/admin/js/modules/indices.js?v=2026082201"></script><script src="/admin/js/modules/scraper.js?v=2026082201"></script><script src="/admin/js/modules/boc.js?v=2026082201"></script><script src="/admin/js/modules/entreprises.js?v=2026082201"></script><script src="/admin/js/financials/financials-schema.js?v=2026082201"></script><script src="/admin/js/financials/financials-excel.js?v=2026082201"></script><script src="/admin/js/modules/financials.js?v=2026082201"></script><script src="/admin/js/modules/dividendes.js?v=2026082201"></script><script src="/admin/js/modules/analyses.js?v=2026082201"></script><script src="/admin/js/modules/reporting.js?v=2026082201"></script><script src="/admin/js/modules/utilisateurs.js?v=2026082201"></script><script src="/admin/js/modules/import.js?v=2026082201"></script><script src="/admin/js/modules/diagnostic.js?v=2026082201"></script>
+<script>
+(function(){
+    function reportButton(){
+        var b=document.createElement('button');
+        b.className='btn btn-outline btn-sm'; b.textContent='Télécharger le rapport technique';
+        b.onclick=function(){ if(window.TC_DIAG) TC_DIAG.download(); };
+        return b;
+    }
+    function fatal(title, detail){
+        var boot=document.getElementById('boot'); if(!boot)return;
+        boot.innerHTML='<img src="/assets/the-capital-logo.png" alt=""><div class="fatal"><h2>'+String(title).replace(/[<>]/g,'')+'</h2><p>'+String(detail).replace(/[<>]/g,'')+'</p><div class="boot-actions"></div></div>';
+        boot.hidden=false; document.getElementById('shell').hidden=true;
+        var actions=boot.querySelector('.boot-actions');
+        actions.appendChild(reportButton());
+        var reload=document.createElement('button'); reload.className='btn btn-primary btn-sm'; reload.textContent='Réessayer'; reload.onclick=function(){location.reload();}; actions.appendChild(reload);
+        if(window.TC_DIAG) TC_DIAG.push('boot-fatal',title,detail);
+    }
+    if(window.TC_DIAG) TC_DIAG.mark('admin-scripts-loaded');
+    if(!window.TC || typeof TC.boot!=='function') { fatal('Démarrage impossible','Le noyau JavaScript de l’administration n’a pas pu être chargé.'); return; }
+    var originalBoot=TC.boot;
+    var finished=false, aborted=false;
+    var shell=document.getElementById('shell');
+    var observer=new MutationObserver(function(){ if(aborted && !shell.hidden) shell.hidden=true; });
+    observer.observe(shell,{attributes:true,attributeFilter:['hidden']});
+    TC.boot=async function(){
+        if(window.TC_DIAG) TC_DIAG.mark('boot-start');
+        var work;
+        try { work=Promise.resolve(originalBoot()); }
+        catch(e){ work=Promise.reject(e); }
+        var watchdog=new Promise(function(_,reject){setTimeout(function(){reject(new Error('Le démarrage dépasse 12 secondes. Une requête ou un module ne répond probablement pas.'));},12000);});
+        try {
+            await Promise.race([work,watchdog]);
+            finished=true;
+            if(window.TC_DIAG) TC_DIAG.mark('boot-finished');
+        } catch(e){
+            if(finished)return;
+            aborted=true;
+            if(window.TC_DIAG) TC_DIAG.push('boot-timeout',e.message);
+            fatal('Démarrage interrompu',e.message+' Aucun chargement ne continuera à bloquer cette page.');
+        }
+    };
+    TC.boot();
+})();
+</script>
+</body></html>
