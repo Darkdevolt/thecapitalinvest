@@ -88,18 +88,51 @@
     if(typeof window.apiGet!=='function'){console.warn('[MAIN] apiGet non disponible:',endpoint);setter(emptyVal);return Promise.resolve();}
     return window.apiGet(endpoint).then(function(res){var payload=(res&&typeof res==='object'&&'data' in res)?res.data:res;setter(payload||emptyVal);}).catch(function(err){console.warn('[MAIN] '+endpoint+' non chargé:',err.message||err);setter(emptyVal);});
   }
+  /**
+   * Consolidation des indices.
+   *
+   * Deux notions distinctes portaient le même nom, ce qui rendait le
+   * résultat dépendant de l'ordre d'exécution :
+   *   - /marche?type=indices             renvoie le DERNIER état
+   *   - /marche?type=indices_historique  renvoie la SÉRIE
+   *
+   * overview.js attend une série dans window.allIndices : getLatestIndices()
+   * en déduit lui-même le dernier état, mais getIndiceHistory() a besoin des
+   * trente derniers points. Alimenté avec le seul dernier état, le graphique
+   * composite affiche « Données insuffisantes » sans lever d'erreur.
+   *
+   * Chaque notion a désormais son nom, et allIndices reçoit la série. Le
+   * repli sur le dernier état garantit que les cartes d'indices restent
+   * affichées même si l'historique est indisponible.
+   */
+  function applyIndices(){
+    var history=Array.isArray(window.allIndicesHistory)?window.allIndicesHistory:[];
+    var latest=Array.isArray(window.allIndicesLatest)?window.allIndicesLatest:[];
+    window.allIndices=history.length?history:latest.slice();
+    renderCurrentView();
+  }
+
   async function loadAll(){
     await Promise.allSettled([
       fetchOrEmpty('/marche?type=cours',function(d){window.allCours=Array.isArray(d)?d:[];if(typeof window.populateTickerSelect==='function')window.populateTickerSelect();if(typeof window.populateTickerSelects==='function')window.populateTickerSelects();if(parseHashFromUrl()==='analyse-technique')ensureTechnicalReady();renderCurrentView();ensureFundamentalReady();},[]),
-      fetchOrEmpty('/marche?type=indices',function(d){window.allIndices=Array.isArray(d)?d:[];renderCurrentView();},[])
+      fetchOrEmpty('/marche?type=indices',function(d){window.allIndicesLatest=Array.isArray(d)?d:[];applyIndices();},[]),
+      fetchOrEmpty('/marche?type=indices_historique&limit=90',function(d){window.allIndicesHistory=Array.isArray(d)?d:[];applyIndices();},[])
     ]);
     await Promise.allSettled([
       fetchOrEmpty('/boc',function(d){window.allBoc=d&&Array.isArray(d.data)?d.data:(Array.isArray(d)?d:[]);},[]),
       fetchOrEmpty('/marche?type=financials',function(d){window.allFinancials=Array.isArray(d)?d:[];if(typeof window.populateTickerSelects==='function')window.populateTickerSelects();renderCurrentView();ensureFundamentalReady();},[]),
       fetchOrEmpty('/marche?type=analyses',function(d){window.allAnalyses=Array.isArray(d)?d:[];renderCurrentView();},[]),
-      fetchOrEmpty('/marche?type=entreprises',function(d){window.allEntreprises=Array.isArray(d)?d:[];window.entMap={};window.allEntreprises.forEach(function(e){if(e&&e.ticker)window.entMap[e.ticker]=e;});renderCurrentView();},[])
+      fetchOrEmpty('/marche?type=entreprises',function(d){window.allEntreprises=Array.isArray(d)?d:[];window.entMap={};window.allEntreprises.forEach(function(e){if(e&&e.ticker)window.entMap[e.ticker]=e;});renderCurrentView();},[]),
+      fetchOrEmpty('/marche?type=dividendes',function(d){window.allDividendes=Array.isArray(d)?d:[];renderCurrentView();},[])
     ]);
     ensureTechnicalReady();renderCurrentView();ensureFundamentalReady();
+    console.log('[APP LOAD] Cours:',(window.allCours||[]).length,
+      '| Indices série:',(window.allIndicesHistory||[]).length,
+      '| Indices dernier état:',(window.allIndicesLatest||[]).length,
+      '| Dividendes:',(window.allDividendes||[]).length);
+    window.dispatchEvent(new CustomEvent('tc:dataready',{detail:{
+      cours:(window.allCours||[]).length,indices:(window.allIndices||[]).length
+    }}));
   }
   function ensureFundamentalReady(){
     if(parseHashFromUrl()!=='analyse-fondamentale')return;var select=document.getElementById('fundTickerSelect');if(!select)return;if(typeof window.populateTickerSelects==='function')window.populateTickerSelects();
