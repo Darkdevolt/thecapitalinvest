@@ -185,6 +185,20 @@ export default async function handler(req, res) {
           .order('date_detachement', { ascending: true, nullsLast: true })
           .order('date_paiement', { ascending: true, nullsLast: true }).limit(2000));
         break;
+      // Coupons obligataires. Table distincte des dividendes : un coupon est
+      // contractuel, periodique et exprime sur un nominal. La route reste
+      // tolerante a l'absence de la table tant que la migration n'est pas
+      // appliquee, afin de ne pas casser le calendrier du tableau de bord.
+      case 'coupons':
+        try {
+          result = await table('coupons_calendrier', q => q
+            .order('date_detachement', { ascending: true, nullsLast: true })
+            .order('date_paiement', { ascending: true, nullsLast: true }).limit(2000));
+        } catch (e) {
+          console.warn('[MARCHE] coupons_calendrier indisponible :', e?.message || e);
+          result = { data: [], source: 'coupons', absent: true };
+        }
+        break;
       case 'apercu': {
         const [cours, indices] = await Promise.all([latestCours(), latestIndices()]);
         const sessionDate = [cours.latestDate, indices.latestDate].filter(Boolean).sort().reverse()[0] || null;
