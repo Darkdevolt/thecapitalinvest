@@ -16,7 +16,9 @@ import { authenticateAdmin, rateLimited, handlePreflight } from '../lib/middlewa
 import { ok, fail, json, readBody, requestUrl, BodyError } from '../lib/http.js';
 import config from '../lib/config.js';
 
-const BUCKET = 'financials_pdfs';
+// Bucket Storage déjà utilisé par le système des états financiers.
+// Il possède les policies et la configuration PDF nécessaires.
+const BUCKET = 'etats-financiers';
 
 const TYPES = new Set([
   'etats_financiers', 'rapport_annuel', 'rapport_semestriel',
@@ -48,8 +50,6 @@ export default async function handler(req, res) {
   if (rateLimited(req, res, 'financials-upload')) return;
   if (!supabaseAdmin) return fail(res, 503, 'Service temporairement indisponible.', 'SERVICE_UNAVAILABLE');
 
-  // La liste est réservée à l'administration ; l'application publique lit la
-  // table directement, filtrée sur les documents publiés par la règle RLS.
   const admin = await authenticateAdmin(req, res);
   if (!admin) return;
 
@@ -75,8 +75,6 @@ export default async function handler(req, res) {
       if (lookupError) throw lookupError;
       if (!doc) return fail(res, 404, 'Document introuvable.', 'NOT_FOUND');
 
-      // Le fichier est retiré du stockage avant la ligne : l'inverse laisserait
-      // un objet orphelin impossible à retrouver.
       const marqueur = `/${BUCKET}/`;
       const position = String(doc.fichier_url || '').indexOf(marqueur);
       if (position !== -1) {
@@ -133,8 +131,6 @@ export default async function handler(req, res) {
         notes: body.notes ? String(body.notes).slice(0, 2000) : null
       };
 
-      // L'index unique porte sur ticker + année + période + type : un nouveau
-      // dépôt pour le même exercice remplace le précédent plutôt que d'échouer.
       const { data, error } = await supabaseAdmin
         .from('financials_documents')
         .upsert(record, { onConflict: 'ticker,annee,periode,type_document' })
