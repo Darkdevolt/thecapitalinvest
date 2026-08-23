@@ -44,18 +44,24 @@
         TC.session = { token: '', user: null };
     };
 
+    /* Rafraîchissement borné : une panne du endpoint Auth ne peut plus
+       immobiliser l'écran de démarrage indéfiniment. */
     async function refreshToken() {
         const stored = readStored();
         const { session } = unwrap(stored);
         const refresh = session && session.refresh_token;
         if (!refresh) return false;
+
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 10000);
         try {
             const r = await fetch(E.AUTH + '/token?grant_type=refresh_token', {
                 method: 'POST',
                 headers: { apikey: E.SUPABASE_ANON, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh_token: refresh })
+                body: JSON.stringify({ refresh_token: refresh }),
+                signal: controller.signal
             });
-            const data = await r.json();
+            const data = await r.json().catch(() => ({}));
             if (!r.ok || !data.access_token) return false;
             const target = (stored.data && stored.data.session) || stored.session || stored;
             target.access_token = data.access_token;
@@ -64,7 +70,12 @@
             localStorage.setItem(E.SESSION_KEY, JSON.stringify(stored));
             TC.session.token = data.access_token;
             return true;
-        } catch (e) { return false; }
+        } catch (e) {
+            if (e.name !== 'AbortError') console.warn('[TC] Rafraîchissement de session impossible', e);
+            return false;
+        } finally {
+            clearTimeout(timer);
+        }
     }
 
     /** Renouvelle le jeton deux minutes avant son expiration. */
