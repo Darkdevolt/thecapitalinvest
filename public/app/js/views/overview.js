@@ -41,6 +41,29 @@
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
+  /**
+   * Les noms d'indices ne sont pas écrits partout de la même façon :
+   * la base contient « BRVM-COMPOSITE », l'API d'historique renomme
+   * parfois en « BRVM C », et cette vue cherchait « BRVM Composite ».
+   * Une comparaison stricte échouait donc silencieusement, et les cartes
+   * retombaient sur leur valeur de repli sans qu'aucune erreur n'apparaisse.
+   * On compare désormais sur une forme réduite : majuscules, sans espace
+   * ni tiret ni souligné.
+   */
+  const normIndice = s => String(s == null ? '' : s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+
+  /** Retrouve le nom réellement présent dans les données, quelle que soit sa graphie. */
+  function resolveIndice(candidates) {
+    const noms = [...new Set((window.allIndices || []).map(r => r && r.indice).filter(Boolean))];
+    for (const c of candidates) {
+      const hit = noms.find(n => normIndice(n) === normIndice(c));
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  const COMPOSITE_CANDIDATS = ['BRVM C', 'BRVM Composite', 'COMPOSITE', 'BRVM_C', 'BRVM COMPOSITE', 'BRVM-COMPOSITE'];
+
   function getLatestIndices() {
     const map = {};
     (window.allIndices || []).forEach(row => {
@@ -52,8 +75,9 @@
   }
 
   function getIndiceHistory(indiceName, maxDays = 30) {
+    const cible = normIndice(indiceName);
     return (window.allIndices || [])
-      .filter(r => r?.indice && String(r.indice).trim() === indiceName && r?.valeur != null)
+      .filter(r => r?.indice && normIndice(r.indice) === cible && r?.valeur != null)
       .sort((a, b) => new Date(a.date_seance) - new Date(b.date_seance))
       .slice(-maxDays);
   }
@@ -104,11 +128,13 @@
   }
 
   function renderIndexCards(latest, indiceNames) {
-    const findIndice = candidates => candidates.map(c => indiceNames.find(n => n.toLowerCase() === c.toLowerCase())).find(Boolean) || null;
+    const findIndice = candidates => candidates
+      .map(c => indiceNames.find(n => normIndice(n) === normIndice(c)))
+      .find(Boolean) || null;
     const mapCard = {
-      composite:{candidates:['BRVM C','BRVM Composite','COMPOSITE','BRVM_C','BRVM COMPOSITE'],id:'idx-composite',chgId:'idx-composite-chg',sparkId:'sparkComposite'},
-      brvm30:{candidates:['BRVM 30','BRVM30','30','BRVM_30'],id:'idx-30',chgId:'idx-30-chg',sparkId:'spark30'},
-      prestige:{candidates:['BRVM Prestige','BRVMPrestige','PRESTIGE','BRVM PRESTIGE'],id:'idx-prestige',chgId:'idx-prestige-chg',sparkId:'sparkPrestige'}
+      composite:{candidates:COMPOSITE_CANDIDATS,id:'idx-composite',chgId:'idx-composite-chg',sparkId:'sparkComposite'},
+      brvm30:{candidates:['BRVM 30','BRVM30','30','BRVM_30','BRVM-30'],id:'idx-30',chgId:'idx-30-chg',sparkId:'spark30'},
+      prestige:{candidates:['BRVM Prestige','BRVMPrestige','PRESTIGE','BRVM PRESTIGE','BRVM-PRESTIGE'],id:'idx-prestige',chgId:'idx-prestige-chg',sparkId:'sparkPrestige'}
     };
     const setIdx = (id,val,chgId,chg) => {
       const el=document.getElementById(id), ce=document.getElementById(chgId);
@@ -122,7 +148,7 @@
 
   window.renderCompositeChart=function(){
     if(window.compositeChartInst){window.compositeChartInst.destroy();window.compositeChartInst=null;}
-    const history=getIndiceHistory('BRVM C',_compositePeriod),labels=history.map(d=>d?.date_seance?new Date(d.date_seance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}):'?'),values=history.map(d=>d?.valeur??0),canvas=document.getElementById('chartComposite');
+    const history=getIndiceHistory(resolveIndice(COMPOSITE_CANDIDATS)||'BRVM C',_compositePeriod),labels=history.map(d=>d?.date_seance?new Date(d.date_seance).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'}):'?'),values=history.map(d=>d?.valeur??0),canvas=document.getElementById('chartComposite');
     if(!canvas)return;
     if(labels.length<=1||!values.some(v=>v>0)){const ctx=canvas.getContext('2d');if(ctx){ctx.clearRect(0,0,canvas.width,canvas.height);ctx.fillStyle='rgba(245,240,232,.3)';ctx.font='14px DM Sans';ctx.textAlign='center';ctx.fillText('Données insuffisantes',canvas.width/2,canvas.height/2);}return;}
     try{window.compositeChartInst=new Chart(canvas,{type:'line',data:{labels,datasets:[{...mkDataset(values),tension:.3,pointRadius:0,pointHoverRadius:6}]},options:{...chartOpts,interaction:{intersect:false,mode:'index'},plugins:{...chartOpts.plugins,legend:{display:false}}}});}catch(err){console.error('[OVERVIEW] Erreur création chart:',err);}
