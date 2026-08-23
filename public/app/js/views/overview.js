@@ -54,7 +54,7 @@
 
   /** Retrouve le nom réellement présent dans les données, quelle que soit sa graphie. */
   function resolveIndice(candidates) {
-    const noms = [...new Set((window.allIndices || []).map(r => r && r.indice).filter(Boolean))];
+    const noms = [...new Set(serieIndices().map(r => r && r.indice).filter(Boolean))];
     for (const c of candidates) {
       const hit = noms.find(n => normIndice(n) === normIndice(c));
       if (hit) return hit;
@@ -74,9 +74,22 @@
     return map;
   }
 
+  /**
+   * Source de la serie. allIndices est ecrase par un chargeur concurrent qui
+   * n'y met que la derniere seance : la courbe tombait alors sur « Donnees
+   * insuffisantes » alors que l'historique etait bien charge. On retient donc
+   * la source la plus fournie des deux, ce qui rend la vue insensible a
+   * l'ordre d'execution des chargeurs.
+   */
+  function serieIndices() {
+    const courant = window.allIndices || [];
+    const historique = window.allIndicesHistory || [];
+    return historique.length > courant.length ? historique : courant;
+  }
+
   function getIndiceHistory(indiceName, maxDays = 30) {
     const cible = normIndice(indiceName);
-    return (window.allIndices || [])
+    return serieIndices()
       .filter(r => r?.indice && normIndice(r.indice) === cible && r?.valeur != null)
       .sort((a, b) => new Date(a.date_seance) - new Date(b.date_seance))
       .slice(-maxDays);
@@ -158,6 +171,22 @@
 
   function drawSparkline(canvasId,values){const canvas=document.getElementById(canvasId);if(!canvas||values.length<2)return;const ctx=canvas.getContext('2d'),dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();if(rect.width===0||rect.height===0)return;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.scale(dpr,dpr);const w=rect.width,h=rect.height,min=Math.min(...values),max=Math.max(...values),range=max-min||1;ctx.clearRect(0,0,w,h);ctx.beginPath();ctx.strokeStyle=values[values.length-1]>=values[0]?'var(--green)':'var(--red)';ctx.lineWidth=2;values.forEach((v,i)=>{const x=i/(values.length-1)*w,y=h-((v-min)/range)*h*.8-h*.1;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();}
 
+  /**
+   * Capitalisation boursiere. /marche?type=cours ne la renvoie pas : la
+   * colonne restait vide sur les 47 lignes. Elle se deduit du dernier cours
+   * et du nombre d'actions de la fiche societe, donnee administree. En son
+   * absence, on n'invente rien.
+   */
+  function capitalisation(c) {
+    if (!c) return null;
+    if (c.capitalisation != null && !isNaN(+c.capitalisation)) return +c.capitalisation;
+    const ref = (window.entMap || {})[c.ticker];
+    const actions = ref ? (ref.nombre_actions != null ? ref.nombre_actions : ref.nb_actions) : null;
+    const cours = c.cours != null ? c.cours : c.cours_cloture;
+    if (actions == null || cours == null || isNaN(+actions) || isNaN(+cours)) return null;
+    return +actions * +cours;
+  }
+
   function renderSectorHeatmap(){const bySector={},byTicker={};(window.allCours||[]).forEach(c=>{if(c?.ticker&&!byTicker[c.ticker])byTicker[c.ticker]=c;});Object.values(byTicker).forEach(c=>{const sector=getSector(c.ticker)||'Autre';if(!bySector[sector])bySector[sector]={total:0,count:0};const v=parseFloat(c.variation)||0;bySector[sector].total+=v;bySector[sector].count++;});const container=document.getElementById('sectorHeatmap');if(!container)return;const sectors=Object.entries(bySector).map(([name,data])=>({name,avg:data.total/data.count,count:data.count})).sort((a,b)=>Math.abs(b.avg)-Math.abs(a.avg));if(!sectors.length){container.innerHTML='<div class="empty-state">Aucune donnée sectorielle</div>';return;}container.innerHTML=sectors.map(s=>{const cls=s.avg>0?'heatmap-up':s.avg<0?'heatmap-down':'heatmap-neutral',color=s.avg>0?'var(--green)':s.avg<0?'var(--red)':'var(--dim)';return `<div class="heatmap-cell ${cls}" style="border-left-color:${color}"><div class="hm-name">${escapeHtml(s.name)}</div><div class="hm-value" style="color:${color}">${s.avg>0?'+':''}${s.avg.toFixed(2)}%</div><div class="hm-count">${s.count} titre${s.count>1?'s':''}</div></div>`;}).join('');}
 
   function renderNewsFeed(){
@@ -226,7 +255,7 @@
     const countEl=document.getElementById('coursCount');if(countEl)countEl.textContent=rows.length+' titre'+(rows.length>1?'s':'');
     const tableEl=document.getElementById('coursTable');if(!tableEl)return;
     if(!rows.length){tableEl.innerHTML='<tr><td colspan="6" class="empty-cell">Aucune donnée de cours disponible.</td></tr>';return;}
-    tableEl.innerHTML=rows.map(c=>`<tr onclick="openFiche('${escapeHtml(c.ticker)}')"><td><strong>${escapeHtml(c.ticker)}</strong></td><td>${fmt(c.cours)}</td><td>${changePill(c.variation)}</td><td>${fmt(c.volume)}</td><td>${c.capitalisation?fmtM(c.capitalisation):', '}</td><td>${escapeHtml(getSector(c.ticker))}</td></tr>`).join('');
+    tableEl.innerHTML=rows.map(c=>`<tr onclick="openFiche('${escapeHtml(c.ticker)}')"><td><strong>${escapeHtml(c.ticker)}</strong></td><td>${fmt(c.cours)}</td><td>${changePill(c.variation)}</td><td>${fmt(c.volume)}</td><td>${fmtM(capitalisation(c))}</td><td>${escapeHtml(getSector(c.ticker))}</td></tr>`).join('');
   }
 
   console.log('[OVERVIEW] Chargé avec succès');
