@@ -258,7 +258,13 @@
    */
   function activite() {
     var parDate = {};
-    (window.allCours || []).forEach(function (r) {
+    /* La séance du jour seule ne permet aucune comparaison. On privilégie
+       l'historique court lorsqu'il est chargé, et l'on retombe sur le
+       dernier instantané sinon, auquel cas le bloc s'efface, comme prevu. */
+    var source = (Array.isArray(window.allCoursHistory) && window.allCoursHistory.length)
+      ? window.allCoursHistory
+      : (window.allCours || []);
+    source.forEach(function (r) {
       var d = r && r.date_seance;
       var v = Number(r && (r.valeur_totale != null ? r.valeur_totale : r.valeur_transigee));
       if (!d || !isFinite(v)) return;
