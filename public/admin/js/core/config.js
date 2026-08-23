@@ -29,6 +29,13 @@ TC.INDICES = [
 /* Limite réglementaire de variation d'un titre sur une séance BRVM. */
 TC.VARIATION_LIMIT = 7.5;
 
+/* Horizon des balayages d'historique, en mois. PostgREST plafonne les réponses
+   à mille lignes : lire trois ans de cotations demande une trentaine d'allers-
+   retours enchaînés, soit plusieurs secondes d'attente avant le premier
+   affichage. Les contrôles de qualité portent sur la période récente, la seule
+   sur laquelle une correction ait encore un sens. */
+TC.SCAN_MONTHS = 18;
+
 TC.PAYS_UEMOA = ['Bénin', 'Burkina Faso', "Côte d'Ivoire", 'Guinée-Bissau', 'Mali', 'Niger', 'Sénégal', 'Togo'];
 
 TC.RECOS = ['Acheter', 'Renforcer', 'Conserver', 'Alléger', 'Vendre'];
@@ -75,8 +82,12 @@ TC.COLUMNS = {
 
     indices: ['indice', 'date_seance', 'valeur', 'variation', 'variation_pct'],
 
-    analyses: ['ticker', 'titre', 'recommandation', 'commentaire', 'resume', 'date_analyse',
-        'analyste', 'cours_cible', 'cours_reference'],
+    /* Colonnes vérifiées directement dans Supabase. `titre` et `resume`
+       n'existent pas : les écrire faisait rejeter la note entière par
+       PostgREST. `objectif_cours`, `potentiel_pct` et `horizon` existent et
+       n'étaient jamais alimentées. */
+    analyses: ['ticker', 'date_analyse', 'analyste', 'recommandation', 'objectif_cours',
+        'cours_cible', 'cours_reference', 'potentiel_pct', 'commentaire', 'horizon'],
 
     actionnaires: ['ticker', 'nom_actionnaire', 'pourcentage', 'type_actionnaire', 'pays_origine'],
 
