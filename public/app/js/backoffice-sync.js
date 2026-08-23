@@ -24,7 +24,7 @@
   function publish(key,data){
     var value=unwrap(data);
     state.sources[key]={ok:true,fetchedAt:new Date().toISOString(),count:Array.isArray(value)?value.length:null,data:value};
-    var globals={entreprises:'allEntreprises',cours:'allCours',indices:'allIndices',analyses:'allAnalyses',financials:'allFinancials',boc:'allBoc'};
+    var globals={entreprises:'allEntreprises',cours:'allCours',indices:'allIndices',indices_historique:'allIndicesHistory',dividendes:'allDividendes',analyses:'allAnalyses',financials:'allFinancials',boc:'allBoc',apercu:'allApercu'};
     if(globals[key]&&Array.isArray(value))w[globals[key]]=value;
     emit('tc:backoffice-source-updated',{source:key,data:value,count:state.sources[key].count});
   }
