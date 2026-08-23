@@ -12,6 +12,21 @@
     let editing = null;
     const sel = TC.selection('an');
 
+    const HORIZONS = [
+        { v: '', l: '— Non précisé —' },
+        { v: '3 mois', l: '3 mois' },
+        { v: '6 mois', l: '6 mois' },
+        { v: '12 mois', l: '12 mois' },
+        { v: '24 mois', l: '24 mois' }
+    ];
+
+    /* La table porte deux colonnes de cours cible, `cours_cible` et
+       `objectif_cours`, alimentées différemment selon l'origine de la note.
+       La lecture accepte les deux, l'écriture renseigne les deux : sans quoi
+       l'application affiche une cible vide sur la moitié des notes. */
+    const cible = r => TC.toNumber(
+        r.cours_cible !== null && r.cours_cible !== undefined ? r.cours_cible : r.objectif_cours);
+
     function view() {
         return '' +
             '<div class="page-head">' +
@@ -26,6 +41,7 @@
             '<div class="form-grid">' + TC.fields([
                 { id: 'a-ticker', label: 'Ticker', upper: true, placeholder: 'SNTS' },
                 { id: 'a-titre', label: 'Titre de la note', placeholder: 'Sonatel — la croissance mobile money tient' },
+                { id: 'a-horizon', label: 'Horizon', type: 'select', options: HORIZONS },
                 { id: 'a-reco', label: 'Recommandation', type: 'select', options: TC.RECOS.map(r => ({ v: r, l: r })) },
                 { id: 'a-cible', label: 'Cours cible', type: 'number', col: 'cours_cible' },
                 { id: 'a-ref', label: 'Cours de référence', type: 'number', col: 'cours_reference', hint: 'Vide : dernier cours de clôture connu.' },
@@ -76,17 +92,17 @@
 
     /** Une note est à réviser si l'objectif est atteint, ou si elle a vieilli. */
     function reviewFlag(r) {
-        const cible = TC.toNumber(r.cours_cible);
+        const objectif = cible(r);
         const age = r.date_analyse ? Math.round((Date.now() - Date.parse(String(r.date_analyse).slice(0, 10) + 'T12:00:00')) / 86400000) : null;
         const reasons = [];
-        if (cible !== null && r.__price) {
+        if (objectif !== null && r.__price) {
             const sens = ['Acheter', 'Renforcer'].indexOf(r.recommandation) !== -1 ? 1 : -1;
-            if (sens === 1 && r.__price >= cible) reasons.push('objectif atteint');
-            if (sens === -1 && r.__price <= cible) reasons.push('objectif atteint à la baisse');
+            if (sens === 1 && r.__price >= objectif) reasons.push('objectif atteint');
+            if (sens === -1 && r.__price <= objectif) reasons.push('objectif atteint à la baisse');
         }
         if (age !== null && age > 365) reasons.push('note de plus d\'un an');
         else if (age !== null && age > 180) reasons.push('note de plus de six mois');
-        if (!r.commentaire && !r.resume) reasons.push('sans corps d\'analyse');
+        if (!r.commentaire) reasons.push('sans corps d\'analyse');
         return reasons;
     }
 
@@ -99,9 +115,10 @@
         ]);
         rows = (data || []).map(function (r) {
             r.__price = quotes.map[String(r.ticker).toUpperCase()] || null;
-            const cible = TC.toNumber(r.cours_cible);
-            r.__potential = (cible !== null && r.__price && r.__price > 0)
-                ? ((cible - r.__price) / r.__price) * 100 : null;
+            const objectif = cible(r);
+            r.__cible = objectif;
+            r.__potential = (objectif !== null && r.__price && r.__price > 0)
+                ? ((objectif - r.__price) / r.__price) * 100 : null;
             r.__review = reviewFlag(r);
             return r;
         });
@@ -131,6 +148,11 @@
             (tone ? ' style="color:var(--' + tone + ')"' : '') + '>' + TC.esc(String(value)) + '</div></div>';
     }
 
+    /** Intitulé affiché : la colonne `titre` n'existe pas dans toutes les bases. */
+    function noteTitle(r) {
+        return r.titre || (r.ticker + ' — ' + (r.recommandation || 'note'));
+    }
+
     function recoBadge(reco) {
         const tone = reco === 'Acheter' || reco === 'Renforcer' ? 'badge-green'
             : reco === 'Vendre' || reco === 'Alléger' ? 'badge-red' : 'badge-gold';
@@ -150,9 +172,9 @@
             return '<tr class="' + (r.__review.length ? 'row-warn' : '') + '">' +
                 '<td><input type="checkbox" class="rowcheck" data-id="' + r.id + '"></td>' +
                 '<td class="td-key">' + TC.esc(r.ticker) + '</td>' +
-                '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;">' + TC.esc(r.titre || 'Sans titre') + '</td>' +
+                '<td style="max-width:280px;overflow:hidden;text-overflow:ellipsis;">' + TC.esc(noteTitle(r)) + '</td>' +
                 '<td>' + recoBadge(r.recommandation) + '</td>' +
-                '<td class="r td-mono">' + TC.fmt(r.cours_cible) + '</td>' +
+                '<td class="r td-mono">' + TC.fmt(r.__cible) + '</td>' +
                 '<td class="r td-mono td-muted">' + TC.fmt(r.__price) + '</td>' +
                 '<td class="r td-mono ' + TC.trendClass(r.__potential) + '">' + TC.fmtPct(r.__potential) + '</td>' +
                 '<td class="td-muted">' + TC.esc(r.analyste || '—') + '</td>' +
@@ -171,7 +193,7 @@
         const q = TC.val('an-search').toLowerCase();
         const reco = TC.val('an-filter-reco');
         paint(rows.filter(function (r) {
-            const haystack = (r.ticker + ' ' + (r.titre || '') + ' ' + (r.analyste || '')).toLowerCase();
+            const haystack = (r.ticker + ' ' + noteTitle(r) + ' ' + (r.analyste || '')).toLowerCase();
             if (q && haystack.indexOf(q) === -1) return false;
             if (reco === '__revoir') return r.__review.length > 0;
             if (reco && r.recommandation !== reco) return false;
@@ -231,17 +253,30 @@
         const texte = TC.val('a-texte');
         if (!texte && !confirm('Cette note n\'a pas de corps d\'analyse. Elle apparaîtra dans l\'application sans justification.\n\nPublier quand même ?')) return;
 
+        const objectif = TC.num('a-cible');
+        let reference = TC.num('a-ref');
+        if (reference === null) {
+            const quotes = await prices();
+            reference = quotes.map[ticker] || null;
+        }
+
         const body = {
             ticker,
-            titre: TC.val('a-titre') || null,
             recommandation: reco,
             commentaire: texte || null,
-            resume: texte ? texte.slice(0, 400) : null,
             date_analyse: TC.val('a-date') || TC.today(),
             analyste: TC.val('a-analyste') || 'The Capital Research',
-            cours_cible: TC.num('a-cible'),
-            cours_reference: TC.num('a-ref')
+            /* Les deux colonnes de cible sont renseignées ensemble. */
+            cours_cible: objectif,
+            objectif_cours: objectif,
+            cours_reference: reference,
+            /* Colonne existante que rien n'alimentait : l'application lisait
+               un potentiel toujours vide. */
+            potentiel_pct: (objectif !== null && reference && reference > 0)
+                ? Math.round(((objectif - reference) / reference) * 10000) / 100 : null,
+            horizon: TC.val('a-horizon') || null
         };
+        if (TC.hasColumn('analyses', 'titre')) body.titre = TC.val('a-titre') || null;
 
         try {
             if (editing) {
@@ -260,13 +295,14 @@
     function edit(row) {
         editing = row.id;
         TC.setVal('a-ticker', row.ticker);
-        TC.setVal('a-titre', row.titre);
+        TC.setVal('a-titre', row.titre || '');
         TC.setVal('a-reco', row.recommandation);
-        TC.setVal('a-cible', row.cours_cible);
+        TC.setVal('a-cible', row.__cible);
+        TC.setVal('a-horizon', row.horizon || '');
         TC.setVal('a-ref', row.cours_reference);
         TC.setVal('a-analyste', row.analyste);
         TC.setVal('a-date', TC.toISODate(row.date_analyse) || '');
-        TC.setVal('a-texte', row.commentaire || row.resume || '');
+        TC.setVal('a-texte', row.commentaire || '');
         TC.el('an-form-title').textContent = 'Modifier la note ' + row.ticker;
         TC.el('an-save').textContent = 'Enregistrer la modification';
         TC.el('an-cancel-edit').hidden = false;
@@ -287,16 +323,16 @@
 
     function read(row) {
         TC.modal.open({
-            title: row.titre || (row.ticker + ' — ' + row.recommandation),
+            title: noteTitle(row),
             subtitle: row.ticker + ' · ' + (row.analyste || 'analyste non précisé') + ' · ' + TC.fmtDateLong(row.date_analyse),
             readonly: true,
             body: '<div class="card-body">' +
                 '<div class="note" style="margin-bottom:14px;">' + recoBadge(row.recommandation) +
-                ' &nbsp; Cible <b>' + TC.fmt(row.cours_cible) + ' F</b>' +
+                ' &nbsp; Cible <b>' + TC.fmt(row.__cible) + ' F</b>' +
                 (row.__price ? ' · cours actuel <b>' + TC.fmt(row.__price) + ' F</b> · potentiel <b>' + TC.fmtPct(row.__potential) + '</b>' : '') +
                 (row.__review.length ? '<br>À réviser : ' + TC.esc(row.__review.join(' · ')) : '') + '</div>' +
                 '<div style="font-size:13.5px;line-height:1.75;white-space:pre-wrap;">' +
-                TC.esc(row.commentaire || row.resume || 'Aucun corps d\'analyse enregistré pour cette note.') + '</div></div>'
+                TC.esc(row.commentaire || 'Aucun corps d\'analyse enregistré pour cette note.') + '</div></div>'
         });
     }
 
@@ -309,6 +345,20 @@
         view,
         refresh: load,
         mount() {
+            /* Le formulaire s'adapte à la table : si la colonne `titre`
+               n'existe pas, le champ disparaît plutôt que de recueillir une
+               saisie qui serait écartée à l'enregistrement. */
+            TC.schema('analyses').then(function () {
+                if (TC.hasColumn('analyses', 'titre') === false) {
+                    const field = TC.el('a-titre');
+                    if (field && field.closest('.field')) field.closest('.field').remove();
+                }
+                if (TC.hasColumn('analyses', 'horizon') === false) {
+                    const field = TC.el('a-horizon');
+                    if (field && field.closest('.field')) field.closest('.field').remove();
+                }
+            });
+
             const tickerInput = TC.el('a-ticker');
             if (tickerInput) tickerInput.setAttribute('list', 'tickers-list');
             TC.setVal('a-date', TC.today());
@@ -324,7 +374,8 @@
             TC.on('an-export', 'click', function () {
                 if (!rows.length) return;
                 TC.download('analyses-' + TC.today() + '.csv',
-                    TC.toCSV(rows, ['ticker', 'titre', 'recommandation', 'cours_cible', 'cours_reference', 'analyste', 'date_analyse']),
+                    TC.toCSV(rows, ['ticker', 'recommandation', 'cours_cible', 'objectif_cours',
+                        'cours_reference', 'potentiel_pct', 'horizon', 'analyste', 'date_analyse']),
                     'text/csv;charset=utf-8');
             });
             TC.on('an-all', 'change', e => sel.all(rows.map(r => r.id), e.target.checked));
