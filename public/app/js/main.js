@@ -123,13 +123,20 @@
       fetchOrEmpty('/marche?type=financials',function(d){window.allFinancials=Array.isArray(d)?d:[];if(typeof window.populateTickerSelects==='function')window.populateTickerSelects();renderCurrentView();ensureFundamentalReady();},[]),
       fetchOrEmpty('/marche?type=analyses',function(d){window.allAnalyses=Array.isArray(d)?d:[];renderCurrentView();},[]),
       fetchOrEmpty('/marche?type=entreprises',function(d){window.allEntreprises=Array.isArray(d)?d:[];window.entMap={};window.allEntreprises.forEach(function(e){if(e&&e.ticker)window.entMap[e.ticker]=e;});renderCurrentView();},[]),
-      fetchOrEmpty('/marche?type=dividendes',function(d){window.allDividendes=Array.isArray(d)?d:[];renderCurrentView();},[])
+      fetchOrEmpty('/marche?type=dividendes',function(d){window.allDividendes=Array.isArray(d)?d:[];renderCurrentView();},[]),
+      /* Historique court des cotations. /marche?type=cours ne renvoie que la
+         derniere seance : le bloc « Activite de la seance » du tableau de bord
+         a besoin d'au moins deux seances pour comparer, et restait donc vide.
+         Mille lignes couvrent une vingtaine de seances sur 47 valeurs. Charge
+         en seconde vague : son absence ne retarde jamais l'affichage. */
+      fetchOrEmpty('/marche?type=historique&limit=1000',function(d){window.allCoursHistory=Array.isArray(d)?d:[];renderCurrentView();},[])
     ]);
     ensureTechnicalReady();renderCurrentView();ensureFundamentalReady();
     console.log('[APP LOAD] Cours:',(window.allCours||[]).length,
       '| Indices série:',(window.allIndicesHistory||[]).length,
       '| Indices dernier état:',(window.allIndicesLatest||[]).length,
-      '| Dividendes:',(window.allDividendes||[]).length);
+      '| Dividendes:',(window.allDividendes||[]).length,
+      '| Historique cours:',(window.allCoursHistory||[]).length);
     window.dispatchEvent(new CustomEvent('tc:dataready',{detail:{
       cours:(window.allCours||[]).length,indices:(window.allIndices||[]).length
     }}));
