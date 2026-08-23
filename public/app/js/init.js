@@ -88,15 +88,14 @@
   }
 
   function loadRuntimeLayers() {
+    // Pont officiel entre le back-office et l'application publique.
+    // Il est volontairement chargé en différé : l'app doit être interactive
+    // même si une source de données est lente ou momentanément indisponible.
+    loadScript('app/js/backoffice-sync.js?v=1');
+
     // Navigation is a core layer: it must be available before users start moving between views.
     loadScript('app/js/navigation-guard.js?v=1');
-
-    // Dashboard market-data/UI patch: loaded dynamically so the core HTML and
-    // existing views remain untouched while the fixes are independently cache-busted.
     loadScript('app/js/views/overview-fixes.js?v=1');
-
-    // The technical experience is independent: it must never wait for
-    // portfolio/fundamental enhancements before becoming interactive.
     loadStyle('app/css/technique-experience.css?v=2');
     loadScript('app/js/views/technique/experience.js?v=3');
 
@@ -166,7 +165,6 @@
     normalizeDocument();
     console.log('[INIT] Session authentifiée, démarrage The Capital');
 
-    // CORE: always start the application before optional enhancements.
     if (typeof window.initApp !== 'function') {
       console.error('[INIT] initApp manquant, main.js doit être chargé avant init.js');
       document.body.classList.remove('init-hidden');
