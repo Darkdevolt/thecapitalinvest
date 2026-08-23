@@ -8,7 +8,7 @@
 <link rel="icon" href="/assets/the-capital-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900;1,700&family=DM+Sans:wght@300;400;500&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/admin/css/admin.css?v=2026082201">
 </head>
 <body>
@@ -18,44 +18,44 @@
 <script>(function(){var script=document.createElement('script');script.src='https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';script.async=true;script.onerror=function(){if(window.TC_DIAG)TC_DIAG.push('resource','Moteur Excel indisponible');};document.head.appendChild(script);})();</script><script src="/js/env.js"></script><script src="/admin/js/core/config.js?v=2026082201"></script><script src="/admin/js/core/utils.js?v=2026082201"></script><script src="/admin/js/core/api.js?v=2026082201"></script><script src="/admin/js/core/app.js?v=2026082201"></script><script src="/admin/js/modules/dashboard.js?v=2026082201"></script><script src="/admin/js/modules/cours.js?v=2026082201"></script><script src="/admin/js/modules/indices.js?v=2026082201"></script><script src="/admin/js/modules/scraper.js?v=2026082201"></script><script src="/admin/js/modules/boc.js?v=2026082201"></script><script src="/admin/js/modules/entreprises.js?v=2026082201"></script><script src="/admin/js/financials/financials-schema.js?v=2026082201"></script><script src="/admin/js/financials/financials-excel.js?v=2026082201"></script><script src="/admin/js/modules/financials.js?v=2026082201"></script><script src="/admin/js/modules/dividendes.js?v=2026082201"></script><script src="/admin/js/modules/analyses.js?v=2026082201"></script><script src="/admin/js/modules/reporting.js?v=2026082201"></script><script src="/admin/js/modules/utilisateurs.js?v=2026082201"></script><script src="/admin/js/modules/import.js?v=2026082201"></script><script src="/admin/js/modules/diagnostic.js?v=2026082201"></script>
 <script>
 (function(){
+    function esc(v){return String(v||'').replace(/[<>]/g,'');}
     function reportButton(){
-        var b=document.createElement('button');
-        b.className='btn btn-outline btn-sm'; b.textContent='Télécharger le rapport technique';
-        b.onclick=function(){ if(window.TC_DIAG) TC_DIAG.download(); };
-        return b;
+        var b=document.createElement('button'); b.className='btn btn-outline btn-sm'; b.textContent='Télécharger le rapport technique';
+        b.onclick=function(){if(window.TC_DIAG)TC_DIAG.download();}; return b;
     }
-    function fatal(title, detail){
+    function fatal(title,detail){
         var boot=document.getElementById('boot'); if(!boot)return;
-        boot.innerHTML='<img src="/assets/the-capital-logo.png" alt=""><div class="fatal"><h2>'+String(title).replace(/[<>]/g,'')+'</h2><p>'+String(detail).replace(/[<>]/g,'')+'</p><div class="boot-actions"></div></div>';
+        boot.innerHTML='<img src="/assets/the-capital-logo.png" alt=""><div class="fatal"><h2>'+esc(title)+'</h2><p>'+esc(detail)+'</p><div class="boot-actions"></div></div>';
         boot.hidden=false; document.getElementById('shell').hidden=true;
-        var actions=boot.querySelector('.boot-actions');
-        actions.appendChild(reportButton());
+        var actions=boot.querySelector('.boot-actions'); actions.appendChild(reportButton());
         var reload=document.createElement('button'); reload.className='btn btn-primary btn-sm'; reload.textContent='Réessayer'; reload.onclick=function(){location.reload();}; actions.appendChild(reload);
-        if(window.TC_DIAG) TC_DIAG.push('boot-fatal',title,detail);
+        if(window.TC_DIAG)TC_DIAG.push('boot-fatal',title,detail);
     }
-    if(window.TC_DIAG) TC_DIAG.mark('admin-scripts-loaded');
-    if(!window.TC || typeof TC.boot!=='function') { fatal('Démarrage impossible','Le noyau JavaScript de l’administration n’a pas pu être chargé.'); return; }
-    var originalBoot=TC.boot;
-    var finished=false, aborted=false;
+    if(window.TC_DIAG)TC_DIAG.mark('admin-scripts-loaded');
+    if(!window.TC || typeof TC.boot!=='function'){fatal('Démarrage impossible','Le noyau JavaScript de l’administration n’a pas pu être chargé.');return;}
+
+    /* Protection supplémentaire : une lecture Supabase ne peut plus bloquer
+       l’interface administrative pendant 20 secondes. Le timeout de boot
+       reste séparé pour détecter un blocage ailleurs (module, auth, JS). */
+    var rawGet=TC.get;
+    TC.get=function(table,query){
+        var timeout=table==='users'?7000:10000;
+        return Promise.race([
+            rawGet(table,query),
+            new Promise(function(_,reject){setTimeout(function(){reject(new Error('Délai dépassé : Supabase n’a pas répondu pour « '+table+' ».'));},timeout);})
+        ]);
+    };
+
+    var originalBoot=TC.boot, finished=false, aborted=false;
     var shell=document.getElementById('shell');
-    var observer=new MutationObserver(function(){ if(aborted && !shell.hidden) shell.hidden=true; });
+    var observer=new MutationObserver(function(){if(aborted && !shell.hidden)shell.hidden=true;});
     observer.observe(shell,{attributes:true,attributeFilter:['hidden']});
     TC.boot=async function(){
-        if(window.TC_DIAG) TC_DIAG.mark('boot-start');
-        var work;
-        try { work=Promise.resolve(originalBoot()); }
-        catch(e){ work=Promise.reject(e); }
-        var watchdog=new Promise(function(_,reject){setTimeout(function(){reject(new Error('Le démarrage dépasse 12 secondes. Une requête ou un module ne répond probablement pas.'));},12000);});
-        try {
-            await Promise.race([work,watchdog]);
-            finished=true;
-            if(window.TC_DIAG) TC_DIAG.mark('boot-finished');
-        } catch(e){
-            if(finished)return;
-            aborted=true;
-            if(window.TC_DIAG) TC_DIAG.push('boot-timeout',e.message);
-            fatal('Démarrage interrompu',e.message+' Aucun chargement ne continuera à bloquer cette page.');
-        }
+        if(window.TC_DIAG)TC_DIAG.mark('boot-start');
+        var work; try{work=Promise.resolve(originalBoot());}catch(e){work=Promise.reject(e);}
+        var watchdog=new Promise(function(_,reject){setTimeout(function(){reject(new Error('Le démarrage dépasse 15 secondes. Une requête, l’authentification ou un module ne répond probablement pas.'));},15000);});
+        try{await Promise.race([work,watchdog]);finished=true;if(window.TC_DIAG)TC_DIAG.mark('boot-finished');}
+        catch(e){if(finished)return;aborted=true;if(window.TC_DIAG)TC_DIAG.push('boot-timeout',e.message);fatal('Démarrage interrompu',e.message+' Le chargement est arrêté pour éviter une boucle infinie.');}
     };
     TC.boot();
 })();
