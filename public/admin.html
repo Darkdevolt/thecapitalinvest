@@ -34,8 +34,6 @@
             </span>
         </a>
 
-        <!-- Contrôle de santé permanent : le diagnostic vit dans l'interface,
-             pas dans une page à part. Un clic ouvre le détail. -->
         <button class="health-chip" id="health-chip" title="Ouvrir le diagnostic de la base">
             <span class="health-dot busy" id="health-dot"></span>
             <span class="health-text" id="health-text">Contrôle de la base…</span>
@@ -69,7 +67,6 @@
     </div>
 </div>
 
-<!-- Fenêtre modale générique : le contenu est injecté par chaque module -->
 <div class="overlay" id="modal-host">
     <div class="modal">
         <div class="modal-head">
@@ -86,8 +83,7 @@
 </div>
 
 <!-- SheetJS est chargé en arrière-plan : une panne/latence du CDN ne doit jamais
-     bloquer le chargement de tout l'espace d'administration. Les fonctions Excel
-     vérifient elles-mêmes la présence de XLSX au moment de leur utilisation. -->
+     bloquer le chargement de tout l'espace d'administration. -->
 <script>
 (function () {
     var script = document.createElement('script');
@@ -122,6 +118,8 @@
 <script src="/admin/js/modules/import.js?v=2026082201"></script>
 <script src="/admin/js/modules/diagnostic.js?v=2026082201"></script>
 
+<!-- Garde-fou chargé après tous les modules, avant le démarrage. -->
+<script src="/admin/js/core/performance.js?v=2026082301"></script>
 <script>TC.boot();</script>
 </body>
 </html>
