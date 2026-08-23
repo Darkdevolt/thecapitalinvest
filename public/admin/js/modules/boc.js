@@ -41,6 +41,54 @@
         return m ? m[1] + '-' + m[2] + '-' + m[3] : '';
     }
 
+    /**
+     * Selon la version du client Supabase, createSignedUploadUrl renvoie soit
+     * une URL absolue, soit un simple chemin du type
+     * /object/upload/sign/boc_pdfs/… . Envoyé tel quel, ce chemin relatif est
+     * adressé au domaine Vercel, qui répond 404 : le message d'erreur accuse
+     * alors le stockage d'un refus dont il n'est pas responsable.
+     */
+    function signedTarget(prep) {
+        const raw = String((prep && prep.signedUrl) || '');
+        if (!raw) throw new Error('Le serveur n\'a pas fourni d\'URL de téléversement.');
+        if (/^https?:\/\//i.test(raw)) return raw;
+        const base = String(TC.env.SUPABASE_URL || '').replace(/\/+$/, '');
+        const path = raw.replace(/^\/+/, '');
+        return base + (path.indexOf('storage/v1/') === 0 ? '/' : '/storage/v1/') + path;
+    }
+
+    /** Restitue le motif exact renvoyé par le stockage plutôt qu'un code nu. */
+    async function storageError(response, target) {
+        let detail = '';
+        try {
+            const text = await response.text();
+            const parsed = JSON.parse(text);
+            detail = parsed.message || parsed.error || text;
+        } catch (e) { /* corps vide ou non JSON */ }
+
+        const host = (function () {
+            try { return new URL(target).host; } catch (e) { return target; }
+        })();
+
+        if (response.status === 404) {
+            if (host.indexOf('supabase') === -1) {
+                return 'Le téléversement a été adressé à ' + host + ' au lieu du stockage Supabase. ' +
+                    'Rechargez la page pour charger la version corrigée du module.';
+            }
+            return 'Le stockage Supabase a répondu 404' + (detail ? ' : ' + detail : '') +
+                '. Vérifiez le bucket visé dans api/boc-upload.js et la validité du jeton signé.';
+        }
+        if (response.status === 400 && /already exists/i.test(detail)) {
+            return 'Un fichier porte déjà ce chemin dans le stockage.';
+        }
+        if (response.status === 401 || response.status === 403) {
+            return 'Le stockage a refusé l\'autorisation. Vérifiez les politiques du bucket « boc_pdfs ».' +
+                (detail ? ' [' + detail + ']' : '');
+        }
+        if (response.status === 413) return 'Fichier trop volumineux pour le stockage Supabase.';
+        return 'Le stockage a refusé le fichier (HTTP ' + response.status + ')' + (detail ? ' : ' + detail : '.');
+    }
+
     async function load() {
         TC.el('boc-tbody').innerHTML = TC.rowsLoading(5);
         try {
@@ -118,10 +166,16 @@
 
             TC.say('boc-msg', 'Téléversement du document…', 'info');
             fill.style.width = '45%';
-            const put = await fetch(prep.signedUrl, {
-                method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: file
+            const target = signedTarget(prep);
+            /* Le jeton est signé côté serveur avec upsert:false. L'en-tête
+               envoyé ici doit correspondre au jeton, sinon le stockage rejette
+               le téléversement. Le chemin porte un horodatage, il est donc
+               toujours unique : l'écrasement n'a de toute façon pas lieu d'être. */
+            console.log('[BOC] téléversement vers', target.split('?')[0]);
+            const put = await fetch(target, {
+                method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'false' }, body: file
             });
-            if (!put.ok) throw new Error('Le stockage a refusé le fichier (HTTP ' + put.status + ').');
+            if (!put.ok) throw new Error(await storageError(put, target));
 
             TC.say('boc-msg', 'Enregistrement de la référence…', 'info');
             fill.style.width = '80%';
