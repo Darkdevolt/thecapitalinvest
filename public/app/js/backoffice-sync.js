@@ -1,20 +1,15 @@
 /* ============================================================
    THE CAPITAL — BACK-OFFICE / APP BRIDGE
    Le back-office est la source de vérité. Cette couche ne modifie
-   aucune donnée : elle synchronise les données publiques disponibles,
+   aucune donnée : elle synchronise les sources publiques disponibles,
    expose leur fraîcheur et informe les vues lorsqu'une donnée change.
    ============================================================ */
 (function (w) {
   'use strict';
 
   var state = w.TC_BACKOFFICE = w.TC_BACKOFFICE || {
-    status: 'idle',
-    startedAt: null,
-    finishedAt: null,
-    lastSync: null,
-    sources: {},
-    errors: [],
-    version: '1.0.0'
+    status: 'idle', startedAt: null, finishedAt: null, lastSync: null,
+    sources: {}, errors: [], version: '1.1.0'
   };
 
   var sources = {
@@ -22,6 +17,7 @@
     cours: function () { return w.apiGetCours ? w.apiGetCours() : w.apiGet('/marche?type=cours'); },
     indices: function () { return w.apiGetIndices ? w.apiGetIndices() : w.apiGet('/marche?type=indices'); },
     indices_historique: function () { return w.apiGetIndicesHistory ? w.apiGetIndicesHistory(30) : w.apiGet('/marche?type=indices_historique&limit=30'); },
+    dividendes: function () { return w.apiGet('/marche?type=dividendes'); },
     analyses: function () { return w.apiGetAnalyses ? w.apiGetAnalyses() : w.apiGet('/marche?type=analyses'); },
     financials: function () { return w.apiGetFinancials ? w.apiGetFinancials() : w.apiGet('/marche?type=financials'); },
     boc: function () { return w.apiGetBOC ? w.apiGetBOC() : w.apiGet('/boc'); },
@@ -42,7 +38,8 @@
   }
 
   async function sync(options) {
-    if (state.status === 'loading' && !options?.force) return state;
+    options = options || {};
+    if (state.status === 'loading' && !options.force) return state;
     state.status = 'loading';
     state.startedAt = new Date().toISOString();
     state.errors = [];
@@ -57,7 +54,11 @@
       var key = keys[i];
       if (result.status === 'fulfilled') save(key, result.value);
       else {
-        state.sources[key] = { ok: false, fetchedAt: new Date().toISOString(), error: String(result.reason && result.reason.message || result.reason || 'Erreur inconnue') };
+        state.sources[key] = {
+          ok: false,
+          fetchedAt: new Date().toISOString(),
+          error: String(result.reason && result.reason.message || result.reason || 'Erreur inconnue')
+        };
         state.errors.push({ source: key, error: state.sources[key].error });
       }
     });
@@ -84,12 +85,8 @@
   w.tcBackofficeData = get;
   w.tcBackofficeFreshness = freshness;
 
-  // Synchronisation légère après le rendu initial : elle ne bloque jamais
-  // l'ouverture de l'application.
-  function start() {
-    setTimeout(function () { sync(); }, 0);
-  }
-
+  // Synchronisation après le premier rendu : elle ne bloque jamais l'ouverture.
+  function start() { setTimeout(function () { sync(); }, 0); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
   else start();
 })(window);
