@@ -85,8 +85,20 @@
     </div>
 </div>
 
-<!-- Moteur Excel : chargé une seule fois, utilisé par l'import et les modèles -->
-<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<!-- SheetJS est chargé en arrière-plan : une panne/latence du CDN ne doit jamais
+     bloquer le chargement de tout l'espace d'administration. Les fonctions Excel
+     vérifient elles-mêmes la présence de XLSX au moment de leur utilisation. -->
+<script>
+(function () {
+    var script = document.createElement('script');
+    script.src = 'https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js';
+    script.async = true;
+    script.onerror = function () {
+        console.warn('[TC] Moteur Excel indisponible : le reste de l’administration reste accessible.');
+    };
+    document.head.appendChild(script);
+})();
+</script>
 
 <script src="/js/env.js"></script>
 <script src="/admin/js/core/config.js?v=2026082201"></script>
