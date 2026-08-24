@@ -3,9 +3,22 @@
 function atLoadModernTheme(){
   if(!document.getElementById('atModernCss')){const link=document.createElement('link');link.id='atModernCss';link.rel='stylesheet';link.href='/app/css/technique-modern.css';document.head.appendChild(link)}
   if(!document.getElementById('atExperienceCss')){const link=document.createElement('link');link.id='atExperienceCss';link.rel='stylesheet';link.href='/app/css/technique-experience.css';document.head.appendChild(link)}
-  if(!document.getElementById('atExperienceJs')){const s=document.createElement('script');s.id='atExperienceJs';s.src='/app/js/views/technique/experience.js';s.onload=()=>window.atInitExperience?.();document.head.appendChild(s)} else window.atInitExperience?.();
-  if(!document.getElementById('atHistoryBridgeJs')){const s=document.createElement('script');s.id='atHistoryBridgeJs';s.src='/app/js/views/technique/data-bridge.js';document.head.appendChild(s)}
-  if(!document.getElementById('atProToolsJs')){const s=document.createElement('script');s.id='atProToolsJs';s.src='/app/js/views/technique/pro-tools.js';s.onload=()=>window.atInitProTools?.();document.head.appendChild(s)} else window.atInitProTools?.();
+  // Les trois modules complementaires — experience, data-bridge et pro-tools —
+  // etaient injectes ici par createElement('script'). Trois consequences :
+  //
+  //   1. Chacun enveloppe atLoadTicker et atRender. L'ordre d'enveloppement
+  //      dependait de la latence reseau, donc du jour : la chaine d'appels
+  //      n'etait jamais deux fois la meme.
+  //   2. experience.js etait charge deux fois, ici sans version et par
+  //      init.js avec ?v=3. Deux URL distinctes, donc deux evaluations que
+  //      la garde par identifiant DOM ne pouvait pas rattraper.
+  //   3. Un module absent ou lent laissait la vue dans un etat intermediaire
+  //      sans que rien ne le signale.
+  //
+  // Ils sont desormais declares dans app.html, dans un ordre fixe. Il ne
+  // reste ici qu'a declencher leur initialisation, si elle existe.
+  if(typeof window.atInitExperience==='function')window.atInitExperience();
+  if(typeof window.atInitProTools==='function')window.atInitProTools();
 }
 function atInstallThemeToggle(){
   const view=document.getElementById('view-analyse-technique'),toolbar=view?.querySelector('.at-toolbar');if(!view||!toolbar||document.getElementById('atThemeToggle'))return;
