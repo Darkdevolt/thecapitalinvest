@@ -1,0 +1,59 @@
+/* THE CAPITAL — Analyse technique : expérience Simple / Pro */
+#view-analyse-technique{--at-control-h:34px}
+#view-analyse-technique .at-mode-control{display:flex;align-items:center;gap:7px;margin-left:auto;padding-left:9px;border-left:1px solid var(--border2);white-space:nowrap}
+#view-analyse-technique .at-mode-label{font:600 8px var(--mono);letter-spacing:.1em;color:var(--dim)}
+#view-analyse-technique .at-mode-switch{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--border2);background:var(--card);border-radius:999px;padding:3px 7px;min-height:30px;cursor:pointer;color:var(--dim);touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#view-analyse-technique .at-mode-option{font:600 9px var(--sans);transition:.15s}
+#view-analyse-technique .at-mode-option.active{color:var(--gold)}
+#view-analyse-technique .at-mode-track{width:30px;height:16px;border-radius:99px;background:rgba(184,150,78,.14);border:1px solid var(--border2);position:relative}
+#view-analyse-technique .at-mode-thumb{position:absolute;width:12px;height:12px;top:1px;left:1px;border-radius:50%;background:var(--dim);transition:.18s}
+#view-analyse-technique.at-pro .at-mode-thumb{left:15px;background:var(--gold)}
+#view-analyse-technique .at-mode-help{width:16px;height:16px;border:1px solid var(--border2);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:600 9px var(--mono);color:var(--dim);cursor:help}
+#view-analyse-technique.at-simple .at-tb-group:has(#atBtnHA),#view-analyse-technique.at-simple .at-tb-group:has(#atBtnBar){display:none}
+#view-analyse-technique.at-simple .at-tb-group:has([onclick="atCompare()"]),#view-analyse-technique.at-simple .at-tb-group:has([onclick="atExportPNG()"]),#view-analyse-technique.at-simple .at-tb-group:has([onclick="atExportReport()"]),#view-analyse-technique.at-simple .at-tb-group:has([onclick="atToggleFocus()"]){display:none}
+#view-analyse-technique.at-simple .at-drawtb{display:none}
+#view-analyse-technique.at-simple .at-left{display:none}
+#view-analyse-technique.at-simple .at-right{width:205px}
+#view-analyse-technique.at-simple .at-right .at-ind-item:nth-child(n+5){display:none}
+#view-analyse-technique.at-simple .at-right:before{content:'Lecture essentielle';display:block;padding:10px 12px 2px;font:600 9px var(--mono);color:var(--gold);letter-spacing:.08em}
+#view-analyse-technique.at-pro .at-toolbar{box-shadow:inset 0 -1px 0 rgba(184,150,78,.08)}
+#view-analyse-technique.at-pro .at-drawtb{display:flex}
+#view-analyse-technique.at-pro .at-left{display:flex}
+#view-analyse-technique.at-pro .at-right{width:250px}
+#view-analyse-technique.at-pro .at-draw-hint{margin-left:auto;font:500 9px var(--mono);color:var(--dim);padding-right:6px;white-space:nowrap}
+#view-analyse-technique.at-pro .at-tool{transition:.12s;position:relative}
+#view-analyse-technique.at-pro .at-tool:hover:after{content:attr(title);position:absolute;left:40px;top:50%;transform:translateY(-50%);z-index:300;background:var(--surface);border:1px solid var(--border2);border-radius:6px;padding:5px 8px;color:var(--cream);font:500 9px var(--sans);white-space:nowrap;box-shadow:0 8px 20px rgba(0,0,0,.18)}
+#view-analyse-technique.at-pro .at-btn{position:relative}
+#view-analyse-technique.at-pro .at-btn:focus-visible,#view-analyse-technique.at-pro .at-tool:focus-visible{outline:2px solid rgba(184,150,78,.45);outline-offset:2px}
+#view-analyse-technique.at-light .at-mode-switch{background:#fff;border-color:#d7dde3}
+#view-analyse-technique.at-light .at-mode-option.active{color:#8b6a2b}
+#view-analyse-technique.at-light .at-mode-track{background:#eee9df;border-color:#d7c9ac}
+#view-analyse-technique.at-light .at-mode-thumb{background:#6d7884}
+#view-analyse-technique.at-light.at-pro .at-mode-thumb{background:#8b6a2b}
+@media(max-width:900px){
+ #view-analyse-technique .at-mode-control{order:-1;margin-left:0;border-left:0;padding-left:0;width:100%;justify-content:space-between;border-bottom:1px solid var(--border2);padding-bottom:7px}
+ #view-analyse-technique .at-mode-switch{flex:0 0 auto}
+ #view-analyse-technique.at-simple .at-right{width:190px}
+ #view-analyse-technique.at-pro .at-right{width:210px}
+}
+@media(max-width:600px){
+ #view-analyse-technique .at-mode-control{position:sticky;top:0;z-index:80;background:var(--surface);padding:6px 0}
+ #view-analyse-technique .at-mode-help{display:none}
+ #view-analyse-technique .at-mode-switch{min-height:44px;padding:5px 10px;min-width:132px}
+ #view-analyse-technique .at-mode-option{font-size:10px}
+ #view-analyse-technique .at-mode-track{width:34px;height:18px}
+ #view-analyse-technique .at-mode-thumb{width:14px;height:14px}
+ #view-analyse-technique.at-pro .at-mode-thumb{left:17px}
+ #view-analyse-technique.at-simple .at-right,#view-analyse-technique.at-pro .at-right{width:100%;max-height:230px;border-left:0;border-top:1px solid var(--border2)}
+ #view-analyse-technique.at-pro .at-draw-hint{display:none}
+ /* Le mode Pro doit réellement exposer les outils avancés sur mobile. */
+ #view-analyse-technique.at-pro .at-left{display:flex;width:42px;padding:7px 0;flex:0 0 42px}
+ #view-analyse-technique.at-pro .at-drawtb{display:flex;min-height:44px;overflow-x:auto}
+ #view-analyse-technique.at-pro .at-drawtb .at-btn{min-width:max-content;min-height:42px}
+}
+@media(max-width:360px){
+ #view-analyse-technique .at-mode-control{gap:5px}
+ #view-analyse-technique .at-mode-label{font-size:7px}
+ #view-analyse-technique .at-mode-switch{min-width:124px;padding-left:7px;padding-right:7px}
+ #view-analyse-technique.at-pro .at-drawtb .at-btn{font-size:9px;padding-left:8px;padding-right:8px}
+}

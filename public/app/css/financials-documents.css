@@ -1,0 +1,53 @@
+/** THE CAPITAL — Publications officielles côté application. Namespace `fdoc-`. */
+
+.fdoc-card {
+  background: var(--panel, #121210);
+  border: 1px solid var(--border, rgba(255,255,255,.09));
+  border-radius: 10px; padding: 16px 18px; margin-top: 16px;
+}
+.fdoc-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 8px; }
+.fdoc-title { font-size: 13px; font-weight: 600; letter-spacing: .4px; color: var(--text, #f2eee4); }
+.fdoc-sub {
+  font-size: 11px; color: var(--dim, #9a978f); margin-left: auto;
+  font-family: var(--mono, ui-monospace, monospace);
+}
+.fdoc-note {
+  font-size: 12px; line-height: 1.6; color: var(--dim, #9a978f);
+  max-width: 80ch; margin: 0 0 14px;
+}
+
+.fdoc-annee { margin-bottom: 14px; }
+.fdoc-annee-titre {
+  font-family: var(--mono, ui-monospace, monospace); font-size: 12px;
+  color: var(--gold, #b8964e); margin-bottom: 6px; letter-spacing: 1px;
+}
+.fdoc-liste { display: flex; flex-direction: column; gap: 6px; }
+
+.fdoc-item {
+  display: grid; grid-template-columns: auto 1fr auto auto;
+  align-items: center; gap: 12px;
+  padding: 9px 12px; border-radius: 7px; text-decoration: none;
+  background: var(--surface, rgba(255,255,255,.025));
+  border: 1px solid var(--border, rgba(255,255,255,.07));
+  color: inherit;
+}
+.fdoc-item:hover { background: rgba(255,255,255,.05); border-color: rgba(184,150,78,.35); }
+
+.fdoc-type {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .6px;
+  color: var(--gold, #b8964e); background: rgba(184,150,78,.12);
+  padding: 2px 8px; border-radius: 20px; white-space: nowrap;
+}
+.fdoc-nom {
+  font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fdoc-meta { font-size: 11px; color: var(--dim, #9a978f); white-space: nowrap; }
+.fdoc-fleche {
+  font-size: 11px; font-weight: 600; color: var(--gold, #b8964e);
+  font-family: var(--mono, ui-monospace, monospace);
+}
+
+@media (max-width: 620px) {
+  .fdoc-item { grid-template-columns: 1fr auto; gap: 6px 10px; }
+  .fdoc-type { grid-column: 1 / -1; justify-self: start; }
+}

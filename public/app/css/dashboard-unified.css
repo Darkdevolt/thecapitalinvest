@@ -1,0 +1,394 @@
+/*
+ * THE CAPITAL — Dashboard Unified Design Layer
+ * Presentation only: no data, API, navigation or business logic changes.
+ * Loaded last so it harmonises the existing dashboard without replacing
+ * the established component styles.
+ */
+
+/* ---------- Design tokens ---------- */
+#view-overview {
+  --dash-gap: 18px;
+  --dash-radius: 12px;
+  --dash-radius-sm: 9px;
+  --dash-border: rgba(184,150,78,.15);
+  --dash-border-soft: rgba(184,150,78,.08);
+  --dash-surface: rgba(22,19,13,.96);
+  --dash-surface-2: rgba(26,22,16,.96);
+}
+
+/* ---------- Page frame ---------- */
+#view-overview.view {
+  padding: 28px 32px 44px;
+}
+
+#view-overview .page-header {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--dash-border-soft);
+}
+
+#view-overview .page-header h1 {
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -.01em;
+}
+
+#view-overview .page-header p {
+  margin-top: 5px;
+  max-width: 760px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* ---------- Every dashboard card follows one visual language ---------- */
+#view-overview > .card,
+#view-overview .dashboard-news,
+#view-overview .tci-card,
+#view-overview .stat-card {
+  background: var(--dash-surface);
+  border: 1px solid var(--dash-border);
+  border-radius: var(--dash-radius);
+  box-shadow: 0 10px 28px rgba(0,0,0,.14);
+}
+
+#view-overview > .card,
+#view-overview .dashboard-news,
+#view-overview .tci-card {
+  margin-bottom: var(--dash-gap);
+}
+
+#view-overview .card-header,
+#view-overview .dashboard-news-head,
+#view-overview .tci-head {
+  min-height: 52px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--dash-border-soft);
+}
+
+#view-overview .card-title,
+#view-overview .tci-title {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+#view-overview .card-body,
+#view-overview .tci-card {
+  padding: 18px;
+}
+
+/* ---------- KPI row ---------- */
+#view-overview #overviewStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  gap: var(--dash-gap);
+  margin-bottom: var(--dash-gap);
+}
+
+#view-overview #overviewStats .stat-card {
+  min-height: 132px;
+  padding: 18px 18px 16px;
+}
+
+#view-overview #overviewStats .stat-card::before {
+  height: 1px;
+  opacity: .9;
+}
+
+#view-overview .stat-label {
+  margin-bottom: 12px;
+  font-size: 9px;
+  letter-spacing: .13em;
+}
+
+#view-overview .stat-value {
+  font-size: 24px;
+  line-height: 1.05;
+}
+
+#view-overview .stat-change {
+  margin-top: 8px;
+  font-size: 11px;
+}
+
+/* ---------- Market status ---------- */
+#view-overview .market-status,
+#view-overview .header-badge {
+  border-radius: 999px;
+  font-size: 10px;
+  letter-spacing: .07em;
+}
+
+/* ---------- Charts ---------- */
+#view-overview .chart-container {
+  min-height: 220px;
+}
+
+#view-overview .chart-tabs,
+#view-overview .movers-tabs {
+  border: 1px solid var(--dash-border-soft);
+  background: rgba(184,150,78,.045);
+  border-radius: 8px;
+  padding: 3px;
+}
+
+#view-overview .chart-tabs .year-tab,
+#view-overview .mover-filter {
+  border-radius: 6px;
+  min-height: 30px;
+  padding: 6px 10px;
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: .07em;
+  transition: background .16s ease, color .16s ease, border-color .16s ease;
+}
+
+#view-overview .chart-tabs .year-tab.active,
+#view-overview .mover-filter.active {
+  background: var(--surface);
+  color: var(--gold);
+}
+
+/* ---------- Heatmap ---------- */
+#view-overview .heatmap-cell {
+  min-height: 76px;
+  padding: 12px 13px;
+  background: var(--dash-surface-2);
+  border: 1px solid var(--dash-border-soft);
+  border-left-width: 2px;
+  border-radius: var(--dash-radius-sm);
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+
+#view-overview .heatmap-cell:hover {
+  transform: translateY(-1px);
+  border-color: var(--dash-border);
+  background: rgba(30,27,19,.98);
+}
+
+#view-overview .hm-name {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .03em;
+}
+
+#view-overview .hm-value {
+  margin-top: 5px;
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+#view-overview .hm-count {
+  margin-top: 3px;
+  font-size: 9px;
+  color: var(--dim);
+}
+
+/* ---------- Movers ---------- */
+#view-overview .movers-header {
+  min-height: 52px;
+}
+
+#view-overview .mover-row {
+  padding: 11px 2px;
+}
+
+#view-overview .mover-row:last-child {
+  border-bottom: 0;
+}
+
+#view-overview .mover-symbol,
+#view-overview .mover-price,
+#view-overview .mover-change {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- News / feeds ---------- */
+#view-overview .dashboard-news {
+  overflow: hidden;
+}
+
+#view-overview .dashboard-news-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+#view-overview .dashboard-news-grid {
+  display: grid;
+  grid-template-columns: repeat(3,minmax(0,1fr));
+  gap: 0;
+}
+
+#view-overview .news-item {
+  min-height: 128px;
+  padding: 16px 18px;
+  border-right: 1px solid var(--dash-border-soft);
+  transition: background .16s ease;
+}
+
+#view-overview .news-item:last-child {
+  border-right: 0;
+}
+
+#view-overview .news-item:hover {
+  background: rgba(184,150,78,.035);
+}
+
+#view-overview .news-title {
+  margin-top: 9px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--cream);
+}
+
+#view-overview .news-meta {
+  margin-top: 9px;
+  font-size: 9px;
+  line-height: 1.4;
+  color: var(--dim);
+}
+
+#view-overview .news-refresh {
+  appearance: none;
+  border: 1px solid var(--dash-border-soft);
+  background: transparent;
+  color: var(--muted);
+  border-radius: 7px;
+  padding: 7px 10px;
+  font: 500 9px var(--sans);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+#view-overview .news-refresh:hover {
+  border-color: var(--gold-dim);
+  color: var(--gold);
+  background: rgba(184,150,78,.04);
+}
+
+/* ---------- Generic dashboard tables ---------- */
+#view-overview table {
+  font-size: 12px;
+}
+
+#view-overview thead th {
+  padding: 10px 12px;
+  font-size: 9px;
+  letter-spacing: .1em;
+}
+
+#view-overview tbody td {
+  padding: 10px 12px;
+}
+
+#view-overview tbody tr:hover {
+  background: rgba(184,150,78,.035);
+}
+
+/* ---------- Buttons / filters ---------- */
+#view-overview button,
+#view-overview .filter-btn {
+  font-family: var(--sans);
+}
+
+#view-overview .filter-btn {
+  border-radius: 7px;
+}
+
+/* ---------- Existing insight cards: bring them onto the same baseline ---------- */
+#view-overview .tci-card {
+  border-radius: var(--dash-radius);
+  background: var(--dash-surface);
+}
+
+#view-overview .tci-title {
+  color: var(--muted);
+}
+
+#view-overview .tci-sub,
+#view-overview .tci-label,
+#view-overview .tci-unit,
+#view-overview .tci-watch-name,
+#view-overview .tci-contrib-label {
+  color: var(--dim);
+}
+
+#view-overview .tci-value {
+  font-family: var(--mono);
+  font-size: 20px;
+  font-weight: 500;
+}
+
+#view-overview .tci-watch-row {
+  padding: 10px 6px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 1050px) {
+  #view-overview #overviewStats {
+    grid-template-columns: repeat(3,minmax(0,1fr));
+    gap: 12px;
+  }
+  #view-overview .dashboard-news-grid {
+    grid-template-columns: 1fr;
+  }
+  #view-overview .news-item {
+    min-height: 0;
+    border-right: 0;
+    border-bottom: 1px solid var(--dash-border-soft);
+  }
+  #view-overview .news-item:last-child {
+    border-bottom: 0;
+  }
+}
+
+@media (max-width: 760px) {
+  #view-overview.view {
+    padding: 20px 14px 32px;
+  }
+  #view-overview .page-header {
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+  }
+  #view-overview .page-header h1 {
+    font-size: 23px;
+  }
+  #view-overview #overviewStats {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  #view-overview #overviewStats .stat-card {
+    min-height: 112px;
+  }
+  #view-overview .card-header,
+  #view-overview .dashboard-news-head,
+  #view-overview .tci-head {
+    padding: 13px 14px;
+  }
+  #view-overview .card-body,
+  #view-overview .tci-card {
+    padding: 14px;
+  }
+  #view-overview .chart-container {
+    min-height: 190px;
+  }
+}
+
+@media (max-width: 480px) {
+  #view-overview.view {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+  #view-overview .stat-value {
+    font-size: 21px;
+  }
+  #view-overview .news-item {
+    padding: 14px;
+  }
+}
