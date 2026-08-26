@@ -1,8 +1,9 @@
 // ═══════════════════════════════════════
 // COMPONENTS, The Capital BRVM
 // ═══════════════════════════════════════
-// Les formatters, toast et debounce appartiennent à utils.js.
-// Ce module ne conserve que les composants UI spécifiques.
+// Les formatters, toast, debounce et recherche globale ont chacun une source
+// unique dans utils.js / search.js. Ce module contient uniquement les
+// composants HTML réutilisables de l'application.
 (function(){
   'use strict';
 
@@ -35,8 +36,9 @@
     const ent = (window.entMap && window.entMap[c.ticker]) || null;
     const nom = ent && ent.nom ? ent.nom : '';
     const displaySector = ent && ent.secteur ? ent.secteur : sector;
+    const tickerArg = String(c.ticker || '').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
 
-    let html = '<tr onclick="openFiche(\''+ticker.replace(/'/g,'\\\'')+'\')">';
+    let html = '<tr onclick="openFiche(\''+esc(tickerArg)+'\')">';
     html += '<td class="ticker-cell">'+ticker+'</td>';
     if(opts.showCompany) html += '<td class="company-cell">'+esc(nom)+'</td>';
     html += '<td class="price-cell right">'+esc(fmt(c.cours,0))+'</td>';
@@ -51,55 +53,5 @@
     return html;
   };
 
-  window.initGlobalSearch = window.initGlobalSearch || function(){
-    const input=document.getElementById('globalSearchInput') || document.getElementById('globalSearch');
-    const results=document.getElementById('globalSearchResults');
-    if(!input || !results || input.dataset.tcSearchBound==='1') return;
-    input.dataset.tcSearchBound='1';
-
-    input.addEventListener('input',window.debounce(function(e){
-      const q=String(e.target.value||'').toLowerCase().trim();
-      if(!q){ results.classList.remove('open'); results.innerHTML=''; return; }
-
-      const matches=(Array.isArray(window.allCours)?window.allCours:[]).filter(function(c){
-        const ent=window.entMap && window.entMap[c.ticker];
-        return c && c.ticker && (
-          String(c.ticker).toLowerCase().includes(q) ||
-          Boolean(ent && ent.nom && String(ent.nom).toLowerCase().includes(q))
-        );
-      }).slice(0,8);
-
-      if(!matches.length){
-        results.innerHTML='<div class="gsr-item"><span class="gsr-name">Aucun résultat</span></div>';
-      }else{
-        results.innerHTML=matches.map(function(c){
-          const ent=window.entMap && window.entMap[c.ticker];
-          const ticker=esc(c.ticker);
-          const name=ent && ent.nom ? ', '+esc(ent.nom) : '';
-          const sector=ent && ent.secteur ? esc(ent.secteur) : 'Autre';
-          const safeTicker=String(c.ticker).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-          return '<div class="gsr-item" data-ticker="'+ticker+'">'+
-            '<div><span class="gsr-ticker">'+ticker+'</span><span class="gsr-name">'+name+'</span></div>'+
-            '<span class="gsr-sector">'+sector+'</span></div>';
-        }).join('');
-
-        results.querySelectorAll('[data-ticker]').forEach(function(item){
-          item.addEventListener('click',function(){
-            const ticker=item.getAttribute('data-ticker');
-            if(typeof window.openFiche==='function') window.openFiche(ticker);
-            results.classList.remove('open');
-          });
-        });
-      }
-      results.classList.add('open');
-    },200));
-
-    document.addEventListener('click',function(e){
-      if(!e.target.closest('.global-search')) results.classList.remove('open');
-    });
-  };
-
-  // Initialisation différée pour garantir que le DOM et les données sont prêts.
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',window.initGlobalSearch,{once:true});
-  else window.initGlobalSearch();
+  console.log('[COMPONENTS] Composants chargés, responsabilités consolidées');
 })();
