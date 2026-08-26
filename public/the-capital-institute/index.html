@@ -4,50 +4,43 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Capital Institute — Apprendre la bourse à partir de la BRVM</title>
-<meta name="description" content="Academie de formation boursiere ancree sur la BRVM et l'UEMOA : six parcours, trente-quatre lecons, quatre-vingt-huit questions et sept calculateurs.">
-<meta name="theme-color" content="#0e0c09">
-
+<meta name="description" content="Académie de formation boursière ancrée sur la BRVM et l'UEMOA : six parcours, trente-quatre leçons, quatre-vingt-huit questions et sept calculateurs.">
+<meta name="theme-color" content="#0b0b0a">
+<meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/institute.css">
+<link rel="stylesheet" href="css/institute-integration.css">
 </head>
 <body>
-
 <header class="tci-head">
   <div class="tci-head-in">
-    <button class="tci-logo" data-nav="accueil">
+    <button class="tci-logo" data-nav="accueil" aria-label="Accueil The Capital Institute">
       <strong>The Capital Institute</strong>
-      <span>Academie BRVM</span>
+      <span>Académie BRVM</span>
     </button>
-    <nav class="tci-nav">
+    <nav class="tci-nav" aria-label="Navigation de l'Institute">
       <button data-nav="accueil">Parcours</button>
       <button data-nav="glossaire">Glossaire</button>
       <button data-nav="outils">Calculateurs</button>
       <button data-nav="progression">Ma progression</button>
     </nav>
   </div>
-  <div class="tci-progres-w">
+  <div class="tci-progres-w" aria-label="Progression globale">
     <div id="tciProgres" style="width:0"></div>
     <span class="tci-progres-t" id="tciProgresTexte"></span>
   </div>
 </header>
-
-<main id="tciVue"></main>
-
+<main id="tciVue" aria-live="polite"></main>
 <footer class="tci-pied">
-  <p>
-    The Capital Institute est un support de formation. Il ne constitue pas un conseil en investissement,
-    ne recommande aucun titre et ne garantit aucun rendement. Les decisions d'investissement et leurs
-    consequences relevent de la seule responsabilite de celui qui les prend. Verifiez toujours qu'un
-    intermediaire est agree par le regulateur regional avant de lui confier des fonds.
-  </p>
+  <p>The Capital Institute est un support de formation. Il ne constitue pas un conseil en investissement, ne recommande aucun titre et ne garantit aucun rendement. Les décisions d'investissement et leurs conséquences relèvent de la seule responsabilité de celui qui les prend. Vérifiez toujours qu'un intermédiaire est agréé par le régulateur régional avant de lui confier des fonds.</p>
 </footer>
-
 <script src="js/curriculum-1.js"></script>
 <script src="js/curriculum-2.js"></script>
 <script src="js/glossaire.js"></script>
 <script src="js/outils.js"></script>
 <script src="js/app.js"></script>
+<script src="js/integration.js"></script>
 </body>
 </html>
