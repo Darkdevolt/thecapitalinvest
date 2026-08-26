@@ -95,6 +95,13 @@
     // existing views remain untouched while the fixes are independently cache-busted.
     loadScript('app/js/views/overview-fixes.js?v=1');
 
+    // Complete historical-data bridge for Technical Analysis.
+    // It uses the existing public /api/marche?type=historique endpoint and
+    // loads the selected ticker explicitly. This is intentionally loaded here
+    // rather than only from the technical view so it is installed before a
+    // user switches from the default ABJC ticker to another BRVM security.
+    loadScript('app/js/views/technique/data-bridge.js?v=20260826');
+
     // The technical experience is independent: it must never wait for
     // portfolio/fundamental enhancements before becoming interactive.
     // technique-experience.css habillait le sélecteur Simple/Pro de
