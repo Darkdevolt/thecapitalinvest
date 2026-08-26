@@ -20,6 +20,7 @@
     _pubFilter: 'all', _sortState: {}, _fundMethod: 'tcam'
   };
 
+  const stateKeys = Object.keys(initialState);
   const listeners = new Map();
   const store = new Proxy(initialState, {
     set(target, prop, value){
@@ -46,19 +47,22 @@
     }
   });
 
-  store.get = key => store[key];
-  store.set = (key, value) => { store[key] = value; return value; };
-  store.subscribe = function(key, callback){
-    if(typeof callback !== 'function') return function(){};
-    if(!listeners.has(key)) listeners.set(key, new Set());
-    listeners.get(key).add(callback);
-    return function(){ listeners.get(key)?.delete(callback); };
-  };
-  store.snapshot = () => JSON.parse(JSON.stringify(store));
+  // Non-enumerable API : elle ne devient jamais une propriété window.*.
+  Object.defineProperties(store, {
+    get: { value: key => store[key] },
+    set: { value: (key, value) => { store[key] = value; return value; } },
+    subscribe: { value: function(key, callback){
+      if(typeof callback !== 'function') return function(){};
+      if(!listeners.has(key)) listeners.set(key, new Set());
+      listeners.get(key).add(callback);
+      return function(){ listeners.get(key)?.delete(callback); };
+    }},
+    snapshot: { value: () => JSON.parse(JSON.stringify(store)) }
+  });
   window.tcStore = store;
 
   // Compatibilité transparente : toute écriture window.* est synchronisée.
-  Object.keys(initialState).forEach(function(key){
+  stateKeys.forEach(function(key){
     try {
       Object.defineProperty(window, key, {
         configurable: true, enumerable: true,
