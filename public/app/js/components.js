@@ -1,178 +1,105 @@
 // ═══════════════════════════════════════
-// UTILITAIRES & COMPONENTS (CORRIGÉ, protégé contre redéclaration)
+// COMPONENTS, The Capital BRVM
 // ═══════════════════════════════════════
-// Ce fichier est chargé APRÈS utils.js, donc les fonctions peuvent déjà exister.
-// On utilise des gardes pour éviter "Identifier 'xxx' has already been declared"
+// Les formatters, toast et debounce appartiennent à utils.js.
+// Ce module ne conserve que les composants UI spécifiques.
+(function(){
+  'use strict';
 
-// ─── FORMATTERS (protégés) ───────────────────────────────────────────────────
-if (typeof window.fmt === 'undefined') {
-  window.fmt = function(n, d) {
-    if (n == null || isNaN(n)) return ', ';
-    d = d || 0;
-    return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+  function esc(value){
+    return typeof window.escapeHtml === 'function'
+      ? window.escapeHtml(value)
+      : String(value == null ? '' : value)
+          .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+          .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+  }
+
+  window.emptyState = window.emptyState || function(msg){
+    return '<tr><td colspan="99" class="tc-empty">'+esc(msg || 'Aucune donnée')+'</td></tr>';
   };
-}
 
-if (typeof window.fmtM === 'undefined') {
-  window.fmtM = function(n) {
-    if (n == null || isNaN(n)) return ', ';
-    if (Math.abs(n) >= 1e9) return fmt(n / 1e9, 2) + ' Mds';
-    if (Math.abs(n) >= 1e6) return fmt(n / 1e6, 2) + ' M';
-    if (Math.abs(n) >= 1e3) return fmt(n / 1e3, 2) + ' K';
-    return fmt(n, 0);
-  };
-}
-
-if (typeof window.fmtDate === 'undefined') {
-  window.fmtDate = function(d) {
-    if (!d) return ', ';
-    const date = new Date(d);
-    if (isNaN(date)) return String(d);
-    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-  };
-}
-
-// ─── SECTOR & PAYS HELPERS (protégés) ─────────────────────────────────────────
-if (typeof window.getSector === 'undefined') {
-  window.getSector = function(ticker) {
-    const e = (typeof entMap !== 'undefined' && entMap) ? entMap[ticker] : null;
-    const s = e && e.secteur ? e.secteur : 'Autre';
-    return s.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^-a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '');
-  };
-}
-
-if (typeof window.getPays === 'undefined') {
-  window.getPays = function(ticker) {
-    const e = (typeof entMap !== 'undefined' && entMap) ? entMap[ticker] : null;
+  window.getPays = window.getPays || function(ticker){
+    const e = (window.entMap && window.entMap[ticker]) || null;
     return (e && e.pays) || 'UEMOA';
   };
-}
 
-// ─── EMPTY STATE (protégé) ───────────────────────────────────────────────────
-if (typeof window.emptyState === 'undefined') {
-  window.emptyState = function(msg) {
-    return '<tr><td colspan="99" class="tc-empty">' + (msg || 'Aucun donnée') + '</td></tr>';
-  };
-}
-
-// ─── TICKER ROW (protégé) ──────────────────────────────────────────────────────
-if (typeof window.tickerRow === 'undefined') {
-  window.tickerRow = function(c, opts) {
+  window.tickerRow = window.tickerRow || function(c, opts){
     opts = opts || {};
+    c = c || {};
+    const ticker = esc(c.ticker || '');
     const v = parseFloat(c.variation) || 0;
     const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
     const sign = v > 0 ? '+' : '';
-    const sector = getSector(c.ticker);
-    const sectorClass = sector.replace(/[^a-z-]/g, '');
-    const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[c.ticker] : null;
+    const sector = typeof window.getSector === 'function' ? window.getSector(c.ticker) : 'Divers';
+    const sectorClass = esc(String(sector).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9-]/g,''));
+    const ent = (window.entMap && window.entMap[c.ticker]) || null;
     const nom = ent && ent.nom ? ent.nom : '';
-    const pays = getPays(c.ticker);
+    const displaySector = ent && ent.secteur ? ent.secteur : sector;
 
-    let html = '<tr onclick="openFiche(\'' + c.ticker + '\')">' +
-      '<td class="ticker-cell">' + c.ticker + '</td>';
-
-    if (opts.showCompany) {
-      html += '<td class="company-cell">' + nom + '</td>';
+    let html = '<tr onclick="openFiche(\''+ticker.replace(/'/g,'\\\'')+'\')">';
+    html += '<td class="ticker-cell">'+ticker+'</td>';
+    if(opts.showCompany) html += '<td class="company-cell">'+esc(nom)+'</td>';
+    html += '<td class="price-cell right">'+esc(fmt(c.cours,0))+'</td>';
+    html += '<td class="var-cell right"><span class="pill '+cls+'">'+sign+v.toFixed(2)+'%</span></td>';
+    if(opts.show52Week){
+      html += '<td class="right mono">'+esc(c.high_52 || ', ')+'</td>';
+      html += '<td class="right mono">'+esc(c.low_52 || ', ')+'</td>';
     }
-
-    html += '<td class="price-cell right">' + fmt(c.cours, 0) + '</td>' +
-      '<td class="var-cell right"><span class="pill ' + cls + '">' + sign + v.toFixed(2) + '%</span></td>';
-
-    if (opts.show52Week) {
-      html += '<td class="right mono">' + (c.high_52 || ', ') + '</td>' +
-        '<td class="right mono">' + (c.low_52 || ', ') + '</td>';
-    }
-
-    html += '<td class="vol-cell right">' + fmt(c.volume) + '</td>';
-
-    if (opts.showCapital) {
-      html += '<td class="cap-cell right">' + (c.capitalisation ? fmtM(c.capitalisation) : ', ') + '</td>';
-    }
-
-    html += '<td class="sector-cell right"><span class="sector-badge ' + sectorClass + '">' + (ent && ent.secteur ? ent.secteur : 'Autre') + '</span></td>' +
-      '</tr>';
-
+    html += '<td class="vol-cell right">'+esc(fmt(c.volume))+'</td>';
+    if(opts.showCapital) html += '<td class="cap-cell right">'+esc(c.capitalisation ? fmtM(c.capitalisation) : ', ')+'</td>';
+    html += '<td class="sector-cell right"><span class="sector-badge '+sectorClass+'">'+esc(displaySector)+'</span></td></tr>';
     return html;
   };
-}
 
-// ─── TOAST (protégé) ──────────────────────────────────────────────────────────
-if (typeof window.toast === 'undefined') {
-  window.toast = function(msg, type) {
-    type = type || 'info';
-    const container = document.querySelector('.toast-container') || (function() {
-      const el = document.createElement('div');
-      el.className = 'toast-container';
-      document.body.appendChild(el);
-      return el;
-    })();
+  window.initGlobalSearch = window.initGlobalSearch || function(){
+    const input=document.getElementById('globalSearchInput') || document.getElementById('globalSearch');
+    const results=document.getElementById('globalSearchResults');
+    if(!input || !results || input.dataset.tcSearchBound==='1') return;
+    input.dataset.tcSearchBound='1';
 
-    const t = document.createElement('div');
-    t.className = 'toast ' + type;
-    t.textContent = msg;
-    container.appendChild(t);
+    input.addEventListener('input',window.debounce(function(e){
+      const q=String(e.target.value||'').toLowerCase().trim();
+      if(!q){ results.classList.remove('open'); results.innerHTML=''; return; }
 
-    setTimeout(function() {
-      t.style.opacity = '0';
-      t.style.transform = 'translateX(20px)';
-      setTimeout(function() { t.remove(); }, 300);
-    }, 4000);
-  };
-}
-
-// ─── GLOBAL SEARCH (protégé) ──────────────────────────────────────────────────
-if (typeof window.initGlobalSearch === 'undefined') {
-  window.initGlobalSearch = function() {
-    const input = document.getElementById('globalSearch');
-    const results = document.getElementById('globalSearchResults');
-    if (!input || !results) return;
-
-    input.addEventListener('input', debounce(function(e) {
-      const q = e.target.value.toLowerCase().trim();
-      if (!q) {
-        results.classList.remove('open');
-        return;
-      }
-
-      const matches = ((typeof allCours !== 'undefined' && allCours) || []).filter(function(c) {
+      const matches=(Array.isArray(window.allCours)?window.allCours:[]).filter(function(c){
+        const ent=window.entMap && window.entMap[c.ticker];
         return c && c.ticker && (
-          c.ticker.toLowerCase().includes(q) ||
-          ((typeof entMap !== 'undefined' && entMap[c.ticker]) && entMap[c.ticker].nom && entMap[c.ticker].nom.toLowerCase().includes(q))
+          String(c.ticker).toLowerCase().includes(q) ||
+          Boolean(ent && ent.nom && String(ent.nom).toLowerCase().includes(q))
         );
-      }).slice(0, 8);
+      }).slice(0,8);
 
-      if (!matches.length) {
-        results.innerHTML = '<div class="gsr-item"><span class="gsr-name">Aucun résultat</span></div>';
-      } else {
-        results.innerHTML = matches.map(function(c) {
-          const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[c.ticker] : null;
-          return '<div class="gsr-item" onclick="openFiche(\'' + c.ticker + '\');document.getElementById(\'globalSearchResults\').classList.remove(\'open\');">' +
-            '<div><span class="gsr-ticker">' + c.ticker + '</span><span class="gsr-name">' + (ent && ent.nom ? ', ' + ent.nom : '') + '</span></div>' +
-            '<span class="gsr-sector">' + (ent && ent.secteur ? ent.secteur : 'Autre') + '</span>' +
-          '</div>';
+      if(!matches.length){
+        results.innerHTML='<div class="gsr-item"><span class="gsr-name">Aucun résultat</span></div>';
+      }else{
+        results.innerHTML=matches.map(function(c){
+          const ent=window.entMap && window.entMap[c.ticker];
+          const ticker=esc(c.ticker);
+          const name=ent && ent.nom ? ', '+esc(ent.nom) : '';
+          const sector=ent && ent.secteur ? esc(ent.secteur) : 'Autre';
+          const safeTicker=String(c.ticker).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+          return '<div class="gsr-item" data-ticker="'+ticker+'">'+
+            '<div><span class="gsr-ticker">'+ticker+'</span><span class="gsr-name">'+name+'</span></div>'+
+            '<span class="gsr-sector">'+sector+'</span></div>';
         }).join('');
+
+        results.querySelectorAll('[data-ticker]').forEach(function(item){
+          item.addEventListener('click',function(){
+            const ticker=item.getAttribute('data-ticker');
+            if(typeof window.openFiche==='function') window.openFiche(ticker);
+            results.classList.remove('open');
+          });
+        });
       }
       results.classList.add('open');
-    }, 200));
+    },200));
 
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.global-search')) {
-        results.classList.remove('open');
-      }
+    document.addEventListener('click',function(e){
+      if(!e.target.closest('.global-search')) results.classList.remove('open');
     });
   };
-}
 
-// ─── DEBOUNCE HELPER (si non défini) ──────────────────────────────────────────
-if (typeof window.debounce === 'undefined') {
-  window.debounce = function(fn, ms) {
-    let timer;
-    return function() {
-      clearTimeout(timer);
-      timer = setTimeout(fn.apply(this, arguments), ms);
-    };
-  };
-}
+  // Initialisation différée pour garantir que le DOM et les données sont prêts.
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',window.initGlobalSearch,{once:true});
+  else window.initGlobalSearch();
+})();
