@@ -14,7 +14,8 @@ function initHeader() {
   const scripts = [
     'app/js/mode.js',
     'app/js/views/comparison.js',
-    'app/js/views/dividend-screener.js'
+    'app/js/views/dividend-screener.js',
+    'app/js/header-polish.js'
   ];
   scripts.forEach(src => {
     if (document.querySelector(`script[data-tc-module="${src}"]`)) return;
@@ -24,7 +25,6 @@ function initHeader() {
     document.body.appendChild(script);
   });
 
-  // Load responsive header rules without modifying the existing HTML structure.
   const cssHref = 'app/css/header-responsive.css';
   if (!document.querySelector(`link[data-tc-header-responsive="${cssHref}"]`)) {
     const link = document.createElement('link');
@@ -34,7 +34,16 @@ function initHeader() {
     document.head.appendChild(link);
   }
 
-  // Load the compact 100% zoom layout after all existing application CSS.
+  // Final header layer is deliberately loaded after all legacy responsive rules.
+  const finalCssHref = 'app/css/header-final.css';
+  if (!document.querySelector(`link[data-tc-header-final="${finalCssHref}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = finalCssHref;
+    link.dataset.tcHeaderFinal = finalCssHref;
+    document.head.appendChild(link);
+  }
+
   const scaleHref = 'app/css/scale-100.css';
   if (!document.querySelector(`link[data-tc-scale-100="${scaleHref}"]`)) {
     const link = document.createElement('link');
