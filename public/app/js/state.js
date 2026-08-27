@@ -51,6 +51,15 @@
     document.head.appendChild(script);
   })();
 
+  (function loadUIConsistency(){
+    if (document.getElementById('tc-ui-consistency-script')) return;
+    var script = document.createElement('script');
+    script.id = 'tc-ui-consistency-script';
+    script.src = '/app/js/ui-consistency.js?v=20260827.1';
+    script.defer = true;
+    document.head.appendChild(script);
+  })();
+
   window.destroyChart = function(chartVar) {
     if (chartVar && typeof chartVar.destroy === 'function') chartVar.destroy();
     return null;
