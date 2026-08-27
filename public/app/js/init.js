@@ -12,41 +12,7 @@
   function loadRuntimeLayers(){loadScript('app/js/navigation-guard.js?v=1');loadScript('app/js/views/overview-fixes.js?v=1');loadScript('app/js/views/brvm-market-hours.js?v=20260827.3',function(){loadScript('app/js/market-ux.js?v=20260827.2');});loadScript('app/js/views/technique/data-bridge.js?v=20260826');loadScript('app/js/views/portefeuille/portfolio-store.js?v=9',function(){loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8',function(){loadScript('app/js/views/user-data-patch.js?v=7',function(){loadScript('app/js/views/fundamental-ratios.js?v=1',function(){renderAfterData();});});});});}
   function loadIntegratedSuivi(){if(window.__TC_SUIVI_LOADER__)return;window.__TC_SUIVI_LOADER__=true;function load(src){return new Promise(function(resolve,reject){var s=document.createElement('script');s.src=src;s.async=false;s.onload=resolve;s.onerror=reject;document.head.appendChild(s);});}load('/app/js/views/suivi-integrated.js?v=20260827').then(function(){return load('/app/js/views/suivi-metrics-fix.js?v=20260827');}).catch(function(err){console.error('[SUIVI] Chargement du module intégré impossible',err);});}
   function removeObsoleteFormation(){document.querySelectorAll('[onclick*="formation"],[href*="#formation"],#nav-formation,#view-formation').forEach(function(node){node.remove();});}
-  function ensureGuideNavigation(){
-    var sidebar=document.getElementById('sidebar');
-    if(!sidebar)return;
-
-    // Une seule entrée Guide, dans la navigation gauche. Supprime toute
-    // ancienne variante à droite et tout doublon injecté par une version précédente.
-    document.querySelectorAll('[data-tc-guide-top]').forEach(function(node){node.remove();});
-    sidebar.querySelectorAll('[data-tc-guide]').forEach(function(node){node.remove();});
-    sidebar.querySelectorAll('[data-tc-guide-section]').forEach(function(node){node.remove();});
-    sidebar.querySelectorAll('.sidebar-section').forEach(function(section){
-      if(String(section.textContent||'').trim()==='Découvrir')section.remove();
-    });
-
-    var section=document.createElement('div');
-    section.className='sidebar-section';
-    section.setAttribute('data-tc-guide-section','1');
-    section.textContent='Découvrir';
-
-    var item=document.createElement('button');
-    item.type='button';
-    item.setAttribute('data-tc-guide','1');
-    item.setAttribute('data-open-guide','1');
-    item.className='nav-item';
-    item.style.cssText='width:calc(100% - 16px);text-align:left;margin:3px 8px;padding:9px 10px;';
-    item.innerHTML='<span class="icon">✦</span> Guide The Capital';
-
-    var bottom=sidebar.querySelector('.sidebar-bottom');
-    if(bottom){
-      sidebar.insertBefore(section,bottom);
-      sidebar.insertBefore(item,bottom);
-    }else{
-      sidebar.appendChild(section);
-      sidebar.appendChild(item);
-    }
-  }
+  function ensureGuideNavigation(){var sidebar=document.getElementById('sidebar');if(sidebar){sidebar.querySelectorAll('[data-tc-guide], [data-tc-guide-top]').forEach(function(node){node.remove();});}var right=document.querySelector('.topnav-right');if(right){right.querySelectorAll('[data-tc-guide-top], [data-open-guide]').forEach(function(node){node.remove();});}if(sidebar&&!sidebar.querySelector('[data-tc-guide]')){var section=document.createElement('div');section.className='sidebar-section';section.textContent='Découvrir';var item=document.createElement('button');item.type='button';item.setAttribute('data-tc-guide','1');item.setAttribute('data-open-guide','1');item.className='nav-item';item.style.width='100%';item.style.textAlign='left';item.innerHTML='<span class="icon">✦</span> Guide The Capital';sidebar.appendChild(section);sidebar.appendChild(item);}}
   function renderAfterData(){try{if(typeof window.renderCurrentView==='function')window.renderCurrentView();else if(typeof window.parseHash==='function')window.parseHash();if(window.tcNavigation&&typeof window.tcNavigation.render==='function')window.tcNavigation.render();}catch(e){console.warn('[INIT] rendu après données:',e);}}
   function ensureSuiviNavigation(){var href='/app/suivi.html',sidebar=document.getElementById('sidebar');if(sidebar&&!sidebar.querySelector('[data-tc-suivi]')){var sections=sidebar.querySelectorAll('.sidebar-section'),gestionSection=null;sections.forEach(function(section){if(String(section.textContent||'').trim()==='Gestion')gestionSection=section;});if(gestionSection){var item=document.createElement('a');item.setAttribute('data-tc-suivi','1');item.href=href;item.target='_self';item.className='nav-item';item.style.textDecoration='none';item.innerHTML='<span class="icon">☆</span> Suivi';gestionSection.insertAdjacentElement('afterend',item);}}var menu=document.getElementById('menu-dd-gestion');if(menu&&!menu.querySelector('[data-tc-suivi]')){var separator=document.createElement('div');separator.className='nav-dropdown-separator';var desktopItem=document.createElement('a');desktopItem.setAttribute('data-tc-suivi','1');desktopItem.href=href;desktopItem.target='_self';desktopItem.className='nav-dropdown-item';desktopItem.style.textDecoration='none';desktopItem.innerHTML='<span class="icon">☆</span><div><div>Suivi</div><div class="item-desc">Valeurs surveillées & monitoring</div></div>';menu.appendChild(separator);menu.appendChild(desktopItem);}}
   function init(){if(started)return;started=true;if(!requireAuth())return;normalizeDocument();console.log('[INIT] Session authentifiée, démarrage The Capital');if(typeof window.initApp!=='function'){console.error('[INIT] initApp manquant, main.js doit être chargé avant init.js');document.body.classList.remove('init-hidden');return;}try{window.initApp();}catch(e){console.error('[INIT] initApp:',e);}removeObsoleteFormation();ensureSuiviNavigation();ensureGuideNavigation();setTimeout(function(){removeObsoleteFormation();ensureSuiviNavigation();ensureGuideNavigation();},0);loadIntegratedSuivi();if(typeof window.initUserDataLayer==='function'){try{window.initUserDataLayer();}catch(e){console.warn('[INIT] user data:',e);}}if(window.marketsModule&&typeof window.marketsModule.loadData==='function'){try{window.marketsModule.loadData();}catch(e){console.warn('[INIT] marketsModule:',e);}}document.body.classList.remove('init-hidden');renderAfterData();setTimeout(loadRuntimeLayers,0);}
