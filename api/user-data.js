@@ -1,12 +1,11 @@
 /**
  * Données personnelles : alertes de cours et liste de suivi.
- *
- * Les modes alerts/watchlist restent inchangés. Les modes admin-billing et
- * admin-institute réutilisent cette fonction Vercel existante afin de ne pas
- * dépasser la limite de fonctions Serverless du plan actuel.
+ * Les modes admin-billing et admin-institute réutilisent cette fonction
+ * Vercel existante afin de conserver le nombre de fonctions serverless sous
+ * la limite du déploiement actuel.
  */
 import { supabaseAdmin, isSupabaseReady } from '../lib/supabase.js';
-import { authenticate, authenticateAdmin, rateLimited, handlePreflight } from '../lib/middleware.js';
+import { authenticate, authenticateMasterAdmin, rateLimited, handlePreflight } from '../lib/middleware.js';
 import { ok, fail, json, readBody, requestUrl, BodyError } from '../lib/http.js';
 import { validators } from '../lib/validate.js';
 import { handleAdminBilling, handleAdminInstitute } from '../lib/admin-billing.js';
@@ -19,7 +18,7 @@ function toApiAlert(row){if(!row)return row;const condition=row.type_alerte==='H
 export default async function handler(req,res){
   if(handlePreflight(req,res,{methods:'GET,POST,PUT,DELETE,OPTIONS'}))return;if(rateLimited(req,res,'user-data'))return;if(!isSupabaseReady()||!supabaseAdmin)return fail(res,503,'Service temporairement indisponible.','SERVICE_UNAVAILABLE');
   const url=requestUrl(req),mode=url.searchParams.get('mode');
-  if(mode==='admin-billing'||mode==='admin-institute'){const admin=await authenticateAdmin(req,res);if(!admin)return;return mode==='admin-billing'?handleAdminBilling(req,res,admin):handleAdminInstitute(req,res,admin);}
+  if(mode==='admin-billing'||mode==='admin-institute'){const admin=await authenticateMasterAdmin(req,res);if(!admin)return;return mode==='admin-billing'?handleAdminBilling(req,res,admin):handleAdminInstitute(req,res,admin);}
   const user=await authenticate(req,res);if(!user)return;const userId=user.sub;const table=TABLES[mode];if(!table)return fail(res,400,'Mode invalide (attendu : alerts ou watchlist).','INVALID_MODE');
   try{
     if(req.method==='GET'){const {data,error}=await supabaseAdmin.from(table).select('*').eq('user_id',userId).order('created_at',{ascending:false});if(error)throw error;const rows=data||[];return ok(res,mode==='alerts'?rows.map(toApiAlert):rows);}
