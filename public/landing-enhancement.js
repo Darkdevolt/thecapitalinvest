@@ -4,7 +4,7 @@
   const STORAGE_KEY='thecapital:landing-theme';
   const prefersLight=()=>window.matchMedia?.('(prefers-color-scheme: light)').matches;
   const getTheme=()=>{try{return localStorage.getItem(STORAGE_KEY)|| (prefersLight()?'light':'dark')}catch{return prefersLight()?'light':'dark'}};
-  const normaliseName=value=>String(value||'').trim().toUpperCase().replace(/[-_]+/g,' ');
+  const normaliseName=value=>{const name=String(value||'').trim().toUpperCase().replace(/[-_]+/g,' ');return name==='BRVM C'?'BRVM COMPOSITE':name};
 
   const setTheme=(theme,button)=>{
     const light=theme==='light';
