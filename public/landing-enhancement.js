@@ -3,7 +3,8 @@
 
   const STORAGE_KEY='thecapital:landing-theme';
   const prefersLight=()=>window.matchMedia?.('(prefers-color-scheme: light)').matches;
-  const getTheme=()=>{try{return localStorage.getItem(STORAGE_KEY)||'dark'}catch{return 'dark'}};
+  const getTheme=()=>{try{return localStorage.getItem(STORAGE_KEY)|| (prefersLight()?'light':'dark')}catch{return prefersLight()?'light':'dark'}};
+  const normaliseName=value=>String(value||'').trim().toUpperCase().replace(/[-_]+/g,' ');
 
   const setTheme=(theme,button)=>{
     const light=theme==='light';
@@ -29,7 +30,7 @@
     }).join(' ');
   };
 
-  const normaliseIndex=(rows,name)=>rows.find(r=>String(r.indice||'').trim().toUpperCase()===name)||null;
+  const normaliseIndex=(rows,name)=>rows.find(r=>normaliseName(r.indice)===normaliseName(name))||null;
 
   const buildScene=()=>{
     const hero=document.querySelector('.hero');
@@ -91,7 +92,7 @@
       const prestige=normaliseIndex(rows,'BRVM PRESTIGE');
       [composite,brvm30,prestige].forEach(row=>{
         if(!row)return;
-        const name=String(row.indice||'').toUpperCase();
+        const name=normaliseName(row.indice);
         const value=Number(row.valeur);
         const pct=Number(row.variation_pct);
         const valueText=Number.isFinite(value)?value.toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2}):'—';
@@ -106,14 +107,13 @@
 
       const groups={composite:'BRVM COMPOSITE',brvm30:'BRVM 30',prestige:'BRVM PRESTIGE'};
       Object.entries(groups).forEach(([key,name])=>{
-        const path=makePath(historyRows.filter(r=>String(r.indice||'').trim().toUpperCase()===name));
+        const path=makePath(historyRows.filter(r=>normaliseName(r.indice)===normaliseName(name)));
         const el=scene.querySelector(`[data-chart="${key}"]`);
         if(el&&path){el.setAttribute('d',path);requestAnimationFrame(()=>el.classList.add('draw'));}
       });
     }catch(error){
       setText('[data-data-status]','DATA UNAVAILABLE');
       setText('[data-session]','Données non disponibles');
-      // The scene remains usable and never fabricates financial values.
       console.warn('[The Capital] Market data unavailable:',error);
     }
   };
@@ -124,8 +124,7 @@
     const button=document.createElement('button');
     button.type='button';button.className='tc-theme-toggle';button.setAttribute('aria-label','Passer en mode clair');
     nav.appendChild(button);
-    const saved=getTheme();
-    setTheme(saved|| (prefersLight()?'light':'dark'),button);
+    setTheme(getTheme(),button);
     button.addEventListener('click',()=>setTheme(document.body.classList.contains('tc-light')?'dark':'light',button));
   };
 
