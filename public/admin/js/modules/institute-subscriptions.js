@@ -4,7 +4,9 @@
 (function (TC) {
     'use strict';
 
-    const API = '/api/admin-institute-subscription';
+    /* Réutilisation d'une fonction admin existante : Vercel Hobby limite le
+       nombre de fonctions serverless par déploiement. */
+    const API = '/api/financials-upload';
     const originalOpen = TC.modal && TC.modal.open;
     if (!originalOpen) return;
 
@@ -16,10 +18,12 @@
         };
     }
 
-    async function request(method, userId, payload) {
-        const options = { method, headers: authHeaders() };
-        if (payload) options.body = JSON.stringify(payload);
-        const response = await fetch(API + '?user_id=' + encodeURIComponent(userId), options);
+    async function request(userId, payload) {
+        const response = await fetch(API, {
+            method: 'POST',
+            headers: authHeaders(),
+            body: JSON.stringify(Object.assign({ user_id: userId }, payload || {}))
+        });
         const data = await response.json().catch(() => ({}));
         if (!response.ok) throw new Error(data?.message || data?.error || 'Gestion de l’abonnement Institute impossible.');
         return data;
@@ -61,6 +65,7 @@
 
             select.value = 'inactive';
             expiry.value = expiryFromDays(30);
+            expiry.disabled = true;
 
             const refreshNote = function (text, type) {
                 if (!note) return;
@@ -76,7 +81,10 @@
                 refreshNote(active ? 'Accès Institute : choisissez une échéance puis enregistrez.' : 'L’accès Institute sera retiré à l’enregistrement.');
             });
 
-            request('GET', findUserIdByEmail(email)).then(function (result) {
+            findUserIdByEmail(email).then(function (userId) {
+                if (!userId) throw new Error('Utilisateur introuvable.');
+                return request(userId, { action: 'institute_status' });
+            }).then(function (result) {
                 const list = Array.isArray(result) ? result : (result.data || []);
                 const active = list.find(function (s) {
                     return s.plan_code === 'institute' && s.status === 'active' && (!s.current_period_end || new Date(s.current_period_end) > new Date());
@@ -91,8 +99,6 @@
                     refreshNote('Aucun abonnement Institute actif pour ce compte.');
                 }
             }).catch(function (error) {
-                /* L’édition du compte reste utilisable même si la lecture distante échoue. */
-                expiry.disabled = select.value !== 'active';
                 refreshNote('Impossible de lire l’état actuel de l’Institute : ' + error.message, 'warn');
             });
         };
@@ -102,17 +108,17 @@
             const expiry = TC.el('mu-institute-expiry');
             if (!select || !expiry) return originalOnSave();
 
-            const userId = await findUserIdByEmail(email);
-            if (!userId) throw new Error('Utilisateur introuvable pour la gestion de l’Institute.');
-
             try {
+                const userId = await findUserIdByEmail(email);
+                if (!userId) throw new Error('Utilisateur introuvable pour la gestion de l’Institute.');
+
                 if (select.value === 'active') {
                     if (!expiry.value) throw new Error('Choisissez une date d’échéance pour l’Institute.');
                     const end = new Date(expiry.value + 'T23:59:59');
                     if (Number.isNaN(end.getTime()) || end <= new Date()) throw new Error('La date d’échéance Institute doit être future.');
-                    await request('POST', userId, { action: 'assign', user_id: userId, expires_at: end.toISOString() });
+                    await request(userId, { action: 'institute_assign', expires_at: end.toISOString() });
                 } else {
-                    await request('POST', userId, { action: 'revoke', user_id: userId });
+                    await request(userId, { action: 'institute_revoke' });
                 }
                 await originalOnSave();
             } catch (error) {
