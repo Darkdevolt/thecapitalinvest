@@ -92,7 +92,7 @@ function initializeUI(){
   if(!document.querySelector('[data-tci-intercept]')){intercept();var marker=document.createElement('meta');marker.setAttribute('data-tci-intercept','1');document.head.appendChild(marker)}
   setInterval(function(){if(enrolled)pushProgress(false)},2500);
   window.addEventListener('beforeunload',function(){if(enrolled)pushProgress(true)});
-  try{window.dispatchEvent(new CustomEvent('thecapital:institute-ready',{detail:{version:'3.1',enrolled:enrolled,state:enrollmentState}})}catch(e){}
+  try{window.dispatchEvent(new CustomEvent('thecapital:institute-ready',{detail:{version:'3.1',enrolled:enrolled,state:enrollmentState}}))}catch(e){}
 }
 function ready(){
   initializeUI();
