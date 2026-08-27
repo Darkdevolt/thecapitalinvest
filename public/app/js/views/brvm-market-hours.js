@@ -1,6 +1,8 @@
 // THE CAPITAL — BRVM central market calendar / session engine
 // Official trading hours: https://www.brvm.org/fr/horaires-de-cotation
 // Official 2026 calendar: https://www.brvm.org/fr/brvm-calendrier-de-cotation-2026
+// IMPORTANT: this file is the single source of truth for BRVM session state.
+// DOM rendering/clocks are intentionally handled only by market-ux.js.
 (function (global) {
   'use strict';
   if (global.TC_BRVM_MARKET_HOURS && global.TC_BRVM_MARKET_HOURS.version) return;
@@ -17,8 +19,6 @@
     {phase:'closing_fixing',start:690,end:690}, {phase:'last_price',start:690,end:720},
     {phase:'official_close',start:720,end:720}
   ];
-  // BRVM's published 2026 calendar, updated for the official notice moving
-  // Maouloud's public holiday to Tuesday 25 August 2026.
   var HOLIDAYS_2026 = {
     '2026-01-01':'Jour de l’an',
     '2026-03-17':'Lendemain de la nuit du destin',
@@ -104,26 +104,26 @@
       officialSource:'BRVM'
     };
   }
-  function render() {
-    var d = new Date(), state = stateFor(d), status = document.getElementById('marketStatus'), time = document.getElementById('marketTime'), next = document.getElementById('marketNext');
-    if (status) { status.className = 'market-status ' + (state.isOpen ? 'open' : 'closed'); status.innerHTML = '<span class="status-dot"></span>' + state.phaseLabel; status.title = 'BRVM — référence horaire : Abidjan (Africa/Abidjan)'; }
-    if (time) time.textContent = new Intl.DateTimeFormat('fr-FR', {timeZone:'Africa/Abidjan',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(d);
-    if (next) next.textContent = state.nextPhaseAt ? 'Prochaine phase : ' + LABELS[state.nextPhase] + ' à ' + new Date(state.nextPhaseAt).toLocaleTimeString('fr-FR', {timeZone:'Africa/Abidjan',hour:'2-digit',minute:'2-digit',hour12:false}) : 'Aucune prochaine séance disponible';
+  function publishState(value) {
+    var state = stateFor(value || new Date());
     global.TC_BRVM_MARKET_PHASE = state;
+    return state;
   }
   global.TC_BRVM_MARKET_HOURS = {
-    version:'2026.08.27.1', labels:LABELS, normalPhases:NORMAL, holidayEvePhases:HOLIDAY_EVE,
-    holidays2026:HOLIDAYS_2026, exceptionalSessions:EXCEPTIONAL,
-    getState:function (value) { return stateFor(value || new Date()); },
-    isTradingDay:function (value) { return stateFor(value).isTradingDay; },
-    isOpen:function (value) { return stateFor(value).isOpen; },
+    version:'2026.08.27.2',
+    labels:LABELS,
+    normalPhases:NORMAL,
+    holidayEvePhases:HOLIDAY_EVE,
+    holidays2026:HOLIDAYS_2026,
+    exceptionalSessions:EXCEPTIONAL,
+    getState:function (value) { return publishState(value || new Date()); },
+    isTradingDay:function (value) { return stateFor(value || new Date()).isTradingDay; },
+    isOpen:function (value) { return stateFor(value || new Date()).isOpen; },
     configureExceptionalSession:function (date, config) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(String(date)) || !config || !Array.isArray(config.phases)) throw Error('Invalid exceptional BRVM session');
       EXCEPTIONAL[date] = {type:config.type || 'exceptional', reason:config.reason || 'Séance exceptionnelle BRVM', phases:config.phases};
-      render();
+      publishState(new Date(date + 'T12:00:00Z'));
     }
   };
-  render();
-  clearInterval(global.__TC_BRVM_MARKET_INTERVAL__);
-  global.__TC_BRVM_MARKET_INTERVAL__ = setInterval(render, 1000);
+  publishState(new Date());
 })(window);
