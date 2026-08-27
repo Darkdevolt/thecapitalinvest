@@ -1,0 +1,84 @@
+/* THE CAPITAL — final UI/UX polish layer
+ * Presentation only. No API, data, auth, storage or business logic changes.
+ */
+:root{--tc-section-gap:24px;--tc-content-gap:14px;--tc-radius-final:10px}
+html{overflow-x:hidden}
+body{overflow-x:hidden}
+.main{width:100%;max-width:1600px;margin-left:auto;margin-right:auto}
+.view{width:100%;min-width:0}
+.view>.page-header{margin-bottom:24px}
+.view>.page-header h1{overflow-wrap:anywhere}
+
+/* Prevent accidental width collapse in every dashboard layout. */
+.view .grid-2,.view .grid-3,.view .grid-4,.view .grid-5,.view .grid-7030,
+.view .session-grid,.view .portf-summary,.view .portf-kpi-grid{width:100%;min-width:0}
+.view .grid-2>*,.view .grid-3>*,.view .grid-4>*,.view .grid-5>*,.view .grid-7030>*,
+.view .session-grid>*,.view .portf-summary>*,.view .portf-kpi-grid>*{min-width:0;max-width:100%}
+.view .card,.view .stat-card,.view .portf-kpi,.view .fiche-hero{min-width:0;max-width:100%}
+.view .card-body,.view .card-header{min-width:0}
+.view .card-header{overflow:visible}
+.view .card-header>*{min-width:0;max-width:100%}
+
+/* Tables remain contained and readable instead of forcing the page wider. */
+.table-wrap{width:100%;max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+.table-wrap table{width:100%;min-width:680px}
+.table-wrap td,.table-wrap th{white-space:nowrap}
+
+/* Forms: predictable wrapping rather than compressed controls. */
+.search-bar,.portf-form,.screener-filters{min-width:0;max-width:100%}
+.search-input,.portf-form input,.portf-form select,.screener-filters input,.screener-filters select{min-width:0;max-width:100%}
+
+/* Charts never enlarge their parent. */
+.chart-container{width:100%;max-width:100%;min-width:0;position:relative}
+.chart-container canvas{max-width:100%!important}
+
+/* Trading desk final composition. */
+body:has(.wrap .tabs) .wrap{width:min(1500px,100%);margin:auto}
+body:has(.wrap .tabs) .head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:24px}
+body:has(.wrap .tabs) .head>div:first-child{min-width:0}
+body:has(.wrap .tabs) .actions{max-width:100%;justify-content:flex-end}
+body:has(.wrap .tabs) .grid{min-width:0}
+body:has(.wrap .tabs) .grid>*,body:has(.wrap .tabs) .kpis>*{min-width:0}
+body:has(.wrap .tabs) .card{min-width:0}
+body:has(.wrap .tabs) .idea-row,body:has(.wrap .tabs) .position-row{min-width:0}
+
+@media(max-width:1100px){
+ .main{padding-left:20px;padding-right:20px}
+ body:has(.wrap .tabs) .head{grid-template-columns:1fr;align-items:start}
+ body:has(.wrap .tabs) .actions{justify-content:flex-start}
+}
+@media(max-width:760px){
+ .main{padding-left:12px;padding-right:12px}
+ .view>.page-header{margin-bottom:17px}
+ .view .card{margin-bottom:12px!important}
+ .view .card-header{padding:12px 14px!important}
+ .view .card-body{padding:14px!important}
+ .view .table-wrap{border-radius:8px}
+ .view .search-bar{gap:7px}
+ body:has(.wrap .tabs) .wrap{padding:18px 12px 40px!important}
+ body:has(.wrap .tabs) .head{gap:13px!important}
+ body:has(.wrap .tabs) .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:7px}
+ body:has(.wrap .tabs) .actions .btn{min-width:0}
+ body:has(.wrap .tabs) .tabs{width:100%;max-width:100%;overflow-x:auto}
+ body:has(.wrap .tabs) .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+ body:has(.wrap .tabs) .grid{grid-template-columns:1fr}
+ body:has(.wrap .tabs) .idea-row,body:has(.wrap .tabs) .position-row{grid-template-columns:1fr 1fr;gap:8px}
+}
+@media(max-width:430px){
+ .main{padding-left:10px;padding-right:10px}
+ body:has(.wrap .tabs) .wrap{padding-inline:10px!important}
+ body:has(.wrap .tabs) .actions{grid-template-columns:1fr}
+ body:has(.wrap .tabs) .kpis{grid-template-columns:1fr}
+}
+
+/* Guide: maintain a deliberate visual rhythm even with long descriptions. */
+.intro-block,.grid,.path{min-width:0}
+.grid .card{min-width:0}
+.items{min-width:0}
+.item{min-width:0}
+.item>div:last-child{min-width:0}
+.item span,.item b{overflow-wrap:anywhere}
+
+/* Never use horizontal page overflow as a layout fix. */
+img,svg,video,iframe{max-width:100%}
+button{max-width:100%}
