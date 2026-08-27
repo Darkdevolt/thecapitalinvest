@@ -4,6 +4,10 @@
   if(window.__TCI_TRANSITION__) return;
   window.__TCI_TRANSITION__=true;
 
+  var fallbackTimer=null;
+  var observer=null;
+  var left=false;
+
   function styles(){
     if(document.getElementById('tci-transition-style')) return;
     var s=document.createElement('style'); s.id='tci-transition-style';
@@ -35,14 +39,52 @@
     document.head.appendChild(s);
   }
 
+  function cleanup(){
+    if(fallbackTimer){clearTimeout(fallbackTimer);fallbackTimer=null;}
+    if(observer){observer.disconnect();observer=null;}
+  }
+
+  function leave(){
+    if(left)return;
+    left=true;
+    cleanup();
+    var d=document.querySelector('.tci-transition');
+    document.body.classList.remove('tci-transition-lock');
+    if(!d)return;
+    d.classList.add('is-leaving');
+    setTimeout(function(){if(d&&d.parentNode)d.remove()},650);
+  }
+
+  function instituteReady(){
+    var host=document.getElementById('tciVue');
+    return !!(host && host.children && host.children.length);
+  }
+
+  function watchReady(){
+    var host=document.getElementById('tciVue');
+    if(!host){
+      fallbackTimer=setTimeout(leave,10000);
+      return;
+    }
+    if(instituteReady()){
+      requestAnimationFrame(leave);
+      return;
+    }
+    observer=new MutationObserver(function(){
+      if(instituteReady()) requestAnimationFrame(leave);
+    });
+    observer.observe(host,{childList:true,subtree:true});
+    fallbackTimer=setTimeout(leave,10000);
+  }
+
   function show(){
-    if(document.querySelector('.tci-transition')) return;
+    if(document.querySelector('.tci-transition'))return;
     styles();
     document.body.classList.add('tci-transition-lock');
     var d=document.createElement('div'); d.className='tci-transition'; d.setAttribute('aria-label','Ouverture de The Capital Institute');
     d.innerHTML='<div class="tci-transition-bg"></div><div class="tci-transition-ring"></div><div class="tci-transition-orbit"></div><div class="tci-transition-core"></div><div class="tci-transition-copy"><span class="tci-transition-kicker">THE CAPITAL</span><span class="tci-transition-title">Bienvenue dans <em>Institute.</em></span><span class="tci-transition-sub">PRÉPARATION DE VOTRE ESPACE D’APPRENTISSAGE</span></div>';
     document.body.appendChild(d);
-    setTimeout(function(){d.classList.add('is-leaving');document.body.classList.remove('tci-transition-lock');setTimeout(function(){d.remove()},650)},1900);
+    watchReady();
   }
 
   function leaveThen(url){
@@ -70,8 +112,7 @@
     },500);
   }
 
-  /* Le script est chargé en fin de body : on démarre immédiatement.
-     Avant, boot attendait DOMContentLoaded, donc l'animation ne pouvait
-     pas masquer le temps d'initialisation de l'Institute. */
+  // La transition reste synchrone pour pouvoir s'afficher avant les scripts defer.
+  // Les ressources de l'Institute sont chargées et exécutées indépendamment.
   boot();
 })();
