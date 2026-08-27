@@ -34,22 +34,22 @@ function initHeader() {
     document.head.appendChild(link);
   }
 
-  // Final header layer is deliberately loaded after all legacy responsive rules.
-  const finalCssHref = 'app/css/header-final.css';
-  if (!document.querySelector(`link[data-tc-header-final="${finalCssHref}"]`)) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = finalCssHref;
-    link.dataset.tcHeaderFinal = finalCssHref;
-    document.head.appendChild(link);
-  }
-
+  // Density first, final header rules last so no legacy layer can override them.
   const scaleHref = 'app/css/scale-100.css';
   if (!document.querySelector(`link[data-tc-scale-100="${scaleHref}"]`)) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
     link.href = scaleHref;
     link.dataset.tcScale100 = scaleHref;
+    document.head.appendChild(link);
+  }
+
+  const finalCssHref = 'app/css/header-final.css';
+  if (!document.querySelector(`link[data-tc-header-final="${finalCssHref}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = finalCssHref;
+    link.dataset.tcHeaderFinal = finalCssHref;
     document.head.appendChild(link);
   }
 })();
