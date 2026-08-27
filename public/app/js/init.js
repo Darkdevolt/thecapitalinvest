@@ -95,6 +95,10 @@
     // existing views remain untouched while the fixes are independently cache-busted.
     loadScript('app/js/views/overview-fixes.js?v=1');
 
+    // Official BRVM market-session clock. It overrides the old approximate
+    // 09:30–15:30 status and exposes each official phase independently.
+    loadScript('app/js/views/brvm-market-hours.js?v=20260827');
+
     // Complete historical-data bridge for Technical Analysis.
     // It uses the existing public /api/marche?type=historique endpoint and
     // loads the selected ticker explicitly. This is intentionally loaded here
