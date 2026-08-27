@@ -1,0 +1,8 @@
+'use strict';
+(function(TC){
+  let rows=[];
+  function view(){return '<div class="page-head"><div><div class="page-title">Paramètres <em>Administration</em></div><div class="page-sub">Lecture des paramètres déjà présents dans admin_settings. Aucun nouveau système de configuration n’est créé.</div></div><div class="page-actions"><button class="btn btn-outline btn-sm" id="set-reload">↺</button></div></div><div class="card"><div class="card-head"><span class="card-title">Paramètres existants</span><span class="card-count" id="set-count"></span></div><div class="tw"><table><thead><tr><th>Clé</th><th>Valeur</th><th>Dernière mise à jour</th></tr></thead><tbody id="set-tbody">'+TC.rowsLoading(3)+'</tbody></table></div></div>'}
+  async function load(){const tbody=TC.el('set-tbody');if(tbody)tbody.innerHTML=TC.rowsLoading(3);try{rows=await TC.getAll('admin_settings','select=key,value,updated_at&order=key.asc');paint();}catch(e){if(tbody)tbody.innerHTML=TC.rowsEmpty(3,'Paramètres indisponibles',e.message||'Erreur');}}
+  function paint(){TC.el('set-count').textContent=(rows||[]).length+' paramètre(s)';TC.el('set-tbody').innerHTML=rows?.length?rows.map(r=>'<tr><td><strong>'+TC.esc(r.key)+'</strong></td><td><code>'+TC.esc(JSON.stringify(r.value))+'</code></td><td class="td-mono td-muted">'+TC.fmtDate(r.updated_at)+'</td></tr>').join(''):TC.rowsEmpty(3,'Aucun paramètre','La table admin_settings est vide.')}
+  TC.register({id:'parametres',label:'Paramètres',group:'gestion',icon:'⚙',keywords:'settings configuration admin',view,mount(){TC.on('set-reload','click',load);load();},refresh:load});
+})(window.TC);
