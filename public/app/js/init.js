@@ -88,38 +88,15 @@
   }
 
   function loadRuntimeLayers() {
-    // Navigation is a core layer: it must be available before users start moving between views.
     loadScript('app/js/navigation-guard.js?v=1');
-
-    // Dashboard market-data/UI patch: loaded dynamically so the core HTML and
-    // existing views remain untouched while the fixes are independently cache-busted.
     loadScript('app/js/views/overview-fixes.js?v=1');
 
-    // Official BRVM market-session clock. It overrides the old approximate
-    // 09:30–15:30 status and exposes each official phase independently.
-    loadScript('app/js/views/brvm-market-hours.js?v=20260827');
+    // Official BRVM session clock: normal phases + official 2026 holidays.
+    // Cache-busted whenever the session-clock rules change.
+    loadScript('app/js/views/brvm-market-hours.js?v=20260827.2');
 
-    // Complete historical-data bridge for Technical Analysis.
-    // It uses the existing public /api/marche?type=historique endpoint and
-    // loads the selected ticker explicitly. This is intentionally loaded here
-    // rather than only from the technical view so it is installed before a
-    // user switches from the default ABJC ticker to another BRVM security.
     loadScript('app/js/views/technique/data-bridge.js?v=20260826');
 
-    // The technical experience is independent: it must never wait for
-    // portfolio/fundamental enhancements before becoming interactive.
-    // technique-experience.css habillait le sélecteur Simple/Pro de
-    // l'ancienne vue technique. Cette vue a été remplacée et plus aucune
-    // de ses classes n'existe : la feuille est donc devenue une requête
-    // sans effet. Le fichier reste sur le disque, il n'est plus chargé.
-    // loadStyle('app/css/technique-experience.css?v=2');
-    // experience.js est desormais declare dans app.html, avec les autres
-    // modules de l'analyse technique et dans un ordre fixe. Le charger aussi
-    // ici produisait une seconde evaluation sous une URL differente (?v=3
-    // contre aucune version cote navigation.js), et donc un second
-    // enveloppement de atLoadTicker.
-
-    // Optional enhancements remain non-blocking for the application core.
     loadScript('app/js/views/portefeuille/portfolio-store.js?v=9', function () {
       loadScript('app/js/views/portefeuille/portfolio-crud-patch.js?v=8', function () {
         loadScript('app/js/views/user-data-patch.js?v=7', function () {
@@ -185,7 +162,6 @@
     normalizeDocument();
     console.log('[INIT] Session authentifiée, démarrage The Capital');
 
-    // CORE: always start the application before optional enhancements.
     if (typeof window.initApp !== 'function') {
       console.error('[INIT] initApp manquant, main.js doit être chargé avant init.js');
       document.body.classList.remove('init-hidden');
