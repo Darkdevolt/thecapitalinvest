@@ -1,0 +1,184 @@
+/* THE CAPITAL — FINAL HEADER / BANNER LAYOUT
+   Presentation only. No market, auth, API or subscription logic. */
+
+.header{
+  position:fixed!important;
+  top:0;left:0;right:0;
+  height:74px!important;
+  min-height:74px!important;
+  box-sizing:border-box;
+  display:flex!important;
+  align-items:center!important;
+  gap:14px!important;
+  padding:0 28px!important;
+  z-index:5000!important;
+  overflow:visible!important;
+  isolation:isolate;
+}
+.header .topnav{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  width:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:4px!important;
+  overflow:visible!important;
+  white-space:nowrap;
+}
+.header .topnav-logo{
+  flex:0 0 auto!important;
+  white-space:nowrap;
+  margin-right:10px!important;
+  padding-right:16px!important;
+  max-width:none!important;
+}
+.header .topnav-divider{flex:0 0 1px!important;height:22px!important;margin:0 5px!important;opacity:.55}
+.header .nav-dropdown{position:relative!important;flex:0 0 auto!important;z-index:5100!important}
+.header .nav-dropdown-btn{
+  display:inline-flex!important;
+  align-items:center!important;
+  white-space:nowrap!important;
+  height:36px!important;
+  box-sizing:border-box;
+  padding:0 11px!important;
+  border-radius:8px!important;
+  font-size:11px!important;
+  line-height:1!important;
+}
+.header .nav-dropdown-btn.active,
+.header .nav-dropdown-btn:hover{background:rgba(184,150,78,.08)}
+.header .nav-dropdown-menu{
+  position:absolute!important;
+  top:calc(100% + 9px)!important;
+  left:0!important;
+  z-index:5200!important;
+  max-height:calc(100vh - 92px)!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+
+.header .topnav-right{
+  flex:0 0 auto!important;
+  min-width:0!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-end!important;
+  gap:9px!important;
+  margin-left:auto!important;
+  padding-left:14px!important;
+  border-left:1px solid rgba(184,150,78,.10);
+  overflow:visible!important;
+  white-space:nowrap;
+}
+.header .global-search{flex:0 0 168px!important;width:168px!important;min-width:168px!important;max-width:168px!important}
+.header .global-search input{height:36px!important;box-sizing:border-box}
+.header .header-badge{flex:0 0 auto!important;min-width:max-content!important;height:34px;display:inline-flex!important;align-items:center;justify-content:center;white-space:nowrap}
+
+/* Clock banner: horizontal and balanced, never vertical. */
+.header .tc-market-clocks{
+  flex:0 0 auto!important;
+  min-width:355px!important;
+  width:355px!important;
+  height:46px!important;
+  display:grid!important;
+  grid-template-columns:1.2fr 1fr 1fr!important;
+  align-items:center!important;
+  gap:0!important;
+  padding:0!important;
+  border-left:1px solid rgba(184,150,78,.12);
+  border-right:1px solid rgba(184,150,78,.12);
+}
+.header .tc-clock-main{display:block!important;min-width:0;padding:0 13px!important}
+.header .tc-clock-kicker{
+  display:block!important;
+  margin:0 0 4px!important;
+  color:var(--gold)!important;
+  font:500 7px/1 var(--mono,monospace)!important;
+  letter-spacing:.16em!important;
+  text-transform:uppercase!important;
+  writing-mode:horizontal-tb!important;
+  transform:none!important;
+}
+.header .tc-clock-primary,
+.header .tc-clock-list,
+.header .tc-clock-list span{display:flex!important;align-items:flex-start!important}
+.header .tc-clock-primary,.header .tc-clock-list span{flex-direction:column!important;gap:3px!important}
+.header .tc-clock-primary b,.header .tc-clock-list b{font:500 11px/1 var(--mono,monospace)!important;color:var(--text)!important}
+.header .tc-clock-primary small,.header .tc-clock-list small{font:500 7px/1 var(--mono,monospace)!important;color:rgba(244,239,230,.46)!important;letter-spacing:.05em!important;text-transform:uppercase!important}
+.header .tc-clock-list{display:grid!important;grid-template-columns:1fr 1fr!important;gap:0!important;padding-left:0!important;border-left:0!important}
+.header .tc-clock-list span{padding:0 12px!important;border-left:1px solid rgba(184,150,78,.08)}
+
+.header .tc-institute-header-link{
+  flex:0 0 auto!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:7px!important;
+  height:34px!important;
+  padding:0 10px!important;
+  box-sizing:border-box;
+  border:1px solid rgba(184,150,78,.22)!important;
+  border-radius:8px!important;
+  background:rgba(184,150,78,.035)!important;
+  color:var(--text)!important;
+  text-decoration:none!important;
+  font:600 9px/1 var(--sans)!important;
+  letter-spacing:.09em!important;
+  text-transform:uppercase!important;
+  transition:all .2s ease;
+}
+.header .tc-institute-header-link:hover{border-color:rgba(224,193,118,.55)!important;background:rgba(184,150,78,.10)!important;color:var(--gold2)!important}
+.header .tc-institute-header-mark{color:var(--gold2);font:500 10px var(--mono)}
+
+.header #tcDisplayMode{flex:0 0 auto!important;min-width:max-content!important}
+.header .tc-mode-toggle{height:34px!important;box-sizing:border-box}
+.header .topnav-user{flex:0 0 auto!important;display:flex!important;align-items:center!important;gap:7px!important}
+.header .topnav-avatar{flex:0 0 auto!important}
+.header .topnav-logout{flex:0 0 auto!important;white-space:nowrap!important}
+
+/* The content must start below the fixed banner. */
+.main{margin-top:74px!important}
+
+@media(max-width:1600px){
+  .header{padding-inline:18px!important;gap:9px!important}
+  .header .topnav-right{gap:7px!important;padding-left:10px!important}
+  .header .global-search{width:145px!important;min-width:145px!important}
+  .header .tc-market-clocks{width:315px!important;min-width:315px!important}
+  .header .nav-dropdown-btn{padding-inline:9px!important;font-size:10.5px!important}
+}
+@media(max-width:1400px){
+  .header{padding-inline:13px!important}
+  .header .topnav-logo{margin-right:5px!important;padding-right:9px!important}
+  .header .topnav-divider{display:none!important}
+  .header .nav-dropdown-btn{padding-inline:7px!important;font-size:10px!important}
+  .header .global-search{width:125px!important;min-width:125px!important}
+  .header .tc-market-clocks{width:270px!important;min-width:270px!important}
+  .header .tc-clock-primary,.header .tc-clock-list span{padding-inline:8px!important}
+  .header .tc-institute-header-link{padding-inline:8px!important}
+  .header .tc-institute-header-link .tc-institute-header-copy{display:none}
+}
+@media(max-width:1180px){
+  .header{height:62px!important;min-height:62px!important}
+  .header .tc-market-clocks{display:none!important}
+  .header .topnav-right{gap:6px!important}
+  .header .global-search{width:120px!important;min-width:120px!important}
+  .header .header-badge{font-size:8px!important;padding-inline:7px!important}
+  .header .topnav-username{display:none!important}
+  .main{margin-top:62px!important}
+}
+@media(max-width:900px){
+  .header{height:58px!important;min-height:58px!important;padding-inline:9px!important}
+  .header .topnav{overflow-x:auto!important;overflow-y:visible!important;scrollbar-width:none}
+  .header .topnav::-webkit-scrollbar{display:none}
+  .header .topnav-logo{position:sticky!important;left:0;z-index:2;background:rgba(10,8,4,.98)}
+  .header .global-search{width:105px!important;min-width:105px!important}
+  .header .tc-institute-header-link{width:34px!important;padding:0!important;justify-content:center}
+  .header .main{margin-top:58px!important}
+  .main{margin-top:58px!important}
+}
+@media(max-width:700px){
+  .header{gap:5px!important}
+  .header .topnav-right{padding-left:5px!important;border-left:0!important}
+  .header .global-search{width:92px!important;min-width:92px!important}
+  .header .header-badge{display:none!important}
+  .header #tcDisplayMode{display:none!important}
+}
