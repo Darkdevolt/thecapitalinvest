@@ -1,157 +1,25 @@
-// THE CAPITAL — BRVM market session clock
-// Source: official BRVM trading calendar / trading hours (UTC).
-// Normal: pre-open 09:00-09:45, opening fixing 09:45,
-// continuous 09:45-14:00, pre-close 14:00-14:30,
-// closing fixing 14:30, last-price 14:30-15:00, close 15:00.
-(function () {
+// THE CAPITAL — BRVM central market calendar / session engine
+// Official: https://www.brvm.org/fr/horaires-de-cotation
+// Calendar: https://www.brvm.org/fr/brvm-calendrier-de-cotation-2026
+(function (global) {
   'use strict';
-  if (window.__TC_BRVM_MARKET_HOURS__) return;
-  window.__TC_BRVM_MARKET_HOURS__ = true;
-
-  var NORMAL = [
-    { id: 'preopen', label: 'Pré-ouverture', start: 540, end: 585 },
-    { id: 'open-fixing', label: "Fixing d'ouverture", start: 585, end: 585 },
-    { id: 'continuous', label: 'Négociation en continu', start: 585, end: 840 },
-    { id: 'preclose', label: 'Pré-clôture', start: 840, end: 870 },
-    { id: 'close-fixing', label: 'Fixing de clôture', start: 870, end: 870 },
-    { id: 'last-price', label: 'Négociation au dernier cours', start: 870, end: 900 },
-    { id: 'closed', label: 'Marché fermé', start: 900, end: 1440 }
-  ];
-
-  // BRVM 2026 official calendar: no session on these public holidays.
-  // Dates marked (*) in the BRVM calendar can be revised by official notice;
-  // exceptional notices remain the authoritative override when published.
-  var HOLIDAYS_2026 = {
-    '2026-01-01': 'Jour de l’an',
-    '2026-03-17': 'Lendemain de la nuit du destin',
-    '2026-03-20': 'Fête du Ramadan',
-    '2026-04-06': 'Lundi de Pâques',
-    '2026-05-01': 'Fête du Travail',
-    '2026-05-14': 'Jour de l’Ascension',
-    '2026-05-25': 'Lundi de Pentecôte',
-    '2026-05-27': 'Fête de Tabaski',
-    '2026-08-07': 'Jour de l’Indépendance',
-    '2026-08-26': 'Fête de Maouloud',
-    '2026-12-25': 'Fête de Noël'
-  };
-
-  // Explicit exceptional sessions can be added here when BRVM publishes an
-  // official notice. We never infer a shortened session merely because a
-  // holiday is tomorrow.
-  var EXCEPTIONAL = {};
-
-  function pad(n) { return String(n).padStart(2, '0'); }
-  function dateKey(d) { return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
-
-  function nowUTC() {
-    var d = new Date();
-    return {
-      date: d,
-      day: d.getUTCDay(),
-      key: dateKey(d),
-      minutes: d.getUTCHours() * 60 + d.getUTCMinutes() + d.getUTCSeconds() / 60
-    };
-  }
-
-  function scheduleFor(n) {
-    if (EXCEPTIONAL[n.key]) return EXCEPTIONAL[n.key];
-    return NORMAL;
-  }
-
-  function phaseFor() {
-    var n = nowUTC();
-    if (n.day === 0 || n.day === 6) {
-      return { id: 'closed', label: 'Marché fermé', reason: 'Week-end', minutes: n.minutes, schedule: NORMAL };
-    }
-    if (HOLIDAYS_2026[n.key]) {
-      return { id: 'closed', label: 'Marché fermé', reason: HOLIDAYS_2026[n.key], minutes: n.minutes, holiday: true, schedule: NORMAL };
-    }
-
-    var schedule = scheduleFor(n);
-    var m = n.minutes;
-    var pre = schedule[0];
-    var openFix = schedule[1];
-    var continuous = schedule[2];
-    var preclose = schedule[3];
-    var closeFix = schedule[4];
-    var last = schedule[5];
-    var close = schedule[6];
-
-    if (m < pre.start) return { id: 'closed', label: 'Marché fermé', reason: 'Avant pré-ouverture', minutes: m, next: 'Pré-ouverture à ' + pad(Math.floor(pre.start / 60)) + ':' + pad(pre.start % 60) + ' UTC', schedule: schedule };
-    if (m < pre.end) return { id: 'preopen', label: pre.label, reason: 'Carnet d’ordres en pré-ouverture', minutes: m, schedule: schedule };
-
-    // The fixing is an instant with a +/-60s random execution window on the
-    // official schedule. We expose it as a distinct state around the scheduled
-    // timestamp without pretending to know the exact random second.
-    if (Math.abs(m - openFix.start) <= (1 / 60)) return { id: 'open-fixing', label: openFix.label, reason: 'Fixing du prix d’ouverture', minutes: m, schedule: schedule };
-    if (m < continuous.end) return { id: 'continuous', label: continuous.label, reason: 'Marché ouvert', minutes: m, schedule: schedule };
-    if (m < preclose.end) return { id: 'preclose', label: preclose.label, reason: 'Pré-clôture du marché', minutes: m, schedule: schedule };
-    if (Math.abs(m - closeFix.start) <= (1 / 60)) return { id: 'close-fixing', label: closeFix.label, reason: 'Fixing du prix de clôture', minutes: m, schedule: schedule };
-    if (m < last.end) return { id: 'last-price', label: last.label, reason: 'Dernier cours', minutes: m, schedule: schedule };
-    return { id: 'closed', label: close.label, reason: 'Marché clôturé et officialisé', minutes: m, schedule: schedule };
-  }
-
-  function countdown(target, current) {
-    var diff = Math.max(0, target - current);
-    var total = Math.floor(diff * 60);
-    var h = Math.floor(total / 3600);
-    var min = Math.floor((total % 3600) / 60);
-    var sec = total % 60;
-    if (h) return h + ' h ' + pad(min) + ' min';
-    return min + ' min ' + pad(sec) + ' s';
-  }
-
-  function nextTarget(n) {
-    var s = scheduleFor(n);
-    var targets = [s[0].start, s[0].end, s[2].end, s[3].end, s[5].end];
-    for (var i = 0; i < targets.length; i++) if (targets[i] > n.minutes) return targets[i];
-    return null;
-  }
-
-  function nextLabel(n) {
-    if (n.day === 0 || n.day === 6 || HOLIDAYS_2026[n.key] || n.minutes >= 900) return 'prochaine séance : 09:00 UTC';
-    var target = nextTarget(n);
-    return target == null ? 'prochaine séance : 09:00 UTC' : countdown(target, n.minutes);
-  }
-
-  function render() {
-    var n = nowUTC();
-    var p = phaseFor();
-    var status = document.getElementById('marketStatus');
-    var time = document.getElementById('marketTime');
-    var next = document.getElementById('marketNext');
-    if (!status && !time && !next) return;
-
-    var active = p.id !== 'closed';
-    if (status) {
-      status.className = 'market-status ' + (active ? 'open' : 'closed');
-      status.innerHTML = '<span class="status-dot"></span>' + p.label;
-      status.title = 'BRVM — horaires officiels en UTC';
-    }
-    if (time) time.textContent = pad(n.date.getUTCHours()) + ':' + pad(n.date.getUTCMinutes()) + ':' + pad(n.date.getUTCSeconds()) + ' UTC';
-    if (next) {
-      if (p.id === 'preopen') next.textContent = 'Fixing d’ouverture à 09:45 UTC';
-      else if (p.id === 'open-fixing') next.textContent = 'Négociation en continu à 09:45 UTC';
-      else if (p.id === 'continuous') next.textContent = 'Pré-clôture à 14:00 UTC';
-      else if (p.id === 'preclose') next.textContent = 'Fixing de clôture à 14:30 UTC';
-      else if (p.id === 'close-fixing') next.textContent = 'Négociation au dernier cours à 14:30 UTC';
-      else if (p.id === 'last-price') next.textContent = 'Fermeture à 15:00 UTC';
-      else if (p.holiday) next.textContent = 'Jour férié BRVM — prochaine séance : 09:00 UTC';
-      else next.textContent = nextLabel(n);
-    }
-
-    window.TC_BRVM_MARKET_PHASE = {
-      id: p.id,
-      label: p.label,
-      open: active,
-      utcMinutes: n.minutes,
-      date: n.key,
-      reason: p.reason,
-      holiday: !!p.holiday,
-      officialSchedule: p.schedule || NORMAL
-    };
-  }
-
-  render();
-  setInterval(render, 1000);
-})();
+  if (global.TC_BRVM_MARKET_HOURS?.version) return;
+  const LABELS={closed:'Marché fermé',pre_open:'Pré-ouverture',opening_fixing:"Fixing d'ouverture",continuous:'Négociation en continu',pre_close:'Pré-clôture',closing_fixing:'Fixing de clôture',last_price:'Négociation au dernier cours',official_close:'Fermeture et officialisation'};
+  const NORMAL=[{phase:'pre_open',start:540,end:585},{phase:'opening_fixing',start:585,end:585},{phase:'continuous',start:585,end:840},{phase:'pre_close',start:840,end:870},{phase:'closing_fixing',start:870,end:870},{phase:'last_price',start:870,end:900},{phase:'official_close',start:900,end:900}];
+  const HOLIDAY_EVE=[{phase:'pre_open',start:540,end:570},{phase:'opening_fixing',start:570,end:570},{phase:'continuous',start:570,end:660},{phase:'pre_close',start:660,end:690},{phase:'closing_fixing',start:690,end:690},{phase:'last_price',start:690,end:720},{phase:'official_close',start:720,end:720}];
+  const HOLIDAYS_2026={'2026-01-01':'Jour de l’an','2026-03-17':'Lendemain de la nuit du destin','2026-03-20':'Fête du Ramadan','2026-04-06':'Lundi de Pâques','2026-05-01':'Fête du Travail','2026-05-14':'Jour de l’Ascension','2026-05-25':'Lundi de Pentecôte','2026-05-27':'Fête de Tabaski','2026-08-07':'Jour de l’Indépendance','2026-08-26':'Fête de Maouloud','2026-12-25':'Fête de Noël'};
+  const EXCEPTIONAL={};
+  const pad=n=>String(n).padStart(2,'0');
+  const key=d=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+  const dateOf=v=>{const d=v instanceof Date?new Date(v):(/^\d{4}-\d{2}-\d{2}$/.test(String(v))?new Date(`${v}T00:00:00Z`):new Date(v??Date.now()));if(isNaN(d))throw Error('Invalid BRVM date');return d;};
+  const mins=d=>d.getUTCHours()*60+d.getUTCMinutes()+d.getUTCSeconds()/60+d.getUTCMilliseconds()/60000;
+  const at=(d,m)=>new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),0,0,0)).setUTCMinutes(m);
+  const iso=(d,m)=>new Date(at(d,m)).toISOString();
+  const weekend=d=>[0,6].includes(d.getUTCDay());
+  function schedule(d){const k=key(d),e=EXCEPTIONAL[k];if(e)return {type:e.type||'exceptional',reason:e.reason||'Séance exceptionnelle BRVM',phases:e.phases||NORMAL};if(weekend(d)||HOLIDAYS_2026[k])return {type:'closed',reason:weekend(d)?'Week-end':HOLIDAYS_2026[k],phases:[]};return {type:'normal',reason:'Horaire normal BRVM',phases:NORMAL};}
+  function nextTrading(d){const x=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));for(let i=0;i<370;i++){const s=schedule(x);if(s.phases.length)return {date:new Date(x),schedule:s};x.setUTCDate(x.getUTCDate()+1);}return null;}
+  function stateFor(v){const d=dateOf(v),k=key(d),s=schedule(d),m=mins(d);let phase='closed',phaseStart=null,phaseEnd=null,nextPhase='pre_open',nextPhaseAt=null;if(s.phases.length){for(const p of s.phases){if(p.start===p.end?Math.abs(m-p.start)<1/60:m>=p.start&&m<p.end){phase=p.phase;phaseStart=iso(d,p.start);phaseEnd=iso(d,p.end);break;}}const idx=s.phases.findIndex(p=>p.phase===phase);if(idx>=0&&idx<s.phases.length-1){nextPhase=s.phases[idx+1].phase;nextPhaseAt=iso(d,s.phases[idx+1].start);}else{const n=new Date(d);n.setUTCDate(n.getUTCDate()+1);const t=nextTrading(n);if(t){nextPhase=t.schedule.phases[0].phase;nextPhaseAt=iso(t.date,t.schedule.phases[0].start);}}if(phase==='closed'){const p=s.phases.find(x=>x.start>m);if(p){nextPhase=p.phase;nextPhaseAt=iso(d,p.start);}}}else{const n=new Date(d);n.setUTCDate(n.getUTCDate()+1);const t=nextTrading(n);if(t){nextPhase=t.schedule.phases[0].phase;nextPhaseAt=iso(t.date,t.schedule.phases[0].start);}}return {date:k,isTradingDay:!!s.phases.length,isOpen:phase!=='closed'&&phase!=='official_close',phase,phaseLabel:LABELS[phase],phaseStart,phaseEnd,nextPhase,nextPhaseAt,scheduleType:s.type,reason:s.reason,timezone:'UTC',randomizationSeconds:60,officialSource:'BRVM'};}
+  function render(){const d=new Date(),s=stateFor(d),status=document.getElementById('marketStatus'),time=document.getElementById('marketTime'),next=document.getElementById('marketNext');if(status){status.className='market-status '+(s.isOpen?'open':'closed');status.innerHTML='<span class="status-dot"></span>'+s.phaseLabel;status.title='BRVM — horaires officiels en UTC';}if(time)time.textContent=pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds())+' UTC';if(next)next.textContent=s.nextPhaseAt?'Prochaine phase : '+LABELS[s.nextPhase]+' à '+new Date(s.nextPhaseAt).toISOString().slice(11,16)+' UTC':'Aucune prochaine séance disponible';global.TC_BRVM_MARKET_PHASE=s;}
+  global.TC_BRVM_MARKET_HOURS={version:'2026.08.27',labels:LABELS,normalPhases:NORMAL,holidayEvePhases:HOLIDAY_EVE,holidays2026:HOLIDAYS_2026,exceptionalSessions:EXCEPTIONAL,getState:v=>stateFor(v??new Date()),isTradingDay:v=>stateFor(v).isTradingDay,isOpen:v=>stateFor(v).isOpen,configureExceptionalSession:(date,c)=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date))||!c||!Array.isArray(c.phases))throw Error('Invalid exceptional BRVM session');EXCEPTIONAL[date]={type:c.type||'exceptional',reason:c.reason||'Séance exceptionnelle BRVM',phases:c.phases};render();}};
+  render();clearInterval(global.__TC_BRVM_MARKET_INTERVAL__);global.__TC_BRVM_MARKET_INTERVAL__=setInterval(render,1000);
+})(window);
