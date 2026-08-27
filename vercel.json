@@ -16,6 +16,8 @@
     { "source": "/app/app.html", "destination": "/app.html", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/app", "destination": "/app.html" },
+    { "source": "/admin", "destination": "/admin.html" },
     { "source": "/app.html", "destination": "/app/app.html" },
     { "source": "/titres", "destination": "/app/app.html#titres" },
     { "source": "/marche", "destination": "/app/app.html#marche" },
