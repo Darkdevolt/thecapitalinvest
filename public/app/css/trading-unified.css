@@ -44,20 +44,17 @@ h1{font-family:'Playfair Display',serif!important;font-weight:600!important;lett
 .up,.badge.buy{color:var(--tc-green)!important}.down,.badge.sell{color:var(--tc-red)!important}.badge.wait{color:var(--tc-gold-2)!important}
 .modal{background:rgba(0,0,0,.72)!important;backdrop-filter:blur(4px)}.modal-box{border-radius:12px!important}.empty{color:var(--tc-muted)!important;padding:36px 20px!important}.error{background:rgba(248,113,113,.05)!important;border-color:rgba(248,113,113,.2)!important}
 .frame-shell{background:linear-gradient(180deg,var(--tc-card-2),var(--tc-card))!important;border:1px solid var(--tc-border)!important;border-radius:12px!important;box-shadow:0 10px 28px rgba(0,0,0,.14)!important;overflow:hidden}
-.frame{display:block;width:100%;height:calc(100vh - 245px)!important;min-height:680px!important;border:0;background:var(--tc-bg)!important}
+.frame{display:block;width:100%;height:calc(100vh - 245px)!important;min-height:0!important;border:0;background:var(--tc-bg)!important}
 .help{box-shadow:0 10px 30px rgba(0,0,0,.35)}
-
-/* Workspace hierarchy */
 .status{white-space:nowrap}
 .head .actions .btn{min-height:36px}
 .tabs+.panel{margin-top:0}
-
 @media(max-width:1100px){
   .wrap{padding-inline:20px!important}
   .head{grid-template-columns:1fr!important;align-items:start!important;gap:14px!important}
   .actions{justify-content:flex-start;max-width:none}
   .kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .frame{height:calc(100vh - 270px)!important;min-height:620px!important}
+  .frame{height:calc(100vh - 270px)!important;min-height:0!important}
 }
 @media(max-width:700px){
   .top{padding:11px 14px}
@@ -75,12 +72,12 @@ h1{font-family:'Playfair Display',serif!important;font-weight:600!important;lett
   .value{font-size:18px!important}
   .card-head{padding:13px 14px!important}
   .card-body{padding:14px!important}
-  .frame{height:calc(100vh - 305px)!important;min-height:590px!important}
+  .frame{height:calc(100vh - 305px)!important;min-height:0!important}
   .help{right:12px;bottom:12px}
 }
 @media(max-width:430px){
   .wrap{padding-inline:10px!important}
   .actions{grid-template-columns:1fr}
   .kpis{grid-template-columns:1fr}
-  .frame{height:calc(100vh - 350px)!important;min-height:560px!important}
+  .frame{height:calc(100vh - 350px)!important;min-height:0!important}
 }
