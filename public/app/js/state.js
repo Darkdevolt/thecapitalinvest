@@ -37,7 +37,16 @@
     }
     var script = document.createElement('script');
     script.id = 'tc-market-ux-script';
-    script.src = '/app/js/market-ux.js?v=20260827.2';
+    script.src = '/app/js/market-ux.js?v=20260827.3';
+    script.defer = true;
+    document.head.appendChild(script);
+  })();
+
+  (function loadMarketStatusReconciler(){
+    if (document.getElementById('tc-market-status-reconciler-script')) return;
+    var script = document.createElement('script');
+    script.id = 'tc-market-status-reconciler-script';
+    script.src = '/app/js/market-status-reconciler.js?v=20260827.1';
     script.defer = true;
     document.head.appendChild(script);
   })();
