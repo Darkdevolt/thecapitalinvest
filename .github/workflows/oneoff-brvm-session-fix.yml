@@ -1,0 +1,107 @@
+name: oneoff-brvm-session-fix
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Apply BRVM session engine and remove obsolete Formation
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          # Replace the BRVM engine with the central UTC implementation.
+          Path('public/app/js/views/brvm-market-hours.js').write_text(r'''// THE CAPITAL — BRVM central market calendar / session engine
+// Official: https://www.brvm.org/fr/horaires-de-cotation
+// Calendar: https://www.brvm.org/fr/brvm-calendrier-de-cotation-2026
+(function (global) {
+  'use strict';
+  if (global.TC_BRVM_MARKET_HOURS?.version) return;
+  const LABELS={closed:'Marché fermé',pre_open:'Pré-ouverture',opening_fixing:"Fixing d'ouverture",continuous:'Négociation en continu',pre_close:'Pré-clôture',closing_fixing:'Fixing de clôture',last_price:'Négociation au dernier cours',official_close:'Fermeture et officialisation'};
+  const NORMAL=[
+    {phase:'pre_open',start:540,end:585},{phase:'opening_fixing',start:585,end:585},{phase:'continuous',start:585,end:840},
+    {phase:'pre_close',start:840,end:870},{phase:'closing_fixing',start:870,end:870},{phase:'last_price',start:870,end:900},{phase:'official_close',start:900,end:900}
+  ];
+  const HOLIDAY_EVE=[
+    {phase:'pre_open',start:540,end:570},{phase:'opening_fixing',start:570,end:570},{phase:'continuous',start:570,end:660},
+    {phase:'pre_close',start:660,end:690},{phase:'closing_fixing',start:690,end:690},{phase:'last_price',start:690,end:720},{phase:'official_close',start:720,end:720}
+  ];
+  const HOLIDAYS_2026={
+    '2026-01-01':'Jour de l’an','2026-03-17':'Lendemain de la nuit du destin','2026-03-20':'Fête du Ramadan','2026-04-06':'Lundi de Pâques',
+    '2026-05-01':'Fête du Travail','2026-05-14':'Jour de l’Ascension','2026-05-25':'Lundi de Pentecôte','2026-05-27':'Fête de Tabaski',
+    '2026-08-07':'Jour de l’Indépendance','2026-08-26':'Fête de Maouloud','2026-12-25':'Fête de Noël'
+  };
+  // Empty by design: shortened sessions require an explicit BRVM notice.
+  const EXCEPTIONAL={};
+  const pad=n=>String(n).padStart(2,'0');
+  const key=d=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
+  const dateOf=v=>{const d=v instanceof Date?new Date(v):(/^\d{4}-\d{2}-\d{2}$/.test(String(v))?new Date(`${v}T00:00:00Z`):new Date(v??Date.now()));if(isNaN(d))throw Error('Invalid BRVM date');return d;};
+  const mins=d=>d.getUTCHours()*60+d.getUTCMinutes()+d.getUTCSeconds()/60+d.getUTCMilliseconds()/60000;
+  const at=(d,m)=>new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate(),0,0,0)).setUTCMinutes(m);
+  const iso=(d,m)=>new Date(at(d,m)).toISOString();
+  const weekend=d=>[0,6].includes(d.getUTCDay());
+  function schedule(d){const k=key(d),e=EXCEPTIONAL[k];if(e)return {type:e.type||'exceptional',reason:e.reason||'Séance exceptionnelle BRVM',phases:e.phases||NORMAL};if(weekend(d)||HOLIDAYS_2026[k])return {type:'closed',reason:weekend(d)?'Week-end':HOLIDAYS_2026[k],phases:[]};return {type:'normal',reason:'Horaire normal BRVM',phases:NORMAL};}
+  function nextTrading(d){const x=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()));for(let i=0;i<370;i++){const s=schedule(x);if(s.phases.length)return {date:new Date(x),schedule:s};x.setUTCDate(x.getUTCDate()+1);}return null;}
+  function stateFor(v){const d=dateOf(v),k=key(d),s=schedule(d),m=mins(d);let phase='closed',phaseStart=null,phaseEnd=null,nextPhase='pre_open',nextPhaseAt=null;
+    if(s.phases.length){
+      for(const p of s.phases){if(p.start===p.end?Math.abs(m-p.start)<1/60:m>=p.start&&m<p.end){phase=p.phase;phaseStart=iso(d,p.start);phaseEnd=iso(d,p.end);break;}}
+      const idx=s.phases.findIndex(p=>p.phase===phase);
+      if(idx>=0&&idx<s.phases.length-1){nextPhase=s.phases[idx+1].phase;nextPhaseAt=iso(d,s.phases[idx+1].start);}
+      else {const n=new Date(d);n.setUTCDate(n.getUTCDate()+1);const t=nextTrading(n);if(t){nextPhase=t.schedule.phases[0].phase;nextPhaseAt=iso(t.date,t.schedule.phases[0].start);}}
+      if(phase==='closed'){const p=s.phases.find(x=>x.start>m);if(p){nextPhase=p.phase;nextPhaseAt=iso(d,p.start);}}
+    } else {const n=new Date(d);n.setUTCDate(n.getUTCDate()+1);const t=nextTrading(n);if(t){nextPhase=t.schedule.phases[0].phase;nextPhaseAt=iso(t.date,t.schedule.phases[0].start);}}
+    return {date:k,isTradingDay:!!s.phases.length,isOpen:phase!=='closed'&&phase!=='official_close',phase,phaseLabel:LABELS[phase],phaseStart,phaseEnd,nextPhase,nextPhaseAt,scheduleType:s.type,reason:s.reason,timezone:'UTC',randomizationSeconds:60,officialSource:'BRVM'};
+  }
+  function render(){const d=new Date(),s=stateFor(d),status=document.getElementById('marketStatus'),time=document.getElementById('marketTime'),next=document.getElementById('marketNext');if(status){status.className='market-status '+(s.isOpen?'open':'closed');status.innerHTML='<span class="status-dot"></span>'+s.phaseLabel;status.title='BRVM — horaires officiels en UTC';}if(time)time.textContent=pad(d.getUTCHours())+':'+pad(d.getUTCMinutes())+':'+pad(d.getUTCSeconds())+' UTC';if(next)next.textContent=s.nextPhaseAt?'Prochaine phase : '+LABELS[s.nextPhase]+' à '+new Date(s.nextPhaseAt).toISOString().slice(11,16)+' UTC':'Aucune prochaine séance disponible';global.TC_BRVM_MARKET_PHASE=s;}
+  global.TC_BRVM_MARKET_HOURS={version:'2026.08.27',labels:LABELS,normalPhases:NORMAL,holidayEvePhases:HOLIDAY_EVE,holidays2026:HOLIDAYS_2026,exceptionalSessions:EXCEPTIONAL,getState:v=>stateFor(v??new Date()),isTradingDay:v=>stateFor(v).isTradingDay,isOpen:v=>stateFor(v).isOpen,configureExceptionalSession:(date,c)=>{if(!/^\d{4}-\d{2}-\d{2}$/.test(String(date))||!c||!Array.isArray(c.phases))throw Error('Invalid exceptional BRVM session');EXCEPTIONAL[date]={type:c.type||'exceptional',reason:c.reason||'Séance exceptionnelle BRVM',phases:c.phases};render();}};
+  render();clearInterval(global.__TC_BRVM_MARKET_INTERVAL__);global.__TC_BRVM_MARKET_INTERVAL__=setInterval(render,1000);
+})(window);
+''')
+
+          p=Path('public/app/app.html'); s=p.read_text()
+          s=s.replace('''  <div class="sidebar-section">Apprendre</div>\n  <div class="nav-item" onclick="nav('formation')"><span class="icon">📚</span> Formation</div>\n''','')
+          s=s.replace('''        <div class="nav-dropdown-separator"></div>\n        <div class="nav-dropdown-label">Apprendre</div>\n        <div class="nav-dropdown-item" id="nav-formation" onclick="nav('formation');closeDropdowns()">\n          <span class="icon">📚</span>\n          <div><div>Formation</div><div class="item-desc">Lexique & guides</div></div>\n        </div>\n''','''        <div class="nav-dropdown-separator"></div>\n''')
+          start=s.find('<!-- ═══ FORMATION ═══ -->')
+          if start!=-1:
+              end=s.find('<div class="view" id="view-marche">', start)
+              if end==-1: raise SystemExit('Formation view end marker not found')
+              s=s[:start]+s[end:]
+          s=s.replace('<script src="/app/js/views/formation.js?v=5"></script>\n','')
+          p.write_text(s)
+
+          p=Path('public/app/js/router.js'); s=p.read_text()
+          for old in [
+            ",formation:'Formation BRVM'",
+            ",formation:[{label:'Tableau de bord',view:'overview'},{label:'Formation',view:'formation'}]",
+            ",formation:'renderFormation'",
+            ",formation:'#formation'",
+            ",'#formation':'formation'"
+          ]: s=s.replace(old,'')
+          p.write_text(s)
+
+          p=Path('public/app/js/init.js'); s=p.read_text()
+          needle="  function renderAfterData() {\n"
+          insert="""  function loadIntegratedSuivi() {\n    if (window.__TC_SUIVI_LOADER__) return;\n    window.__TC_SUIVI_LOADER__ = true;\n    function load(src) {\n      return new Promise(function (resolve, reject) {\n        var s = document.createElement('script');\n        s.src = src; s.async = false; s.onload = resolve; s.onerror = reject;\n        document.head.appendChild(s);\n      });\n    }\n    load('/app/js/views/suivi-integrated.js?v=20260827')\n      .then(function () { return load('/app/js/views/suivi-metrics-fix.js?v=20260827'); })\n      .catch(function (err) { console.error('[SUIVI] Chargement du module intégré impossible', err); });\n  }\n\n  function removeObsoleteFormation() {\n    document.querySelectorAll('[onclick*=\\\"formation\\\"], [href*=\\\"#formation\\\"], #nav-formation, #view-formation').forEach(function (node) { node.remove(); });\n  }\n\n"""
+          if needle not in s: raise SystemExit('init insertion point not found')
+          s=s.replace(needle,insert+needle,1)
+          marker="    if (window.marketsModule && typeof window.marketsModule.loadData === 'function') {\n"
+          if marker not in s: raise SystemExit('init marker not found')
+          s=s.replace(marker,"    loadIntegratedSuivi();\n    removeObsoleteFormation();\n\n"+marker,1)
+          p.write_text(s)
+          Path('public/app/js/views/formation.js').unlink()
+          PY
+
+          node --check public/app/js/views/brvm-market-hours.js
+          node --check public/app/js/init.js
+          node --check public/app/js/router.js
+          git diff --check
+          git status --short
+          git add public/app/app.html public/app/js/init.js public/app/js/router.js public/app/js/views/brvm-market-hours.js public/app/js/views/formation.js
+          git commit -m "fix(brvm): implement official trading phases and remove obsolete formation"
+          git push origin HEAD:main
