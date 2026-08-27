@@ -29,17 +29,18 @@
 .stat-value,.portf-item-value,.portf-kpi-value{font-family:var(--mono);font-size:21px;line-height:1.1}
 
 /* TABLES */
-.table-wrap{border:1px solid var(--tc-line-soft);border-radius:var(--tc-radius);background:rgba(10,8,4,.16)}
+.table-wrap{border:1px solid var(--tc-line-soft);border-radius:var(--tc-radius);background:rgba(10,8,4,.16);overflow-x:auto;max-width:100%}
 thead th{height:40px;padding:9px 13px;background:rgba(184,150,78,.025);border-bottom:1px solid var(--tc-line);font-size:9px;letter-spacing:.11em}
 tbody td{padding:10px 13px}
 tbody tr{border-bottom:1px solid rgba(184,150,78,.05)}
 tbody tr:hover{background:rgba(184,150,78,.035)}
 
 /* FORMS / FILTERS */
-.search-bar{gap:8px;padding-bottom:16px}
+.search-bar{gap:8px;padding-bottom:16px;display:flex;flex-wrap:wrap;align-items:center}
 .search-input,.filter-btn,.portf-form input,.portf-form select,.screener-filters input,.screener-filters select{
  min-height:38px;padding:8px 12px;border-radius:7px;background:rgba(22,19,13,.88);border:1px solid var(--tc-line);font-size:12px
 }
+.search-bar .search-input{flex:1 1 260px;min-width:0}
 .search-input:focus,.portf-form input:focus,.portf-form select:focus,.screener-filters input:focus,.screener-filters select:focus{border-color:var(--gold);box-shadow:0 0 0 2px rgba(184,150,78,.06)}
 .filter-btn{font-size:10px;letter-spacing:.07em;text-transform:uppercase}
 
@@ -67,5 +68,55 @@ tbody tr:hover{background:rgba(184,150,78,.035)}
 .empty-state{padding:50px 20px;border:1px dashed var(--tc-line-soft);border-radius:var(--tc-radius);background:rgba(184,150,78,.01)}
 .empty-title{font-size:17px}.empty-text{font-size:12px}
 
-@media(max-width:1100px){.main{padding:22px 20px 46px}.view>.page-header h1{font-size:26px}}
-@media(max-width:700px){.main{padding:18px 12px 34px}.view>.page-header{margin-bottom:17px;padding-bottom:13px}.view>.page-header h1{font-size:23px}.view>.page-header p{font-size:11px}.card-header{padding:12px 14px}.card-body{padding:14px}.stat-card,.portf-item,.portf-kpi{padding:15px}.stat-value,.portf-item-value,.portf-kpi-value{font-size:19px}.chart-container{height:200px}.chart-container.tall{height:260px}.chart-container.xl{height:300px}}
+/* STRUCTURAL CLEANUP — prevents accidental stacking and width collapse */
+.view{min-width:0;overflow:visible}
+.view>*{min-width:0}
+.view .grid-2,.view .grid-3,.view .grid-4,.view .grid-5,.view .grid-7030,.view .session-grid,.view .portf-summary,.view .portf-kpi-grid{align-items:stretch}
+.view .grid-2>*,.view .grid-3>*,.view .grid-4>*,.view .grid-5>*,.view .grid-7030>*,.view .session-grid>*,.view .portf-summary>*,.view .portf-kpi-grid>*{min-width:0}
+.view .card,.view .stat-card,.view .analyse-card,.view .boc-card,.view .fiche-hero{overflow:hidden}
+.view .card-header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.view .card-header>*{min-width:0}
+.view .card-header>div:first-child{flex:1 1 auto}
+.view img,.view canvas,.view iframe{max-width:100%}
+.view button,.view input,.view select,.view textarea{max-width:100%}
+.view .grid-7030{grid-template-columns:minmax(0,7fr) minmax(260px,3fr)}
+
+/* Hero / banner rhythm without changing content */
+.view .page-header{position:relative;display:block;max-width:none}
+.view .page-header h1{margin:0;max-width:100%;text-wrap:balance}
+.view .page-header p{max-width:760px;line-height:1.55}
+
+/* Dense lists become deliberate rows rather than visual piles */
+.view .card-body>table,.view .card-body>.table-wrap{max-width:100%}
+.view .card-body>div+div{margin-top:0}
+
+@media(max-width:1100px){
+ .main{padding:22px 20px 46px}
+ .view>.page-header h1{font-size:26px}
+ .view .grid-7030{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:760px){
+ .main{padding:18px 12px 34px}
+ .view>.page-header{margin-bottom:17px;padding-bottom:13px}
+ .view>.page-header h1{font-size:23px}
+ .view>.page-header p{font-size:11px}
+ .view .card-header{padding:12px 14px}
+ .view .card-body{padding:14px}
+ .view .grid-2,.view .grid-3,.view .grid-4,.view .grid-5,.view .grid-7030,.view .session-grid,.view .portf-summary,.view .portf-kpi-grid{grid-template-columns:1fr!important;gap:10px;margin-bottom:12px}
+ .view .stat-card,.view .portf-item,.view .portf-kpi{padding:15px}
+ .view .stat-value,.view .portf-item-value,.view .portf-kpi-value{font-size:19px}
+ .view .chart-container{height:200px}
+ .view .chart-container.tall{height:260px}
+ .view .chart-container.xl{height:300px}
+ .view .page-header p{max-width:100%}
+ .view .search-bar{align-items:stretch}
+ .view .search-bar .search-input{flex-basis:100%}
+ .view .search-bar .filter-btn{flex:1 1 auto}
+}
+@media(max-width:480px){
+ .main{padding-inline:10px}
+ .view>.page-header h1{font-size:21px}
+ .view .card-header{gap:8px}
+ .view .card-body{padding:12px}
+ .view .search-bar .filter-btn{min-width:0;padding-inline:8px}
+}
