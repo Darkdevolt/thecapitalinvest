@@ -69,5 +69,9 @@
       if(a)a.setAttribute('aria-label','Retour vers The Capital');
     },500);
   }
-  document.readyState==='loading'?document.addEventListener('DOMContentLoaded',boot):boot();
+
+  /* Le script est chargé en fin de body : on démarre immédiatement.
+     Avant, boot attendait DOMContentLoaded, donc l'animation ne pouvait
+     pas masquer le temps d'initialisation de l'Institute. */
+  boot();
 })();
