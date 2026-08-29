@@ -6,36 +6,46 @@
 
 <title>The Capital — Intelligence financière africaine</title>
 
-<meta name="description" content="The Capital réunit marché BRVM, données financières, analyse, suivi et The Capital Institute.">
+<meta
+  name="description"
+  content="The Capital réunit marché BRVM, données financières, analyse, suivi et The Capital Institute."
+>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@500;600;700;800&display=swap" rel="stylesheet">
+<link
+  href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Playfair+Display:ital,wght@500;600;700;800&display=swap"
+  rel="stylesheet"
+>
 
 <style>
 
 :root{
   --bg:#090806;
-  --bg2:#0d0b08;
-  --panel:#11100c;
-  --panel2:#17140e;
+  --bg-soft:#0d0b08;
+  --panel:#11100d;
+  --panel-2:#15120e;
 
   --gold:#b8964e;
-  --gold2:#e0c176;
-  --gold3:#f1d991;
+  --gold-light:#e0c176;
+  --gold-bright:#f1d991;
 
-  --text:#f4efe6;
-  --muted:rgba(244,239,230,.64);
-  --muted2:rgba(244,239,230,.38);
+  --white:#f5f0e7;
+  --muted:rgba(245,240,231,.62);
+  --muted-soft:rgba(245,240,231,.38);
 
-  --line:rgba(184,150,78,.18);
-  --line2:rgba(184,150,78,.10);
+  --line:rgba(184,150,78,.17);
+  --line-soft:rgba(184,150,78,.09);
 
   --serif:'Playfair Display',Georgia,serif;
   --sans:'DM Sans',Arial,sans-serif;
   --mono:'DM Mono',monospace;
 }
+
+/* =========================================================
+   RESET
+========================================================= */
 
 *{
   box-sizing:border-box;
@@ -43,30 +53,52 @@
 
 html{
   scroll-behavior:smooth;
-  scroll-padding-top:76px;
+  scroll-padding-top:80px;
 }
 
 body{
   margin:0;
+  color:var(--white);
   background:
-    radial-gradient(circle at 75% 15%,rgba(184,150,78,.055),transparent 25%),
-    var(--bg);
-  color:var(--text);
+    radial-gradient(
+      circle at 78% 12%,
+      rgba(184,150,78,.07),
+      transparent 28%
+    ),
+    linear-gradient(
+      180deg,
+      #090806 0%,
+      #0a0907 45%,
+      #090806 100%
+    );
   font:15px/1.65 var(--sans);
   overflow-x:hidden;
 }
 
-body:before{
+body::before{
   content:"";
   position:fixed;
   inset:0;
   pointer-events:none;
-  opacity:.18;
-  background-image:
-    linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px);
-  background-size:80px 80px;
-  mask-image:linear-gradient(to bottom,black,transparent 75%);
+  z-index:-1;
+
+  background:
+    linear-gradient(
+      rgba(255,255,255,.009) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255,255,255,.009) 1px,
+      transparent 1px
+    );
+
+  background-size:90px 90px;
+  mask-image:linear-gradient(
+    to bottom,
+    black,
+    transparent 75%
+  );
 }
 
 a{
@@ -75,34 +107,42 @@ a{
 }
 
 .wrap{
-  width:min(1200px,calc(100% - 32px));
+  width:min(1200px,calc(100% - 40px));
   margin:auto;
 }
 
-
 /* =========================================================
    NAVIGATION
-   ========================================================= */
+========================================================= */
 
 .top{
   position:sticky;
   top:0;
-  z-index:100;
-  background:rgba(9,8,6,.88);
+  z-index:1000;
+
+  background:rgba(9,8,6,.91);
   border-bottom:1px solid var(--line);
-  backdrop-filter:blur(20px);
+
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
 }
 
 .nav{
-  min-height:72px;
+  min-height:74px;
+
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:20px;
+  gap:30px;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
 }
 
 .brand img{
-  width:185px;
+  width:180px;
   height:48px;
   object-fit:contain;
   object-position:left center;
@@ -110,72 +150,91 @@ a{
 
 .links{
   display:flex;
-  gap:18px;
   align-items:center;
+  gap:20px;
+
   color:var(--muted);
+
   font:500 10px var(--mono);
+  letter-spacing:.04em;
   text-transform:uppercase;
 }
 
 .links a:not(.btn){
-  transition:.2s;
+  transition:color .2s ease;
 }
 
 .links a:not(.btn):hover{
-  color:var(--text);
+  color:var(--white);
 }
 
+/* =========================================================
+   BUTTONS
+========================================================= */
+
 .btn{
+  min-height:44px;
+
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  min-height:44px;
+
   padding:0 18px;
+
   border:1px solid var(--line);
+
   font:500 10px var(--mono);
-  letter-spacing:.06em;
+  letter-spacing:.07em;
   text-transform:uppercase;
-  transition:.25s ease;
+
+  transition:
+    background .25s ease,
+    border-color .25s ease,
+    transform .25s ease,
+    box-shadow .25s ease;
+
   cursor:pointer;
 }
 
 .btn.primary{
+  color:#0b0905;
   background:var(--gold);
   border-color:var(--gold);
-  color:#0b0905;
 }
 
 .btn.primary:hover{
-  background:var(--gold2);
-  border-color:var(--gold2);
+  background:var(--gold-light);
+  border-color:var(--gold-light);
   transform:translateY(-2px);
-  box-shadow:0 12px 30px rgba(184,150,78,.18);
+
+  box-shadow:
+    0 14px 35px rgba(184,150,78,.16);
 }
 
 .btn.ghost:hover{
+  background:rgba(184,150,78,.06);
   border-color:var(--gold);
-  background:rgba(184,150,78,.07);
 }
-
 
 /* =========================================================
    HERO
-   ========================================================= */
+========================================================= */
 
 .hero{
-  min-height:calc(100svh - 72px);
+  min-height:calc(100svh - 74px);
 
   display:grid;
-  grid-template-columns:.82fr 1.18fr;
+  grid-template-columns:
+    minmax(320px,.78fr)
+    minmax(600px,1.22fr);
 
   align-items:center;
-
-  gap:48px;
+  gap:50px;
 
   position:relative;
 }
 
-.hero:before{
+.hero::after{
   content:"";
 
   position:absolute;
@@ -183,132 +242,10 @@ a{
   width:650px;
   height:500px;
 
-  right:-300px;
-  top:50%;
+  right:-350px;
+  top:45%;
 
   transform:translateY(-50%);
-
-  background:
-    radial-gradient(
-      ellipse,
-      rgba(184,150,78,.11),
-      transparent 68%
-    );
-
-  pointer-events:none;
-}
-
-.copy{
-  padding:65px 0;
-
-  position:relative;
-  z-index:2;
-}
-
-.eyebrow,
-.kicker{
-  color:var(--gold);
-
-  font:500 9px var(--mono);
-
-  letter-spacing:.18em;
-
-  text-transform:uppercase;
-}
-
-.eyebrow{
-  display:flex;
-
-  gap:9px;
-
-  align-items:center;
-
-  margin-bottom:18px;
-}
-
-.eyebrow:before{
-  content:"";
-
-  width:24px;
-  height:1px;
-
-  background:var(--gold);
-}
-
-h1{
-  font:700 clamp(48px,6vw,74px)/.98 var(--serif);
-
-  letter-spacing:-.035em;
-
-  margin:0;
-}
-
-h1 em,
-.title em{
-  display:block;
-
-  color:var(--gold2);
-
-  font-style:italic;
-}
-
-.lead{
-  max-width:600px;
-
-  color:var(--muted);
-
-  font-size:16px;
-
-  line-height:1.75;
-
-  margin:24px 0 28px;
-}
-
-.actions{
-  display:flex;
-
-  gap:10px;
-
-  flex-wrap:wrap;
-}
-
-.note{
-  margin-top:14px;
-
-  color:var(--muted2);
-
-  font:9px var(--mono);
-}
-
-
-/* =========================================================
-   SALLE DES MARCHÉS
-   ========================================================= */
-
-.visual{
-  min-height:610px;
-
-  position:relative;
-
-  display:flex;
-
-  align-items:center;
-
-  justify-content:center;
-
-  perspective:1400px;
-}
-
-
-/* Lumière ambiante */
-
-.visual:before{
-  content:"";
-
-  position:absolute;
-
-  width:620px;
-  height:450px;
 
   background:
     radial-gradient(
@@ -317,106 +254,193 @@ h1 em,
       transparent 70%
     );
 
-  filter:blur(18px);
+  pointer-events:none;
 }
 
+.copy{
+  position:relative;
+  z-index:2;
 
-/* Salle */
+  padding:60px 0;
+}
 
-.trading-floor{
-  width:min(700px,100%);
+.eyebrow,
+.kicker{
+  color:var(--gold);
 
-  height:500px;
+  font:500 9px var(--mono);
+  letter-spacing:.18em;
+  text-transform:uppercase;
+}
 
+.eyebrow{
+  display:flex;
+  align-items:center;
+  gap:9px;
+
+  margin-bottom:18px;
+}
+
+.eyebrow::before{
+  content:"";
+
+  width:26px;
+  height:1px;
+
+  background:var(--gold);
+}
+
+h1{
+  margin:0;
+
+  font:
+    700 clamp(48px,6vw,76px)/.98
+    var(--serif);
+
+  letter-spacing:-.04em;
+}
+
+h1 em,
+.title em{
+  display:block;
+
+  color:var(--gold-light);
+  font-style:italic;
+}
+
+.lead{
+  max-width:580px;
+
+  margin:25px 0 28px;
+
+  color:var(--muted);
+
+  font-size:16px;
+  line-height:1.8;
+}
+
+.lead strong{
+  color:var(--white);
+  font-weight:500;
+}
+
+.actions{
+  display:flex;
+  flex-wrap:wrap;
+  gap:10px;
+}
+
+.note{
+  margin-top:15px;
+
+  color:var(--muted-soft);
+
+  font:9px var(--mono);
+}
+
+/* =========================================================
+   TRADING FLOOR
+========================================================= */
+
+.visual{
   position:relative;
 
+  min-width:0;
+  min-height:620px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+/*
+  CONTENEUR PRINCIPAL
+  Tout ce qui appartient à la salle
+  reste enfermé dans cette structure.
+*/
+
+.trading-floor{
+  position:relative;
+
+  width:min(760px,100%);
+  height:510px;
+
   overflow:hidden;
+
+  border:1px solid rgba(184,150,78,.23);
 
   background:
     linear-gradient(
       180deg,
-      #1b1710 0%,
-      #0e0c09 55%,
-      #080705 100%
+      #18140e 0%,
+      #100e0a 42%,
+      #090806 100%
     );
 
-  border:1px solid rgba(184,150,78,.24);
-
   box-shadow:
-    0 35px 80px rgba(0,0,0,.65),
-    inset 0 0 80px rgba(0,0,0,.58);
-
-  transform:
-    perspective(1300px)
-    rotateX(2deg);
+    0 35px 90px rgba(0,0,0,.58),
+    inset 0 0 90px rgba(0,0,0,.55);
 
   isolation:isolate;
 }
 
+/* profondeur latérale */
 
-/* Architecture */
-
-.trading-floor:before{
+.trading-floor::before{
   content:"";
 
   position:absolute;
-
   inset:0;
 
   background:
     linear-gradient(
       90deg,
-      transparent,
       rgba(184,150,78,.025),
-      transparent
+      transparent 18%,
+      transparent 82%,
+      rgba(184,150,78,.025)
     );
 
   pointer-events:none;
 }
 
+/* =========================================================
+   ARCHITECTURE
+========================================================= */
 
-/* Sol */
-
-.trading-floor:after{
-  content:"";
-
+.ceiling-lines{
   position:absolute;
 
+  top:48px;
   left:0;
   right:0;
 
-  bottom:-10px;
+  height:150px;
 
-  height:140px;
+  pointer-events:none;
+
+  opacity:.45;
 
   background:
     linear-gradient(
-      rgba(184,150,78,.065) 1px,
-      transparent 1px
+      120deg,
+      transparent 0 25%,
+      rgba(184,150,78,.07) 25.2%,
+      transparent 25.5%
     ),
     linear-gradient(
-      90deg,
-      rgba(184,150,78,.045) 1px,
-      transparent 1px
+      60deg,
+      transparent 0 25%,
+      rgba(184,150,78,.045) 25.2%,
+      transparent 25.5%
     );
 
-  background-size:55px 28px;
-
-  transform:
-    perspective(500px)
-    rotateX(58deg);
-
-  transform-origin:bottom;
-
-  opacity:.3;
-
-  z-index:-1;
+  background-size:180px 120px;
 }
 
-
 /* =========================================================
-   HEADER DE LA SALLE
-   ========================================================= */
+   HEADER SALLE
+========================================================= */
 
 .floor-header{
   position:absolute;
@@ -428,42 +452,37 @@ h1 em,
   height:48px;
 
   display:flex;
-
   align-items:center;
-
   justify-content:space-between;
 
   padding:0 20px;
 
+  background:rgba(6,5,4,.78);
+
   border-bottom:1px solid rgba(184,150,78,.13);
 
-  background:rgba(8,7,5,.65);
-
   font:8px var(--mono);
-
-  letter-spacing:.14em;
+  letter-spacing:.13em;
 }
 
 .floor-brand{
   display:flex;
-
   align-items:center;
+  gap:9px;
 
-  gap:8px;
-
-  color:var(--gold2);
+  color:var(--gold-light);
 }
 
 .status-dot{
-  width:5px;
-  height:5px;
+  width:6px;
+  height:6px;
 
   border-radius:50%;
 
-  background:var(--gold2);
+  background:var(--gold-light);
 
   box-shadow:
-    0 0 8px rgba(224,193,118,.65);
+    0 0 10px rgba(224,193,118,.7);
 
   animation:livePulse 2.5s infinite;
 }
@@ -481,68 +500,70 @@ h1 em,
 }
 
 .floor-status{
-  color:rgba(244,239,230,.32);
+  color:rgba(245,240,231,.30);
 }
 
-
 /* =========================================================
-   GRAND ÉCRAN
-   ========================================================= */
+   MARKET WALL
+========================================================= */
 
 .market-wall{
   position:absolute;
 
-  top:68px;
-
-  left:42px;
-  right:42px;
+  top:70px;
+  left:34px;
+  right:34px;
 
   height:205px;
+
+  border:1px solid rgba(184,150,78,.21);
 
   background:
     linear-gradient(
       145deg,
-      #1a1710,
-      #090806
+      #19150e,
+      #0b0a08
     );
 
-  border:1px solid rgba(184,150,78,.24);
-
   box-shadow:
-    inset 0 0 40px rgba(0,0,0,.8),
-    0 12px 35px rgba(0,0,0,.35);
-
-  padding:14px;
+    inset 0 0 45px rgba(0,0,0,.75),
+    0 14px 35px rgba(0,0,0,.28);
 }
 
 .wall-title{
-  height:25px;
+  height:36px;
 
   display:flex;
-
+  align-items:center;
   justify-content:space-between;
 
-  border-bottom:1px solid rgba(184,150,78,.10);
+  padding:0 14px;
 
-  color:rgba(244,239,230,.50);
+  border-bottom:1px solid rgba(184,150,78,.09);
 
   font:8px var(--mono);
+  letter-spacing:.14em;
 
-  letter-spacing:.13em;
+  color:rgba(245,240,231,.45);
 }
 
 .wall-live{
-  color:var(--gold2);
+  color:var(--gold-light);
 }
 
 .wall-content{
+  height:168px;
+
   display:grid;
 
-  grid-template-columns:145px 1fr 120px;
+  grid-template-columns:
+    150px
+    minmax(0,1fr)
+    110px;
 
   gap:18px;
 
-  height:155px;
+  padding:15px;
 
   align-items:center;
 }
@@ -550,36 +571,40 @@ h1 em,
 .wall-index span{
   display:block;
 
-  color:var(--muted2);
+  margin-bottom:5px;
+
+  color:var(--muted-soft);
 
   font:7px var(--mono);
-
-  margin-bottom:5px;
 }
 
 .wall-index strong{
   display:block;
 
-  color:var(--text);
+  color:var(--white);
 
-  font:500 26px var(--mono);
+  font:500 27px var(--mono);
+  letter-spacing:-.04em;
 }
 
 .wall-index small{
-  color:var(--gold2);
+  color:var(--gold-light);
 
   font:8px var(--mono);
 }
 
 .wall-chart{
-  height:105px;
-
   position:relative;
+
+  height:112px;
+
+  min-width:0;
+
+  overflow:hidden;
 }
 
-.chart-lines{
+.chart-grid{
   position:absolute;
-
   inset:0;
 
   background:
@@ -593,12 +618,13 @@ h1 em,
       transparent 1px
     );
 
-  background-size:25% 50%;
+  background-size:
+    25% 50%,
+    25% 100%;
 }
 
 .wall-chart svg{
   position:absolute;
-
   inset:0;
 
   width:100%;
@@ -607,10 +633,8 @@ h1 em,
 
 .wall-stats{
   display:flex;
-
   flex-direction:column;
-
-  gap:10px;
+  gap:9px;
 }
 
 .wall-stats div{
@@ -622,49 +646,111 @@ h1 em,
 .wall-stats span{
   display:block;
 
-  color:var(--muted2);
+  margin-bottom:2px;
+
+  color:var(--muted-soft);
 
   font:7px var(--mono);
 }
 
 .wall-stats b{
-  color:var(--text);
+  color:var(--white);
 
   font:500 10px var(--mono);
 }
 
+/* =========================================================
+   MARKET FLOOR
+========================================================= */
+
+.floor-ground{
+  position:absolute;
+
+  left:0;
+  right:0;
+  bottom:35px;
+
+  height:210px;
+
+  overflow:hidden;
+
+  background:
+    linear-gradient(
+      180deg,
+      transparent,
+      rgba(0,0,0,.25)
+    );
+}
+
+/* perspective grid */
+
+.floor-grid{
+  position:absolute;
+
+  left:-10%;
+  right:-10%;
+  bottom:-110px;
+
+  height:280px;
+
+  background:
+    linear-gradient(
+      rgba(184,150,78,.075) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(184,150,78,.05) 1px,
+      transparent 1px
+    );
+
+  background-size:
+    52px 32px,
+    52px 32px;
+
+  transform:
+    perspective(500px)
+    rotateX(63deg);
+
+  transform-origin:center bottom;
+
+  opacity:.45;
+}
 
 /* =========================================================
-   POSTES DE TRADING
-   ========================================================= */
+   TRADING DESKS
+========================================================= */
 
 .trader-row{
   position:absolute;
 
-  left:24px;
-  right:24px;
+  left:30px;
+  right:30px;
+  bottom:62px;
 
-  bottom:58px;
-
-  height:150px;
+  height:155px;
 
   display:grid;
 
-  grid-template-columns:repeat(3,1fr);
+  grid-template-columns:
+    repeat(3,minmax(0,1fr));
 
-  gap:16px;
+  gap:18px;
 
   align-items:end;
 }
 
 .desk{
-  height:150px;
-
   position:relative;
+
+  height:155px;
+
+  min-width:0;
 }
 
-
-/* Écrans */
+/* =========================================================
+   MONITORS
+========================================================= */
 
 .monitor{
   position:absolute;
@@ -672,128 +758,140 @@ h1 em,
   top:0;
   left:50%;
 
+  width:165px;
+  height:92px;
+
   transform:translateX(-50%);
 
-  width:155px;
-  height:88px;
+  overflow:hidden;
 
-  background:#070706;
+  background:#060605;
 
-  border:5px solid #17150f;
+  border:
+    4px solid #18150f;
 
   box-shadow:
-    0 5px 14px rgba(0,0,0,.65),
-    inset 0 0 15px rgba(184,150,78,.06);
+    0 8px 20px rgba(0,0,0,.72),
+    inset 0 0 18px rgba(184,150,78,.05);
 }
 
-.monitor:after{
+.monitor::after{
   content:"";
 
   position:absolute;
 
-  bottom:-13px;
   left:50%;
+  bottom:-13px;
 
-  width:27px;
-  height:10px;
+  width:30px;
+  height:11px;
 
   transform:translateX(-50%);
 
-  background:#17150f;
+  background:#18150f;
 }
 
 .monitor-top{
-  display:flex;
+  height:24px;
 
+  display:flex;
+  align-items:center;
   justify-content:space-between;
 
-  padding:6px 7px;
-
-  font:5px var(--mono);
-
-  color:var(--muted2);
+  padding:0 7px;
 
   border-bottom:1px solid rgba(184,150,78,.08);
+
+  color:var(--muted-soft);
+
+  font:5px var(--mono);
 }
 
 .monitor-top i{
-  color:var(--gold);
-
+  color:var(--gold-light);
   font-style:normal;
 }
 
-
-/* Mini graphique */
-
-.mini-chart{
-  height:38px;
-
-  display:flex;
-
-  align-items:end;
-
-  gap:4px;
-
-  padding:6px;
-}
-
-.mini-chart span{
-  flex:1;
-
-  background:rgba(184,150,78,.58);
-}
-
-
-/* Valeurs écran */
-
 .monitor-values{
   display:flex;
-
   justify-content:space-between;
 
-  padding:2px 7px;
+  padding:3px 7px;
 
   font:5px var(--mono);
 }
 
 .monitor-values b{
   color:var(--muted);
-}
-
-.monitor-values strong{
-  color:var(--gold2);
-
   font-weight:400;
 }
 
+.monitor-values strong{
+  color:var(--gold-light);
+  font-weight:400;
+}
 
-/* Barres financières */
+/* =========================================================
+   MINI CHARTS
+========================================================= */
 
-.financial-bars{
-  height:38px;
+.mini-chart{
+  height:40px;
 
   display:flex;
-
   align-items:end;
 
-  gap:7px;
+  gap:4px;
 
-  padding:6px;
+  padding:7px;
+}
+
+.mini-chart span{
+  flex:1;
+
+  min-width:2px;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(224,193,118,.85),
+      rgba(184,150,78,.35)
+    );
+}
+
+/* =========================================================
+   BAR CHART
+========================================================= */
+
+.financial-bars{
+  height:40px;
+
+  display:flex;
+  align-items:end;
+
+  gap:6px;
+
+  padding:7px;
 }
 
 .financial-bars div{
   flex:1;
 
-  background:rgba(184,150,78,.55);
+  background:
+    linear-gradient(
+      180deg,
+      rgba(224,193,118,.75),
+      rgba(184,150,78,.25)
+    );
 }
 
-
-/* Portfolio */
+/* =========================================================
+   PORTFOLIO
+========================================================= */
 
 .portfolio-line{
-  height:38px;
-
-  padding:5px;
+  height:40px;
+  padding:6px;
 }
 
 .portfolio-line svg{
@@ -801,171 +899,142 @@ h1 em,
   height:100%;
 }
 
-
 /* =========================================================
-   SILHOUETTES HUMAINES
-   ========================================================= */
+   PERSON
+========================================================= */
 
 .person{
   position:absolute;
 
-  bottom:18px;
-
+  bottom:19px;
   left:50%;
+
+  width:62px;
+  height:65px;
 
   transform:translateX(-50%);
 
-  width:65px;
-
-  height:65px;
+  z-index:3;
 }
 
 .head{
-  width:19px;
-  height:19px;
+  width:18px;
+  height:18px;
 
   margin:auto;
 
   border-radius:50%;
 
-  background:#211d16;
+  background:#211c15;
 
   box-shadow:
-    0 0 12px rgba(0,0,0,.8);
+    0 0 14px rgba(0,0,0,.85);
 }
 
 .body{
-  width:48px;
-  height:42px;
+  width:46px;
+  height:43px;
 
-  margin:2px auto 0;
+  margin:3px auto 0;
+
+  border-radius:18px 18px 4px 4px;
 
   background:
     linear-gradient(
       90deg,
-      #17150f,
-      #292319,
-      #17150f
+      #14120e,
+      #292219,
+      #14120e
     );
 
-  border-radius:18px 18px 3px 3px;
-
   box-shadow:
-    0 -2px 15px rgba(0,0,0,.5);
+    0 -4px 18px rgba(0,0,0,.5);
 }
 
-
 /* =========================================================
-   BUREAUX
-   ========================================================= */
+   DESK SURFACE
+========================================================= */
 
 .desk-surface{
   position:absolute;
 
+  left:-8px;
+  right:-8px;
   bottom:0;
 
-  left:0;
-  right:0;
-
   height:35px;
+
+  z-index:4;
+
+  border-top:1px solid rgba(184,150,78,.16);
 
   background:
     linear-gradient(
       180deg,
-      #251f15,
+      #282116,
       #100e0a
     );
 
-  border-top:1px solid rgba(184,150,78,.15);
-
   box-shadow:
-    0 -8px 20px rgba(0,0,0,.35);
+    0 -8px 22px rgba(0,0,0,.4);
 }
 
-
 /* =========================================================
-   TICKER
-   ========================================================= */
+   FLOOR TICKER
+========================================================= */
 
 .floor-ticker{
   position:absolute;
 
-  bottom:0;
-
   left:0;
   right:0;
+  bottom:0;
 
   height:35px;
 
   display:flex;
-
   align-items:center;
 
-  justify-content:center;
+  gap:28px;
 
-  gap:25px;
+  padding:0 20px;
 
-  background:#080705;
+  overflow:hidden;
 
-  border-top:1px solid rgba(184,150,78,.14);
+  white-space:nowrap;
 
-  color:rgba(244,239,230,.38);
+  border-top:1px solid rgba(184,150,78,.13);
+
+  background:#070605;
+
+  color:rgba(245,240,231,.35);
 
   font:7px var(--mono);
 }
 
 .floor-ticker b{
-  color:var(--gold2);
-
+  color:var(--gold-light);
   font-weight:400;
 }
 
-
-/* =========================================================
-   PETIT LABEL
-   ========================================================= */
-
-.market-label-floating{
-  position:absolute;
-
-  right:-8px;
-  top:13%;
-
-  padding:7px 10px;
-
-  background:rgba(10,9,7,.9);
-
-  border:1px solid rgba(184,150,78,.17);
-
-  color:rgba(224,193,118,.65);
-
-  font:7px var(--mono);
-
-  letter-spacing:.12em;
-
-  box-shadow:
-    0 8px 20px rgba(0,0,0,.35);
-}
-
-
 /* =========================================================
    MARKET STRIP
-   ========================================================= */
+========================================================= */
 
 .strip{
+  overflow:hidden;
+
   border-block:1px solid var(--line);
+
+  background:rgba(17,16,12,.42);
+
+  white-space:nowrap;
 
   padding:12px 0;
 
   color:var(--muted);
 
   font:9px var(--mono);
-
-  overflow:hidden;
-
-  white-space:nowrap;
-
-  background:rgba(17,16,12,.4);
 }
 
 .strip-inner{
@@ -975,21 +1044,16 @@ h1 em,
 
   width:max-content;
 
-  animation:ticker 35s linear infinite;
+  animation:ticker 38s linear infinite;
 }
 
 .strip span{
   display:inline-flex;
-
   gap:6px;
 }
 
 .strip b{
-  color:var(--text);
-}
-
-.up{
-  color:var(--gold2);
+  color:var(--white);
 }
 
 @keyframes ticker{
@@ -1004,21 +1068,22 @@ h1 em,
 
 }
 
-
 /* =========================================================
    SECTIONS
-   ========================================================= */
+========================================================= */
 
 .section{
-  padding:82px 0;
+  padding:90px 0;
 }
 
 .title{
-  font:700 clamp(34px,4.4vw,56px)/1.04 var(--serif);
+  margin:10px 0 15px;
 
-  margin:10px 0 14px;
+  font:
+    700 clamp(35px,4.5vw,58px)/1.04
+    var(--serif);
 
-  letter-spacing:-.025em;
+  letter-spacing:-.03em;
 }
 
 .sub{
@@ -1026,82 +1091,80 @@ h1 em,
 
   color:var(--muted);
 
-  line-height:1.75;
+  line-height:1.8;
 }
 
-
 /* =========================================================
-   FEATURE CARDS
-   ========================================================= */
+   FEATURE GRID
+========================================================= */
 
 .grid{
   display:grid;
 
-  gap:1px;
-
-  background:var(--line);
+  margin-top:40px;
 
   border:1px solid var(--line);
 
-  margin-top:38px;
+  background:var(--line);
+
+  gap:1px;
 }
 
 .three{
   grid-template-columns:repeat(3,1fr);
 }
 
-.two{
-  grid-template-columns:repeat(2,1fr);
-}
-
 .card{
-  background:var(--panel);
-
-  padding:28px;
+  position:relative;
 
   min-height:190px;
 
-  position:relative;
+  padding:29px;
+
+  background:var(--panel);
 
   overflow:hidden;
 
-  transition:.3s;
+  transition:
+    background .25s ease,
+    transform .25s ease;
 }
 
 .card:nth-child(even){
-  background:var(--panel2);
+  background:var(--panel-2);
 }
 
 .card:hover{
-  background:#1b1710;
+  z-index:2;
+
+  background:#19150f;
 
   transform:translateY(-2px);
-
-  z-index:2;
 }
 
 .num{
+  margin-bottom:15px;
+
   color:var(--gold);
 
   font:9px var(--mono);
-
-  margin-bottom:15px;
 }
 
 .card h3{
-  font:600 20px var(--serif);
-
   margin:0 0 8px;
+
+  font:
+    600 20px
+    var(--serif);
 }
 
 .card p{
+  margin:0;
+
   color:var(--muted);
 
   font-size:12px;
-
-  margin:0;
-
-  line-height:1.7;
+  line-height:1.75;
 }
 
 .tag{
@@ -1109,56 +1172,58 @@ h1 em,
 
   margin-top:14px;
 
-  margin-right:5px;
-
   padding:3px 7px;
 
   border:1px solid var(--line);
 
-  color:rgba(244,239,230,.45);
+  color:rgba(245,240,231,.42);
 
   font:8px var(--mono);
 
   text-transform:uppercase;
 }
 
-
 /* =========================================================
    INSTITUTE
-   ========================================================= */
+========================================================= */
 
 .institute{
   position:relative;
 
   overflow:hidden;
 
+  border-block:1px solid var(--line);
+
   background:
     radial-gradient(
-      circle at 85% 25%,
-      rgba(215,173,75,.15),
-      transparent 34%
+      circle at 82% 35%,
+      rgba(184,150,78,.10),
+      transparent 32%
     ),
     linear-gradient(
       120deg,
-      #100e09,
-      #171108
+      #0e0c08,
+      #151108
     );
-
-  border-block:1px solid var(--line);
 }
 
-.institute:after{
-  content:"✦";
+/* Architecture instead of decorative star */
+
+.institute::after{
+  content:"";
 
   position:absolute;
 
-  right:8%;
+  right:-120px;
+  top:20%;
 
-  top:-25px;
+  width:500px;
+  height:300px;
 
-  font-size:190px;
+  border:
+    1px solid rgba(184,150,78,.06);
 
-  color:rgba(215,173,75,.035);
+  transform:skewX(-25deg);
 
   pointer-events:none;
 }
@@ -1166,49 +1231,62 @@ h1 em,
 .institute-grid{
   display:grid;
 
-  grid-template-columns:1.1fr .9fr;
+  grid-template-columns:
+    minmax(0,1.1fr)
+    minmax(320px,.9fr);
 
-  gap:35px;
+  gap:45px;
 
   align-items:center;
 }
 
 .institute h2{
-  font:700 clamp(38px,5vw,62px)/1.02 var(--serif);
-
   margin:10px 0;
+
+  font:
+    700 clamp(38px,5vw,62px)/1.02
+    var(--serif);
 }
 
 .institute h2 em{
-  color:var(--gold2);
+  color:var(--gold-light);
 }
 
+/* =========================================================
+   OFFER
+========================================================= */
+
 .offer{
-  background:rgba(17,16,12,.88);
+  position:relative;
+  z-index:2;
 
-  border:1px solid rgba(215,173,75,.28);
+  padding:30px;
 
-  padding:28px;
+  border:1px solid rgba(184,150,78,.25);
 
-  border-radius:18px;
+  background:
+    linear-gradient(
+      145deg,
+      rgba(20,18,13,.96),
+      rgba(11,10,8,.96)
+    );
 
   box-shadow:
-    0 20px 60px rgba(0,0,0,.25);
-
-  position:relative;
-
-  z-index:1;
+    0 25px 70px rgba(0,0,0,.3);
 }
 
 .offer-price{
-  font:700 42px var(--serif);
+  margin-top:5px;
 
-  color:var(--gold2);
+  color:var(--gold-light);
+
+  font:
+    700 42px
+    var(--serif);
 }
 
 .offer .small{
   color:var(--muted);
-
   font-size:12px;
 }
 
@@ -1216,26 +1294,25 @@ h1 em,
   list-style:none;
 
   padding:0;
-
   margin:18px 0;
 }
 
 .offer li{
-  padding:7px 0;
+  padding:8px 0;
 
-  border-bottom:1px solid rgba(184,150,78,.08);
-
-  font-size:12px;
+  border-bottom:1px solid rgba(184,150,78,.07);
 
   color:var(--muted);
+
+  font-size:12px;
 }
 
-.offer li:before{
-  content:'✓';
-
-  color:var(--gold2);
+.offer li::before{
+  content:"✓";
 
   margin-right:9px;
+
+  color:var(--gold-light);
 }
 
 .path{
@@ -1243,147 +1320,147 @@ h1 em,
 
   grid-template-columns:repeat(3,1fr);
 
-  gap:1px;
-
-  background:var(--line);
-
   margin-top:34px;
 
+  gap:1px;
+
   border:1px solid var(--line);
+
+  background:var(--line);
 }
 
 .path article{
-  background:var(--panel);
-
   padding:20px;
+
+  background:var(--panel);
 }
 
 .path b{
-  font-family:var(--serif);
-
-  font-size:18px;
+  font:
+    18px
+    var(--serif);
 }
 
 .path p{
-  font-size:11px;
+  margin:5px 0 0;
 
   color:var(--muted);
 
-  margin:5px 0 0;
+  font-size:11px;
 }
-
 
 /* =========================================================
    PRICING
-   ========================================================= */
+========================================================= */
 
 .pricing-grid{
   display:grid;
 
-  grid-template-columns:repeat(4,1fr);
+  grid-template-columns:
+    repeat(4,minmax(0,1fr));
+
+  margin-top:30px;
 
   gap:1px;
 
-  background:var(--line);
-
   border:1px solid var(--line);
 
-  margin-top:28px;
+  background:var(--line);
 }
 
 .price-card{
-  background:var(--panel);
-
-  padding:28px;
-
   display:flex;
-
   flex-direction:column;
+
+  padding:29px;
+
+  background:var(--panel);
 }
 
 .price-card.featured{
-  background:var(--panel2);
+  background:var(--panel-2);
 
   border:1px solid var(--gold);
 }
 
 .plan-label{
-  font:9px var(--mono);
-
-  letter-spacing:.15em;
-
-  text-transform:uppercase;
-
   color:var(--gold);
+
+  font:9px var(--mono);
+  letter-spacing:.15em;
+  text-transform:uppercase;
 }
 
 .plan-name{
-  font:700 26px var(--serif);
-
   margin:8px 0 16px;
+
+  font:
+    700 26px
+    var(--serif);
 }
 
 .price{
-  font:500 28px var(--mono);
+  color:var(--gold-light);
 
-  color:var(--gold2);
+  font:
+    500 28px
+    var(--mono);
 }
 
 .price small{
-  font:11px var(--sans);
-
   color:var(--muted);
+
+  font:
+    11px
+    var(--sans);
 }
 
 .price-desc{
+  min-height:60px;
+
   color:var(--muted);
 
   font-size:11px;
-
   line-height:1.7;
-
-  min-height:60px;
 }
 
 .price-card ul{
+  flex:1;
+
   list-style:none;
 
   padding:0;
-
-  flex:1;
-
   margin:12px 0 22px;
 }
 
 .price-card li{
-  font-size:11px;
-
-  color:var(--muted);
-
   padding:7px 0;
 
   border-bottom:1px solid rgba(184,150,78,.07);
+
+  color:var(--muted);
+
+  font-size:11px;
 }
 
-.price-card li:before{
-  content:'✓';
-
-  color:var(--gold);
+.price-card li::before{
+  content:"✓";
 
   margin-right:8px;
-}
 
+  color:var(--gold);
+}
 
 /* =========================================================
    FOOTER
-   ========================================================= */
+========================================================= */
 
 .footer{
+  padding:27px 0;
+
   border-top:1px solid var(--line);
 
-  padding:26px 0;
-
-  color:rgba(244,239,230,.4);
+  color:rgba(245,240,231,.38);
 
   font:9px var(--mono);
 }
@@ -1391,54 +1468,67 @@ h1 em,
 .footer-inner{
   display:flex;
 
+  align-items:center;
   justify-content:space-between;
 
-  gap:18px;
+  gap:20px;
 }
 
 .footlinks{
   display:flex;
-
-  gap:16px;
-
   flex-wrap:wrap;
+  gap:16px;
 }
 
-
 /* =========================================================
-   RESPONSIVE
-   ========================================================= */
+   TABLET
+========================================================= */
 
 @media(max-width:1100px){
 
   .hero{
-    grid-template-columns:.85fr 1.15fr;
+    grid-template-columns:
+      minmax(300px,.75fr)
+      minmax(520px,1.25fr);
 
     gap:25px;
   }
 
   .links{
-    gap:10px;
+    gap:11px;
+  }
+
+  .trading-floor{
+    width:100%;
   }
 
 }
 
-@media(max-width:1000px){
+/* =========================================================
+   MOBILE / TABLET
+========================================================= */
+
+@media(max-width:980px){
 
   .links a:not(.btn){
     display:none;
   }
 
   .hero{
+    min-height:auto;
+
     grid-template-columns:1fr;
+
+    gap:0;
   }
 
   .copy{
-    padding:50px 0 10px;
+    padding:60px 0 20px;
   }
 
   .visual{
-    min-height:540px;
+    min-height:560px;
+    padding:20px 0 50px;
   }
 
   .three,
@@ -1453,6 +1543,10 @@ h1 em,
 
 }
 
+/* =========================================================
+   MOBILE
+========================================================= */
+
 @media(max-width:700px){
 
   .wrap{
@@ -1460,77 +1554,134 @@ h1 em,
   }
 
   .brand img{
-    width:165px;
+    width:160px;
+  }
+
+  .hero{
+    overflow:hidden;
+  }
+
+  .copy{
+    padding-top:45px;
+  }
+
+  h1{
+    font-size:
+      clamp(43px,13vw,62px);
+  }
+
+  .lead{
+    font-size:15px;
   }
 
   .visual{
     min-height:430px;
+    padding-top:15px;
   }
 
   .trading-floor{
-    height:380px;
+    height:390px;
+  }
+
+  .floor-header{
+    height:42px;
+    padding:0 13px;
+  }
+
+  .floor-status{
+    display:none;
   }
 
   .market-wall{
-    top:58px;
-
-    left:20px;
-    right:20px;
-
+    top:57px;
+    left:16px;
+    right:16px;
     height:145px;
   }
 
+  .wall-title{
+    height:29px;
+    padding:0 10px;
+  }
+
   .wall-content{
-    grid-template-columns:100px 1fr;
+    height:116px;
+
+    grid-template-columns:
+      90px
+      minmax(0,1fr);
+
+    gap:10px;
+
+    padding:10px;
+  }
+
+  .wall-index strong{
+    font-size:18px;
+  }
+
+  .wall-chart{
+    height:78px;
   }
 
   .wall-stats{
     display:none;
   }
 
-  .wall-chart{
-    height:75px;
-  }
-
-  .wall-index strong{
-    font-size:20px;
-  }
-
   .trader-row{
-    left:10px;
-    right:10px;
+    left:8px;
+    right:8px;
+    bottom:47px;
 
-    bottom:45px;
+    height:115px;
 
-    gap:7px;
+    gap:6px;
+  }
 
+  .desk{
     height:115px;
   }
 
   .monitor{
-    width:100px;
-    height:63px;
+    width:105px;
+    height:64px;
+
+    border-width:3px;
   }
 
   .monitor-top{
-    padding:4px;
+    height:18px;
+    padding:0 5px;
   }
 
-  .mini-chart{
-    height:25px;
+  .mini-chart,
+  .financial-bars{
+    height:27px;
+    padding:5px;
+  }
+
+  .monitor-values{
+    padding:2px 5px;
   }
 
   .person{
+    bottom:14px;
     transform:
       translateX(-50%)
-      scale(.75);
+      scale(.72);
 
-    transform-origin:bottom;
+    transform-origin:
+      center bottom;
+  }
+
+  .desk-surface{
+    height:25px;
   }
 
   .floor-ticker{
-    gap:10px;
-
+    height:30px;
+    gap:12px;
+    padding:0 10px;
     font-size:6px;
   }
 
@@ -1547,25 +1698,42 @@ h1 em,
   }
 
   .section{
-    padding:55px 0;
+    padding:60px 0;
   }
 
   .card,
   .price-card,
   .offer{
-    padding:22px;
+    padding:23px;
   }
 
   .footer-inner{
     flex-direction:column;
+    align-items:flex-start;
   }
 
 }
 
-@media(max-width:480px){
+/* =========================================================
+   SMALL PHONES
+========================================================= */
+
+@media(max-width:430px){
+
+  .brand img{
+    width:145px;
+  }
+
+  .nav{
+    min-height:66px;
+  }
+
+  .hero{
+    min-height:auto;
+  }
 
   .visual{
-    min-height:350px;
+    min-height:355px;
   }
 
   .trading-floor{
@@ -1573,37 +1741,76 @@ h1 em,
   }
 
   .market-wall{
-    top:50px;
+    top:48px;
+    height:116px;
+  }
 
-    height:120px;
+  .wall-content{
+    height:87px;
+  }
+
+  .wall-chart{
+    height:62px;
   }
 
   .trader-row{
-    bottom:40px;
+    bottom:39px;
+    height:92px;
+  }
 
-    height:95px;
+  .desk{
+    height:92px;
   }
 
   .monitor{
     width:78px;
-
     height:50px;
+  }
 
-    border-width:3px;
+  .monitor-top{
+    height:14px;
+    font-size:4px;
+  }
+
+  .mini-chart,
+  .financial-bars{
+    height:21px;
+    padding:4px;
+    gap:2px;
   }
 
   .monitor-values{
     font-size:4px;
   }
 
-  .floor-status{
-    display:none;
+  .person{
+    transform:
+      translateX(-50%)
+      scale(.58);
   }
 
   .floor-ticker{
-    justify-content:flex-start;
+    height:26px;
+  }
 
-    padding-left:12px;
+}
+
+/* =========================================================
+   REDUCED MOTION
+========================================================= */
+
+@media(prefers-reduced-motion:reduce){
+
+  html{
+    scroll-behavior:auto;
+  }
+
+  *,
+  *::before,
+  *::after{
+    animation-duration:.001ms !important;
+    animation-iteration-count:1 !important;
+    transition-duration:.001ms !important;
   }
 
 }
@@ -1611,24 +1818,25 @@ h1 em,
 </style>
 
 <link rel="stylesheet" href="/landing-enhancement.css">
-
 <script src="/landing-enhancement.js" defer></script>
 
 </head>
 
 <body>
 
-
 <!-- =========================================================
      NAVIGATION
-     ========================================================= -->
+========================================================= -->
 
 <header class="top">
 
   <div class="wrap nav">
 
     <a href="#accueil" class="brand">
-      <img src="/assets/the-capital-logo.png" alt="The Capital">
+      <img
+        src="/assets/the-capital-logo.png"
+        alt="The Capital"
+      >
     </a>
 
     <nav class="links">
@@ -1653,7 +1861,10 @@ h1 em,
         À propos
       </a>
 
-      <a class="btn primary" href="/register.html">
+      <a
+        class="btn primary"
+        href="/register.html"
+      >
         Commencer
       </a>
 
@@ -1666,10 +1877,9 @@ h1 em,
 
 <main id="accueil">
 
-
 <!-- =========================================================
      HERO
-     ========================================================= -->
+========================================================= -->
 
 <section class="hero">
 
@@ -1692,11 +1902,17 @@ h1 em,
 
     <div class="actions">
 
-      <a class="btn primary" href="/register.html">
+      <a
+        class="btn primary"
+        href="/register.html"
+      >
         Commencer
       </a>
 
-      <a class="btn ghost" href="/app/app.html#marche">
+      <a
+        class="btn ghost"
+        href="/app/app.html#marche"
+      >
         Explorer la BRVM
       </a>
 
@@ -1710,16 +1926,17 @@ h1 em,
   </div>
 
 
-  <!-- =====================================================
-       SALLE DES MARCHÉS
-       ===================================================== -->
+  <!-- =======================================================
+       TRADING FLOOR
+  ======================================================== -->
 
   <div class="visual">
 
     <div class="trading-floor">
 
+      <div class="ceiling-lines"></div>
 
-      <!-- Header -->
+      <!-- HEADER -->
 
       <div class="floor-header">
 
@@ -1738,7 +1955,7 @@ h1 em,
       </div>
 
 
-      <!-- Grand écran -->
+      <!-- MARKET WALL -->
 
       <div class="market-wall">
 
@@ -1754,9 +1971,7 @@ h1 em,
 
         </div>
 
-
         <div class="wall-content">
-
 
           <div class="wall-index">
 
@@ -1777,23 +1992,25 @@ h1 em,
 
           <div class="wall-chart">
 
-            <div class="chart-lines"></div>
+            <div class="chart-grid"></div>
 
             <svg
               viewBox="0 0 500 150"
-              preserveAspectRatio="none">
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
 
               <path
                 d="
-                M0 118
-                C35 110 45 120 70 104
-                S105 108 130 92
-                S155 98 180 78
-                S215 88 240 70
-                S270 76 300 61
-                S335 69 360 51
-                S400 62 425 43
-                S460 48 500 27
+                  M0 118
+                  C35 110 45 120 70 104
+                  S105 108 130 92
+                  S155 98 180 78
+                  S215 88 240 70
+                  S270 76 300 61
+                  S335 69 360 51
+                  S400 62 425 43
+                  S460 48 500 27
                 "
                 fill="none"
                 stroke="rgba(224,193,118,.9)"
@@ -1850,12 +2067,20 @@ h1 em,
       </div>
 
 
-      <!-- Postes de trading -->
+      <!-- FLOOR -->
+
+      <div class="floor-ground">
+
+        <div class="floor-grid"></div>
+
+      </div>
+
+
+      <!-- TRADING DESKS -->
 
       <div class="trader-row">
 
-
-        <!-- Poste 1 -->
+        <!-- DESK 1 -->
 
         <div class="desk">
 
@@ -1900,7 +2125,6 @@ h1 em,
 
           </div>
 
-
           <div class="person">
 
             <div class="head"></div>
@@ -1909,13 +2133,12 @@ h1 em,
 
           </div>
 
-
           <div class="desk-surface"></div>
 
         </div>
 
 
-        <!-- Poste 2 -->
+        <!-- DESK 2 -->
 
         <div class="desk">
 
@@ -1933,7 +2156,6 @@ h1 em,
 
             </div>
 
-
             <div class="financial-bars">
 
               <div style="height:38%"></div>
@@ -1944,7 +2166,6 @@ h1 em,
               <div style="height:82%"></div>
 
             </div>
-
 
             <div class="monitor-values">
 
@@ -1960,7 +2181,6 @@ h1 em,
 
           </div>
 
-
           <div class="person">
 
             <div class="head"></div>
@@ -1969,13 +2189,12 @@ h1 em,
 
           </div>
 
-
           <div class="desk-surface"></div>
 
         </div>
 
 
-        <!-- Poste 3 -->
+        <!-- DESK 3 -->
 
         <div class="desk">
 
@@ -1993,24 +2212,25 @@ h1 em,
 
             </div>
 
-
             <div class="portfolio-line">
 
               <svg
                 viewBox="0 0 240 70"
-                preserveAspectRatio="none">
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
 
                 <path
                   d="
-                  M0 58
-                  L35 52
-                  L62 55
-                  L90 39
-                  L120 43
-                  L150 27
-                  L185 32
-                  L210 16
-                  L240 10
+                    M0 58
+                    L35 52
+                    L62 55
+                    L90 39
+                    L120 43
+                    L150 27
+                    L185 32
+                    L210 16
+                    L240 10
                   "
                   fill="none"
                   stroke="rgba(224,193,118,.9)"
@@ -2020,7 +2240,6 @@ h1 em,
               </svg>
 
             </div>
-
 
             <div class="monitor-values">
 
@@ -2036,7 +2255,6 @@ h1 em,
 
           </div>
 
-
           <div class="person">
 
             <div class="head"></div>
@@ -2045,7 +2263,6 @@ h1 em,
 
           </div>
 
-
           <div class="desk-surface"></div>
 
         </div>
@@ -2053,7 +2270,7 @@ h1 em,
       </div>
 
 
-      <!-- Ticker -->
+      <!-- TICKER -->
 
       <div class="floor-ticker">
 
@@ -2081,11 +2298,6 @@ h1 em,
 
     </div>
 
-
-    <div class="market-label-floating">
-      MARKET INTELLIGENCE
-    </div>
-
   </div>
 
 </section>
@@ -2093,7 +2305,7 @@ h1 em,
 
 <!-- =========================================================
      MARKET STRIP
-     ========================================================= -->
+========================================================= -->
 
 <div class="strip">
 
@@ -2146,9 +2358,12 @@ h1 em,
 
 <!-- =========================================================
      FONCTIONNALITÉS
-     ========================================================= -->
+========================================================= -->
 
-<section id="fonctionnalites" class="section">
+<section
+  id="fonctionnalites"
+  class="section"
+>
 
   <div class="wrap">
 
@@ -2168,15 +2383,10 @@ h1 em,
       dans un environnement cohérent.
     </p>
 
-
     <div class="grid three">
 
-
       <article class="card">
-
-        <div class="num">
-          01
-        </div>
+        <div class="num">01</div>
 
         <h3>
           Données de marché
@@ -2189,15 +2399,11 @@ h1 em,
         <span class="tag">
           BRVM
         </span>
-
       </article>
 
 
       <article class="card">
-
-        <div class="num">
-          02
-        </div>
+        <div class="num">02</div>
 
         <h3>
           Screener avancé
@@ -2211,15 +2417,11 @@ h1 em,
         <span class="tag">
           Multi-critères
         </span>
-
       </article>
 
 
       <article class="card">
-
-        <div class="num">
-          03
-        </div>
+        <div class="num">03</div>
 
         <h3>
           Portefeuille
@@ -2232,15 +2434,11 @@ h1 em,
         <span class="tag">
           P&L
         </span>
-
       </article>
 
 
       <article class="card">
-
-        <div class="num">
-          04
-        </div>
+        <div class="num">04</div>
 
         <h3>
           Analyse fondamentale
@@ -2253,15 +2451,11 @@ h1 em,
         <span class="tag">
           PER
         </span>
-
       </article>
 
 
       <article class="card">
-
-        <div class="num">
-          05
-        </div>
+        <div class="num">05</div>
 
         <h3>
           Outils quantitatifs
@@ -2274,15 +2468,11 @@ h1 em,
         <span class="tag">
           Quant
         </span>
-
       </article>
 
 
       <article class="card">
-
-        <div class="num">
-          06
-        </div>
+        <div class="num">06</div>
 
         <h3>
           Dividendes & BOC
@@ -2295,7 +2485,6 @@ h1 em,
         <span class="tag">
           Données
         </span>
-
       </article>
 
     </div>
@@ -2307,12 +2496,14 @@ h1 em,
 
 <!-- =========================================================
      INSTITUTE
-     ========================================================= -->
+========================================================= -->
 
-<section id="institute" class="section institute">
+<section
+  id="institute"
+  class="section institute"
+>
 
   <div class="wrap institute-grid">
-
 
     <div>
 
@@ -2332,30 +2523,29 @@ h1 em,
         de l’analyse financière dans un parcours conçu pour partir de zéro.
       </p>
 
-
-      <div class="actions" style="margin-top:24px">
+      <div
+        class="actions"
+        style="margin-top:24px"
+      >
 
         <a
           class="btn primary"
-          href="/register.html?redirect=/institute-payment.html">
-
+          href="/register.html?redirect=/institute-payment.html"
+        >
           Commencer mon parcours
-
         </a>
 
         <a
           class="btn ghost"
-          href="/the-capital-institute/">
-
+          href="/the-capital-institute/"
+        >
           Découvrir l’Institute
-
         </a>
 
       </div>
 
 
       <div class="path">
-
 
         <article>
 
@@ -2369,7 +2559,6 @@ h1 em,
 
         </article>
 
-
         <article>
 
           <b>
@@ -2382,7 +2571,6 @@ h1 em,
 
         </article>
 
-
         <article>
 
           <b>
@@ -2394,7 +2582,6 @@ h1 em,
           </p>
 
         </article>
-
 
       </div>
 
@@ -2414,7 +2601,6 @@ h1 em,
       <p class="small">
         Accès Institute pendant 1 an après validation du paiement.
       </p>
-
 
       <ul>
 
@@ -2448,13 +2634,11 @@ h1 em,
 
       </ul>
 
-
       <a
         class="btn primary"
-        href="/register.html?redirect=/institute-payment.html">
-
+        href="/register.html?redirect=/institute-payment.html"
+      >
         S’inscrire pour 1 000 FCFA
-
       </a>
 
     </aside>
@@ -2466,9 +2650,12 @@ h1 em,
 
 <!-- =========================================================
      MARCHÉS
-     ========================================================= -->
+========================================================= -->
 
-<section id="marches" class="section">
+<section
+  id="marches"
+  class="section"
+>
 
   <div class="wrap">
 
@@ -2486,23 +2673,23 @@ h1 em,
       Explorez les titres, indices, fiches entreprises et outils d’analyse.
     </p>
 
-
-    <div class="actions" style="margin-top:22px">
+    <div
+      class="actions"
+      style="margin-top:22px"
+    >
 
       <a
         class="btn primary"
-        href="/app/app.html#marche">
-
+        href="/app/app.html#marche"
+      >
         Ouvrir le marché
-
       </a>
 
       <a
         class="btn ghost"
-        href="/app/app.html#screener">
-
+        href="/app/app.html#screener"
+      >
         Ouvrir le screener
-
       </a>
 
     </div>
@@ -2514,9 +2701,12 @@ h1 em,
 
 <!-- =========================================================
      TARIFS
-     ========================================================= -->
+========================================================= -->
 
-<section id="tarifs" class="section">
+<section
+  id="tarifs"
+  class="section"
+>
 
   <div class="wrap">
 
@@ -2535,9 +2725,7 @@ h1 em,
       des abonnements d'analyse de la plateforme.
     </p>
 
-
     <div class="pricing-grid">
-
 
       <article class="price-card">
 
@@ -2575,10 +2763,9 @@ h1 em,
 
         <a
           class="btn ghost"
-          href="/register.html">
-
+          href="/register.html"
+        >
           Commencer
-
         </a>
 
       </article>
@@ -2624,10 +2811,9 @@ h1 em,
 
         <a
           class="btn ghost"
-          href="/payment.html?plan=investor&period=monthly">
-
+          href="/payment.html?plan=investor&period=monthly"
+        >
           Choisir Investor
-
         </a>
 
       </article>
@@ -2677,10 +2863,9 @@ h1 em,
 
         <a
           class="btn primary"
-          href="/payment.html?plan=pro&period=monthly">
-
+          href="/payment.html?plan=pro&period=monthly"
+        >
           Choisir Pro
-
         </a>
 
       </article>
@@ -2730,14 +2915,12 @@ h1 em,
 
         <a
           class="btn primary"
-          href="/payment.html?plan=elite&period=monthly">
-
+          href="/payment.html?plan=elite&period=monthly"
+        >
           Choisir Elite
-
         </a>
 
       </article>
-
 
     </div>
 
@@ -2748,9 +2931,12 @@ h1 em,
 
 <!-- =========================================================
      À PROPOS
-     ========================================================= -->
+========================================================= -->
 
-<section id="a-propos" class="section">
+<section
+  id="a-propos"
+  class="section"
+>
 
   <div class="wrap">
 
@@ -2777,34 +2963,35 @@ h1 em,
 
 <!-- =========================================================
      CTA FINAL
-     ========================================================= -->
+========================================================= -->
 
 <section
   class="section"
-  style="padding-top:20px">
+  style="padding-top:20px"
+>
 
   <div
     class="wrap"
-    style="text-align:center">
+    style="text-align:center"
+  >
 
     <div
       class="actions"
-      style="justify-content:center">
+      style="justify-content:center"
+    >
 
       <a
         class="btn primary"
-        href="/register.html">
-
+        href="/register.html"
+      >
         Créer mon compte
-
       </a>
 
       <a
         class="btn ghost"
-        href="/app/app.html">
-
+        href="/app/app.html"
+      >
         Ouvrir le dashboard
-
       </a>
 
     </div>
@@ -2813,13 +3000,12 @@ h1 em,
 
 </section>
 
-
 </main>
 
 
 <!-- =========================================================
      FOOTER
-     ========================================================= -->
+========================================================= -->
 
 <footer class="footer">
 
