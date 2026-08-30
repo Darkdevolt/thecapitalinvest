@@ -392,3 +392,213 @@
     padding: 14px;
   }
 }
+
+/* ========================================================================
+   THE CAPITAL — ADAPTIVE SCALE / READABILITY V2
+   Goal: readable at 100% Windows/browser scaling from laptop to 2K desktop.
+   Presentation only. No data or business logic is touched.
+   ======================================================================== */
+
+#view-overview {
+  container-type: inline-size;
+  --dash-gap-fluid: clamp(16px, 1.25vw, 26px);
+  --dash-pad-fluid: clamp(20px, 2vw, 34px);
+}
+
+#view-overview.view {
+  width: 100%;
+  max-width: 1720px;
+  margin-inline: auto;
+  box-sizing: border-box;
+  padding: clamp(22px, 2vw, 34px) clamp(22px, 2.25vw, 38px) 48px;
+}
+
+/* A slightly denser, but much more readable information hierarchy. */
+#view-overview .page-header h1 {
+  font-size: clamp(25px, 1.75vw, 34px);
+}
+
+#view-overview .page-header p {
+  font-size: clamp(12px, .78vw, 15px);
+  line-height: 1.55;
+}
+
+#view-overview .card-title,
+#view-overview .tci-title {
+  font-size: clamp(11px, .72vw, 14px);
+  letter-spacing: .105em;
+}
+
+#view-overview .card-header,
+#view-overview .dashboard-news-head,
+#view-overview .tci-head {
+  min-height: clamp(54px, 4vw, 64px);
+  padding: clamp(15px, 1.2vw, 20px) clamp(18px, 1.45vw, 24px);
+}
+
+#view-overview .card-body,
+#view-overview .tci-card {
+  padding: clamp(18px, 1.5vw, 28px);
+}
+
+#view-overview #overviewStats {
+  gap: var(--dash-gap-fluid);
+  margin-bottom: var(--dash-gap-fluid);
+}
+
+#view-overview #overviewStats .stat-card {
+  min-height: clamp(136px, 10vw, 170px);
+  padding: clamp(20px, 1.6vw, 28px);
+}
+
+#view-overview .stat-label {
+  margin-bottom: clamp(12px, 1vw, 16px);
+  font-size: clamp(10px, .66vw, 13px);
+  letter-spacing: .12em;
+}
+
+#view-overview .stat-value {
+  font-size: clamp(30px, 2.25vw, 46px);
+  line-height: 1;
+}
+
+#view-overview .stat-change {
+  margin-top: clamp(8px, .7vw, 12px);
+  font-size: clamp(12px, .76vw, 15px);
+}
+
+#view-overview .tci-value {
+  font-size: clamp(23px, 1.7vw, 34px);
+}
+
+#view-overview .tci-label,
+#view-overview .tci-unit,
+#view-overview .tci-sub,
+#view-overview .tci-watch-name,
+#view-overview .tci-contrib-label {
+  font-size: clamp(11px, .68vw, 14px);
+}
+
+#view-overview .tci-watch-row {
+  padding: clamp(12px, .9vw, 16px) 6px;
+}
+
+#view-overview table {
+  font-size: clamp(13px, .82vw, 16px);
+}
+
+#view-overview thead th {
+  padding: clamp(10px, .8vw, 14px) clamp(12px, 1vw, 16px);
+  font-size: clamp(10px, .64vw, 13px);
+}
+
+#view-overview tbody td {
+  padding: clamp(11px, .85vw, 15px) clamp(12px, 1vw, 16px);
+}
+
+#view-overview .hm-name {
+  font-size: clamp(11px, .7vw, 14px);
+}
+
+#view-overview .hm-value {
+  font-size: clamp(16px, 1.05vw, 20px);
+}
+
+#view-overview .hm-count {
+  font-size: clamp(10px, .62vw, 12px);
+}
+
+#view-overview .mover-row {
+  padding: clamp(12px, .9vw, 16px) 2px;
+}
+
+#view-overview .news-title {
+  font-size: clamp(13px, .82vw, 16px);
+}
+
+#view-overview .news-meta {
+  font-size: clamp(10px, .64vw, 13px);
+}
+
+#view-overview .chart-container {
+  min-height: clamp(230px, 19vw, 330px);
+}
+
+/* Components adapt to the width of their own card, not only the viewport. */
+#view-overview .tci-card,
+#view-overview .dashboard-news,
+#view-overview > .card {
+  container-type: inline-size;
+}
+
+@container (min-width: 700px) {
+  #view-overview .tci-grid {
+    gap: clamp(20px, 2.5cqw, 40px);
+  }
+  #view-overview .tci-value {
+    font-size: clamp(26px, 4.2cqw, 38px);
+  }
+}
+
+@container (max-width: 620px) {
+  #view-overview .tci-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@container (max-width: 430px) {
+  #view-overview .tci-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Desktop layout: use the available width without stretching text to extremes. */
+@media (min-width: 1500px) {
+  #view-overview.view {
+    max-width: 1720px;
+  }
+  #view-overview .page-header {
+    margin-bottom: 26px;
+  }
+}
+
+/* Laptop / medium desktop: preserve the brand while simplifying secondary chrome. */
+@media (min-width: 901px) and (max-width: 1366px) {
+  #view-overview.view {
+    padding-inline: 22px;
+  }
+  #view-overview .stat-value {
+    font-size: clamp(27px, 2.5vw, 36px);
+  }
+}
+
+/* Tablet and mobile: never allow the information hierarchy to become tiny. */
+@media (max-width: 760px) {
+  #view-overview .card-title,
+  #view-overview .tci-title {
+    font-size: 11px;
+  }
+  #view-overview .stat-value {
+    font-size: 30px;
+  }
+  #view-overview .tci-value {
+    font-size: 24px;
+  }
+  #view-overview table {
+    font-size: 13px;
+  }
+}
+
+/* High-density displays: keep text physical-size friendly without enlarging containers excessively. */
+@media (min-width: 1800px) {
+  #view-overview .card-title,
+  #view-overview .tci-title {
+    font-size: 13px;
+  }
+  #view-overview .stat-value {
+    font-size: 44px;
+  }
+  #view-overview .tci-value {
+    font-size: 34px;
+  }
+}
