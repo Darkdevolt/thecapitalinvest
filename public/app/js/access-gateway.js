@@ -1,4 +1,4 @@
-/* The Capital — authenticated application gateway */
+/* The Capital — authenticated application gateway + trial access */
 (function () {
   'use strict';
 
@@ -25,12 +25,30 @@
   }
 
   function goLogin() {
-    var target = encodeURIComponent(window.location.pathname + window.location.search);
+    var target = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
     window.location.replace('/login.html?redirect=' + target);
   }
 
   function goPayment(plan) {
     window.location.replace('/payment.html?plan=' + encodeURIComponent(plan || 'pro') + '&period=monthly');
+  }
+
+  function exposeAccess(profile) {
+    var now = Date.now();
+    var trialEnd = profile.trial_ends_at ? new Date(profile.trial_ends_at).getTime() : 0;
+    var trialActive = trialEnd > now;
+    var plan = String(profile.plan || 'free').toLowerCase();
+    var paidActive = paidPlans[plan] && profile.plan_expire_at && new Date(profile.plan_expire_at).getTime() > now;
+    window.TC_ACCESS = {
+      plan: plan,
+      trialActive: trialActive,
+      trialEndsAt: profile.trial_ends_at || null,
+      paidActive: !!paidActive,
+      premium: trialActive || !!paidActive,
+      premiumRestricted: !trialActive && !paidActive
+    };
+    document.documentElement.setAttribute('data-tc-access', window.TC_ACCESS.premium ? 'premium' : 'free');
+    document.documentElement.setAttribute('data-tc-trial', trialActive ? 'active' : 'expired');
   }
 
   var session = getSession();
@@ -45,7 +63,7 @@
   var userId = session.user && session.user.id;
   if (!userId) return goLogin();
 
-  fetch(SUPABASE_URL + '/rest/v1/users?select=plan,plan_expire_at,is_admin&id=eq.' + encodeURIComponent(userId), {
+  fetch(SUPABASE_URL + '/rest/v1/users?select=plan,plan_expire_at,trial_started_at,trial_ends_at,is_admin&id=eq.' + encodeURIComponent(userId), {
     headers: {
       apikey: SUPABASE_KEY,
       Authorization: 'Bearer ' + session.access_token,
@@ -60,29 +78,28 @@
     .then(function (rows) {
       var profile = rows && rows[0];
       if (!profile) return goLogin();
-      if (profile.is_admin) return;
+      if (profile.is_admin) {
+        window.TC_ACCESS = { plan: 'admin', premium: true, trialActive: false, paidActive: true, premiumRestricted: false };
+        return;
+      }
+
+      exposeAccess(profile);
 
       var plan = String(profile.plan || 'free').toLowerCase();
-      if (!paidPlans[plan] || plan === 'free') return;
+      var now = Date.now();
+      var trialEnd = profile.trial_ends_at ? new Date(profile.trial_ends_at).getTime() : 0;
+      var planExpiry = profile.plan_expire_at ? new Date(profile.plan_expire_at).getTime() : 0;
 
-      var expiry = profile.plan_expire_at ? new Date(profile.plan_expire_at).getTime() : 0;
-      if (expiry > Date.now()) return;
+      // Première période : accès complet pendant 14 jours.
+      if (trialEnd > now) return;
 
-      return fetch(SUPABASE_URL + '/rest/v1/subscriptions?select=plan_code,status,current_period_end&user_id=eq.' + encodeURIComponent(userId) + '&status=eq.active&order=current_period_end.desc&limit=1', {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: 'Bearer ' + session.access_token,
-          Accept: 'application/json'
-        },
-        cache: 'no-store'
-      }).then(function (r) {
-        if (!r.ok) throw new Error('subscription');
-        return r.json();
-      }).then(function (subs) {
-        var active = subs && subs[0];
-        if (active && active.current_period_end && new Date(active.current_period_end).getTime() > Date.now()) return;
-        goPayment(plan);
-      });
+      // Abonnement payant actif : accès complet.
+      if (paidPlans[plan] && planExpiry > now) return;
+
+      // Après l'essai, ce workspace est une fonctionnalité premium.
+      // L'utilisateur conserve l'accès aux espaces gratuits de la plateforme,
+      // mais doit choisir une formule pour revenir ici.
+      return goPayment('pro');
     })
     .catch(function () {
       window.location.replace('/login.html?error=access_check');
