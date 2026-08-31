@@ -1,0 +1,132 @@
+/* THE CAPITAL — final visual contrast layer
+   Prevents legacy hardcoded dark/light colors from becoming unreadable.
+   Presentation only. No market, API, auth, Supabase or business logic. */
+
+body[data-theme="light"] {
+  background:#f4f1ea !important;
+  color:#1d1a15 !important;
+}
+
+body[data-theme="light"] .main,
+body[data-theme="light"] .main .view,
+body[data-theme="light"] .page-header,
+body[data-theme="light"] .breadcrumb {
+  color:#1d1a15;
+}
+
+body[data-theme="light"] .page-header h1,
+body[data-theme="light"] .page-header h2,
+body[data-theme="light"] .section-title,
+body[data-theme="light"] .view-title,
+body[data-theme="light"] .card-title,
+body[data-theme="light"] .stat-value,
+body[data-theme="light"] .stat-value.mono,
+body[data-theme="light"] .topnav-logo,
+body[data-theme="light"] .nav-dropdown-btn {
+  color:#1d1a15;
+}
+
+body[data-theme="light"] .sidebar,
+body[data-theme="light"] .header {
+  background:#fffdf9 !important;
+  color:#1d1a15 !important;
+  border-color:rgba(55,45,28,.14) !important;
+}
+
+body[data-theme="light"] .nav-item,
+body[data-theme="light"] .nav-dropdown-btn,
+body[data-theme="light"] .topnav-username,
+body[data-theme="light"] .header-time {
+  color:rgba(29,26,21,.68) !important;
+}
+
+body[data-theme="light"] .nav-item.active,
+body[data-theme="light"] .nav-item:hover,
+body[data-theme="light"] .nav-dropdown-btn:hover {
+  color:#76591f !important;
+  background:rgba(154,116,48,.08) !important;
+}
+
+body[data-theme="light"] .card,
+body[data-theme="light"] .stat-card,
+body[data-theme="light"] .fiche-hero,
+body[data-theme="light"] .boc-card,
+body[data-theme="light"] .dashboard-news,
+body[data-theme="light"] .news-item,
+body[data-theme="light"] .chart-card {
+  background:#fffdf9 !important;
+  color:#1d1a15 !important;
+  border-color:rgba(55,45,28,.13) !important;
+}
+
+body[data-theme="light"] .card p,
+body[data-theme="light"] .card .muted,
+body[data-theme="light"] .stat-label,
+body[data-theme="light"] .page-header p,
+body[data-theme="light"] .item-desc,
+body[data-theme="light"] .breadcrumb,
+body[data-theme="light"] .muted,
+body[data-theme="light"] .description {
+  color:rgba(29,26,21,.64) !important;
+}
+
+body[data-theme="light"] .nav-dropdown-menu,
+body[data-theme="light"] .global-search-results,
+body[data-theme="light"] .dropdown-menu,
+body[data-theme="light"] .modal,
+body[data-theme="light"] .popover,
+body[data-theme="light"] .menu {
+  background:#fffdf9 !important;
+  color:#1d1a15 !important;
+  border-color:rgba(55,45,28,.14) !important;
+  box-shadow:0 18px 45px rgba(38,31,20,.12) !important;
+}
+
+body[data-theme="light"] table { color:#1d1a15 !important; }
+body[data-theme="light"] th { color:rgba(29,26,21,.62) !important; background:#f7f4ed !important; }
+body[data-theme="light"] td { color:#1d1a15 !important; border-color:rgba(55,45,28,.08) !important; }
+body[data-theme="light"] tr:hover td { background:rgba(154,116,48,.035) !important; }
+
+body[data-theme="light"] input,
+body[data-theme="light"] select,
+body[data-theme="light"] textarea,
+body[data-theme="light"] .search-input,
+body[data-theme="light"] .global-search input {
+  background:#fffdf9 !important;
+  color:#1d1a15 !important;
+  border-color:rgba(55,45,28,.16) !important;
+}
+
+body[data-theme="light"] input::placeholder,
+body[data-theme="light"] textarea::placeholder {
+  color:rgba(29,26,21,.40) !important;
+}
+
+body[data-theme="light"] .btn.ghost,
+body[data-theme="light"] button.ghost,
+body[data-theme="light"] .secondary-btn {
+  color:#76591f !important;
+  border-color:rgba(118,89,31,.28) !important;
+}
+
+body[data-theme="light"] .green,
+body[data-theme="light"] .positive,
+body[data-theme="light"] .up,
+body[data-theme="light"] [class*="positive"] { color:#187447 !important; }
+body[data-theme="light"] .red,
+body[data-theme="light"] .negative,
+body[data-theme="light"] .down,
+body[data-theme="light"] [class*="negative"] { color:#b63838 !important; }
+
+/* Keep numbers and financial metrics visually dominant without huge type. */
+body[data-theme="light"] .stat-card .stat-value,
+body[data-theme="light"] .stat-card .stat-value.mono { font-size:clamp(1.02rem,1.15vw,1.22rem) !important; line-height:1.15 !important; }
+
+/* Focus visibility across the application. */
+body[data-theme="light"] button:focus-visible,
+body[data-theme="light"] a:focus-visible,
+body[data-theme="light"] input:focus-visible,
+body[data-theme="light"] select:focus-visible {
+  outline:2px solid #9a7430 !important;
+  outline-offset:2px !important;
+}
