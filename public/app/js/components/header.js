@@ -55,4 +55,14 @@ function initHeader() {
     link.dataset.tcHeaderFinal = finalCssHref;
     document.head.appendChild(link);
   }
+
+  // Header clock: one reference only — BRVM / Abidjan.
+  const singleClockHref = '/app/css/header-clock-single.css';
+  if (!document.querySelector(`link[data-tc-header-clock-single="${singleClockHref}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = singleClockHref;
+    link.dataset.tcHeaderClockSingle = singleClockHref;
+    document.head.appendChild(link);
+  }
 })();
