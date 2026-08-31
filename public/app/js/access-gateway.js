@@ -24,9 +24,18 @@
     } catch (e) { return null; }
   }
 
+  function rememberDestination() {
+    try {
+      var target = window.location.pathname + window.location.search + window.location.hash;
+      if (target && target.indexOf('/login.html') === -1) {
+        sessionStorage.setItem('tc_auth_destination', target);
+      }
+    } catch (e) {}
+  }
+
   function goLogin() {
-    var target = encodeURIComponent(window.location.pathname + window.location.search + window.location.hash);
-    window.location.replace('/login.html?redirect=' + target);
+    rememberDestination();
+    window.location.replace('/login.html');
   }
 
   function goPayment(plan) {
@@ -90,18 +99,14 @@
       var trialEnd = profile.trial_ends_at ? new Date(profile.trial_ends_at).getTime() : 0;
       var planExpiry = profile.plan_expire_at ? new Date(profile.plan_expire_at).getTime() : 0;
 
-      // Première période : accès complet pendant 14 jours.
       if (trialEnd > now) return;
-
-      // Abonnement payant actif : accès complet.
       if (paidPlans[plan] && planExpiry > now) return;
 
-      // Après l'essai, ce workspace est une fonctionnalité premium.
-      // L'utilisateur conserve l'accès aux espaces gratuits de la plateforme,
-      // mais doit choisir une formule pour revenir ici.
       return goPayment('pro');
     })
     .catch(function () {
-      window.location.replace('/login.html?error=access_check');
+      /* Ne'expose pas de détails techniques dans l'URL utilisateur. */
+      rememberDestination();
+      window.location.replace('/login.html');
     });
 })();
