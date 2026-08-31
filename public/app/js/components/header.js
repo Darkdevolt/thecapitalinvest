@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════
-// COMPONENT, Header
+// COMPONENT — Header
 // ═══════════════════════════════════════
 
 // Header-related logic extracted from router.js
@@ -11,11 +11,14 @@ function initHeader() {
 }
 
 (function loadDisplayAndProductModules(){
+  // IMPORTANT: this file is loaded from /app/app.html.
+  // Paths must therefore be absolute /app/... and never app/...
+  // Otherwise the browser resolves them as /app/app/...
   const scripts = [
-    'app/js/mode.js',
-    'app/js/views/comparison.js',
-    'app/js/views/dividend-screener.js',
-    'app/js/header-polish.js'
+    '/app/js/mode.js',
+    '/app/js/views/comparison.js',
+    '/app/js/views/dividend-screener.js',
+    '/app/js/header-polish.js'
   ];
   scripts.forEach(src => {
     if (document.querySelector(`script[data-tc-module="${src}"]`)) return;
@@ -25,7 +28,7 @@ function initHeader() {
     document.body.appendChild(script);
   });
 
-  const cssHref = 'app/css/header-responsive.css';
+  const cssHref = '/app/css/header-responsive.css';
   if (!document.querySelector(`link[data-tc-header-responsive="${cssHref}"]`)) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -35,7 +38,7 @@ function initHeader() {
   }
 
   // Density first, final header rules last so no legacy layer can override them.
-  const scaleHref = 'app/css/scale-100.css';
+  const scaleHref = '/app/css/scale-100.css';
   if (!document.querySelector(`link[data-tc-scale-100="${scaleHref}"]`)) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
@@ -44,7 +47,7 @@ function initHeader() {
     document.head.appendChild(link);
   }
 
-  const finalCssHref = 'app/css/header-final.css';
+  const finalCssHref = '/app/css/header-final.css';
   if (!document.querySelector(`link[data-tc-header-final="${finalCssHref}"]`)) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
