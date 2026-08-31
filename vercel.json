@@ -27,7 +27,7 @@
     {
       "source": "/",
       "headers": [
-        { "key": "Link", "value": "</api/marche-public>; rel=preload; as=fetch" }
+        { "key": "Link", "value": "</api/marche?type=apercu>; rel=preload; as=fetch" }
       ]
     },
     {
