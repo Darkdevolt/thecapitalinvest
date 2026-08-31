@@ -18,7 +18,8 @@ function initHeader() {
     '/app/js/mode.js',
     '/app/js/views/comparison.js',
     '/app/js/views/dividend-screener.js',
-    '/app/js/header-polish.js'
+    '/app/js/header-polish.js',
+    '/app/js/theme.js'
   ];
   scripts.forEach(src => {
     if (document.querySelector(`script[data-tc-module="${src}"]`)) return;
@@ -63,6 +64,26 @@ function initHeader() {
     link.rel = 'stylesheet';
     link.href = singleClockHref;
     link.dataset.tcHeaderClockSingle = singleClockHref;
+    document.head.appendChild(link);
+  }
+
+  // Final density corrections must load after every legacy header layer.
+  const fixesHref = '/app/css/header-fixes.css';
+  if (!document.querySelector(`link[data-tc-header-fixes="${fixesHref}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = fixesHref;
+    link.dataset.tcHeaderFixes = fixesHref;
+    document.head.appendChild(link);
+  }
+
+  // Institutional white / ivory theme. Dark remains the default.
+  const lightThemeHref = '/app/css/theme-light.css';
+  if (!document.querySelector(`link[data-tc-theme-light="${lightThemeHref}"]`)) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = lightThemeHref;
+    link.dataset.tcThemeLight = lightThemeHref;
     document.head.appendChild(link);
   }
 })();
