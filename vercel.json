@@ -4,17 +4,6 @@
   "crons": [
     { "path": "/api/process-brvm", "schedule": "5 16 * * 1-5" }
   ],
-  "redirects": [
-    { "source": "/landing-v4.html", "destination": "/", "permanent": true },
-    { "source": "/features.html", "destination": "/#fonctionnalites", "permanent": true },
-    { "source": "/platform.html", "destination": "/#fonctionnalites", "permanent": true },
-    { "source": "/markets.html", "destination": "/#marches", "permanent": true },
-    { "source": "/pricing.html", "destination": "/#tarifs", "permanent": true },
-    { "source": "/about.html", "destination": "/#a-propos", "permanent": true },
-    { "source": "/contact.html", "destination": "/#contact", "permanent": true },
-    { "source": "/app/app.html", "destination": "/app.html", "permanent": true },
-    { "source": "/index-new.html", "destination": "/", "permanent": true }
-  ],
   "rewrites": [
     { "source": "/app", "destination": "/app.html" },
     { "source": "/admin", "destination": "/admin.html" },
@@ -30,27 +19,14 @@
     { "source": "/api/signup-otp", "destination": "https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2" }
   ],
   "headers": [
-    {
-      "source": "/(.*)",
-      "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
-        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=() }
-      ]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "no-store" }
-      ]
-    },
-    {
-      "source": "/assets/(.*)",
-      "headers": [
-        { "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }
-      ]
-    }
+    { "source": "/(.*)", "headers": [
+      { "key": "X-Content-Type-Options", "value": "nosniff" },
+      { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
+      { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
+      { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
+      { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=() } 
+    ]},
+    { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] },
+    { "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] }
   ]
 }
