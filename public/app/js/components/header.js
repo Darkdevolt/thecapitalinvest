@@ -16,10 +16,10 @@ function initHeader() {
   // Otherwise the browser resolves them as /app/app/...
   const scripts = [
     '/app/js/mode.js',
+    '/app/js/theme.js',
     '/app/js/views/comparison.js',
     '/app/js/views/dividend-screener.js',
-    '/app/js/header-polish.js',
-    '/app/js/theme.js'
+    '/app/js/header-polish.js'
   ];
   scripts.forEach(src => {
     if (document.querySelector(`script[data-tc-module="${src}"]`)) return;
@@ -67,23 +67,13 @@ function initHeader() {
     document.head.appendChild(link);
   }
 
-  // Final density corrections must load after every legacy header layer.
-  const fixesHref = '/app/css/header-fixes.css';
-  if (!document.querySelector(`link[data-tc-header-fixes="${fixesHref}"]`)) {
+  // Global visual theme + compact index hierarchy. Loaded last intentionally.
+  const themeCssHref = '/app/css/theme-system.css';
+  if (!document.querySelector(`link[data-tc-theme-system="${themeCssHref}"]`)) {
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = fixesHref;
-    link.dataset.tcHeaderFixes = fixesHref;
-    document.head.appendChild(link);
-  }
-
-  // Institutional white / ivory theme. Dark remains the default.
-  const lightThemeHref = '/app/css/theme-light.css';
-  if (!document.querySelector(`link[data-tc-theme-light="${lightThemeHref}"]`)) {
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = lightThemeHref;
-    link.dataset.tcThemeLight = lightThemeHref;
+    link.href = themeCssHref;
+    link.dataset.tcThemeSystem = themeCssHref;
     document.head.appendChild(link);
   }
 })();
