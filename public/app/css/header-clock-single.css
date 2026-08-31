@@ -1,0 +1,63 @@
+/* THE CAPITAL — single market clock */
+.header .tc-market-clocks{
+  flex:0 0 150px!important;
+  width:150px!important;
+  min-width:150px!important;
+  height:42px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:0 10px!important;
+  border-left:1px solid rgba(184,150,78,.12)!important;
+  border-right:1px solid rgba(184,150,78,.12)!important;
+}
+
+.header .tc-market-clocks .tc-clock-main{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:flex-start!important;
+  gap:3px!important;
+  min-width:0!important;
+  padding:0!important;
+}
+
+.header .tc-market-clocks .tc-clock-kicker{
+  display:block!important;
+  writing-mode:horizontal-tb!important;
+  transform:none!important;
+  margin:0!important;
+  font:500 7px/1 var(--mono,monospace)!important;
+  letter-spacing:.14em!important;
+  color:var(--gold)!important;
+}
+
+.header .tc-market-clocks .tc-clock-primary{
+  display:flex!important;
+  flex-direction:row!important;
+  align-items:baseline!important;
+  gap:7px!important;
+}
+
+.header .tc-market-clocks .tc-clock-primary b{
+  font:500 12px/1 var(--mono,monospace)!important;
+  color:var(--text)!important;
+}
+
+.header .tc-market-clocks .tc-clock-primary small{
+  font:500 7px/1 var(--mono,monospace)!important;
+  color:rgba(244,239,230,.46)!important;
+  letter-spacing:.05em!important;
+  text-transform:uppercase!important;
+}
+
+.header .tc-market-clocks .tc-clock-list{
+  display:none!important;
+}
+
+@media(max-width:1800px){
+  .header .tc-market-clocks{flex-basis:145px!important;width:145px!important;min-width:145px!important}
+}
+
+@media(max-width:1600px){
+  .header .tc-market-clocks{flex-basis:135px!important;width:135px!important;min-width:135px!important}
+}
