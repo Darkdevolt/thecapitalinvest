@@ -51,3 +51,317 @@
   .fdoc-item { grid-template-columns: 1fr auto; gap: 6px 10px; }
   .fdoc-type { grid-column: 1 / -1; justify-self: start; }
 }
+
+/* ==================================================================
+   THE CAPITAL — UI CONSISTENCY OVERRIDE
+   Couche de présentation uniquement.
+   Aucun calcul, aucune donnée, aucune logique métier modifiée.
+   ================================================================== */
+
+:root {
+  --tc-bg: #0A0804;
+  --tc-surface: #16130D;
+  --tc-card: #1A1610;
+  --tc-card-2: #1E1B13;
+  --tc-border: rgba(184,150,78,.15);
+  --tc-border-soft: rgba(184,150,78,.08);
+  --tc-gold: #B8964E;
+  --tc-gold-light: #D4AF6A;
+  --tc-text: #F5F0E8;
+  --tc-muted: rgba(245,240,232,.60);
+  --tc-faint: rgba(245,240,232,.30);
+  --tc-green: #4ADE80;
+  --tc-red: #F87171;
+  --tc-warn: #F0A72A;
+  --tc-serif: 'Playfair Display', Georgia, serif;
+  --tc-sans: 'DM Sans', system-ui, sans-serif;
+  --tc-mono: 'DM Mono', ui-monospace, monospace;
+}
+
+/* ---------------------------------------------------------------
+   Analyse fondamentale : même langage visuel que le reste de l'app
+   --------------------------------------------------------------- */
+
+#view-analyse-fondamentale {
+  --af-bg: var(--tc-bg);
+  --af-panel: var(--tc-surface);
+  --af-panel-2: var(--tc-card);
+  --af-line: var(--tc-border);
+  --af-line-soft: var(--tc-border-soft);
+  --af-gold: var(--tc-gold);
+  --af-text: var(--tc-text);
+  --af-dim: var(--tc-muted);
+  --af-faint: var(--tc-faint);
+  --af-up: var(--tc-green);
+  --af-down: var(--tc-red);
+  --af-warn: var(--tc-warn);
+  color: var(--tc-text);
+  font-family: var(--tc-sans);
+}
+
+#view-analyse-fondamentale .af-shell { gap: 12px; }
+
+#view-analyse-fondamentale .af-toolbar,
+#view-analyse-fondamentale .af-header,
+#view-analyse-fondamentale .af-tabs,
+#view-analyse-fondamentale .af-panel {
+  background: var(--tc-surface);
+  border-color: var(--tc-border);
+}
+
+#view-analyse-fondamentale .af-toolbar,
+#view-analyse-fondamentale .af-header {
+  border-radius: 10px;
+}
+
+#view-analyse-fondamentale .af-tabs {
+  border-radius: 10px 10px 0 0;
+  padding-top: 7px;
+}
+
+#view-analyse-fondamentale .af-panel {
+  border-radius: 0 0 10px 10px;
+}
+
+#view-analyse-fondamentale .af-select,
+#view-analyse-fondamentale .af-champ input,
+#view-analyse-fondamentale .af-champ select {
+  background: var(--tc-card);
+  color: var(--tc-text);
+  border-color: var(--tc-border);
+  border-radius: 7px;
+}
+
+#view-analyse-fondamentale .af-btn {
+  border-color: var(--tc-border);
+  border-radius: 7px;
+  color: var(--tc-muted);
+}
+
+#view-analyse-fondamentale .af-btn:hover,
+#view-analyse-fondamentale .af-select:focus,
+#view-analyse-fondamentale .af-champ input:focus,
+#view-analyse-fondamentale .af-champ select:focus {
+  border-color: var(--tc-gold);
+}
+
+#view-analyse-fondamentale .af-h-head strong,
+#view-analyse-fondamentale .af-group,
+#view-analyse-fondamentale .af-tab.on,
+#view-analyse-fondamentale .af-gold,
+#view-analyse-fondamentale .af-h-v {
+  color: var(--tc-gold);
+}
+
+#view-analyse-fondamentale .af-h-nom,
+#view-analyse-fondamentale .af-cat,
+#view-analyse-fondamentale .af-champ-l,
+#view-analyse-fondamentale .af-pilier-t,
+#view-analyse-fondamentale .af-note strong {
+  color: var(--tc-muted);
+}
+
+#view-analyse-fondamentale .af-h-sec,
+#view-analyse-fondamentale .af-note,
+#view-analyse-fondamentale .af-nd,
+#view-analyse-fondamentale .af-dim,
+#view-analyse-fondamentale .af-stat-l,
+#view-analyse-fondamentale .af-stat-s,
+#view-analyse-fondamentale .af-val-l,
+#view-analyse-fondamentale .af-val-v small,
+#view-analyse-fondamentale .af-verdict-s,
+#view-analyse-fondamentale .af-disclaimer {
+  color: var(--tc-faint);
+}
+
+#view-analyse-fondamentale .af-tab {
+  color: var(--tc-faint);
+}
+
+#view-analyse-fondamentale .af-tab:hover {
+  color: var(--tc-text);
+}
+
+#view-analyse-fondamentale .af-verdict,
+#view-analyse-fondamentale .af-stat,
+#view-analyse-fondamentale .af-mini,
+#view-analyse-fondamentale .af-val-head,
+#view-analyse-fondamentale .af-lecture,
+#view-analyse-fondamentale .af-methode,
+#view-analyse-fondamentale .af-wacc > div,
+#view-analyse-fondamentale .af-alerte,
+#view-analyse-fondamentale .af-form + * {
+  background: var(--tc-card);
+}
+
+#view-analyse-fondamentale .af-verdict,
+#view-analyse-fondamentale .af-stat,
+#view-analyse-fondamentale .af-wacc,
+#view-analyse-fondamentale .af-stats {
+  border-color: var(--tc-border);
+}
+
+#view-analyse-fondamentale .af-verdict,
+#view-analyse-fondamentale .af-val-head,
+#view-analyse-fondamentale .af-mini,
+#view-analyse-fondamentale .af-methode,
+#view-analyse-fondamentale .af-lecture,
+#view-analyse-fondamentale .af-alerte,
+#view-analyse-fondamentale .af-warn {
+  border-radius: 8px;
+}
+
+#view-analyse-fondamentale .af-verdict-n,
+#view-analyse-fondamentale .af-stat-v,
+#view-analyse-fondamentale .af-val-v,
+#view-analyse-fondamentale .af-methode strong,
+#view-analyse-fondamentale .af-wacc strong,
+#view-analyse-fondamentale .af-h-v {
+  font-family: var(--tc-mono);
+}
+
+#view-analyse-fondamentale .af-verdict-n,
+#view-analyse-fondamentale .af-methode strong {
+  color: var(--tc-text);
+}
+
+#view-analyse-fondamentale .af-bar,
+#view-analyse-fondamentale .af-wacc,
+#view-analyse-fondamentale .af-stats {
+  background: var(--tc-border-soft);
+}
+
+/* ---------------------------------------------------------------
+   Mémos : les petits « i » ne doivent jamais devenir blancs/gris
+   --------------------------------------------------------------- */
+
+.tc-memo-i {
+  width: 13px !important;
+  height: 13px !important;
+  margin-left: 5px !important;
+  border: 1px solid rgba(184,150,78,.46) !important;
+  border-radius: 50% !important;
+  color: var(--tc-gold) !important;
+  background: rgba(184,150,78,.035) !important;
+  opacity: .72 !important;
+  font-family: var(--tc-sans) !important;
+  font-size: 8px !important;
+  font-weight: 600 !important;
+  line-height: 1 !important;
+  box-shadow: none !important;
+  transition: opacity .15s, transform .15s, color .15s, border-color .15s, background .15s !important;
+}
+
+.tc-memo-i:hover,
+.tc-memo-i:focus,
+.tc-memo-i:focus-visible {
+  color: var(--tc-gold-light) !important;
+  border-color: var(--tc-gold-light) !important;
+  background: rgba(184,150,78,.09) !important;
+  opacity: 1 !important;
+  transform: scale(1.08) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(184,150,78,.12) !important;
+}
+
+/* ---------------------------------------------------------------
+   Panneau mémo : cohérence avec le design institutionnel
+   --------------------------------------------------------------- */
+
+.tc-memo-panel {
+  background: var(--tc-surface) !important;
+  color: var(--tc-text) !important;
+  border-left: 1px solid var(--tc-border) !important;
+  font-family: var(--tc-sans) !important;
+  box-shadow: -18px 0 50px rgba(0,0,0,.42) !important;
+}
+
+.tc-memo-head {
+  border-bottom-color: var(--tc-border-soft) !important;
+}
+
+.tc-memo-kicker,
+.tc-memo-lbl {
+  color: var(--tc-gold) !important;
+}
+
+.tc-memo-title {
+  color: var(--tc-text) !important;
+  font-family: var(--tc-serif) !important;
+}
+
+.tc-memo-txt,
+.tc-memo-foot {
+  color: var(--tc-muted) !important;
+}
+
+.tc-memo-formule,
+.tc-memo-search,
+.tc-memo-list button {
+  background: var(--tc-card) !important;
+  color: var(--tc-text) !important;
+}
+
+.tc-memo-formule {
+  border-left-color: rgba(184,150,78,.35) !important;
+}
+
+.tc-memo-x,
+.tc-memo-rel button,
+.tc-memo-search {
+  border-color: var(--tc-border) !important;
+}
+
+.tc-memo-x {
+  color: var(--tc-muted) !important;
+  border-radius: 7px !important;
+}
+
+.tc-memo-x:hover,
+.tc-memo-rel button:hover {
+  color: var(--tc-gold-light) !important;
+  border-color: rgba(184,150,78,.5) !important;
+}
+
+.tc-memo-rel button {
+  color: var(--tc-muted) !important;
+  border-radius: 14px !important;
+}
+
+.tc-memo-list button:hover {
+  background: rgba(184,150,78,.08) !important;
+  color: var(--tc-text) !important;
+}
+
+.tc-memo-back {
+  background: rgba(8,7,5,.58) !important;
+}
+
+/* ---------------------------------------------------------------
+   Préparation du thème clair — aucune activation automatique.
+   --------------------------------------------------------------- */
+
+[data-theme="light"] {
+  --tc-bg: #F6F3EC;
+  --tc-surface: #FFFFFF;
+  --tc-card: #FBF9F4;
+  --tc-card-2: #F2EEE5;
+  --tc-border: rgba(83,67,40,.16);
+  --tc-border-soft: rgba(83,67,40,.09);
+  --tc-gold: #9B7834;
+  --tc-gold-light: #B8964E;
+  --tc-text: #17130D;
+  --tc-muted: rgba(23,19,13,.64);
+  --tc-faint: rgba(23,19,13,.42);
+  --tc-green: #16845A;
+  --tc-red: #C8453F;
+  --tc-warn: #A96F08;
+}
+
+[data-theme="light"] .tc-memo-back {
+  background: rgba(23,19,13,.22) !important;
+}
+
+[data-theme="light"] .tc-memo-panel {
+  box-shadow: -18px 0 50px rgba(23,19,13,.16) !important;
+}
