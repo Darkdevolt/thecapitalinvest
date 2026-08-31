@@ -1,34 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "version": 2,
   "buildCommand": "npm run build",
   "crons": [
     { "path": "/api/process-brvm", "schedule": "5 16 * * 1-5" }
-  ],
-  "redirects": [
-    { "source": "/landing-v4.html", "destination": "/", "permanent": true },
-    { "source": "/features.html", "destination": "/#fonctionnalites", "permanent": true },
-    { "source": "/platform.html", "destination": "/#fonctionnalites", "permanent": true },
-    { "source": "/markets.html", "destination": "/#marches", "permanent": true },
-    { "source": "/pricing.html", "destination": "/#tarifs", "permanent": true },
-    { "source": "/about.html", "destination": "/#a-propos", "permanent": true },
-    { "source": "/contact.html", "destination": "/#contact", "permanent": true },
-    { "source": "/app/app.html", "destination": "/app.html", "permanent": true },
-    { "source": "/index-new.html", "destination": "/", "permanent": true }
-  ],
-  "rewrites": [
-    { "source": "/app", "destination": "/app.html" },
-    { "source": "/admin", "destination": "/admin.html" },
-    { "source": "/app.html", "destination": "/app/app.html" },
-    { "source": "/titres", "destination": "/app/app.html#titres" },
-    { "source": "/marche", "destination": "/app/app.html#marche" },
-    { "source": "/analyses", "destination": "/app/app.html#analyses" },
-    { "source": "/screener", "destination": "/app/app.html#screener" },
-    { "source": "/financials", "destination": "/app/app.html#financials" },
-    { "source": "/titre/:ticker", "destination": "/app/app.html#fiche=:ticker" },
-    { "source": "/institute", "destination": "/the-capital-institute/index.html" },
-    { "source": "/institute/premium", "destination": "/the-capital-institute/premium.html" },
-    { "source": "/api/signup-otp", "destination": "https://otsiwiwlnowxeolbbgvm.supabase.co/functions/v1/thecapital-signup-otp-v2" }
   ],
   "headers": [
     { "source": "/(.*)", "headers": [
