@@ -43,7 +43,37 @@
     toggle:function(){ return apply(getTheme()==='dark'?'light':'dark'); }
   };
 
-  function boot(){ apply(getTheme()); }
+  /*
+   * Il existait une ancienne commande Clair/Sombre injectée à gauche du
+   * dashboard. Le contrôle officiel est désormais dans Mon compte >
+   * Préférences. On retire uniquement les anciens contrôles visuels, sans
+   * toucher au moteur de thème ni au sélecteur de la page compte.
+   */
+  function removeLegacyThemeControls(){
+    if(location.pathname.indexOf('/app/account.html')!==-1) return;
+    var selectors=[
+      '#themeToggle',
+      '#theme-toggle',
+      '#tcThemeToggle',
+      '[data-theme-toggle]',
+      '.theme-toggle',
+      '.theme-switch',
+      '.tc-theme-toggle',
+      '.tc-theme-switch'
+    ];
+    document.querySelectorAll(selectors.join(',')).forEach(function(el){
+      if(el && el.parentNode) el.parentNode.removeChild(el);
+    });
+  }
+
+  function boot(){
+    apply(getTheme());
+    removeLegacyThemeControls();
+    if(document.documentElement && !window.__TC_THEME_OBSERVER__){
+      window.__TC_THEME_OBSERVER__=new MutationObserver(function(){removeLegacyThemeControls();});
+      window.__TC_THEME_OBSERVER__.observe(document.documentElement,{childList:true,subtree:true});
+    }
+  }
 
   if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded',boot,{once:true});
