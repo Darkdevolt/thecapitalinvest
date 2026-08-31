@@ -19,6 +19,7 @@ import { getPublicMarketSnapshot } from '../lib/market-snapshot.js';
 const db = supabaseAdmin || supabase;
 const PAGE_SIZE = 1000;
 const MAX_PAGES = 50;
+const MARKET_PREVIEW_CACHE = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
 
 function table(name, build) {
   if (!db) throw new Error('Supabase non configuré');
@@ -134,7 +135,7 @@ export default async function handler(req, res) {
       case 'analyses': result = await table('analyses', q => q.order('date_analyse', { ascending: false }).limit(500)); break;
       case 'dividendes': result = await table('dividendes_calendrier', q => q.order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000)); break;
       case 'coupons': try { result = await table('coupons_calendrier', q => q.order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000)); } catch (e) { result = { data: [], source: 'coupons', absent: true }; } break;
-      case 'apercu': result = await getPublicMarketSnapshot(); return json(res, 200, result);
+      case 'apercu': result = await getPublicMarketSnapshot(); return json(res, 200, result, { cache: MARKET_PREVIEW_CACHE });
       default: return fail(res, 400, `Type de données inconnu : ${type}`, 'UNKNOWN_TYPE');
     }
     if (result?.error) throw result.error; const data = result?.data || result || []; if (type === 'historique' && Array.isArray(data)) data.reverse(); return json(res, 200, data);
