@@ -1,0 +1,115 @@
+/* THE CAPITAL — coherent theme layer + visual scale correction */
+
+:root[data-theme="light"], body[data-theme="light"] {
+  --bg:#f4f1ea;
+  --surface:#ffffff;
+  --card:#fffdf9;
+  --card2:#f8f5ee;
+  --border:rgba(55,45,28,.14);
+  --border2:rgba(55,45,28,.08);
+  --gold:#9a7430;
+  --gold-light:#b18a43;
+  --gold-dim:rgba(154,116,48,.35);
+  --cream:#1d1a15;
+  --muted:rgba(29,26,21,.64);
+  --dim:rgba(29,26,21,.42);
+  --green:#18834a;
+  --green-bg:rgba(24,131,74,.08);
+  --red:#c43d3d;
+  --red-bg:rgba(196,61,61,.08);
+  --blue:#2869a8;
+  --blue-bg:rgba(40,105,168,.08);
+}
+
+body[data-theme="light"] { background:var(--bg); color:var(--cream); }
+body[data-theme="light"]::before { opacity:.16; }
+
+/* Core surfaces */
+body[data-theme="light"] .sidebar,
+body[data-theme="light"] .header,
+body[data-theme="light"] .card,
+body[data-theme="light"] .stat-card,
+body[data-theme="light"] .fiche-hero,
+body[data-theme="light"] .boc-card,
+body[data-theme="light"] .nav-dropdown-menu,
+body[data-theme="light"] .global-search-results,
+body[data-theme="light"] .modal,
+body[data-theme="light"] .dropdown-menu { background:var(--surface); color:var(--cream); }
+
+body[data-theme="light"] .header,
+body[data-theme="light"] .sidebar,
+body[data-theme="light"] .card,
+body[data-theme="light"] .stat-card,
+body[data-theme="light"] .fiche-hero,
+body[data-theme="light"] .boc-card { border-color:var(--border); }
+
+body[data-theme="light"] .card,
+body[data-theme="light"] .stat-card,
+body[data-theme="light"] .fiche-hero,
+body[data-theme="light"] .boc-card { box-shadow:0 8px 24px rgba(38,31,20,.055); }
+
+/* Typography and controls */
+body[data-theme="light"] .muted,
+body[data-theme="light"] .item-desc,
+body[data-theme="light"] .page-header p,
+body[data-theme="light"] .stat-label { color:var(--muted); }
+body[data-theme="light"] input,
+body[data-theme="light"] select,
+body[data-theme="light"] textarea,
+body[data-theme="light"] .search-input,
+body[data-theme="light"] .global-search input { background:#fbfaf7; color:var(--cream); border-color:var(--border); }
+body[data-theme="light"] input::placeholder { color:var(--dim); }
+body[data-theme="light"] .nav-item:hover,
+body[data-theme="light"] .nav-item.active,
+body[data-theme="light"] .nav-dropdown-btn:hover,
+body[data-theme="light"] .nav-dropdown-btn.active,
+body[data-theme="light"] .nav-dropdown-item:hover { background:rgba(154,116,48,.075); }
+body[data-theme="light"] .nav-dropdown-item,
+body[data-theme="light"] .nav-dropdown-label { color:var(--cream); }
+body[data-theme="light"] .topnav-divider,
+body[data-theme="light"] .header .topnav-right,
+body[data-theme="light"] .header .tc-market-clocks,
+body[data-theme="light"] .header .tc-clock-list span { border-color:rgba(55,45,28,.11)!important; }
+body[data-theme="light"] .header .tc-clock-primary b,
+body[data-theme="light"] .header .tc-clock-list b { color:var(--cream)!important; }
+body[data-theme="light"] .header .tc-clock-primary small,
+body[data-theme="light"] .header .tc-clock-list small { color:var(--muted)!important; }
+
+/* Tables */
+body[data-theme="light"] table { color:var(--cream); }
+body[data-theme="light"] thead th { color:var(--muted); background:#f7f4ed; border-bottom-color:var(--border); }
+body[data-theme="light"] tbody td { border-bottom-color:var(--border2); }
+body[data-theme="light"] tbody tr:hover { background:rgba(154,116,48,.035); }
+
+/* Existing financial special cards */
+body[data-theme="light"] .fin-detail-card { background:linear-gradient(180deg,#fffdf9,#f8f5ee)!important; border-color:var(--border)!important; }
+body[data-theme="light"] .fin-value { color:var(--cream)!important; }
+body[data-theme="light"] .dashboard-news,
+body[data-theme="light"] .dashboard-news-grid .news-item { border-color:var(--border); }
+
+/* Compact market index hierarchy: values should support the label, not dominate it. */
+.main .stat-card .stat-value,
+.main .stat-card .stat-value.mono { font-size:clamp(1.02rem,1.15vw,1.22rem)!important; line-height:1.15!important; letter-spacing:-.01em; }
+.main .stat-card .stat-change { font-size:.66rem!important; }
+.main .stat-card .stat-label { font-size:.58rem!important; letter-spacing:.075em; }
+.main #overviewStats .stat-card { min-height:102px; }
+
+/* Charts remain visually restrained in both themes. */
+.chart-container { max-height:360px; }
+body[data-theme="light"] .chart-container { background:transparent; }
+
+/* Theme control */
+.tc-theme-toggle { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; padding:0; border:1px solid var(--border); border-radius:9px; background:transparent; color:var(--cream); cursor:pointer; transition:.18s ease; }
+.tc-theme-toggle:hover { border-color:var(--gold-dim); background:rgba(184,150,78,.08); }
+.tc-theme-toggle .tc-theme-icon { font-size:15px; line-height:1; }
+
+/* Light-mode logo/header contrast. Keep the supplied brand asset, but prevent a dark header treatment. */
+body[data-theme="light"] .header .topnav-logo { background-color:transparent!important; }
+body[data-theme="light"] .header .topnav-logo { filter:brightness(.72) contrast(1.18); }
+body[data-theme="light"] .topnav-user,
+body[data-theme="light"] .topnav-username,
+body[data-theme="light"] .topnav-logout { color:var(--cream)!important; }
+
+@media (max-width:1400px){
+  .main .stat-card .stat-value { font-size:1.02rem!important; }
+}
