@@ -28,7 +28,8 @@ function initHeader() {
     ['/app/css/scale-100.css','data-tc-scale-100'],
     ['/app/css/header-final.css','data-tc-header-final'],
     ['/app/css/header-clock-single.css','data-tc-header-clock-single'],
-    ['/app/css/theme-system.css','data-tc-theme-system']
+    ['/app/css/theme-system.css','data-tc-theme-system'],
+    ['/app/css/visual-contrast.css','data-tc-visual-contrast']
   ];
   styles.forEach(([href,attr])=>{
     if(document.querySelector(`link[${attr}="${href}"]`)) return;
