@@ -1,0 +1,282 @@
+/* THE CAPITAL INSTITUTE — refined product polish
+   Final layer: stronger hierarchy, consistent controls and a distinctive financial-academy UI. */
+
+:root{
+  --tci-radius:14px;
+  --tci-shadow:0 12px 32px rgba(0,0,0,.12);
+}
+
+/* Header: premium but restrained */
+.tci-head-in{
+  min-height:70px;
+  align-items:center;
+}
+.tci-logo{
+  min-width:300px;
+}
+.tci-logo:before{
+  width:40px!important;
+  height:40px!important;
+  border-radius:12px!important;
+  font-size:12px!important;
+}
+.tci-logo strong{
+  font-size:20px!important;
+}
+.tci-logo span{
+  margin-top:1px;
+  font-size:8.5px!important;
+  letter-spacing:.22em!important;
+}
+.tci-nav{
+  align-items:center;
+  gap:5px!important;
+}
+.tci-nav button,
+.tci-capital-link,
+.tci-user-state,
+.tci-theme-toggle{
+  min-height:38px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+}
+.tci-nav button{
+  padding:0 14px!important;
+  border-radius:10px!important;
+  color:var(--faint)!important;
+}
+.tci-nav button.on{
+  background:linear-gradient(135deg,rgba(200,162,78,.16),rgba(200,162,78,.05))!important;
+  border-color:var(--line)!important;
+  box-shadow:inset 0 0 0 1px rgba(200,162,78,.03);
+}
+.tci-capital-link{
+  gap:7px;
+  padding:0 14px!important;
+  margin-left:5px;
+  border:1px solid rgba(200,162,78,.18);
+  border-radius:10px!important;
+  text-decoration:none;
+  font-size:12px;
+  transition:.2s ease;
+}
+.tci-capital-link:hover{
+  transform:translateY(-1px);
+  border-color:var(--gold)!important;
+}
+.tci-user-state{
+  margin-left:4px;
+  padding:0 13px!important;
+  border:1px solid rgba(200,162,78,.22);
+  border-radius:10px!important;
+  background:linear-gradient(135deg,rgba(200,162,78,.14),rgba(200,162,78,.045))!important;
+  color:var(--gold)!important;
+  font:600 10px 'DM Mono',monospace!important;
+  letter-spacing:.045em;
+  white-space:nowrap;
+}
+.tci-user-state[data-tci-state="inactive"]{
+  color:var(--gold)!important;
+}
+.tci-user-state[data-tci-state="unavailable"]{
+  color:var(--warn)!important;
+  border-color:rgba(240,167,42,.25);
+}
+
+/* Theme control */
+.tci-theme-toggle{
+  margin-left:2px;
+  padding:0 12px;
+  border:1px solid var(--line);
+  border-radius:10px;
+  background:var(--panel-2);
+  color:var(--dim);
+  font:500 10px 'DM Mono',monospace;
+  cursor:pointer;
+  transition:.2s ease;
+}
+.tci-theme-toggle:hover{
+  color:var(--gold);
+  border-color:var(--gold-dim);
+  transform:translateY(-1px);
+}
+.tci-theme-toggle .tci-theme-icon{
+  margin-right:6px;
+  font-size:14px;
+}
+:root[data-tci-theme="light"] .tci-theme-toggle{
+  background:#fffdf8;
+  color:#76591f;
+  border-color:rgba(121,88,31,.22);
+}
+
+/* Progress bar becomes a deliberate product accent */
+.tci-progres-w{
+  height:3px!important;
+}
+.tci-progres-w>div{
+  box-shadow:0 0 10px rgba(200,162,78,.28);
+}
+
+/* Main rhythm */
+main{
+  padding-top:46px!important;
+}
+
+/* Progression / dashboard statistics */
+.tci-stats{
+  padding:7px!important;
+  gap:7px!important;
+  border-radius:16px!important;
+}
+.tci-stat{
+  min-height:108px;
+  justify-content:center;
+  padding:18px 20px!important;
+  border:1px solid var(--line-soft);
+  border-radius:12px!important;
+  transition:transform .2s ease,border-color .2s ease,box-shadow .2s ease;
+}
+.tci-stat:hover{
+  transform:translateY(-2px);
+  border-color:var(--gold-dim);
+  box-shadow:var(--tci-shadow);
+}
+.tci-stat span{
+  letter-spacing:.13em!important;
+}
+.tci-stat strong{
+  font-size:24px!important;
+  letter-spacing:-.025em;
+}
+
+/* Section headings */
+.tci-h2{
+  position:relative;
+  padding-bottom:13px!important;
+  margin-top:50px!important;
+}
+.tci-h2:after{
+  content:"";
+  position:absolute;
+  left:0;
+  bottom:-1px;
+  width:58px;
+  height:2px;
+  background:linear-gradient(90deg,var(--gold),transparent);
+}
+
+/* Course cards */
+.tci-card{
+  min-height:205px;
+  border-radius:16px!important;
+}
+.tci-card-num{
+  font-size:24px!important;
+  opacity:.8;
+}
+.tci-card-bas{
+  margin-top:auto;
+}
+
+/* Lesson list — stronger hierarchy and completion state */
+.tci-lecons{
+  gap:7px!important;
+}
+.tci-lecon{
+  min-height:66px;
+  grid-template-columns:36px 1fr 28px!important;
+  padding:14px 16px!important;
+  border-radius:10px!important;
+}
+.tci-lecon.fait{
+  background:rgba(63,201,138,.055)!important;
+  border-color:rgba(63,201,138,.20)!important;
+}
+.tci-lecon.fait .tci-lecon-n{
+  box-shadow:0 0 0 3px rgba(63,201,138,.045);
+}
+
+/* Chips / glossary */
+.tci-chip,
+.tci-r{
+  border-radius:9px!important;
+}
+.tci-chip.on{
+  box-shadow:0 5px 15px rgba(200,162,78,.08);
+}
+
+/* Primary controls */
+.tci-btn,
+.tci-premium-btn{
+  border-radius:10px!important;
+  transition:transform .18s ease,box-shadow .18s ease,background .18s ease!important;
+}
+.tci-btn-p{
+  background:linear-gradient(135deg,rgba(200,162,78,.20),rgba(200,162,78,.08))!important;
+  box-shadow:0 7px 20px rgba(200,162,78,.07);
+}
+.tci-btn-p:hover,
+.tci-premium-btn:hover{
+  transform:translateY(-2px)!important;
+  box-shadow:0 10px 25px rgba(200,162,78,.13);
+}
+
+/* Search and utility surfaces */
+.tci-search{
+  min-height:44px;
+  border-radius:10px!important;
+}
+
+/* Premium area */
+.tci-premium{
+  position:relative;
+  overflow:hidden;
+  border-radius:20px!important;
+}
+.tci-premium:after{
+  content:"TCI";
+  position:absolute;
+  right:30px;
+  bottom:-32px;
+  font:700 120px/1 'Playfair Display',serif;
+  letter-spacing:-.08em;
+  color:rgba(215,173,75,.035);
+  pointer-events:none;
+}
+.tci-premium-grid article{
+  transition:transform .2s ease,border-color .2s ease;
+}
+.tci-premium-grid article:hover{
+  transform:translateY(-3px);
+  border-color:rgba(215,173,75,.28);
+}
+
+/* Light theme: keep the entire product on one visual system */
+:root[data-tci-theme="light"] .tci-stat,
+:root[data-tci-theme="light"] .tci-card,
+:root[data-tci-theme="light"] .tci-lecon{
+  box-shadow:0 7px 22px rgba(55,43,24,.045);
+}
+:root[data-tci-theme="light"] .tci-user-state{
+  background:linear-gradient(135deg,rgba(154,116,48,.10),rgba(154,116,48,.035))!important;
+}
+:root[data-tci-theme="light"] .tci-btn-p{
+  background:linear-gradient(135deg,rgba(154,116,48,.13),rgba(154,116,48,.045))!important;
+}
+
+@media(max-width:900px){
+  .tci-logo{min-width:unset;}
+  .tci-nav{width:100%;margin-left:0;overflow-x:auto;}
+  .tci-user-state{margin-left:0;}
+}
+
+@media(max-width:620px){
+  .tci-head-in{min-height:auto;}
+  .tci-nav{gap:4px!important;}
+  .tci-nav button,.tci-capital-link,.tci-theme-toggle{min-height:36px;}
+  .tci-user-state{display:none!important;}
+  main{padding-top:30px!important;}
+  .tci-stat{min-height:94px;}
+}
