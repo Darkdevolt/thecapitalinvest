@@ -1,5 +1,9 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "crons": [
+    { "path": "/api/process-brvm", "schedule": "5 16 * * 1-5" }
+  ],
   "redirects": [
     {
       "source": "/app/desk-workspace.html",
