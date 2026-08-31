@@ -25,6 +25,12 @@
   ],
   "headers": [
     {
+      "source": "/",
+      "headers": [
+        { "key": "Link", "value": "</api/marche-public>; rel=preload; as=fetch" }
+      ]
+    },
+    {
       "source": "/(.*)",
       "headers": [
         { "key": "X-Content-Type-Options", "value": "nosniff" },
