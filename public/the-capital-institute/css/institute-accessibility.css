@@ -1,0 +1,222 @@
+/* THE CAPITAL INSTITUTE — final contrast / readability layer
+   Loaded after the visual brand layer so theme-specific hardcoded colors
+   cannot create dark text on dark surfaces or low-contrast controls. */
+
+/* DARK MODE */
+:root:not([data-tci-theme="light"]) body,
+:root:not([data-tci-theme="light"]) .tci-head { color-scheme:dark; }
+
+/* LIGHT MODE: one coherent light surface system */
+:root[data-tci-theme="light"] body {
+  background:#f7f4ed !important;
+  color:#211d18 !important;
+}
+
+:root[data-tci-theme="light"] .tci-head {
+  background:rgba(247,244,237,.94) !important;
+  border-bottom-color:rgba(121,88,31,.16) !important;
+  box-shadow:0 8px 25px rgba(55,43,24,.06) !important;
+}
+
+:root[data-tci-theme="light"] .tci-logo strong,
+:root[data-tci-theme="light"] .tci-nav button,
+:root[data-tci-theme="light"] .tci-capital-link,
+:root[data-tci-theme="light"] .tci-hero h1,
+:root[data-tci-theme="light"] h1,
+:root[data-tci-theme="light"] h2,
+:root[data-tci-theme="light"] .tci-card h3,
+:root[data-tci-theme="light"] .tci-lien,
+:root[data-tci-theme="light"] .tci-quiz-t,
+:root[data-tci-theme="light"] .tci-q-t,
+:root[data-tci-theme="light"] .tci-retenir,
+:root[data-tci-theme="light"] .tci-avert strong {
+  color:#211d18 !important;
+}
+
+:root[data-tci-theme="light"] .tci-hero {
+  background:linear-gradient(135deg,#fffdf8,#f1ede4) !important;
+  border-color:rgba(121,88,31,.18) !important;
+  box-shadow:0 18px 55px rgba(55,43,24,.10) !important;
+}
+
+:root[data-tci-theme="light"] .tci-hero:before {
+  color:rgba(121,88,31,.045) !important;
+}
+
+:root[data-tci-theme="light"] .tci-hero:after {
+  color:rgba(121,88,31,.055) !important;
+}
+
+:root[data-tci-theme="light"] .tci-hero-p,
+:root[data-tci-theme="light"] .tci-st,
+:root[data-tci-theme="light"] .tci-resume,
+:root[data-tci-theme="light"] .tci-card-st,
+:root[data-tci-theme="light"] .tci-card-r,
+:root[data-tci-theme="light"] .tci-card-bas span,
+:root[data-tci-theme="light"] .tci-sec p,
+:root[data-tci-theme="light"] .tci-obj li,
+:root[data-tci-theme="light"] .tci-attention p,
+:root[data-tci-theme="light"] .tci-retenir li,
+:root[data-tci-theme="light"] .tci-quiz-i,
+:root[data-tci-theme="light"] .tci-q-e,
+:root[data-tci-theme="light"] .tci-quiz-score,
+:root[data-tci-theme="light"] .tci-faint,
+:root[data-tci-theme="light"] .tci-gl small {
+  color:rgba(33,29,24,.72) !important;
+}
+
+:root[data-tci-theme="light"] .tci-nav button {
+  color:rgba(33,29,24,.62) !important;
+}
+:root[data-tci-theme="light"] .tci-nav button:hover,
+:root[data-tci-theme="light"] .tci-nav button.on {
+  color:#76591f !important;
+  background:rgba(154,116,48,.09) !important;
+  border-color:rgba(121,88,31,.18) !important;
+}
+
+:root[data-tci-theme="light"] .tci-card,
+:root[data-tci-theme="light"] .tci-stat,
+:root[data-tci-theme="light"] .tci-lecon,
+:root[data-tci-theme="light"] .tci-obj,
+:root[data-tci-theme="light"] .tci-retenir,
+:root[data-tci-theme="light"] .tci-quiz,
+:root[data-tci-theme="light"] .tci-search,
+:root[data-tci-theme="light"] .tci-gl,
+:root[data-tci-theme="light"] .tci-attention,
+:root[data-tci-theme="light"] .tci-avert {
+  background:#fffdf8 !important;
+  color:#211d18 !important;
+  border-color:rgba(121,88,31,.14) !important;
+}
+
+:root[data-tci-theme="light"] .tci-card:hover,
+:root[data-tci-theme="light"] .tci-lecon:hover {
+  background:#f8f3e8 !important;
+  border-color:rgba(154,116,48,.42) !important;
+}
+
+:root[data-tci-theme="light"] .tci-stats {
+  background:linear-gradient(135deg,rgba(154,116,48,.12),rgba(154,116,48,.035)) !important;
+  border-color:rgba(121,88,31,.14) !important;
+}
+
+:root[data-tci-theme="light"] .tci-stat {
+  background:#fffdf8 !important;
+}
+
+:root[data-tci-theme="light"] .tci-stat strong {
+  color:#76591f !important;
+}
+
+:root[data-tci-theme="light"] .tci-lecon-c strong {
+  color:#211d18 !important;
+}
+
+:root[data-tci-theme="light"] .tci-lecon-c small,
+:root[data-tci-theme="light"] .tci-lecon-f,
+:root[data-tci-theme="light"] .tci-card-num,
+:root[data-tci-theme="light"] .tci-bar-t,
+:root[data-tci-theme="light"] .tci-vide {
+  color:rgba(33,29,24,.55) !important;
+}
+
+:root[data-tci-theme="light"] .tci-obj,
+:root[data-tci-theme="light"] .tci-retenir,
+:root[data-tci-theme="light"] .tci-avert,
+:root[data-tci-theme="light"] .tci-attention {
+  box-shadow:0 6px 20px rgba(55,43,24,.045) !important;
+}
+
+:root[data-tci-theme="light"] .tci-r {
+  background:#f1ede4 !important;
+  color:rgba(33,29,24,.76) !important;
+}
+:root[data-tci-theme="light"] .tci-r:hover:not(:disabled) {
+  color:#211d18 !important;
+  background:#ebe4d7 !important;
+}
+
+:root[data-tci-theme="light"] .tci-search {
+  background:#fffdf8 !important;
+  color:#211d18 !important;
+}
+:root[data-tci-theme="light"] .tci-search::placeholder {
+  color:rgba(33,29,24,.42) !important;
+}
+
+/* Integration layer had intentionally dark hardcoded colors; neutralize them in light mode. */
+:root[data-tci-theme="light"] .tci-premium {
+  background:linear-gradient(135deg,#fffdf8,#f1ede4) !important;
+  border-color:rgba(121,88,31,.18) !important;
+  box-shadow:0 18px 55px rgba(55,43,24,.08) !important;
+}
+:root[data-tci-theme="light"] .tci-premium h2,
+:root[data-tci-theme="light"] .tci-premium>p,
+:root[data-tci-theme="light"] .tci-premium-grid strong,
+:root[data-tci-theme="light"] .tci-premium-grid small {
+  color:#211d18 !important;
+}
+:root[data-tci-theme="light"] .tci-premium-grid article {
+  background:#fffdf8 !important;
+  border-color:rgba(121,88,31,.12) !important;
+}
+
+:root[data-tci-theme="light"] .tci-gate {
+  background:rgba(245,241,232,.78) !important;
+}
+:root[data-tci-theme="light"] .tci-gate-card {
+  background:#fffdf8 !important;
+  color:#211d18 !important;
+  border-color:rgba(121,88,31,.20) !important;
+  box-shadow:0 25px 80px rgba(55,43,24,.16) !important;
+}
+:root[data-tci-theme="light"] .tci-gate-card h2,
+:root[data-tci-theme="light"] .tci-gate-card p,
+:root[data-tci-theme="light"] .tci-gate-list {
+  color:#211d18 !important;
+}
+
+:root[data-tci-theme="light"] .tci-capital-link {
+  color:#76591f !important;
+  background:rgba(154,116,48,.08) !important;
+}
+
+:root[data-tci-theme="light"] .tci-fini {
+  background:rgba(33,132,90,.09) !important;
+  border-color:rgba(33,132,90,.32) !important;
+  color:#176c49 !important;
+}
+
+/* Footer and legal text must remain readable too. */
+:root[data-tci-theme="light"] .tci-pied,
+:root[data-tci-theme="light"] .tci-pied p,
+:root[data-tci-theme="light"] .tci-legal-links,
+:root[data-tci-theme="light"] .tci-legal-links a {
+  color:rgba(33,29,24,.62) !important;
+}
+
+/* Keep the gold accent, but never use near-transparent text for functional UI. */
+:root[data-tci-theme="light"] .tci-kicker,
+:root[data-tci-theme="light"] .tci-card-niv,
+:root[data-tci-theme="light"] .tci-obj-t,
+:root[data-tci-theme="light"] .tci-ret-t,
+:root[data-tci-theme="light"] .tci-att-t,
+:root[data-tci-theme="light"] .tci-premium-k {
+  color:#8a651e !important;
+}
+
+/* Desktop and mobile: no tiny low-contrast navigation text. */
+.tci-nav button,
+.tci-capital-link { min-height:34px; }
+.tci-nav button:focus-visible,
+.tci-capital-link:focus-visible,
+.tci-btn:focus-visible,
+.tci-lien:focus-visible,
+.tci-lecon:focus-visible,
+.tci-r:focus-visible,
+.tci-chip:focus-visible,
+.tci-search:focus-visible {
+  outline:2px solid var(--gold,#c8a24e);
+  outline-offset:2px;
+}
