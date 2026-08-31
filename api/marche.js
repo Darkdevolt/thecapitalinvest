@@ -14,6 +14,7 @@
 import { supabase, supabaseAdmin } from '../lib/supabase.js';
 import { json, fail, applyCors, requestUrl } from '../lib/http.js';
 import { rateLimited } from '../lib/middleware.js';
+import { getPublicMarketSnapshot } from '../lib/market-snapshot.js';
 
 const db = supabaseAdmin || supabase;
 const PAGE_SIZE = 1000;
@@ -133,7 +134,7 @@ export default async function handler(req, res) {
       case 'analyses': result = await table('analyses', q => q.order('date_analyse', { ascending: false }).limit(500)); break;
       case 'dividendes': result = await table('dividendes_calendrier', q => q.order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000)); break;
       case 'coupons': try { result = await table('coupons_calendrier', q => q.order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000)); } catch (e) { result = { data: [], source: 'coupons', absent: true }; } break;
-      case 'apercu': { const [cours, indices] = await Promise.all([latestCours(), latestIndices()]); const sessionDate = [cours.latestDate, indices.latestDate].filter(Boolean).sort().reverse()[0] || null; return json(res, 200, { success: true, cours: cours.data || [], indices: indices.data || [], session_date: sessionDate, cours_date: cours.latestDate || null, indices_date: indices.latestDate || null, cours_source: cours.source || null, indices_source: indices.source || null, cours_dates: cours.dates || {}, indices_dates: indices.dates || {} }); }
+      case 'apercu': result = await getPublicMarketSnapshot(); return json(res, 200, result);
       default: return fail(res, 400, `Type de données inconnu : ${type}`, 'UNKNOWN_TYPE');
     }
     if (result?.error) throw result.error; const data = result?.data || result || []; if (type === 'historique' && Array.isArray(data)) data.reverse(); return json(res, 200, data);
