@@ -3,7 +3,7 @@
 'use strict';
 if(window.__TC_LANDING_MARKET_PREVIEW__)return;window.__TC_LANDING_MARKET_PREVIEW__=true;
 var root=document.getElementById('tcLandingMarketPreview');if(!root)return;
-var endpoint='/api/marche-public',storageKey='tc:brvm:public-snapshot:v2',nf=new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}),integer=new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0});
+var endpoint='/api/marche?type=apercu',storageKey='tc:brvm:public-snapshot:v2',nf=new Intl.NumberFormat('fr-FR',{maximumFractionDigits:2}),integer=new Intl.NumberFormat('fr-FR',{maximumFractionDigits:0});
 function esc(v){return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;')}
 function num(v){var n=Number(v);return Number.isFinite(n)?nf.format(n):'—'}
 function fcfa(v){var n=Number(v);return Number.isFinite(n)?integer.format(n)+' FCFA':'—'}
