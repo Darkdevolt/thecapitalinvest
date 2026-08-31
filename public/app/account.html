@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>The Capital — Mon compte</title>
+<link rel="stylesheet" href="/app/css/theme-system.css">
+<style>
+:root{--bg:#090806;--surface:#11100c;--card:#15120d;--text:#f4efe6;--muted:rgba(244,239,230,.62);--gold:#b8964e;--gold2:#e0c176;--line:rgba(184,150,78,.18);--sans:'DM Sans',Arial,sans-serif;--serif:'Playfair Display',Georgia,serif;--mono:'DM Mono',monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.6 var(--sans)}a{color:inherit;text-decoration:none}.account-wrap{width:min(1080px,calc(100% - 32px));margin:auto}.account-top{height:72px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between}.logo{font:600 14px var(--mono);letter-spacing:.12em}.logo span{color:var(--gold)}.back{font:9px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}.back:hover{color:var(--gold2)}main{padding:55px 0}.eyebrow{color:var(--gold);font:500 9px var(--mono);letter-spacing:.18em;text-transform:uppercase}.title{font:700 clamp(38px,5vw,58px)/1.05 var(--serif);margin:8px 0}.title em{color:var(--gold2);font-style:italic}.intro{color:var(--muted);max-width:650px}.layout{display:grid;grid-template-columns:220px 1fr;gap:1px;background:var(--line);border:1px solid var(--line);margin-top:35px}.tabs{background:var(--surface);padding:10px}.tab{width:100%;border:0;background:transparent;color:var(--muted);padding:13px 14px;text-align:left;font:500 9px var(--mono);text-transform:uppercase;cursor:pointer}.tab.active,.tab:hover{color:var(--gold2);background:rgba(184,150,78,.08)}.content{background:var(--surface);padding:32px}.panel{display:none}.panel.active{display:block}.panel h2{font:600 27px var(--serif);margin:0 0 6px}.panel-desc{font-size:11px;color:var(--muted);margin:0 0 25px}.fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{padding:15px;background:var(--card);border:1px solid var(--line)}.field label{display:block;color:var(--muted);font:8px var(--mono);text-transform:uppercase;margin-bottom:5px}.field strong{font-weight:500}.preference{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:16px 0;border-bottom:1px solid rgba(184,150,78,.09)}.preference:last-child{border:0}.preference b{font-size:12px}.preference p{margin:3px 0 0;color:var(--muted);font-size:10px}.select{background:var(--card);border:1px solid var(--line);color:var(--text);padding:9px 12px;border-radius:5px;font:9px var(--mono)}.switch{position:relative;width:42px;height:23px}.switch input{opacity:0;width:0;height:0}.slider{position:absolute;inset:0;background:#27231a;border:1px solid var(--line);border-radius:20px;cursor:pointer}.slider:before{content:'';position:absolute;width:17px;height:17px;left:2px;top:2px;background:#8b826f;border-radius:50%;transition:.2s}.switch input:checked+.slider{background:rgba(184,150,78,.3)}.switch input:checked+.slider:before{transform:translateX(19px);background:var(--gold2)}.plan{padding:20px;background:var(--card);border:1px solid rgba(184,150,78,.25)}.plan-top{display:flex;justify-content:space-between;align-items:center}.plan-name{font:600 26px var(--serif)}.plan-status{font:8px var(--mono);color:var(--gold2);border:1px solid var(--line);padding:5px 8px}.plan-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}.plan-meta div{padding:12px;border-top:1px solid var(--line)}.plan-meta span{display:block;color:var(--muted);font:8px var(--mono);margin-bottom:3px}.security-action{display:flex;justify-content:space-between;align-items:center;padding:17px 0;border-bottom:1px solid rgba(184,150,78,.09)}.security-action b{font-size:12px}.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 15px;border:1px solid var(--line);background:transparent;color:var(--text);font:500 9px var(--mono);text-transform:uppercase;cursor:pointer}.btn.primary{background:var(--gold);border-color:var(--gold);color:#0b0905}.danger{color:#d58d8d}.notice{margin-top:20px;padding:12px;border:1px solid var(--line);color:var(--muted);font-size:10px}.footer{margin-top:50px;color:var(--muted);font:8px var(--mono)}@media(max-width:720px){.layout{grid-template-columns:1fr}.tabs{display:grid;grid-template-columns:repeat(2,1fr)}.fields,.plan-meta{grid-template-columns:1fr}.content{padding:22px}}
+</style>
+</head>
+<body data-theme="dark">
+<header class="account-top"><div class="account-wrap" style="display:flex;align-items:center;justify-content:space-between;width:100%"><div class="logo">THE <span>·</span> CAPITAL</div><a class="back" href="/app/app.html">← Retour au dashboard</a></div></header>
+<main class="account-wrap">
+<div class="eyebrow">Espace personnel</div>
+<h1 class="title">Mon compte <em>& préférences.</em></h1>
+<p class="intro">Gérez vos informations, vos préférences d'affichage, votre sécurité et votre abonnement depuis un espace unique.</p>
+<div class="layout">
+<nav class="tabs">
+<button class="tab active" data-tab="profile">Informations</button>
+<button class="tab" data-tab="preferences">Préférences</button>
+<button class="tab" data-tab="security">Sécurité</button>
+<button class="tab" data-tab="subscription">Abonnement</button>
+</nav>
+<section class="content">
+<div class="panel active" id="panel-profile"><h2>Informations personnelles</h2><p class="panel-desc">Les informations associées à votre compte The Capital.</p><div class="fields"><div class="field"><label>Nom</label><strong id="user-name">—</strong></div><div class="field"><label>Email</label><strong id="user-email">—</strong></div><div class="field"><label>Pays</label><strong id="user-country">Sénégal</strong></div><div class="field"><label>Compte</label><strong id="user-created">—</strong></div></div><div class="notice">Pour éviter de modifier des données sensibles depuis le navigateur, les informations d'identité restent liées à votre compte d'authentification.</div></div>
+<div class="panel" id="panel-preferences"><h2>Préférences</h2><p class="panel-desc">Personnalisez votre expérience The Capital.</p><div class="preference"><div><b>Apparence</b><p>Choisissez le mode d'affichage du dashboard.</p></div><select class="select" id="theme-select"><option value="dark">Sombre</option><option value="light">Clair</option></select></div><div class="preference"><div><b>Devise d'affichage</b><p>Devise utilisée pour présenter les montants.</p></div><select class="select" id="currency-select"><option value="XOF">FCFA (XOF)</option><option value="EUR">EUR</option><option value="USD">USD</option></select></div><div class="preference"><div><b>Notifications de marché</b><p>Alertes et informations importantes du marché.</p></div><label class="switch"><input type="checkbox" id="market-notifications" checked><span class="slider"></span></label></div><div class="preference"><div><b>Alertes portefeuille</b><p>Recevoir les alertes configurées sur votre portefeuille.</p></div><label class="switch"><input type="checkbox" id="portfolio-notifications" checked><span class="slider"></span></label></div></div>
+<div class="panel" id="panel-security"><h2>Sécurité</h2><p class="panel-desc">Gérez l'accès à votre compte.</p><div class="security-action"><div><b>Mot de passe</b><p class="panel-desc" style="margin:3px 0 0">Utilisez le parcours sécurisé de récupération pour le modifier.</p></div><a class="btn" href="/login.html">Gérer l'accès</a></div><div class="security-action"><div><b>Session actuelle</b><p class="panel-desc" style="margin:3px 0 0">Votre session active sur cet appareil.</p></div><button class="btn danger" id="logout-btn">Déconnexion</button></div></div>
+<div class="panel" id="panel-subscription"><h2>Mon abonnement</h2><p class="panel-desc">Consultez votre formule et son statut.</p><div class="plan"><div class="plan-top"><div class="plan-name" id="plan-name">Free</div><div class="plan-status" id="plan-status">ACTIF</div></div><div class="plan-meta"><div><span>Statut</span><strong id="plan-detail">Compte gratuit</strong></div><div><span>Expiration</span><strong id="plan-expiry">—</strong></div></div></div><div style="margin-top:20px"><a class="btn primary" href="/payment.html">Voir les offres</a></div></div>
+</section>
+</div>
+<div class="footer">THE · CAPITAL · Dakar, Sénégal</div>
+</main>
+<script>
+(function(){
+'use strict';
+var KEY='tc_theme';
+function getSession(){try{return JSON.parse(localStorage.getItem('tc_session')||'null')}catch(e){return null}}
+function setTheme(v){document.documentElement.dataset.theme=v;document.body.dataset.theme=v;try{localStorage.setItem(KEY,v)}catch(e){}if(window.parent&&window.parent.TCTheme&&window.parent.TCTheme.set)window.parent.TCTheme.set(v)}
+var session=getSession();
+var user=(session&&session.user)||{};
+var meta=user.user_metadata||{};
+document.getElementById('user-name').textContent=meta.full_name||meta.name||[meta.first_name,meta.last_name].filter(Boolean).join(' ')||user.email?.split('@')[0]||'Utilisateur';
+document.getElementById('user-email').textContent=user.email||'—';
+document.getElementById('user-created').textContent=user.created_at?new Date(user.created_at).toLocaleDateString('fr-FR'):'—';
+var savedTheme=localStorage.getItem(KEY)||'dark';document.getElementById('theme-select').value=savedTheme;setTheme(savedTheme);
+document.getElementById('theme-select').addEventListener('change',function(){setTheme(this.value)});
+var cur=localStorage.getItem('tc_currency')||'XOF';document.getElementById('currency-select').value=cur;document.getElementById('currency-select').addEventListener('change',function(){localStorage.setItem('tc_currency',this.value)});
+['market-notifications','portfolio-notifications'].forEach(function(id){var el=document.getElementById(id);var k='tc_'+id;var saved=localStorage.getItem(k);if(saved!==null)el.checked=saved==='1';el.addEventListener('change',function(){localStorage.setItem(k,this.checked?'1':'0')})});
+var plan='free';try{var p=JSON.parse(localStorage.getItem('tc_profile')||'null');if(p&&p.plan)plan=p.plan}catch(e){}document.getElementById('plan-name').textContent=plan.charAt(0).toUpperCase()+plan.slice(1);document.getElementById('plan-detail').textContent=plan==='free'?'Compte gratuit':'Formule '+plan;
+document.getElementById('logout-btn').addEventListener('click',function(){try{localStorage.removeItem('tc_session');sessionStorage.removeItem('tc_auth_destination')}catch(e){}location.replace('/login.html')});
+document.querySelectorAll('.tab').forEach(function(btn){btn.addEventListener('click',function(){document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active')});document.querySelectorAll('.panel').forEach(function(x){x.classList.remove('active')});btn.classList.add('active');document.getElementById('panel-'+btn.dataset.tab).classList.add('active')})});
+})();
+</script>
+</body>
+</html>
