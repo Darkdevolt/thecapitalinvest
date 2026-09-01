@@ -78,6 +78,8 @@
   }
 
   function loadRuntimeLayers() {
+    // Les couches optionnelles sont chargées après le bootstrap principal.
+    // Elles ne doivent jamais déclencher un second chargement du marché.
     loadScript('/app/js/navigation-guard.js?v=1');
     loadScript('/app/js/views/overview-fixes.js?v=1');
     loadScript('/app/js/views/brvm-market-hours.js?v=20260827.3', function () {
@@ -179,8 +181,8 @@
     normalizeDocument();
     console.log('[INIT] Session authentifiée, démarrage The Capital');
 
-    // Ne jamais bloquer l'affichage du dashboard sur un bootstrap secondaire.
-    // main.js lance son chargement de données indépendamment et gère ses erreurs.
+    // IMPORTANT : main.js est désormais le seul propriétaire du bootstrap
+    // initial. Aucun autre module ne doit lancer loadData/loadAll au démarrage.
     safeInitApp();
 
     removeObsoleteFormation();
@@ -192,22 +194,17 @@
       ensureGuideNavigation();
     }, 0);
 
-    loadIntegratedSuivi();
-    if (typeof window.initUserDataLayer === 'function') {
-      try { window.initUserDataLayer(); } catch (e) { console.warn('[INIT] user data:', e); }
-    }
-    if (window.marketsModule && typeof window.marketsModule.loadData === 'function') {
-      try {
-        var marketPromise = window.marketsModule.loadData();
-        if (marketPromise && typeof marketPromise.catch === 'function') {
-          marketPromise.catch(function (e) { console.warn('[INIT] marketsModule:', e); });
-        }
-      } catch (e) { console.warn('[INIT] marketsModule:', e); }
-    }
-
     document.body.classList.remove('init-hidden');
-    renderAfterData();
-    setTimeout(loadRuntimeLayers, 0);
+
+    // Les modules secondaires sont volontairement différés : ils ne doivent
+    // ni bloquer le premier rendu ni concurrencer les appels API de main.js.
+    setTimeout(function () {
+      loadIntegratedSuivi();
+      if (typeof window.initUserDataLayer === 'function') {
+        try { window.initUserDataLayer(); } catch (e) { console.warn('[INIT] user data:', e); }
+      }
+      setTimeout(loadRuntimeLayers, 250);
+    }, 1200);
   }
 
   function boot() {
