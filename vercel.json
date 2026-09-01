@@ -6,10 +6,5 @@
       "source": "/app.html",
       "destination": "/app/app.html"
     }
-  ],
-  "functions": {
-    "api/**/*.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }
