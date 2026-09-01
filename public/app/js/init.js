@@ -16,9 +16,7 @@
       if (parts.length !== 3) return false;
       var payload = JSON.parse(decodeBase64Url(parts[1]));
       return !!payload.exp && payload.exp * 1000 > Date.now();
-    } catch (e) {
-      return false;
-    }
+    } catch (e) { return false; }
   }
 
   function getSession() {
@@ -30,9 +28,7 @@
       var session = (parsed && parsed.data && parsed.data.session) || (parsed && parsed.session) || parsed;
       if (!session || !session.access_token || !tokenIsValid(session.access_token)) return null;
       return session;
-    } catch (e) {
-      return null;
-    }
+    } catch (e) { return null; }
   }
 
   function requireAuth() {
@@ -61,10 +57,7 @@
   function loadScript(src, done) {
     var selector = 'script[data-tc-runtime="' + src.replace(/"/g, '') + '"]';
     var existing = document.querySelector(selector);
-    if (existing) {
-      if (typeof done === 'function') done();
-      return;
-    }
+    if (existing) { if (typeof done === 'function') done(); return; }
     var script = document.createElement('script');
     script.src = src;
     script.async = false;
@@ -77,11 +70,11 @@
     document.head.appendChild(script);
   }
 
+  /* app.html charge déjà le routeur, les vues et navigation-guard.
+     Ne jamais les recharger : un double chargement crée des wrappers et
+     plusieurs rendus concurrents du dashboard. */
   function loadRuntimeLayers() {
-    // Les couches optionnelles sont chargées après le bootstrap principal.
-    // Elles ne doivent jamais déclencher un second chargement du marché.
-    loadScript('/app/js/navigation-guard.js?v=1');
-    loadScript('/app/js/views/overview-fixes.js?v=1');
+    loadScript('/app/js/views/overview-fixes.js?v=2');
     loadScript('/app/js/views/brvm-market-hours.js?v=20260827.3', function () {
       loadScript('/app/js/market-ux.js?v=20260827.2');
     });
@@ -149,9 +142,7 @@
       if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
       else if (typeof window.parseHash === 'function') window.parseHash();
       if (window.tcNavigation && typeof window.tcNavigation.render === 'function') window.tcNavigation.render();
-    } catch (e) {
-      console.warn('[INIT] rendu après données:', e);
-    }
+    } catch (e) { console.warn('[INIT] rendu après données:', e); }
   }
 
   function ensureSuiviNavigation() { removeDuplicateSuiviNavigation(); }
@@ -180,9 +171,6 @@
 
     normalizeDocument();
     console.log('[INIT] Session authentifiée, démarrage The Capital');
-
-    // IMPORTANT : main.js est désormais le seul propriétaire du bootstrap
-    // initial. Aucun autre module ne doit lancer loadData/loadAll au démarrage.
     safeInitApp();
 
     removeObsoleteFormation();
@@ -196,8 +184,7 @@
 
     document.body.classList.remove('init-hidden');
 
-    // Les modules secondaires sont volontairement différés : ils ne doivent
-    // ni bloquer le premier rendu ni concurrencer les appels API de main.js.
+    /* Les modules secondaires sont différés et ne relancent plus le bootstrap. */
     setTimeout(function () {
       loadIntegratedSuivi();
       if (typeof window.initUserDataLayer === 'function') {
