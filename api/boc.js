@@ -8,6 +8,7 @@ import { json, fail, applyCors } from '../lib/http.js';
 import { rateLimited } from '../lib/middleware.js';
 
 const db = supabaseAdmin || supabase;
+const BOC_CACHE = 'public, max-age=60, s-maxage=300, stale-while-revalidate=900';
 
 /** Numéro de séance déduit du nom de fichier (BOC_20260814_123.pdf). */
 function sessionNumber(filename) {
@@ -32,7 +33,10 @@ export default async function handler(req, res) {
       numero_seance: sessionNumber(r.fichier_nom),
       annee: String(r.date_seance || '').slice(0, 4)
     }));
-    return json(res, 200, { success: true, data: rows });
+    res.setHeader('Cache-Control', BOC_CACHE);
+    res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');
+    res.setHeader('CDN-Cache-Control', 'public, s-maxage=300, stale-while-revalidate=900');
+    return json(res, 200, { success: true, data: rows }, { cache: BOC_CACHE });
   } catch (error) {
     return fail(res, 500, 'Erreur serveur.', 'BOC_ERROR', error);
   }
