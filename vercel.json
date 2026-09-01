@@ -5,27 +5,13 @@
     { "path": "/api/process-brvm", "schedule": "5 16 * * 1-5" }
   ],
   "redirects": [
-    {
-      "source": "/app/desk-workspace.html",
-      "destination": "/app/app.html",
-      "permanent": false
-    },
-    {
-      "source": "/suivi.html",
-      "destination": "/app/app.html",
-      "permanent": false
-    },
-    {
-      "source": "/rsuiv.html",
-      "destination": "/app/app.html",
-      "permanent": false
-    }
+    { "source": "/app/app.html", "destination": "/app.html", "permanent": false },
+    { "source": "/app/desk-workspace.html", "destination": "/app.html", "permanent": false },
+    { "source": "/suivi.html", "destination": "/app.html", "permanent": false },
+    { "source": "/rsuiv.html", "destination": "/app.html", "permanent": false }
   ],
   "rewrites": [
-    {
-      "source": "/app.html",
-      "destination": "/app/app.html"
-    }
+    { "source": "/app.html", "destination": "/app/app.html" }
   ],
   "headers": [
     {
@@ -41,7 +27,7 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
-        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=()" }
+        { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=() }
       ]
     },
     {
