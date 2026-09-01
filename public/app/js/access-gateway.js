@@ -44,18 +44,21 @@
 
   function exposeAccess(profile) {
     var now = Date.now();
-    var trialEnd = profile.trial_ends_at ? new Date(profile.trial_ends_at).getTime() : 0;
+    var trialEnd = profile && profile.trial_ends_at ? new Date(profile.trial_ends_at).getTime() : 0;
     var trialActive = trialEnd > now;
-    var plan = String(profile.plan || 'free').toLowerCase();
-    var paidActive = paidPlans[plan] && profile.plan_expire_at && new Date(profile.plan_expire_at).getTime() > now;
+    var plan = String((profile && profile.plan) || 'free').toLowerCase();
+    var expiry = profile && profile.plan_expire_at ? new Date(profile.plan_expire_at).getTime() : 0;
+    var paidActive = !!(paidPlans[plan] && expiry > now);
+
     window.TC_ACCESS = {
       plan: plan,
       trialActive: trialActive,
-      trialEndsAt: profile.trial_ends_at || null,
-      paidActive: !!paidActive,
-      premium: trialActive || !!paidActive,
+      trialEndsAt: (profile && profile.trial_ends_at) || null,
+      paidActive: paidActive,
+      premium: trialActive || paidActive,
       premiumRestricted: !trialActive && !paidActive
     };
+
     document.documentElement.setAttribute('data-tc-access', window.TC_ACCESS.premium ? 'premium' : 'free');
     document.documentElement.setAttribute('data-tc-trial', trialActive ? 'active' : 'expired');
   }
@@ -65,12 +68,16 @@
 
   var payload = decodeJwt(session.access_token);
   if (!payload || !payload.exp || payload.exp * 1000 <= Date.now()) {
-    localStorage.removeItem(SESSION_KEY);
+    try { localStorage.removeItem(SESSION_KEY); } catch (e) {}
     return goLogin();
   }
 
   var userId = session.user && session.user.id;
-  if (!userId) return goLogin();
+  if (!userId) {
+    /* Session Supabase valide mais ancienne/incomplète : laisse app.html fonctionner. */
+    exposeAccess({ plan: 'free' });
+    return;
+  }
 
   fetch(SUPABASE_URL + '/rest/v1/users?select=plan,plan_expire_at,trial_started_at,trial_ends_at,is_admin&id=eq.' + encodeURIComponent(userId), {
     headers: {
@@ -86,9 +93,19 @@
     })
     .then(function (rows) {
       var profile = rows && rows[0];
-      if (!profile) return goLogin();
+
+      /* Ne jamais renvoyer un utilisateur authentifié vers login simplement parce
+         que la table users n'est pas lisible ou que le profil est absent. */
+      if (!profile) {
+        exposeAccess({ plan: 'free' });
+        return;
+      }
+
       if (profile.is_admin) {
-        window.TC_ACCESS = { plan: 'admin', premium: true, trialActive: false, paidActive: true, premiumRestricted: false };
+        window.TC_ACCESS = {
+          plan: 'admin', premium: true, trialActive: false,
+          paidActive: true, premiumRestricted: false
+        };
         return;
       }
 
@@ -99,14 +116,15 @@
       var trialEnd = profile.trial_ends_at ? new Date(profile.trial_ends_at).getTime() : 0;
       var planExpiry = profile.plan_expire_at ? new Date(profile.plan_expire_at).getTime() : 0;
 
+      /* L'utilisateur authentifié reste dans l'application. Le paywall est géré
+         par l'UI via TC_ACCESS, pas par une redirection d'authentification. */
       if (trialEnd > now) return;
       if (paidPlans[plan] && planExpiry > now) return;
-
-      return goPayment('pro');
     })
     .catch(function () {
-      /* Ne'expose pas de détails techniques dans l'URL utilisateur. */
-      rememberDestination();
-      window.location.replace('/login.html');
+      /* Une panne réseau / RLS sur users ne doit pas casser le login.
+         La session Supabase reste l'autorité d'authentification. */
+      console.warn('[TC ACCESS] Profil utilisateur indisponible; session conservée.');
+      exposeAccess({ plan: 'free' });
     });
 })();
