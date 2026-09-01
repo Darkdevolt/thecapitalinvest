@@ -6,7 +6,7 @@ import { getPublicMarketSnapshot } from '../lib/market-snapshot.js';
 
 const db = supabaseAdmin || supabase;
 const PAGE_SIZE = 1000;
-const MAX_PAGES = 50;
+const CURRENT_SESSION_LIMIT = 500;
 const PUBLIC_CACHE = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
 const PUBLIC_CDN_CACHE = 'public, s-maxage=60, stale-while-revalidate=300';
 
@@ -37,50 +37,38 @@ async function latestCours(sessionDate = null) {
   const latestDate = sessionDate || await latestDateFor('historique');
   if (!latestDate) return { data: [], latestDate: null, source: 'historique', dates: {} };
 
-  const rows = [];
-  let from = 0;
   const columns = 'id,ticker,date_seance,cours_cloture,cloture,cours_normal,cours_ouverture,plus_haut,plus_bas,volume,valeur_totale,variation,variation_pct';
+  const { data, error } = await db.from('historique')
+    .select(columns)
+    .eq('date_seance', latestDate)
+    .order('ticker', { ascending: true })
+    .limit(CURRENT_SESSION_LIMIT);
+  if (error) throw error;
 
-  for (let page = 0; page < MAX_PAGES; page++) {
-    const { data, error } = await db.from('historique')
-      .select(columns)
-      .eq('date_seance', latestDate)
-      .order('ticker', { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
-    if (error) throw error;
-
-    const batch = data || [];
-    if (!batch.length) break;
-
-    for (const r of batch) {
-      const ticker = String(r.ticker || '').trim().toUpperCase();
-      if (!ticker) continue;
-      const close = r.cours_cloture ?? r.cloture ?? r.cours_normal ?? null;
-      const { pct, abs } = splitVariation(r);
-      rows.push({
-        id: r.id,
-        ticker,
-        date_seance: r.date_seance,
-        cours: close,
-        cours_cloture: close,
-        ouverture: r.cours_ouverture,
-        cours_ouverture: r.cours_ouverture,
-        plus_haut: r.plus_haut,
-        plus_bas: r.plus_bas,
-        variation: pct,
-        variation_pct: pct,
-        variation_abs: abs,
-        volume: r.volume,
-        valeur_transigee: r.valeur_totale,
-        valeur_totale: r.valeur_totale,
-        transactions: null,
-        capitalisation: null
-      });
-    }
-
-    if (batch.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
-  }
+  const rows = (data || []).map(r => {
+    const ticker = String(r.ticker || '').trim().toUpperCase();
+    const close = r.cours_cloture ?? r.cloture ?? r.cours_normal ?? null;
+    const { pct, abs } = splitVariation(r);
+    return {
+      id: r.id,
+      ticker,
+      date_seance: r.date_seance,
+      cours: close,
+      cours_cloture: close,
+      ouverture: r.cours_ouverture,
+      cours_ouverture: r.cours_ouverture,
+      plus_haut: r.plus_haut,
+      plus_bas: r.plus_bas,
+      variation: pct,
+      variation_pct: pct,
+      variation_abs: abs,
+      volume: r.volume,
+      valeur_transigee: r.valeur_totale,
+      valeur_totale: r.valeur_totale,
+      transactions: null,
+      capitalisation: null
+    };
+  }).filter(r => r.ticker);
 
   const { data: prevDates, error: prevErr } = await db.from('historique')
     .select('date_seance')
@@ -92,10 +80,11 @@ async function latestCours(sessionDate = null) {
 
   const previousSession = prevDates?.[0]?.date_seance || null;
   if (previousSession && rows.length) {
+    const tickers = [...new Set(rows.map(r => r.ticker))].slice(0, CURRENT_SESSION_LIMIT);
     const { data: previous, error } = await db.from('historique')
       .select('ticker,cours_cloture,cloture,cours_normal')
       .eq('date_seance', previousSession)
-      .in('ticker', rows.map(r => r.ticker));
+      .in('ticker', tickers);
     if (error) throw error;
 
     const map = new Map((previous || []).map(r => [
@@ -172,7 +161,7 @@ async function historiqueIndices(limit = 30, dateFrom = null, dateTo = null) {
   if (dateFrom) q = q.gte('date_seance', dateFrom);
   if (dateTo) q = q.lte('date_seance', dateTo);
 
-  const { data, error } = await q.order('date_seance', { ascending: false }).limit(safe * 40);
+  const { data, error } = await q.order('date_seance', { ascending: false }).limit(safe * 20);
   if (error) throw error;
 
   const sessions = [...new Set((data || []).map(r => r.date_seance).filter(Boolean))]
@@ -253,8 +242,6 @@ export default async function handler(req, res) {
     const data = result?.data || result || [];
     if (type === 'historique' && Array.isArray(data)) data.reverse();
 
-    // All market datasets are public. Allow Vercel to reuse the response while
-    // keeping a short freshness window suitable for a live BRVM dashboard.
     res.setHeader('Vercel-CDN-Cache-Control', PUBLIC_CDN_CACHE);
     res.setHeader('CDN-Cache-Control', PUBLIC_CDN_CACHE);
     return json(res, 200, data, { cache: PUBLIC_CACHE });
