@@ -5,6 +5,10 @@
     {
       "source": "/app.html",
       "destination": "/app/app.html"
+    },
+    {
+      "source": "/api/sync-brvm",
+      "destination": "/api/scrape-brvm"
     }
   ]
 }
