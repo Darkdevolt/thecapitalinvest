@@ -9,7 +9,7 @@
 const SESSION_KEY='tc_session';
 const params=new URLSearchParams(location.search),msg=document.getElementById('msg'),btn=document.getElementById('loginBtn');
 function show(t,c){msg.textContent=t;msg.className='msg show '+c}
-function target(){return '/app/app.html'}
+function target(){return '/app.html'}
 async function login(email,password){
   const r=await fetch('/api/auth-login',{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({email,password}),cache:'no-store'});
   let d={};try{d=await r.json()}catch(e){}
