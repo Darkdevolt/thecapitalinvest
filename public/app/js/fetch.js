@@ -1,8 +1,6 @@
 (function(){
   const API_BASE='/api';
   const inflight=new Map();
-  const startupBackground=new Map();
-  const HEAVY_STARTUP=/^\/marche\?type=(financials|dividendes|historique|indices_historique|coupons)(?:&|$)|^\/boc(?:\?|$)/;
 
   function normalizeEndpoint(endpoint){
     if(!endpoint)return API_BASE;
@@ -25,43 +23,10 @@
     return localStorage.getItem('tc_token')||localStorage.getItem('token')||'';
   }
 
-  function scheduleHeavyStartup(endpoint,options){
-    if(startupBackground.has(endpoint))return;
-    const opts=Object.assign({},options||{},{__tcBackground:true});
-    const run=()=>request('GET',endpoint,undefined,opts)
-      .then(()=>console.log('[API] Données lourdes chargées en arrière-plan:',endpoint))
-      .catch(err=>console.warn('[API] Chargement arrière-plan:',endpoint,err.message||err))
-      .finally(()=>startupBackground.delete(endpoint));
-    startupBackground.set(endpoint,true);
-    if(window.requestIdleCallback)window.requestIdleCallback(run,{timeout:2500});
-    else setTimeout(run,900);
-  }
-
   async function request(method,endpoint,body,options){
-    const opts=options||{};
-    const isBackground=opts.__tcBackground===true;
-
-    /*
-     * Le premier écran ne doit jamais attendre les gros datasets.
-     * main.js est exécuté avant init.js dans app.html : le gate doit donc
-     * vivre ici, au niveau du client API, pour être effectif dès le bootstrap.
-     * Une donnée en cache est rendue immédiatement ; sinon un tableau vide
-     * permet au dashboard de s'afficher et la vraie requête part en idle.
-     */
-    if(method==='GET'&&!isBackground&&HEAVY_STARTUP.test(endpoint)){
-      let cached=null;
-      try{cached=window.cacheManager&&window.cacheManager.getCache(endpoint);}catch(e){}
-      scheduleHeavyStartup(endpoint,options);
-      if(cached!==null&&cached!==undefined)return cached;
-      return [];
-    }
-
-    const url=normalizeEndpoint(endpoint);
+    const url=normalizeEndpoint(endpoint),opts=options||{};
     const key=method==='GET'?endpoint:null;
     if(key&&inflight.has(key))return inflight.get(key);
-
-    const fetchOptions=Object.assign({},opts);
-    delete fetchOptions.__tcBackground;
 
     const promise=(async()=>{
       const token=getToken();
@@ -69,11 +34,11 @@
         {'Accept':'application/json'},
         body!==undefined?{'Content-Type':'application/json'}:{},
         token?{'Authorization':'Bearer '+token}:{},
-        fetchOptions.headers||{}
+        opts.headers||{}
       );
       const controller=new AbortController();
       const timeoutId=setTimeout(()=>controller.abort(),15000);
-      const fetchOpts=Object.assign({},fetchOptions,{method,headers,signal:controller.signal});
+      const fetchOpts=Object.assign({},opts,{method,headers,signal:controller.signal});
       if(body!==undefined)fetchOpts.body=typeof body==='string'?body:JSON.stringify(body);
 
       const cached=key&&window.cacheManager?window.cacheManager.getCache(key):null;
@@ -131,5 +96,5 @@
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadTitleFixes,{once:true});
   else loadTitleFixes();
-  console.log('[FETCH] API client chargé, démarrage léger + données lourdes différées');
+  console.log('[FETCH] API client chargé, CRUD HTTP complet + déduplication GET');
 })();
