@@ -15,12 +15,12 @@
 
   function loadMobilePolish(){
     if(document.getElementById('tc-mobile-polish'))return;
-    var link=document.createElement('link');link.id='tc-mobile-polish';link.rel='stylesheet';link.href='app/css/mobile-polish.css?v=3';document.head.appendChild(link);
-    var finalLink=document.createElement('link');finalLink.id='tc-mobile-polish-v2';finalLink.rel='stylesheet';finalLink.href='app/css/mobile-polish-v2.css?v=3';document.head.appendChild(finalLink);
+    var link=document.createElement('link');link.id='tc-mobile-polish';link.rel='stylesheet';link.href='/app/css/mobile-polish.css?v=3';document.head.appendChild(link);
+    var finalLink=document.createElement('link');finalLink.id='tc-mobile-polish-v2';finalLink.rel='stylesheet';finalLink.href='/app/css/mobile-polish-v2.css?v=3';document.head.appendChild(finalLink);
   }
   function loadFinancialPolish(){
     if(document.getElementById('tc-financial-polish'))return;
-    var link=document.createElement('link');link.id='tc-financial-polish';link.rel='stylesheet';link.href='app/css/financials-polish.css?v=1';document.head.appendChild(link);
+    var link=document.createElement('link');link.id='tc-financial-polish';link.rel='stylesheet';link.href='/app/css/financials-polish.css?v=1';document.head.appendChild(link);
   }
   function loadMobileNavigation(){if(typeof window.initSidebar==='function')window.initSidebar();}
 
@@ -88,23 +88,6 @@
     if(typeof window.apiGet!=='function'){console.warn('[MAIN] apiGet non disponible:',endpoint);setter(emptyVal);return Promise.resolve();}
     return window.apiGet(endpoint).then(function(res){var payload=(res&&typeof res==='object'&&'data' in res)?res.data:res;setter(payload||emptyVal);}).catch(function(err){console.warn('[MAIN] '+endpoint+' non chargé:',err.message||err);setter(emptyVal);});
   }
-  /**
-   * Consolidation des indices.
-   *
-   * Deux notions distinctes portaient le même nom, ce qui rendait le
-   * résultat dépendant de l'ordre d'exécution :
-   *   - /marche?type=indices             renvoie le DERNIER état
-   *   - /marche?type=indices_historique  renvoie la SÉRIE
-   *
-   * overview.js attend une série dans window.allIndices : getLatestIndices()
-   * en déduit lui-même le dernier état, mais getIndiceHistory() a besoin des
-   * trente derniers points. Alimenté avec le seul dernier état, le graphique
-   * composite affiche « Données insuffisantes » sans lever d'erreur.
-   *
-   * Chaque notion a désormais son nom, et allIndices reçoit la série. Le
-   * repli sur le dernier état garantit que les cartes d'indices restent
-   * affichées même si l'historique est indisponible.
-   */
   function applyIndices(){
     var history=Array.isArray(window.allIndicesHistory)?window.allIndicesHistory:[];
     var latest=Array.isArray(window.allIndicesLatest)?window.allIndicesLatest:[];
@@ -124,26 +107,12 @@
       fetchOrEmpty('/marche?type=analyses',function(d){window.allAnalyses=Array.isArray(d)?d:[];renderCurrentView();},[]),
       fetchOrEmpty('/marche?type=entreprises',function(d){window.allEntreprises=Array.isArray(d)?d:[];window.entMap={};window.allEntreprises.forEach(function(e){if(e&&e.ticker)window.entMap[e.ticker]=e;});renderCurrentView();},[]),
       fetchOrEmpty('/marche?type=dividendes',function(d){window.allDividendes=Array.isArray(d)?d:[];renderCurrentView();},[]),
-      /* Historique court des cotations. /marche?type=cours ne renvoie que la
-         derniere seance : le bloc « Activite de la seance » du tableau de bord
-         a besoin d'au moins deux seances pour comparer, et restait donc vide.
-         Mille lignes couvrent une vingtaine de seances sur 47 valeurs. Charge
-         en seconde vague : son absence ne retarde jamais l'affichage. */
       fetchOrEmpty('/marche?type=historique&limit=1000',function(d){window.allCoursHistory=Array.isArray(d)?d:[];renderCurrentView();},[]),
-      /* Coupons obligataires. Tant que la table n'existe pas, la route renvoie
-         un tableau vide : le calendrier n'affiche alors que les dividendes. */
       fetchOrEmpty('/marche?type=coupons',function(d){window.allCoupons=Array.isArray(d)?d:[];renderCurrentView();},[])
     ]);
     ensureTechnicalReady();renderCurrentView();ensureFundamentalReady();
-    console.log('[APP LOAD] Cours:',(window.allCours||[]).length,
-      '| Indices série:',(window.allIndicesHistory||[]).length,
-      '| Indices dernier état:',(window.allIndicesLatest||[]).length,
-      '| Dividendes:',(window.allDividendes||[]).length,
-      '| Historique cours:',(window.allCoursHistory||[]).length,
-      '| Coupons:',(window.allCoupons||[]).length);
-    window.dispatchEvent(new CustomEvent('tc:dataready',{detail:{
-      cours:(window.allCours||[]).length,indices:(window.allIndices||[]).length
-    }}));
+    console.log('[APP LOAD] Cours:',(window.allCours||[]).length,'| Indices série:',(window.allIndicesHistory||[]).length,'| Indices dernier état:',(window.allIndicesLatest||[]).length,'| Dividendes:',(window.allDividendes||[]).length,'| Historique cours:',(window.allCoursHistory||[]).length,'| Coupons:',(window.allCoupons||[]).length);
+    window.dispatchEvent(new CustomEvent('tc:dataready',{detail:{cours:(window.allCours||[]).length,indices:(window.allIndices||[]).length}}));
   }
   function ensureFundamentalReady(){
     if(parseHashFromUrl()!=='analyse-fondamentale')return;var select=document.getElementById('fundTickerSelect');if(!select)return;if(typeof window.populateTickerSelects==='function')window.populateTickerSelects();
