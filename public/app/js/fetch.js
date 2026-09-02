@@ -1,7 +1,6 @@
 (function(){
   const API_BASE='/api';
   const inflight=new Map();
-  const HEAVY_STARTUP=/^\/marche\?type=(financials|dividendes|historique|indices_historique|coupons)(?:&|$)|^\/boc(?:\?|$)/;
   function normalizeEndpoint(endpoint){if(!endpoint)return API_BASE;if(/^https?:\/\//i.test(endpoint))return endpoint;const path=endpoint.startsWith('/')?endpoint:'/'+endpoint;if(path==='/api'||path.startsWith('/api/'))return path;return API_BASE+path;}
   function getToken(){
     if(window.TC_ENV&&typeof window.TC_ENV.getToken==='function'){const token=window.TC_ENV.getToken();if(token)return token;}
@@ -10,11 +9,6 @@
   }
   async function request(method,endpoint,body,options){
     const url=normalizeEndpoint(endpoint),opts=options||{};
-    if(method==='GET'&&window.__TC_STARTUP_DATA_GATE__&&HEAVY_STARTUP.test(endpoint)){
-      const cached=window.cacheManager?window.cacheManager.getCache(endpoint):null;
-      if(cached!==null)return cached;
-      return [];
-    }
     const key=method==='GET'?endpoint:null;
     if(key&&inflight.has(key))return inflight.get(key);
     const promise=(async()=>{

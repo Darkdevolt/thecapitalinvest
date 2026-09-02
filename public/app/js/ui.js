@@ -10,29 +10,6 @@ function sortTable(tbodyId, colIndex) {
   rows.forEach(r=>tbody.appendChild(r));
 }
 
-// Source publique canonique : API/back-office bridge.
-async function loadAll() {
-  try {
-    const results=await Promise.allSettled([
-      window.apiGet('/marche?type=cours'),window.apiGet('/boc'),window.apiGet('/marche?type=analyses'),
-      window.apiGet('/marche?type=financials'),window.apiGet('/marche?type=entreprises'),
-      window.apiGet('/marche?type=indices'),window.apiGet('/marche?type=dividendes')
-    ]);
-    const arr=x=>Array.isArray(x)?x:(x?.data||x?.rows||[]), value=i=>results[i].status==='fulfilled'?arr(results[i].value):[];
-    if(results[0].status==='fulfilled')allCours=value(0);else toast('Erreur chargement cours: '+results[0].reason,'error');
-    if(results[1].status==='fulfilled')allBoc=value(1);else toast('Erreur chargement BOC: '+results[1].reason,'error');
-    if(results[2].status==='fulfilled')allAnalyses=value(2);else toast('Erreur chargement analyses: '+results[2].reason,'error');
-    if(results[3].status==='fulfilled')allFinancials=value(3);else toast('Erreur chargement financiers: '+results[3].reason,'error');
-    if(results[4].status==='fulfilled')allEntreprises=value(4);else toast('Erreur chargement entreprises: '+results[4].reason,'error');
-    if(results[5].status==='fulfilled')allIndices=value(5);else{allIndices=[];toast('Erreur chargement indices: '+results[5].reason,'warn');}
-    window.allDividendes=results[6].status==='fulfilled'?value(6):[];
-    entMap=Object.fromEntries(allEntreprises.map(e=>[e.ticker,e]));
-    renderOverview();renderTitres();renderBoc();renderAnalyses();renderFinancials();renderPublications();populateTickerSelects();
-    if(typeof atInit==='function')atInit(); if(typeof initGlobalSearch==='function')initGlobalSearch(); if(typeof runScreener==='function')runScreener();
-    if(typeof renderPortfolio==='function')renderPortfolio(); if(typeof renderAlerts==='function')renderAlerts(); parseHash();
-  } catch(e){toast('Erreur globale de chargement: '+e.message,'error');console.error('[APP LOAD]',e);}
-}
-
 function populateTickerSelects(){
   const byTicker={};allCours.forEach(c=>{if(c.ticker&&!byTicker[c.ticker])byTicker[c.ticker]=c;});
   const tickers=Object.keys(byTicker).sort(),opts=tickers.map(t=>`<option value="${t}">${t}</option>`).join('');

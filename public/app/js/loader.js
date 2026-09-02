@@ -15,7 +15,5 @@
   window.loadAll=async function(){if(window.__tcLoadPromise)return window.__tcLoadPromise;window.__tcLoadPromise=(async()=>{console.log('[LOADER] Chargement optimisé…');await loadCritical();loadEnrichment().catch(e=>console.error('[LOADER] Enrichissement:',e));console.log('[LOADER] Critique prête | cours:',(window.allCours||[]).length,'| analyses:',(window.allAnalyses||[]).length);})();return window.__tcLoadPromise;};
   window.__tcOptimizedLoadAll=window.loadAll;
   function loadScript(src){if(document.querySelector('script[src="'+src+'"]'))return;const s=document.createElement('script');s.src=src;s.async=false;s.onload=()=>console.log('[LOADER] '+src+' chargé');s.onerror=()=>console.warn('[LOADER] '+src+' indisponible');document.head.appendChild(s);}
-  function bootOptimized(){if(window.__tcOptimizedBooted)return;window.__tcOptimizedBooted=true;window.__TC_STARTUP_DATA_GATE__=true;setTimeout(function(){window.__TC_STARTUP_DATA_GATE__=false;window.__tcOptimizedLoadAll().catch(e=>console.error('[LOADER] Boot optimisé:',e));},0);}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootOptimized,{once:true});else bootOptimized();
   window.addEventListener('load',function(){loadScript('/app/js/views/recommendations-fixes.js?v=20260827');loadScript('/app/js/views/financials-per.js?v=1');});
 })();
