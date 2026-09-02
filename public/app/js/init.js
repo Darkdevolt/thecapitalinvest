@@ -70,22 +70,6 @@
     document.head.appendChild(script);
   }
 
-  /*
-   * IMPORTANT : le différé des datasets lourds est déjà implémenté dans
-   * fetch.js, au niveau de apiGet(). Il ne faut surtout pas installer ici
-   * un second wrapper autour de apiGet : cela créait deux ordonnanceurs,
-   * deux caches potentiels et des rendus concurrents.
-   *
-   * On conserve volontairement la fonction historique ci-dessous comme
-   * compatibilité source, mais elle est désactivée. Le seul gate de données
-   * au démarrage est désormais celui de fetch.js.
-   */
-  function installStartupOptimizer() {
-    if (window.__TC_STARTUP_OPTIMIZER_DISABLED__) return;
-    window.__TC_STARTUP_OPTIMIZER_DISABLED__ = true;
-    window.__TC_STARTUP_DATA_GATE__ = true;
-  }
-
   /* app.html charge déjà le routeur, les vues et navigation-guard.
      Ne jamais les recharger : un double chargement crée des wrappers et
      plusieurs rendus concurrents du dashboard. */
@@ -186,8 +170,6 @@
     if (!requireAuth()) return;
 
     normalizeDocument();
-    /* fetch.js est le propriétaire unique du gate de données lourdes. */
-    installStartupOptimizer();
     console.log('[INIT] Session authentifiée, démarrage The Capital');
     safeInitApp();
 
