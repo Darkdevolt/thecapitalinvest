@@ -71,90 +71,19 @@
   }
 
   /*
-   * Startup optimizer.
-   * main.js conserve son orchestration historique, mais les datasets lourds
-   * ne doivent jamais bloquer le premier rendu. Les endpoints secondaires
-   * sont servis depuis le cache s'il existe, sinon ils retournent immédiatement
-   * un tableau vide et sont chargés en arrière-plan après le premier paint.
+   * IMPORTANT : le différé des datasets lourds est déjà implémenté dans
+   * fetch.js, au niveau de apiGet(). Il ne faut surtout pas installer ici
+   * un second wrapper autour de apiGet : cela créait deux ordonnanceurs,
+   * deux caches potentiels et des rendus concurrents.
+   *
+   * On conserve volontairement la fonction historique ci-dessous comme
+   * compatibilité source, mais elle est désactivée. Le seul gate de données
+   * au démarrage est désormais celui de fetch.js.
    */
   function installStartupOptimizer() {
-    if (window.__TC_STARTUP_OPTIMIZER__) return;
-    if (typeof window.apiGet !== 'function') return;
-
-    var originalApiGet = window.apiGet;
-    var background = new Map();
-    var heavy = /^\/marche\?type=(financials|dividendes|historique|indices_historique|coupons)(?:&|$)|^\/boc(?:\?|$)/;
-
-    function unwrap(value) {
-      if (Array.isArray(value)) return value;
-      if (value && Array.isArray(value.data)) return value.data;
-      if (value && Array.isArray(value.rows)) return value.rows;
-      return [];
-    }
-
-    function publish(endpoint, value) {
-      var data = unwrap(value);
-      if (endpoint.indexOf('indices_historique') !== -1) {
-        window.allIndicesHistory = data;
-        if (data.length) window.allIndices = data;
-      } else if (endpoint.indexOf('financials') !== -1) {
-        window.allFinancials = data;
-      } else if (endpoint.indexOf('dividendes') !== -1) {
-        window.allDividendes = data;
-      } else if (endpoint.indexOf('historique') !== -1) {
-        window.allCoursHistory = data;
-      } else if (endpoint.indexOf('coupons') !== -1) {
-        window.allCoupons = data;
-      } else if (/^\/boc(?:\?|$)/.test(endpoint)) {
-        window.allBoc = data;
-      }
-      try {
-        window.dispatchEvent(new CustomEvent('tc:dataready', { detail: { phase: 'background', endpoint: endpoint } }));
-      } catch (e) {}
-      if (typeof window.renderCurrentView === 'function') {
-        try { window.renderCurrentView(); } catch (e) { console.warn('[INIT] background render:', e); }
-      }
-    }
-
-    function schedule(endpoint) {
-      if (background.has(endpoint)) return background.get(endpoint);
-      var delay = window.requestIdleCallback ? 400 : 1200;
-      var promise = new Promise(function (resolve) {
-        var run = function () {
-          originalApiGet(endpoint).then(function (value) {
-            publish(endpoint, value);
-            resolve(value);
-          }).catch(function (error) {
-            console.warn('[INIT] background data:', endpoint, error);
-            resolve([]);
-          }).finally(function () {
-            background.delete(endpoint);
-          });
-        };
-        if (window.requestIdleCallback) window.requestIdleCallback(run, { timeout: 2500 });
-        else setTimeout(run, delay);
-      });
-      background.set(endpoint, promise);
-      return promise;
-    }
-
-    window.apiGet = function (endpoint, options) {
-      if (typeof endpoint !== 'string' || !heavy.test(endpoint)) {
-        return originalApiGet(endpoint, options);
-      }
-      var cached = null;
-      try { cached = window.cacheManager && window.cacheManager.getCache(endpoint); } catch (e) {}
-      if (cached !== null && cached !== undefined) {
-        schedule(endpoint);
-        return Promise.resolve(cached);
-      }
-      schedule(endpoint);
-      return Promise.resolve([]);
-    };
-
+    if (window.__TC_STARTUP_OPTIMIZER_DISABLED__) return;
+    window.__TC_STARTUP_OPTIMIZER_DISABLED__ = true;
     window.__TC_STARTUP_DATA_GATE__ = true;
-    window.__TC_STARTUP_OPTIMIZER__ = true;
-    console.log('[INIT] Startup optimizer activé');
   }
 
   /* app.html charge déjà le routeur, les vues et navigation-guard.
@@ -257,6 +186,7 @@
     if (!requireAuth()) return;
 
     normalizeDocument();
+    /* fetch.js est le propriétaire unique du gate de données lourdes. */
     installStartupOptimizer();
     console.log('[INIT] Session authentifiée, démarrage The Capital');
     safeInitApp();
