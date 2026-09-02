@@ -30,6 +30,13 @@
       ]
     }
   ],
+  "redirects": [
+    {
+      "source": "/app/app.html",
+      "destination": "/app.html",
+      "permanent": false
+    }
+  ],
   "rewrites": [
     {
       "source": "/app.html",
