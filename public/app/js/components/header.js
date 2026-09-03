@@ -14,7 +14,8 @@ function initHeader() {
     '/app/js/views/comparison.js',
     '/app/js/views/dividend-screener.js',
     '/app/js/header-polish.js',
-    '/app/js/header-runtime-fix.js'
+    '/app/js/header-runtime-fix.js',
+    '/app/js/dashboard-utility.js'
   ];
   scripts.forEach(src => {
     if (document.querySelector(`script[data-tc-module="${src}"]`)) return;
@@ -29,7 +30,8 @@ function initHeader() {
     ['/app/css/scale-100.css','data-tc-scale-100'],
     ['/app/css/header-final.css','data-tc-header-final'],
     ['/app/css/theme-system.css','data-tc-theme-system'],
-    ['/app/css/visual-contrast.css','data-tc-visual-contrast']
+    ['/app/css/visual-contrast.css','data-tc-visual-contrast'],
+    ['/app/css/dashboard-utility.css','data-tc-dashboard-utility']
   ];
   styles.forEach(([href,attr])=>{
     if(document.querySelector(`link[${attr}="${href}"]`)) return;
