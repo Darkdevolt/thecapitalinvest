@@ -7,9 +7,9 @@
   if (window.__TC_HEADER_COMPONENT__) return;
   window.__TC_HEADER_COMPONENT__ = true;
 
-  // These modules are already loaded once, statically, by app.html.
-  // Keep the contract visible for the integrity guard, but never inject them again.
-  var STATIC_MODULE_CONTRACT = [
+  // These modules are loaded once by the header component.
+  // Keep the dependency contract explicit; do not inject them from multiple layers.
+  var MODULES = [
     '/app/js/mode.js',
     '/app/js/theme.js',
     '/app/js/views/comparison.js',
@@ -38,20 +38,22 @@
   }
 
   function installHeaderPresentation() {
-    // Router.js defines the canonical toggleDropdown / closeDropdowns.
-    // CSS opens .nav-dropdown-menu.open, not the parent .nav-dropdown.
+    // router.js is the only owner of dropdown state.
+    // header-runtime-fix.js only positions an already-open menu.
     loadScript('/app/js/header-runtime-fix.js');
     loadScript('/app/js/header-polish.js');
 
-    loadStyle('/app/css/header-responsive.css', 'data-tc-header-responsive');
+    // header-final.css is the sole geometry owner for the header.
+    // theme-system.css / visual-contrast.css only handle theme presentation.
     loadStyle('/app/css/scale-100.css', 'data-tc-scale-100');
     loadStyle('/app/css/header-final.css', 'data-tc-header-final');
     loadStyle('/app/css/theme-system.css', 'data-tc-theme-system');
     loadStyle('/app/css/visual-contrast.css', 'data-tc-visual-contrast');
-    loadStyle('/app/css/dashboard-utility.css', 'data-tc-dashboard-utility');
 
-    // Keep the variable referenced so linters/integrity checks know these are intentional static dependencies.
-    if (!STATIC_MODULE_CONTRACT.length) console.warn('[HEADER] Static dependency contract unexpectedly empty');
+    // Explicitly preserve the dependency contract without duplicating injection.
+    MODULES.forEach(function (src) {
+      if (!document.querySelector('script[src="' + src + '"]')) loadScript(src);
+    });
   }
 
   function installAccountMenu() {
