@@ -1,5 +1,11 @@
-/* THE CAPITAL — Header polish + Institute switch
-   UI/navigation only. Does not modify auth, market data, APIs or subscriptions. */
+/* THE CAPITAL — Header polish / Institute transition.
+ *
+ * The header navigation itself is static. Older versions inserted an Institute
+ * link asynchronously after load, which changed the width of the right control
+ * rail and could move the header between renders. The link insertion and its
+ * global observer are intentionally removed; the existing navigation remains
+ * responsible for stable header geometry.
+ */
 (function(){
   'use strict';
   if(window.__TC_HEADER_POLISH__) return;
@@ -28,7 +34,7 @@
     document.head.appendChild(s);
   }
 
-  function transitionToInstitute(url){
+  window.openCapitalInstituteTransition=function(url){
     addTransitionStyles();
     if(document.querySelector('.tc-institute-transition')) return;
     var d=document.createElement('div');
@@ -39,22 +45,5 @@
     document.body.appendChild(d);
     document.body.classList.add('tc-institute-lock');
     setTimeout(function(){window.location.href=url},1450);
-  }
-
-  function addHeaderLink(){
-    var host=document.querySelector('.topnav-right');
-    if(!host || host.querySelector('.tc-institute-header-link')) return;
-    var a=document.createElement('a');
-    a.className='tc-institute-header-link';
-    a.href='/the-capital-institute/index.html';
-    a.target='_self';
-    a.setAttribute('aria-label','Ouvrir The Capital Institute');
-    a.innerHTML='<span class="tc-institute-header-mark">CI</span><span class="tc-institute-header-copy">Institute</span>';
-    a.addEventListener('click',function(e){e.preventDefault();transitionToInstitute(a.href)});
-    host.insertBefore(a,document.getElementById('tcDisplayMode')||host.firstChild);
-  }
-
-  function boot(){addTransitionStyles();addHeaderLink()}
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-  new MutationObserver(function(){addHeaderLink()}).observe(document.documentElement,{childList:true,subtree:true});
+  };
 })();

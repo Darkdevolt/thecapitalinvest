@@ -1,10 +1,9 @@
 /*
  * THE CAPITAL — Dashboard Unified Design Layer
  * Presentation only: no data, API, navigation or business logic changes.
- * Loaded last so it harmonises the existing dashboard without replacing
- * the established component styles.
+ * This file is the canonical dashboard layout layer and is loaded after the
+ * generic application styles.
  */
-
 #view-overview{--dash-gap:18px;--dash-radius:12px;--dash-radius-sm:9px;--dash-border:rgba(184,150,78,.15);--dash-border-soft:rgba(184,150,78,.08);--dash-surface:rgba(22,19,13,.96);--dash-surface-2:rgba(26,22,16,.96)}
 #view-overview.view{padding:28px 32px 44px;width:100%;max-width:1600px;margin-inline:auto;box-sizing:border-box}
 #view-overview .page-header{margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--dash-border-soft)}
@@ -26,7 +25,7 @@
 #view-overview .tci-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;min-width:0}
 #view-overview .tci-metric{min-width:0;display:flex;flex-direction:column;gap:3px}
 #view-overview .tci-label,#view-overview .tci-unit,#view-overview .tci-sub,#view-overview .tci-watch-name,#view-overview .tci-contrib-label{color:var(--dim)}
-#view-overview .tci-value{font-family:var(--mono);font-size:clamp(22px,1.6vw,32px);line-height:1.08;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+#view-overview .tci-value{font-family:var(--mono);font-size:24px;line-height:1.08;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
 #view-overview .tci-contribs{min-width:0;overflow:hidden}
 #view-overview .tci-contrib{min-width:0;display:flex;align-items:center;gap:8px}
 #view-overview .tci-contrib-ticker{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -34,17 +33,15 @@
 #view-overview .tci-watch-row{min-width:0}
 #view-overview table{font-size:12px;max-width:100%}
 #view-overview thead th,#view-overview tbody td{max-width:100%;box-sizing:border-box}
-#view-overview .chart-container{width:100%;min-width:0;max-width:100%;height:clamp(220px,19vw,330px)}
+#view-overview .chart-container{width:100%;min-width:0;max-width:100%;height:300px}
 #view-overview .chart-container canvas{display:block;width:100%!important;max-width:100%!important;height:100%!important}
 
-/* Critical: do not scale the dashboard itself with viewport/container width.
-   This keeps text and cards at a stable physical size and prevents the
-   oversized rendering visible on compact desktops. */
+/* The dashboard must never be scaled by its container. */
 #view-overview,#view-overview.view,#view-overview .tci-card,#view-overview .dashboard-news,#view-overview > .card{container-type:normal}
 #view-overview .tci-card .tci-grid,#view-overview .dashboard-news-grid{container-type:normal}
 
 @media (min-width:1500px){#view-overview.view{max-width:1720px;padding-inline:34px}}
-@media (min-width:901px) and (max-width:1366px){#view-overview.view{padding-inline:22px}#view-overview .stat-value{font-size:32px}#view-overview .tci-value{font-size:28px}}
+@media (min-width:901px) and (max-width:1366px){#view-overview.view{padding-inline:22px}}
 @media (max-width:760px){
  #view-overview.view{padding:20px 14px 32px}
  #view-overview #overviewStats{grid-template-columns:1fr;gap:10px}
@@ -54,9 +51,9 @@
  #view-overview .card-body,#view-overview .tci-card{padding:14px}
  #view-overview .stat-value{font-size:30px}
  #view-overview .tci-value{font-size:24px}
- #view-overview .chart-container{height:clamp(190px,55vw,260px)}
+ #view-overview .chart-container{height:260px}
 }
 @media (max-width:480px){#view-overview.view{padding-inline:10px}#view-overview .stat-value{font-size:21px}.view .card-body{padding:12px}}
 
-/* Final containment guard: descendants may not paint outside their cards. */
+/* Final containment guard. */
 #view-overview .stat-card,#view-overview .tci-card,#view-overview .dashboard-news,#view-overview > .card{contain:layout paint;overflow:hidden}
