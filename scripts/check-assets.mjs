@@ -9,6 +9,7 @@
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, normalize } from 'node:path';
 import { execFileSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const ROOT = 'public';
 const failures = [];
@@ -69,11 +70,10 @@ for (const file of files.filter(f => f.endsWith('.js'))) {
 }
 
 /**
- * Contrôle de syntaxe. Sept fichiers du dépôt ne se parsaient pas — apostrophes
- * françaises non échappées dans des chaînes, ternaire tronqué, chaîne non
- * fermée, sélecteur mal formé, déclarations de fonctions avalées par un
- * commentaire. Le navigateur les rejetait en silence : les modules concernés
- * n'existaient tout simplement pas à l'exécution.
+ * Contrôle de syntaxe. Chaque JavaScript du dépôt doit pouvoir être parsé par
+ * le même moteur Node que celui utilisé par Vercel. Une erreur de syntaxe est
+ * bloquante : le navigateur peut sinon ignorer un module entier et laisser une
+ * application partiellement initialisée.
  */
 for (const file of files.filter(f => f.endsWith('.js'))) {
   try {
@@ -84,12 +84,101 @@ for (const file of files.filter(f => f.endsWith('.js'))) {
   }
 }
 
+/**
+ * GARDE-FOUS APPLICATION
+ * Ces invariants ne changent pas le comportement de l'application. Ils font
+ * échouer le build lorsqu'une modification casse le socle connu ou réintroduit
+ * les mécanismes qui ont déjà provoqué une boucle navigateur.
+ */
+const appPath = 'public/app/app.html';
+const appHtml = readFileSync(appPath, 'utf8');
+const headerRuntimePath = 'public/app/js/header-runtime-fix.js';
+const navGuardPath = 'public/app/js/navigation-guard.js';
+const headerPath = 'public/app/js/components/header.js';
+const baseCssPath = 'public/app/css/base.css';
+const vercelPath = 'vercel.json';
+
+function count(text, pattern) {
+  return (text.match(pattern) || []).length;
+}
+
+function requireInvariant(condition, message) {
+  if (!condition) failures.push(`GARDE-FOU : ${message}`);
+}
+
+requireInvariant(existsSync(appPath), 'public/app/app.html doit rester l’application principale.');
+requireInvariant(count(appHtml, /<script[^>]+src=["']\/app\/js\/main\.js(?:\?[^"']*)?["']/g) === 1,
+  'app.html doit charger exactement un main.js.');
+requireInvariant(count(appHtml, /<script[^>]+src=["']\/app\/js\/init\.js(?:\?[^"']*)?["']/g) === 1,
+  'app.html doit charger exactement un init.js.');
+requireInvariant(count(appHtml, /<script[^>]+src=["']\/app\/js\/router\.js(?:\?[^"']*)?["']/g) === 1,
+  'app.html doit charger exactement un router.js.');
+
+const mainPos = appHtml.search(/<script[^>]+src=["']\/app\/js\/main\.js(?:\?[^"']*)?["']/);
+const initPos = appHtml.search(/<script[^>]+src=["']\/app\/js\/init\.js(?:\?[^"']*)?["']/);
+const routerPos = appHtml.search(/<script[^>]+src=["']\/app\/js\/router\.js(?:\?[^"']*)?["']/);
+requireInvariant(mainPos >= 0 && initPos > mainPos, 'l’ordre main.js → init.js doit être conservé.');
+requireInvariant(routerPos >= 0 && routerPos < mainPos, 'router.js doit être chargé avant le bootstrap main/init.');
+requireInvariant(/<body[^>]*class=["'][^"']*\binit-hidden\b/.test(appHtml), 'app.html doit conserver le marqueur init-hidden du bootstrap.');
+
+const baseCss = readFileSync(baseCssPath, 'utf8');
+requireInvariant(/body\.init-hidden\s*\{[^}]*visibility\s*:\s*visible\s*!important[^}]*opacity\s*:\s*1\s*!important/s.test(baseCss),
+  'base.css ne doit pas pouvoir laisser init-hidden masquer définitivement l’application.');
+
+const headerRuntime = readFileSync(headerRuntimePath, 'utf8');
+const navGuard = readFileSync(navGuardPath, 'utf8');
+requireInvariant(!/observe\(\s*document\.(body|documentElement)\s*,/.test(headerRuntime),
+  'header-runtime-fix.js ne doit pas observer globalement le document.');
+requireInvariant(!/observe\(\s*document\.(body|documentElement)\s*,/.test(navGuard),
+  'navigation-guard.js ne doit pas observer globalement le document.');
+requireInvariant(/__TC_HEADER_RUNTIME_FIX__/.test(headerRuntime), 'le singleton du runtime header doit être conservé.');
+requireInvariant(/__TC_NAV_GUARD__/.test(navGuard), 'le singleton du navigation guard doit être conservé.');
+
+const header = readFileSync(headerPath, 'utf8');
+for (const modulePath of [
+  '/app/js/mode.js',
+  '/app/js/theme.js',
+  '/app/js/views/comparison.js',
+  '/app/js/views/dividend-screener.js',
+  '/app/js/header-polish.js',
+  '/app/js/header-runtime-fix.js'
+]) {
+  requireInvariant(count(header, new RegExp(`['"]${modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`, 'g') === 1,
+    `header.js doit référencer exactement une fois ${modulePath}.`);
+}
+
+// Aucune ancienne architecture de desk ne doit réapparaître dans l'application.
+for (const file of files) {
+  if (!/^(public\/app\/|public\/app\.html$)/.test(file)) continue;
+  const text = readFileSync(file, 'utf8');
+  if (/desk-workspace/i.test(text)) failures.push(`GARDE-FOU : référence desk-workspace interdite dans ${file}.`);
+}
+
+// admin.html est hors périmètre des correctifs app. Toute modification doit être
+// volontaire et explicite, sinon le build bloque plutôt que de déployer à l'aveugle.
+const adminPath = 'public/admin.html';
+const expectedAdminBlobSha = '482287168d1fb384b27e5b654752bd6ba830933e';
+function gitBlobSha(text) {
+  const body = Buffer.from(text, 'utf8');
+  return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
+}
+if (existsSync(adminPath)) {
+  const actualAdminSha = gitBlobSha(readFileSync(adminPath, 'utf8'));
+  requireInvariant(actualAdminSha === expectedAdminBlobSha,
+    'admin.html a changé alors qu’il est hors périmètre ; bloquer le déploiement jusqu’à validation explicite.');
+}
+
+// La réécriture production /app.html → /app/app.html est un contrat critique.
+const vercel = readFileSync(vercelPath, 'utf8');
+requireInvariant(/"source"\s*:\s*"\/app\.html"[\s\S]*?"destination"\s*:\s*"\/app\/app\.html"/.test(vercel),
+  'vercel.json doit conserver la réécriture /app.html → /app/app.html.');
+
 for (const w of warnings) console.warn('  avertissement :', w);
 
 if (failures.length) {
-  console.error(`\nContrôle des références statiques : ${failures.length} erreur(s)\n`);
+  console.error(`\nContrôle d’intégrité : ${failures.length} erreur(s)\n`);
   for (const f of failures) console.error('  •', f);
   process.exit(1);
 }
 
-console.log(`Contrôle d'intégrité : ${htmlFiles.length} pages et ${files.filter(f => f.endsWith('.js')).length} scripts vérifiés, aucune référence cassée ni erreur de syntaxe.`);
+console.log(`Contrôle d'intégrité : ${htmlFiles.length} pages, ${files.filter(f => f.endsWith('.js')).length} scripts et garde-fous applicatifs vérifiés, aucune référence cassée, erreur de syntaxe ou invariant critique violé.`);
