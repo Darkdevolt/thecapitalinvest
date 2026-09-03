@@ -1,194 +1,454 @@
-// INIT — Unified, defensive application bootstrap
-(function () {
+// ============================================================
+// THE CAPITAL — INIT
+// Bootstrap stable et sécurisé
+// ============================================================
+
+(function(){
+
   'use strict';
 
-  var started = false;
-  var SESSION_KEY = 'tc_session';
+  if(window.__TC_INIT_LOADED__){
+    return;
+  }
 
-  function decodeBase64Url(value) {
-    var input = String(value || '').replace(/-/g, '+').replace(/_/g, '/');
-    while (input.length % 4) input += '=';
+  window.__TC_INIT_LOADED__ = true;
+
+  const SESSION_KEY =
+    'tc_session';
+
+  // ----------------------------------------------------------
+  // TOKEN
+  // ----------------------------------------------------------
+
+  function decodeBase64Url(value){
+
+    let input =
+      String(value || '')
+        .replace(/-/g,'+')
+        .replace(/_/g,'/');
+
+    while(
+      input.length % 4
+    ){
+      input += '=';
+    }
+
     return atob(input);
+
   }
 
-  function tokenIsValid(token) {
-    try {
-      var parts = String(token || '').split('.');
-      if (parts.length !== 3) return false;
-      var payload = JSON.parse(decodeBase64Url(parts[1]));
-      return !!payload.exp && payload.exp * 1000 > Date.now();
-    } catch (e) {
+  function tokenIsValid(token){
+
+    try{
+
+      const parts =
+        String(token || '')
+          .split('.');
+
+      if(parts.length !== 3){
+        return false;
+      }
+
+      const payload =
+        JSON.parse(
+          decodeBase64Url(parts[1])
+        );
+
+      return !!payload.exp &&
+        payload.exp * 1000 >
+        Date.now();
+
+    }catch(error){
+
       return false;
+
     }
+
   }
 
-  function getSession() {
-    if (window.tcSession && window.tcSession.access_token) return window.tcSession;
-    try {
-      var raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) return null;
-      var parsed = JSON.parse(raw);
-      var session =
-        (parsed && parsed.data && parsed.data.session) ||
-        (parsed && parsed.session) ||
+  // ----------------------------------------------------------
+  // SESSION
+  // ----------------------------------------------------------
+
+  function getSession(){
+
+    if(
+      window.tcSession &&
+      window.tcSession.access_token
+    ){
+
+      return window.tcSession;
+
+    }
+
+    try{
+
+      const raw =
+        localStorage.getItem(
+          SESSION_KEY
+        );
+
+      if(!raw){
+        return null;
+      }
+
+      const parsed =
+        JSON.parse(raw);
+
+      const session =
+        (
+          parsed &&
+          parsed.data &&
+          parsed.data.session
+        ) ||
+        (
+          parsed &&
+          parsed.session
+        ) ||
         parsed;
-      if (!session || !session.access_token || !tokenIsValid(session.access_token)) return null;
+
+      if(
+        !session ||
+        !session.access_token
+      ){
+
+        return null;
+
+      }
+
+      if(
+        !tokenIsValid(
+          session.access_token
+        )
+      ){
+
+        return null;
+
+      }
+
       return session;
-    } catch (e) {
+
+    }catch(error){
+
       return null;
+
     }
+
   }
 
-  function requireAuth() {
-    var session = getSession();
-    if (session) {
-      window.tcSession = session;
-      window.tcAccessToken = session.access_token;
+  // ----------------------------------------------------------
+  // AUTH
+  // ----------------------------------------------------------
+
+  function requireAuth(){
+
+    const session =
+      getSession();
+
+    if(session){
+
+      window.tcSession =
+        session;
+
+      window.tcAccessToken =
+        session.access_token;
+
       return true;
+
     }
-    var target = location.pathname + location.search + location.hash;
-    location.replace('/login.html?redirect=' + encodeURIComponent(target));
+
+    /*
+     * DESTINATION UNIQUE :
+     * toujours /app.html
+     */
+    const target =
+      '/app.html';
+
+    window.location.replace(
+      '/login.html?redirect=' +
+      encodeURIComponent(target)
+    );
+
     return false;
+
   }
 
-  function normalizeDocument() {
-    document.querySelectorAll('base').forEach(function (base) { base.remove(); });
-    document.querySelectorAll('a[href]').forEach(function (a) {
-      var href = a.getAttribute('href') || '';
-      if (href && href.charAt(0) !== '#' && !/^(https?:|mailto:|tel:|javascript:)/i.test(href)) {
-        a.removeAttribute('target');
-        a.removeAttribute('rel');
+  // ----------------------------------------------------------
+  // DOCUMENT
+  // ----------------------------------------------------------
+
+  function normalizeDocument(){
+
+    /*
+     * Aucun Desk Workspace.
+     * On retire uniquement les anciennes balises base
+     * qui peuvent perturber les chemins.
+     */
+
+    const bases =
+      document.querySelectorAll(
+        'base'
+      );
+
+    bases.forEach(
+      function(base){
+
+        base.remove();
+
       }
-    });
-  }
+    );
 
-  function loadScript(src, done) {
-    if (document.querySelector('script[data-tc-runtime="' + src.replace(/"/g, '') + '"]')) {
-      if (typeof done === 'function') done();
-      return;
-    }
-    var script = document.createElement('script');
-    script.src = src;
-    script.async = false;
-    script.dataset.tcRuntime = src;
-    script.onload = function () { if (typeof done === 'function') done(); };
-    script.onerror = function () {
-      console.warn('[INIT] Script secondaire indisponible:', src);
-      if (typeof done === 'function') done();
-    };
-    document.head.appendChild(script);
-  }
+    /*
+     * Liens internes en navigation normale.
+     */
+    const links =
+      document.querySelectorAll(
+        'a[href]'
+      );
 
-  function renderAfterData() {
-    try {
-      if (typeof window.renderCurrentView === 'function') window.renderCurrentView();
-      else if (typeof window.parseHash === 'function') window.parseHash();
-      if (window.tcNavigation && typeof window.tcNavigation.render === 'function') {
-        window.tcNavigation.render();
-      }
-    } catch (e) {
-      console.warn('[INIT] rendu après données:', e);
-    }
-  }
+    links.forEach(
+      function(link){
 
-  function loadRuntimeLayers() {
-    loadScript('/app/js/views/overview-fixes.js?v=1');
-    loadScript('/app/js/views/brvm-market-hours.js?v=20260827.3', function () {
-      loadScript('/app/js/market-ux.js?v=20260827.2');
-    });
-    loadScript('/app/js/views/technique/data-bridge.js?v=20260826');
-    loadScript('/app/js/views/portefeuille/portfolio-store.js?v=9', function () {
-      loadScript('/app/js/views/portefeuille/portfolio-crud-patch.js?v=8', function () {
-        loadScript('/app/js/views/user-data-patch.js?v=7', function () {
-          loadScript('/app/js/views/fundamental-ratios.js?v=1', renderAfterData);
-        });
-      });
-    });
-  }
+        const href =
+          link.getAttribute(
+            'href'
+          ) || '';
 
-  function loadIntegratedSuivi() {
-    if (window.__TC_SUIVI_LOADER__) return;
-    window.__TC_SUIVI_LOADER__ = true;
+        if(
+          href &&
+          href.charAt(0) !== '#' &&
+          !/^(https?:|mailto:|tel:|javascript:)/i.test(
+            href
+          )
+        ){
 
-    function load(src) {
-      return new Promise(function (resolve, reject) {
-        var script = document.createElement('script');
-        script.src = src;
-        script.async = false;
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
+          link.removeAttribute(
+            'target'
+          );
 
-    load('/app/js/views/suivi-integrated.js?v=20260827')
-      .then(function () { return load('/app/js/views/suivi-metrics-fix.js?v=20260827'); })
-      .catch(function (err) {
-        console.warn('[SUIVI] Module intégré indisponible:', err);
-      });
-  }
+          link.removeAttribute(
+            'rel'
+          );
 
-  function safeInitApp() {
-    if (typeof window.initApp !== 'function') {
-      console.error('[INIT] initApp manquant : main.js n’est pas disponible.');
-      return false;
-    }
-    try {
-      var result = window.initApp();
-      if (result && typeof result.catch === 'function') {
-        result.catch(function (err) {
-          console.error('[INIT] initApp:', err);
-        });
-      }
-      return true;
-    } catch (e) {
-      console.error('[INIT] initApp:', e);
-      return false;
-    }
-  }
-
-  function init() {
-    if (started) return;
-    started = true;
-
-    if (!requireAuth()) return;
-
-    normalizeDocument();
-    console.log('[INIT] Session authentifiée, démarrage The Capital');
-
-    var initialized = safeInitApp();
-
-    // Le shell ne doit jamais rester masqué à cause d'un module secondaire.
-    if (document.body) {
-      document.body.classList.remove('init-hidden');
-      document.body.style.opacity = '1';
-      document.body.style.visibility = 'visible';
-    }
-
-    // Les enrichissements ne doivent pas bloquer l'application principale.
-    setTimeout(function () {
-      try {
-        loadIntegratedSuivi();
-        if (typeof window.initUserDataLayer === 'function') {
-          try { window.initUserDataLayer(); } catch (e) { console.warn('[INIT] user data:', e); }
         }
-      } catch (e) {
-        console.warn('[INIT] couches secondaires:', e);
+
       }
-      setTimeout(loadRuntimeLayers, 0);
-      if (initialized) renderAfterData();
-    }, 0);
+    );
+
   }
 
-  function boot() {
+  // ----------------------------------------------------------
+  // RENDU
+  // ----------------------------------------------------------
+
+  function safeRender(){
+
+    try{
+
+      if(
+        typeof window.renderCurrentView ===
+        'function'
+      ){
+
+        window.renderCurrentView();
+
+      }
+
+    }catch(error){
+
+      console.error(
+        '[INIT] Rendu:',
+        error
+      );
+
+    }
+
+  }
+
+  // ----------------------------------------------------------
+  // ENRICHISSEMENTS
+  // ----------------------------------------------------------
+
+  function loadSecondaryModules(){
+
+    /*
+     * Les modules complémentaires ne doivent
+     * jamais empêcher l'affichage de l'app.
+     */
+
+    const modules = [
+
+      '/app/js/views/overview-fixes.js?v=1',
+      '/app/js/views/brvm-market-hours.js?v=20260827.3',
+      '/app/js/market-ux.js?v=20260827.2',
+      '/app/js/views/technique/data-bridge.js?v=20260826',
+      '/app/js/views/user-data-patch.js?v=7',
+      '/app/js/views/fundamental-ratios.js?v=1'
+
+    ];
+
+    modules.forEach(
+      function(src){
+
+        if(
+          document.querySelector(
+            'script[data-tc-secondary="' +
+            src.replace(/"/g,'') +
+            '"]'
+          )
+        ){
+
+          return;
+
+        }
+
+        const script =
+          document.createElement(
+            'script'
+          );
+
+        script.src = src;
+
+        /*
+         * Ces scripts ne sont pas critiques.
+         */
+        script.async = true;
+
+        script.dataset.tcSecondary =
+          src;
+
+        script.onerror =
+          function(){
+
+            console.warn(
+              '[INIT] Module secondaire indisponible:',
+              src
+            );
+
+          };
+
+        document.head.appendChild(
+          script
+        );
+
+      }
+    );
+
+  }
+
+  // ----------------------------------------------------------
+  // INITIALISATION
+  // ----------------------------------------------------------
+
+  function init(){
+
+    if(
+      !requireAuth()
+    ){
+
+      return;
+
+    }
+
     normalizeDocument();
-    if (!requireAuth()) return;
-    init();
+
+    console.log(
+      '[INIT] Session authentifiée.'
+    );
+
+    /*
+     * MAIN.JS doit être déjà chargé.
+     */
+    try{
+
+      if(
+        typeof window.initApp ===
+        'function'
+      ){
+
+        window.initApp();
+
+      }else{
+
+        console.error(
+          '[INIT] initApp() absent.'
+        );
+
+      }
+
+    }catch(error){
+
+      console.error(
+        '[INIT] initApp:',
+        error
+      );
+
+    }
+
+    /*
+     * Sécurité absolue :
+     * on affiche l'application quoi qu'il arrive.
+     */
+    if(document.body){
+
+      document.body.classList.remove(
+        'init-hidden'
+      );
+
+      document.body.style.opacity =
+        '1';
+
+      document.body.style.visibility =
+        'visible';
+
+    }
+
+    /*
+     * Modules secondaires après affichage.
+     */
+    setTimeout(
+      function(){
+
+        try{
+
+          loadSecondaryModules();
+
+        }catch(error){
+
+          console.warn(
+            '[INIT] Modules secondaires:',
+            error
+          );
+
+        }
+
+      },
+      100
+    );
+
   }
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', boot, { once: true });
-  } else {
-    boot();
+  // ----------------------------------------------------------
+  // BOOT
+  // ----------------------------------------------------------
+
+  if(
+    document.readyState ===
+    'loading'
+  ){
+
+    document.addEventListener(
+      'DOMContentLoaded',
+      init,
+      {
+        once:true
+      }
+    );
+
+  }else{
+
+    init();
+
   }
+
 })();
