@@ -62,6 +62,18 @@
     try{window[functionName]();}catch(error){console.error('[MAIN] Rendu '+functionName+':',error);}
   }
 
+  let renderTimer=0;
+  let renderQueued=false;
+  function scheduleRender(){
+    if(renderQueued)return;
+    renderQueued=true;
+    clearTimeout(renderTimer);
+    renderTimer=setTimeout(()=>{
+      renderQueued=false;
+      renderCurrentView();
+    },40);
+  }
+
   function setupGlobalEvents(){
     if(window.__TC_GLOBAL_EVENTS__)return;
     window.__TC_GLOBAL_EVENTS__=true;
@@ -73,7 +85,7 @@
       if(typeof window.closeDropdowns==='function')window.closeDropdowns();
       if(typeof window.closeSidebar==='function')window.closeSidebar();
     });
-    window.addEventListener('tc:dataready',function(){renderCurrentView();});
+    window.addEventListener('tc:dataready',function(){scheduleRender();});
   }
 
   function loadDataInBackground(){
@@ -112,12 +124,10 @@
     }catch(error){console.warn('[MAIN] Navigation initiale:',error);}
 
     /*
-     * Le router planifie déjà le rendu de la vue 30 ms après nav().
-     * Ne pas appeler renderCurrentView() ici : cela doublait systématiquement
-     * le premier rendu et, avec les événements dataready, créait une cascade
-     * de rendus identiques. Fallback uniquement si aucun routeur n'a pu router.
+     * Le routeur possède son propre rendu différé. Le rendu initial n'est
+     * donc déclenché ici que si aucun routeur n'a pu prendre la main.
      */
-    if(!routed) setTimeout(renderCurrentView,0);
+    if(!routed) scheduleRender();
 
     setTimeout(loadStyles,0);
     setTimeout(loadDataInBackground,0);
