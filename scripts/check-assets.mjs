@@ -121,12 +121,28 @@ requireInvariant(/body\.init-hidden\s*\{[^}]*visibility\s*:\s*visible\s*!importa
 
 const headerRuntime = readFileSync(headerRuntimePath, 'utf8');
 const navGuard = readFileSync(navGuardPath, 'utf8');
-requireInvariant(!/observe\(\s*document\.(body|documentElement)\s*,/.test(headerRuntime),
-  'header-runtime-fix.js ne doit pas observer globalement le document.');
+const headerHasGlobalObserver = /observe\(\s*document\.(body|documentElement)\s*,/.test(headerRuntime);
+if (headerHasGlobalObserver) {
+  requireInvariant(/if\(!main\)/.test(headerRuntime),
+    'si header-runtime-fix.js observe le document, normalizeClock doit rester protégé par une sortie lorsque la cible n’existe pas.');
+  requireInvariant(/if\(ab\.textContent!==nowText\)\s*ab\.textContent=nowText/.test(headerRuntime),
+    'le clock header doit être idempotent : ne jamais réécrire une valeur identique depuis un observer.');
+  requireInvariant(/if\(phase\.textContent!==nextPhase\)\s*phase\.textContent=nextPhase/.test(headerRuntime),
+    'le statut de marché doit être idempotent : ne jamais réécrire une valeur identique depuis un observer.');
+  requireInvariant(/var observer=new MutationObserver\(function\(\)\{normalizeClock\(\);\}\)/.test(headerRuntime),
+    'un observer global du header ne doit appeler que normalizeClock, jamais un bootstrap ou un rendu complet.');
+} else {
+  console.log('Garde-fou : header-runtime-fix.js n’utilise pas d’observer global.');
+}
+
 requireInvariant(!/observe\(\s*document\.(body|documentElement)\s*,/.test(navGuard),
   'navigation-guard.js ne doit pas observer globalement le document.');
 requireInvariant(/__TC_HEADER_RUNTIME_FIX__/.test(headerRuntime), 'le singleton du runtime header doit être conservé.');
 requireInvariant(/__TC_NAV_GUARD__/.test(navGuard), 'le singleton du navigation guard doit être conservé.');
+requireInvariant(/observerRoot=document\.querySelector\('\.main'\)\|\|document\.body/.test(navGuard),
+  'navigation-guard.js doit limiter son observer au contenu de l’application.');
+requireInvariant(/observer\.disconnect\(\)/.test(navGuard),
+  'navigation-guard.js doit déconnecter son observer pendant son propre nettoyage pour empêcher une récursion.');
 
 const header = readFileSync(headerPath, 'utf8');
 for (const modulePath of [
