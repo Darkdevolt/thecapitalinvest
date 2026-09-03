@@ -50,8 +50,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Capital, Intelligence Financière BRVM</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js"></script>
 <link rel="stylesheet" href="/app/css/overview-insights.css">
 <link rel="stylesheet" href="/app/css/financials-documents.css">
 <link rel="stylesheet" href="/app/css/variables.css">
@@ -1196,79 +1196,79 @@
 </main>
 
 <!-- ═══ NOUVELLE ARCHITECTURE (ordre strict) ═══ -->
-<script src="/js/env.js"></script>
+<script defer src="/js/env.js"></script>
 <!-- Remontée visible des erreurs : une section vide devient un message lisible
      au lieu d'un silence. Chargé en premier pour capter les échecs suivants. -->
-<script src="/app/js/error-reporter.js"></script>
-<script src="/app/js/cache.js"></script>
-<script src="/app/js/fetch.js"></script>
-<script src="/app/js/loader.js"></script>
-<script src="/app/js/table-sort.js"></script>
+<script defer src="/app/js/error-reporter.js"></script>
+<script defer src="/app/js/cache.js"></script>
+<script defer src="/app/js/fetch.js"></script>
+<script defer src="/app/js/loader.js"></script>
+<script defer src="/app/js/table-sort.js"></script>
 
 <!-- ═══ ANCIENNE APP (commentez api.js, fetch.js le remplace) ═══ -->
-<script src="/app/js/utils.js?v=5"></script>
-<script src="/app/js/components.js?v=5"></script>
-<script src="/app/js/state.js?v=5"></script>
+<script defer src="/app/js/utils.js?v=5"></script>
+<script defer src="/app/js/components.js?v=5"></script>
+<script defer src="/app/js/state.js?v=5"></script>
 <!-- -->
-<script src="/app/js/ui.js?v=5"></script>
-<script src="/app/js/search.js?v=5"></script>
-<script src="/app/js/views/marche.js"></script>
-<script src="/app/js/views/overview.js?v=5"></script>
-<script src="/app/js/views/overview-insights.js"></script>
-<script src="/app/js/views/financials-documents.js"></script>
-<script src="/app/js/views/titres.js?v=5"></script>
-<script src="/app/js/views/fiche.js?v=5"></script>
-<script src="/app/js/views/boc.js?v=5"></script>
-<script src="/app/js/views/analyses.js?v=5"></script>
-<script src="/app/js/views/screener.js?v=5"></script>
-<script src="/app/js/views/portefeuille/portefeuille-utils.js?v=5"></script>
-<script src="/app/js/views/portefeuille/portefeuille-prices.js?v=5"></script>
-<script src="/app/js/views/portefeuille/portefeuille-history.js?v=5"></script>
-<script src="/app/js/views/portefeuille/portefeuille-charts.js?v=5"></script>
-<script src="/app/js/views/portefeuille/portefeuille-crud.js?v=5"></script>
-<script src="/app/js/views/portefeuille/portefeuille-main.js?v=5"></script>
-<script src="/app/js/views/alertes.js?v=5"></script>
-<script src="/app/js/views/financials.js?v=5"></script>
-<script src="/app/js/views/publications.js?v=5"></script>
-<script src="/app/js/views/formation.js?v=5"></script>
+<script defer src="/app/js/ui.js?v=5"></script>
+<script defer src="/app/js/search.js?v=5"></script>
+<script defer src="/app/js/views/marche.js"></script>
+<script defer src="/app/js/views/overview.js?v=5"></script>
+<script defer src="/app/js/views/overview-insights.js"></script>
+<script defer src="/app/js/views/financials-documents.js"></script>
+<script defer src="/app/js/views/titres.js?v=5"></script>
+<script defer src="/app/js/views/fiche.js?v=5"></script>
+<script defer src="/app/js/views/boc.js?v=5"></script>
+<script defer src="/app/js/views/analyses.js?v=5"></script>
+<script defer src="/app/js/views/screener.js?v=5"></script>
+<script defer src="/app/js/views/portefeuille/portefeuille-utils.js?v=5"></script>
+<script defer src="/app/js/views/portefeuille/portefeuille-prices.js?v=5"></script>
+<script defer src="/app/js/views/portefeuille/portefeuille-history.js?v=5"></script>
+<script defer src="/app/js/views/portefeuille/portefeuille-charts.js?v=5"></script>
+<script defer src="/app/js/views/portefeuille/portefeuille-crud.js?v=5"></script>
+<script defer src="/app/js/views/portefeuille/portefeuille-main.js?v=5"></script>
+<script defer src="/app/js/views/alertes.js?v=5"></script>
+<script defer src="/app/js/views/financials.js?v=5"></script>
+<script defer src="/app/js/views/publications.js?v=5"></script>
+<script defer src="/app/js/views/formation.js?v=5"></script>
 <!-- Memos contextuels, partages par toutes les vues -->
-<script src="/app/js/shared/memo-data.js?v=1"></script>
-<script src="/app/js/shared/memo.js?v=1"></script>
+<script defer src="/app/js/shared/memo-data.js?v=1"></script>
+<script defer src="/app/js/shared/memo.js?v=1"></script>
 
 <!-- Analyse fondamentale pro : noyau, valorisation, interface.
      analyse-fondamentale.js et fundamental-ratios.js restent sur le
      disque mais ne sont plus charges, entierement remplaces. -->
-<script src="/app/js/views/fondamentale/af-core.js?v=1"></script>
-<script src="/app/js/views/fondamentale/af-valuation.js?v=1"></script>
-<script src="/app/js/views/fondamentale/af-app.js?v=1"></script>
+<script defer src="/app/js/views/fondamentale/af-core.js?v=1"></script>
+<script defer src="/app/js/views/fondamentale/af-valuation.js?v=1"></script>
+<script defer src="/app/js/views/fondamentale/af-app.js?v=1"></script>
 <!-- Modules entièrement développés mais qui n'étaient chargés par aucune page :
      comparateur de valeurs, screener de dividendes, garde de navigation.
      Chargés avant le routeur, qui appelle leurs fonctions de rendu. -->
-<script src="/app/js/navigation-guard.js"></script>
+<script defer src="/app/js/navigation-guard.js"></script>
 <!-- Mode d'affichage Simple / Pro. La route /api/preferences le gérait déjà
      côté serveur ; seul le chargement de ce module manquait. -->
-<script src="/app/js/mode.js"></script>
-<script src="/app/js/views/comparison.js"></script>
-<script src="/app/js/views/dividend-screener.js"></script>
-<script src="/app/js/router.js?v=5"></script>
-<script src="/app/js/components/header.js?v=5"></script>
-<script src="/app/js/components/sidebar.js?v=5"></script>
-<script src="/app/js/components/cards.js?v=5"></script>
+<script defer src="/app/js/mode.js"></script>
+<script defer src="/app/js/views/comparison.js"></script>
+<script defer src="/app/js/views/dividend-screener.js"></script>
+<script defer src="/app/js/router.js?v=5"></script>
+<script defer src="/app/js/components/header.js?v=5"></script>
+<script defer src="/app/js/components/sidebar.js?v=5"></script>
+<script defer src="/app/js/components/cards.js?v=5"></script>
 <!-- ═══ ANALYSE TECHNIQUE PRO ═══
      Cinq modules, chargés dans cet ordre : la bibliothèque de calcul,
      le catalogue d'indicateurs, le moteur de rendu, la couche
      analytique, puis l'application. Les anciens modules de la vue
      restent sur le disque mais ne sont plus chargés : ils sont
      entièrement remplacés par ceux-ci. -->
-<script src="/app/js/views/technique/pro/at-math.js?v=1"></script>
-<script src="/app/js/views/technique/pro/at-indicators.js?v=1"></script>
-<script src="/app/js/views/technique/pro/at-chart.js?v=1"></script>
-<script src="/app/js/views/technique/pro/at-analysis.js?v=1"></script>
-<script src="/app/js/views/technique/pro/at-app.js?v=1"></script>
-<script src="/app/js/main.js?v=7"></script>
+<script defer src="/app/js/views/technique/pro/at-math.js?v=1"></script>
+<script defer src="/app/js/views/technique/pro/at-indicators.js?v=1"></script>
+<script defer src="/app/js/views/technique/pro/at-chart.js?v=1"></script>
+<script defer src="/app/js/views/technique/pro/at-analysis.js?v=1"></script>
+<script defer src="/app/js/views/technique/pro/at-app.js?v=1"></script>
+<script defer src="/app/js/main.js?v=7"></script>
 
 <!-- ═══ INIT TOUJOURS DERNIER ═══ -->
-<script src="/app/js/init.js"></script>
+<script defer src="/app/js/init.js"></script>
 <script>
   document.body.classList.remove('init-hidden');
   document.body.style.opacity='1';
