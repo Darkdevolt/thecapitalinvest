@@ -34,41 +34,6 @@ body.init-hidden { visibility: visible; }
 body::before { content: ''; position: fixed; inset: 0; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E"); pointer-events: none; z-index: 0; opacity: 0.5; }
 
 /* ═══════════════════════════════════════
-   THE CAPITAL, BRAND LOGO
-   ═══════════════════════════════════════ */
-.logo-title,
-.topnav-logo {
-  font-size: 0 !important;
-  line-height: 0 !important;
-  color: transparent !important;
-  background-image: url('/assets/the-capital-logo.png');
-  background-repeat: no-repeat;
-  background-position: center;
-  background-size: contain;
-  flex-shrink: 0;
-}
-
-.logo-title {
-  width: 280px;
-  height: 88px;
-  min-height: 88px;
-}
-
-/* Logo de la barre supérieure, contenu dans les 64px du header */
-.topnav-logo {
-  width: 180px;
-  height: 52px;
-  min-height: 52px;
-  max-width: 180px;
-  max-height: 52px;
-  cursor: pointer;
-  padding: 0 !important;
-  border-right: 0 !important;
-  margin-right: 16px !important;
-  overflow: hidden;
-}
-
-/* ═══════════════════════════════════════
    ÉTATS FINANCIERS, LISIBILITÉ / HIÉRARCHIE
    Présentation uniquement : aucune donnée ni logique métier modifiée.
    ═══════════════════════════════════════ */
@@ -99,13 +64,9 @@ body::before { content: ''; position: fixed; inset: 0; background-image: url("da
 @media (max-width: 1100px) {
   .main .view#view-financials .fin-detail-grid,
   .main .view#view-financials-detail .fin-detail-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
-  .logo-title { width: 240px; height: 76px; min-height: 76px; }
-  .topnav-logo { width: 165px; height: 48px; min-height: 48px; max-width: 165px; max-height: 48px; margin-right: 10px !important; }
 }
 
 @media (max-width: 700px) {
   .main .view#view-financials .fin-detail-grid,
   .main .view#view-financials-detail .fin-detail-grid { grid-template-columns: 1fr !important; }
-  .logo-title { width: 210px; height: 66px; min-height: 66px; }
-  .topnav-logo { width: 145px; height: 44px; min-height: 44px; max-width: 145px; max-height: 44px; margin-right: 6px !important; }
 }
