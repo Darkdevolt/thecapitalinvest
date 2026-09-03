@@ -1,0 +1,14 @@
+/* Header dropdowns must escape the horizontal navigation clipping layer. */
+.header .nav-dropdown-menu{
+  position:fixed!important;
+  z-index:10050!important;
+  max-width:min(420px,calc(100vw - 20px))!important;
+  max-height:calc(100vh - 84px)!important;
+}
+
+@media (max-width:900px){
+  .header .nav-dropdown-menu{
+    max-width:calc(100vw - 12px)!important;
+    max-height:calc(100vh - 68px)!important;
+  }
+}
