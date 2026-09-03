@@ -7,6 +7,51 @@ function initHeader() {
   // Clock, search, user info updates
 }
 
+/*
+ * Header navigation contract.
+ * app.html already uses these handlers inline; keep the public API explicit
+ * so the dropdowns do not depend on a secondary runtime script loading first.
+ */
+(function installHeaderDropdownContract(){
+  if (window.__TC_HEADER_DROPDOWN_CONTRACT__) return;
+  window.__TC_HEADER_DROPDOWN_CONTRACT__ = true;
+
+  window.closeDropdowns = function(){
+    document.querySelectorAll('.header .nav-dropdown.open').forEach(function(dropdown){
+      dropdown.classList.remove('open');
+      var button = dropdown.querySelector('.nav-dropdown-btn');
+      if (button) button.setAttribute('aria-expanded','false');
+    });
+  };
+
+  window.toggleDropdown = function(id){
+    var dropdown = document.getElementById(id);
+    if (!dropdown) return;
+    var wasOpen = dropdown.classList.contains('open');
+    window.closeDropdowns();
+    if (!wasOpen) {
+      dropdown.classList.add('open');
+      var button = dropdown.querySelector('.nav-dropdown-btn');
+      if (button) button.setAttribute('aria-expanded','true');
+    }
+  };
+
+  var style = document.createElement('style');
+  style.id = 'tc-header-dropdown-contract-css';
+  style.textContent = `
+    /* Dropdowns must escape the horizontal navigation clipping region. */
+    .header .topnav{overflow:visible!important;overflow-y:visible!important;}
+    .header .nav-dropdown{position:relative!important;overflow:visible!important;}
+    .header .nav-dropdown-menu{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;position:absolute!important;}
+    .header .nav-dropdown.open > .nav-dropdown-menu{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;}
+    @media(max-width:900px){
+      .header .topnav{overflow-x:auto!important;overflow-y:visible!important;}
+      .header .nav-dropdown-menu{position:fixed!important;top:58px!important;max-height:calc(100vh - 70px)!important;}
+    }
+  `;
+  document.head.appendChild(style);
+})();
+
 (function loadDisplayAndProductModules(){
   const scripts = [
     '/app/js/mode.js',
