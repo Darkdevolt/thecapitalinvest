@@ -1,5 +1,7 @@
 /* THE CAPITAL — Global UI consistency layer
-   Presentation only. Intentionally does not alter data, APIs or business logic. */
+ * Presentation only. Intentionally does not alter data, APIs or business logic.
+ * Header geometry is owned exclusively by header-final.css.
+ */
 :root{--tc-radius:10px;--tc-radius-lg:12px;--tc-gap:16px;--tc-line:rgba(184,150,78,.14);--tc-line-soft:rgba(184,150,78,.075);--tc-panel:rgba(22,19,13,.96);--tc-panel-alt:rgba(26,22,16,.96)}
 .main{max-width:1540px;margin:0 auto;padding:26px 30px 52px;position:relative;z-index:1}
 .view>.page-header{margin:0 0 22px;padding:0 0 17px;border-bottom:1px solid var(--tc-line-soft)}
@@ -23,53 +25,8 @@ html,body{overflow-x:hidden}.main{width:100%;max-width:1600px;margin-left:auto;m
 body:has(.wrap .tabs) .wrap{width:min(1500px,100%);margin:auto}body:has(.wrap .tabs) .head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:end;gap:24px}body:has(.wrap .tabs) .head>div:first-child{min-width:0}body:has(.wrap .tabs) .actions{max-width:100%;justify-content:flex-end}body:has(.wrap .tabs) .grid{min-width:0}body:has(.wrap .tabs) .grid>*,body:has(.wrap .tabs) .kpis>*{min-width:0}body:has(.wrap .tabs) .card{min-width:0}body:has(.wrap .tabs) .idea-row,body:has(.wrap .tabs) .position-row{min-width:0}
 .items,.item,.item>div:last-child,.intro-block,.grid,.path{min-width:0}.item b,.item span{overflow-wrap:anywhere}img,svg,video,iframe{max-width:100%}button{max-width:100%}
 
-/* HEADER FINAL LAYOUT FIX — prevents the navigation from visually colliding at compact desktop widths. */
-.header{min-width:0;gap:10px;padding-left:18px;padding-right:18px}
-.topnav{min-width:0;flex:1 1 auto;gap:2px;overflow:hidden}
-.topnav-logo{flex:0 0 auto;max-width:170px;margin-right:6px;padding-right:14px}
-.nav-dropdown{flex:0 0 auto;min-width:0}
-.nav-dropdown-btn{padding:7px 10px;font-size:11.5px;gap:5px}
-.topnav-right{flex:0 0 auto;min-width:0;gap:7px;padding-left:10px}
-.topnav-right .global-search{width:150px;max-width:150px;flex:0 0 150px}
-.topnav-right .header-time{font-size:10px}
-.topnav-right .header-badge{padding:5px 9px;font-size:9px}
-.topnav-right .topnav-username{max-width:82px;font-size:10px}
-
-/* Keep the header readable when the browser viewport is around tablet/compact-desktop width. */
-@media(max-width:1200px){
- .header{gap:7px;padding-left:12px;padding-right:12px}
- .topnav-logo{max-width:120px;padding-right:9px;margin-right:2px;font-size:13px;letter-spacing:1.4px}
- .nav-dropdown-btn{padding:6px 7px;font-size:10px;gap:4px}
- .nav-dropdown-btn>span:first-child{display:none}
- .topnav-divider{margin:0 1px;height:16px}
- .topnav-right{gap:5px;padding-left:7px}
- .topnav-right .global-search{width:118px;max-width:118px;flex-basis:118px}
- .topnav-right .header-time{display:none}
- .topnav-right .topnav-username{display:none}
- .topnav-right .topnav-user{padding:3px}
- .topnav-right .header-badge{padding:4px 7px}
-}
-
-/* At true mobile widths, let the navigation scroll rather than overlap. */
 @media(max-width:760px){
- .header{height:58px;padding:0 10px;gap:6px}
- .topnav{overflow-x:auto;overflow-y:hidden;scrollbar-width:none;-webkit-overflow-scrolling:touch}
- .topnav::-webkit-scrollbar{display:none}
- .topnav-logo{position:sticky;left:0;background:rgba(10,8,4,.98);z-index:2;max-width:112px;padding-right:9px;margin-right:1px;font-size:12px}
- .topnav-divider{display:none}
- .nav-dropdown-btn{padding:7px 8px;font-size:10.5px}
- .topnav-right{gap:5px;padding-left:0;border-left:0}
- .topnav-right .global-search{width:96px;max-width:96px;flex-basis:96px}
- .topnav-right .header-badge{display:none}
- .topnav-logout{font-size:9px;padding:5px 6px}
- .main{padding:18px 12px 34px}
- .view>.page-header{margin-bottom:17px;padding-bottom:13px}
- .view>.page-header h1{font-size:23px}.view>.page-header p{font-size:11px}
- .view .card{margin-bottom:12px!important}.view .card-header{padding:12px 14px!important}.view .card-body{padding:14px!important}
- .view .grid-2,.view .grid-3,.view .grid-4,.view .grid-5,.view .grid-7030,.view .session-grid,.view .portf-summary,.view .portf-kpi-grid{grid-template-columns:1fr!important;gap:10px;margin-bottom:12px}
- .view .stat-card,.view .portf-item,.view .portf-kpi{padding:15px}.view .stat-value,.view .portf-item-value,.view .portf-kpi-value{font-size:19px}
- .view .chart-container{height:200px}.view .chart-container.tall{height:260px}.view .chart-container.xl{height:300px}
- .view .search-bar{align-items:stretch}.view .search-bar .search-input{flex-basis:100%}.view .search-bar .filter-btn{flex:1 1 auto}
+ .main{padding:18px 12px 34px}.view>.page-header{margin-bottom:17px;padding-bottom:13px}.view>.page-header h1{font-size:23px}.view>.page-header p{font-size:11px}.view .card{margin-bottom:12px!important}.view .card-header{padding:12px 14px!important}.view .card-body{padding:14px!important}.view .grid-2,.view .grid-3,.view .grid-4,.view .grid-5,.view .grid-7030,.view .session-grid,.view .portf-summary,.view .portf-kpi-grid{grid-template-columns:1fr!important;gap:10px;margin-bottom:12px}.view .stat-card,.view .portf-item,.view .portf-kpi{padding:15px}.view .stat-value,.view .portf-item-value,.view .portf-kpi-value{font-size:19px}.view .chart-container{height:200px}.view .chart-container.tall{height:260px}.view .chart-container.xl{height:300px}.view .search-bar{align-items:stretch}.view .search-bar .search-input{flex-basis:100%}.view .search-bar .filter-btn{flex:1 1 auto}
  body:has(.wrap .tabs) .wrap{padding:18px 12px 40px!important}body:has(.wrap .tabs) .head{grid-template-columns:1fr;gap:13px!important}body:has(.wrap .tabs) .actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));width:100%;gap:7px}body:has(.wrap .tabs) .actions .btn{min-width:0}body:has(.wrap .tabs) .tabs{width:100%;max-width:100%;overflow-x:auto}body:has(.wrap .tabs) .kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}body:has(.wrap .tabs) .grid{grid-template-columns:1fr}body:has(.wrap .tabs) .idea-row,body:has(.wrap .tabs) .position-row{grid-template-columns:1fr 1fr;gap:8px}
 }
 @media(max-width:480px){.main{padding-inline:10px}.view>.page-header h1{font-size:21px}.view .card-header{gap:8px}.view .card-body{padding:12px}.view .search-bar .filter-btn{min-width:0;padding-inline:8px}body:has(.wrap .tabs) .wrap{padding-inline:10px!important}body:has(.wrap .tabs) .actions{grid-template-columns:1fr}body:has(.wrap .tabs) .kpis{grid-template-columns:1fr}}
