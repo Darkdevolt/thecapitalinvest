@@ -9,47 +9,30 @@ function initHeader() {
 
 /*
  * Header navigation contract.
- * app.html already uses these handlers inline; keep the public API explicit
- * so the dropdowns do not depend on a secondary runtime script loading first.
+ * app.html uses these handlers inline. Keep one canonical implementation
+ * and let header-runtime-fix.js own the click interaction layer.
  */
 (function installHeaderDropdownContract(){
   if (window.__TC_HEADER_DROPDOWN_CONTRACT__) return;
   window.__TC_HEADER_DROPDOWN_CONTRACT__ = true;
 
-  window.closeDropdowns = function(){
+  window.closeDropdowns = function(except){
     document.querySelectorAll('.header .nav-dropdown.open').forEach(function(dropdown){
-      dropdown.classList.remove('open');
+      if (dropdown !== except) dropdown.classList.remove('open');
       var button = dropdown.querySelector('.nav-dropdown-btn');
-      if (button) button.setAttribute('aria-expanded','false');
+      if (button) button.setAttribute('aria-expanded', dropdown === except ? 'true' : 'false');
     });
   };
 
   window.toggleDropdown = function(id){
     var dropdown = document.getElementById(id);
     if (!dropdown) return;
+    var button = dropdown.querySelector('.nav-dropdown-btn');
     var wasOpen = dropdown.classList.contains('open');
-    window.closeDropdowns();
-    if (!wasOpen) {
-      dropdown.classList.add('open');
-      var button = dropdown.querySelector('.nav-dropdown-btn');
-      if (button) button.setAttribute('aria-expanded','true');
-    }
+    window.closeDropdowns(dropdown);
+    dropdown.classList.toggle('open', !wasOpen);
+    if (button) button.setAttribute('aria-expanded', !wasOpen ? 'true' : 'false');
   };
-
-  var style = document.createElement('style');
-  style.id = 'tc-header-dropdown-contract-css';
-  style.textContent = `
-    /* Dropdowns must escape the horizontal navigation clipping region. */
-    .header .topnav{overflow:visible!important;overflow-y:visible!important;}
-    .header .nav-dropdown{position:relative!important;overflow:visible!important;}
-    .header .nav-dropdown-menu{display:none!important;visibility:hidden!important;opacity:0!important;pointer-events:none!important;position:absolute!important;}
-    .header .nav-dropdown.open > .nav-dropdown-menu{display:block!important;visibility:visible!important;opacity:1!important;pointer-events:auto!important;}
-    @media(max-width:900px){
-      .header .topnav{overflow-x:auto!important;overflow-y:visible!important;}
-      .header .nav-dropdown-menu{position:fixed!important;top:58px!important;max-height:calc(100vh - 70px)!important;}
-    }
-  `;
-  document.head.appendChild(style);
 })();
 
 (function loadDisplayAndProductModules(){
