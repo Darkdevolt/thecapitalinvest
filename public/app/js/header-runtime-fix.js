@@ -1,5 +1,5 @@
-/* THE CAPITAL — header runtime interaction
-   Presentation + navigation interaction only. No data/auth/API changes. */
+/* THE CAPITAL — header runtime CSS
+   Presentation + navigation support only. No data/auth/API changes. */
 (function(){
   'use strict';
   if(window.__TC_HEADER_RUNTIME_FIX__) return;
@@ -10,7 +10,9 @@
     var s=document.createElement('style');
     s.id='tc-header-runtime-fix-css';
     s.textContent=`
-      .header .nav-dropdown{position:relative!important;z-index:6000!important}
+      /* Do not let the horizontal nav clip its dropdown children on desktop. */
+      .header .topnav{overflow:visible!important;overflow-y:visible!important}
+      .header .nav-dropdown{position:relative!important;z-index:6000!important;overflow:visible!important}
       .header .nav-dropdown-btn{cursor:pointer!important;user-select:none!important}
       .header .nav-dropdown-menu{
         display:none!important;
@@ -41,7 +43,10 @@
         color:var(--gold2,#e0c176)!important;
       }
       .header .nav-dropdown-menu .nav-dropdown-item{cursor:pointer!important}
+
       @media(max-width:900px){
+        /* Menu is viewport-positioned on mobile, so the horizontal scroller cannot clip it. */
+        .header .topnav{overflow-x:auto!important;overflow-y:visible!important}
         .header .nav-dropdown-menu{
           position:fixed!important;
           top:58px!important;
@@ -56,57 +61,16 @@
     document.head.appendChild(s);
   }
 
-  function closeAll(except){
-    document.querySelectorAll('.header .nav-dropdown.open').forEach(function(d){
-      if(d!==except)d.classList.remove('open');
-      var b=d.querySelector('.nav-dropdown-btn');
-      if(b)b.setAttribute('aria-expanded',d===except?'true':'false');
-    });
-  }
-
-  function initDropdowns(){
-    if(window.__TC_HEADER_DROPDOWNS__) return;
-    window.__TC_HEADER_DROPDOWNS__=true;
-
-    document.querySelectorAll('.header .nav-dropdown').forEach(function(dropdown){
-      var btn=dropdown.querySelector('.nav-dropdown-btn');
-      if(!btn || !dropdown.id) return;
-      btn.setAttribute('aria-haspopup','true');
-      btn.setAttribute('aria-expanded','false');
-    });
-
-    document.addEventListener('click',function(e){
-      var btn=e.target.closest('.header .nav-dropdown-btn');
-      if(btn){
-        var parent=btn.closest('.nav-dropdown');
-        if(!parent || !parent.id || btn.id==='nav-overview') return;
-        e.preventDefault();
-        closeAll(parent);
-        var opening=!parent.classList.contains('open');
-        parent.classList.toggle('open',opening);
-        btn.setAttribute('aria-expanded',opening?'true':'false');
-        return;
-      }
-      if(!e.target.closest('.header .nav-dropdown')) closeAll(null);
-    });
-
-    document.addEventListener('keydown',function(e){
-      if(e.key==='Escape'){
-        closeAll(null);
-        var active=document.querySelector('.header .nav-dropdown.open .nav-dropdown-btn');
-        if(active)active.focus();
-      }
-    });
-
-    window.addEventListener('resize',function(){closeAll(null)});
-    window.addEventListener('scroll',function(e){
-      if(e.target===document || e.target===document.documentElement || e.target===document.body) closeAll(null);
-    },{passive:true});
-  }
-
   function boot(){
     injectCss();
-    initDropdowns();
+
+    /* app.html already owns click handling through toggleDropdown().
+       Do not install a second listener here: two controllers would toggle
+       the same menu twice and make the dropdown appear not to respond. */
+    document.querySelectorAll('.header .nav-dropdown .nav-dropdown-btn').forEach(function(btn){
+      if(!btn.hasAttribute('aria-haspopup')) btn.setAttribute('aria-haspopup','true');
+      if(!btn.hasAttribute('aria-expanded')) btn.setAttribute('aria-expanded','false');
+    });
   }
 
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});
