@@ -104,9 +104,15 @@
     }
     var ab=host.querySelector('#tc-clock-abidjan');
     if(ab){
-      try{ab.textContent=new Intl.DateTimeFormat('fr-FR',{timeZone:'Africa/Abidjan',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date())}catch(e){}
+      try{
+        var nowText=new Intl.DateTimeFormat('fr-FR',{timeZone:'Africa/Abidjan',hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false}).format(new Date());
+        if(ab.textContent!==nowText) ab.textContent=nowText;
+      }catch(e){}
     }
-    phase.textContent=phaseText();
+    if(phase){
+      var nextPhase=phaseText();
+      if(phase.textContent!==nextPhase) phase.textContent=nextPhase;
+    }
   }
 
   function initDropdowns(){
