@@ -58,7 +58,6 @@ for (const file of files.filter(f => f.endsWith('.js'))) {
         failures.push(`${file} charge dynamiquement ${raw} : fichier introuvable`);
       }
     } else {
-      // Chemin relatif : résolu depuis l'URL de la page, pas du script.
       const candidate = normalize(join(ROOT, raw));
       if (!existsSync(candidate)) {
         failures.push(`${file} charge dynamiquement « ${raw} » (chemin relatif) : introuvable depuis la racine du site. Utiliser un chemin absolu.`);
@@ -69,12 +68,7 @@ for (const file of files.filter(f => f.endsWith('.js'))) {
   }
 }
 
-/**
- * Contrôle de syntaxe. Chaque JavaScript du dépôt doit pouvoir être parsé par
- * le même moteur Node que celui utilisé par Vercel. Une erreur de syntaxe est
- * bloquante : le navigateur peut sinon ignorer un module entier et laisser une
- * application partiellement initialisée.
- */
+// Contrôle de syntaxe de tous les JavaScript avant déploiement.
 for (const file of files.filter(f => f.endsWith('.js'))) {
   try {
     execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
@@ -143,7 +137,8 @@ for (const modulePath of [
   '/app/js/header-polish.js',
   '/app/js/header-runtime-fix.js'
 ]) {
-  requireInvariant(count(header, new RegExp(`['"]${modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}['"]`, 'g') === 1,
+  const escaped = modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  requireInvariant(count(header, new RegExp(`['"]${escaped}['"]`, 'g')) === 1,
     `header.js doit référencer exactement une fois ${modulePath}.`);
 }
 
@@ -155,7 +150,7 @@ for (const file of files) {
 }
 
 // admin.html est hors périmètre des correctifs app. Toute modification doit être
-// volontaire et explicite, sinon le build bloque plutôt que de déployer à l'aveugle.
+// volontaire et explicite, sinon le build bloque plutôt que de déployer à l’aveugle.
 const adminPath = 'public/admin.html';
 const expectedAdminBlobSha = '482287168d1fb384b27e5b654752bd6ba830933e';
 function gitBlobSha(text) {
