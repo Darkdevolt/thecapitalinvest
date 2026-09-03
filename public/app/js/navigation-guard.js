@@ -14,6 +14,7 @@
   };
   var STORAGE = '__tc_navigation_stack_v2__';
   var suppressNext = false, wrapped = false;
+  var observer = null, observerRoot = null;
 
   function rawCurrent() {
     if (typeof window.parseHashFromUrl === 'function') { try { return window.parseHashFromUrl(); } catch (e) {} }
@@ -45,7 +46,7 @@
   }
 
   // Supprime uniquement les vrais contrôles Retour, jamais leur conteneur.
-  // L'ancienne implémentation parcourait div/span et pouvait supprimer un
+  // L’ancienne implémentation parcourait div/span et pouvait supprimer un
   // bloc parent contenant à la fois le bouton Retour et des liens de page.
   function removeLegacyBackControls(){
     var nodes=document.querySelectorAll('button,a,[role="button"]');
@@ -89,11 +90,22 @@
     var home=document.createElement('button');home.type='button';home.className='tc-nav-home';home.textContent='Accueil';
     home.addEventListener('click',function(){writeStack([]);navigate('overview',true);});
     var trail=document.createElement('div');trail.className='tc-nav-trail';trail.innerHTML='<span>'+label(parent)+'</span>  /  <strong>'+label(v)+'</strong>';
-    box.appendChild(home);box.appendChild(trail);main.insertBefore(box,main.firstChild);
+    box.appendChild(home);box.appendChild(trail);
+    main.insertBefore(box,main.firstChild);
   }
   function wrapNav(){
     if(wrapped||typeof window.nav!=='function')return false;
-    var original=window.nav;window.nav=function(target){var before=current();if(target&&target!==before&&!suppressNext){var stack=readStack();if(stack[stack.length-1]!==before){stack.push(before);writeStack(stack);}}suppressNext=false;var r=original.apply(this,arguments);setTimeout(renderContext,0);return r;};wrapped=true;return true;
+    var original=window.nav;
+    window.nav=function(target){
+      var before=current();
+      if(target&&target!==before&&!suppressNext){var stack=readStack();if(stack[stack.length-1]!==before){stack.push(before);writeStack(stack);}}
+      suppressNext=false;
+      var r=original.apply(this,arguments);
+      setTimeout(renderContext,0);
+      return r;
+    };
+    wrapped=true;
+    return true;
   }
   window.tcNavigation={back:goBack,navigate:navigate,render:renderContext,parentFor:fallbackParent};
 
@@ -104,10 +116,28 @@
   },true);
   window.addEventListener('hashchange',function(){setTimeout(renderContext,0);});
   window.addEventListener('popstate',function(){setTimeout(renderContext,0);});
+
   document.addEventListener('DOMContentLoaded',function(){
-    var tries=0,timer=setInterval(function(){tries++;wrapNav();renderContext();if(wrapped||tries>30)clearInterval(timer);},100);
-    var observer=new MutationObserver(function(){removeLegacyBackControls();});
-    observer.observe(document.body,{childList:true,subtree:true});
+    var tries=0,timer=setInterval(function(){
+      tries++;
+      wrapNav();
+      renderContext();
+      if(wrapped||tries>30)clearInterval(timer);
+    },100);
+
+    // Guardrail: observe only the application content, not the whole document.
+    // Disconnect while cleaning so our own removals cannot recursively trigger
+    // the observer. The observer is strictly for legacy Back controls.
+    observerRoot=document.querySelector('.main')||document.body;
+    observer=new MutationObserver(function(){
+      if(observer)observer.disconnect();
+      try{removeLegacyBackControls();}
+      finally{
+        if(observerRoot&&observer)observer.observe(observerRoot,{childList:true,subtree:true});
+      }
+    });
+    if(observerRoot)observer.observe(observerRoot,{childList:true,subtree:true});
   });
+
   setTimeout(function(){wrapNav();renderContext();},100);
 })();
