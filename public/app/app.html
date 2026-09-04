@@ -66,7 +66,7 @@
 <link rel="stylesheet" href="/app/css/global-unified.css">
 </head>
 <body class="init-hidden">
-<a class="tc-skip-link" href="#view-overview">Aller au contenu principal</a>
+<a class="tc-skip-link" href="#main-content">Aller au contenu principal</a>
 <div class="overlay" id="overlay" aria-hidden="true"></div>
 <div class="toast-container" id="toastContainer"></div>
 
@@ -141,7 +141,7 @@
       </div>
     </div>
     <div class="topnav-divider"></div>
-    <div class="nav-dropdown">
+    <div class="nav-dropdown" id="dd-donnees">
       <button class="nav-dropdown-btn" id="nav-donnees-btn" type="button" data-dropdown="dd-donnees" aria-expanded="false" aria-haspopup="true"><span>≡</span> Données <span class="caret" aria-hidden="true">▼</span></button>
       <div class="nav-dropdown-menu" id="menu-dd-donnees">
         <div class="nav-dropdown-label">Données</div>
@@ -168,7 +168,7 @@
 
 <div class="breadcrumb" id="breadcrumb" aria-label="Fil d’Ariane"></div>
 <main class="main" id="main-content">
-<!-- ═══ OVERVIEW ═══ -->
+
 <div class="view active" id="view-overview">
   <div class="page-header"><h1>Tableau de Bord <span style="color:var(--gold)">BRVM</span></h1><p>Bourse Régionale des Valeurs Mobilières, Données de marché</p></div>
   <div class="grid-3" id="overviewStats">
@@ -192,14 +192,14 @@
 <div class="view" id="view-dividend-screener"><div class="page-header"><h1>Screener <span style="color:var(--gold)">Dividendes</span></h1><p>Rendement, croissance et historique de distribution</p></div><div id="dividendScreenerContent"></div></div>
 <div class="view" id="view-fiche"><div id="ficheContent"></div></div>
 <div class="view" id="view-portefeuille"><div id="portfolioContent"></div></div>
-<div class="view" id="view-alertes"><div class="page-header"><h1>Alertes <span style="color:var(--gold)">de Prix</span></h1><p>Recevez une notification quand un titre atteint votre seuil</p></div><div class="card mb20"><div class="card-header"><div class="card-title">Nouvelle alerte</div></div><div class="card-body"><div class="portf-form"><select id="alertTicker"><option value="">Ticker...</option></select><select id="alertCondition"><option value="above">Cours supérieur à</option><option value="below">Cours inférieur à</option></select><input type="number" id="alertPrice" placeholder="Seuil (FCFA)"><button type="button" data-action="add-alert">Créer l'alerte</button></div></div></div><div id="alertsList"></div></div>
+<div class="view" id="view-alertes"><div class="page-header"><h1>Alertes <span style="color:var(--gold)">de Prix</span></h1><p>Recevez une notification quand un titre atteint votre seuil</p></div><div class="card mb20"><div class="card-header"><div class="card-title">Nouvelle alerte</div></div><div class="card-body"><div class="portf-form"><select id="alertTicker"><option value="">Ticker...</option></select><select id="alertCondition"><option value="above">Cours supérieur à</option><option value="below">Cours inférieur à</option></select><input type="number" id="alertPrice" placeholder="Seuil (FCFA)"><button type="button" onclick="addAlert()">Créer l'alerte</button></div></div></div><div id="alertsList"></div></div>
 <div class="view" id="view-financials"><div class="page-header"><h1>États <span style="color:var(--gold)">Financiers</span></h1><p>Comptes annuels, semestriels, trimestriels et données fondamentales</p></div><div class="search-bar"><input class="search-input" id="searchFin" placeholder="Chercher une société..." oninput="filterFin()"></div><div id="finGrid"></div></div>
 <div class="view" id="view-financials-detail"><div id="finDetailContent"></div></div>
 <div class="view" id="view-publications"><div class="page-header"><h1>Calendrier des <span style="color:var(--gold)">Publications</span></h1><p>États financiers publiés et échéances attendues</p></div><div class="search-bar"><input class="search-input" id="searchPubs" placeholder="Filtrer par ticker, société..." oninput="filterPublications()"><button class="filter-btn active" onclick="setPubFilter('all',this)">Tous</button><button class="filter-btn" onclick="setPubFilter('annuel',this)">Annuel</button><button class="filter-btn" onclick="setPubFilter('s1',this)">Semestriel</button><button class="filter-btn" onclick="setPubFilter('t1',this)">T1</button><button class="filter-btn" onclick="setPubFilter('t2',this)">T2</button><button class="filter-btn" onclick="setPubFilter('t3',this)">T3</button></div><div id="publicationsGrid"></div></div>
 <div class="view" id="view-formation"><div class="page-header"><h1>Centre de <span style="color:var(--gold)">Formation</span></h1><p>Ressources pédagogiques BRVM</p></div><div id="formationContent"></div></div>
 <div class="view" id="view-marche"><div class="page-content"><div class="page-header"><h1>Marché <span style="color:var(--gold)">BRVM</span></h1><p>Bourse Régionale des Valeurs Mobilières · Données de marché · Abidjan, Côte d'Ivoire</p></div><div class="section" id="indices"><div class="section-title">Cours des Indices</div><div class="section-sub">Évolution des indices de référence de la BRVM</div><div class="grid-3 mb20"><div class="stat-card"><div class="stat-label">BRVM Composite</div><div class="stat-value" id="marche-idx-composite">—</div><div class="stat-change" id="marche-idx-composite-chg">—</div><div class="market-stat-meta" id="marche-idx-composite-vol">Volume, —</div></div><div class="stat-card"><div class="stat-label">BRVM 30</div><div class="stat-value" id="marche-idx-30">—</div><div class="stat-change" id="marche-idx-30-chg">—</div><div class="market-stat-meta" id="marche-idx-30-vol">—</div></div><div class="stat-card"><div class="stat-label">BRVM Prestige</div><div class="stat-value" id="marche-idx-prestige">—</div><div class="stat-change" id="marche-idx-prestige-chg">—</div><div class="market-stat-meta" id="marche-idx-prestige-vol">—</div></div></div><div class="card mb20"><div class="card-header"><div class="card-title">BRVM Composite, Historique</div><div class="period-controls" id="marche-idxPeriodBtns"><button class="filter-btn active" onclick="setIdxPeriod(30,this)">1M</button><button class="filter-btn" onclick="setIdxPeriod(90,this)">3M</button><button class="filter-btn" onclick="setIdxPeriod(252,this)">1A</button></div></div><div class="card-body"><div class="chart-container tall"><canvas id="marche-chartIndices"></canvas></div></div></div></div><div class="section" id="cours"><div class="section-title">Cours des Actions</div><div class="section-sub">Cotations de toutes les sociétés listées à la BRVM</div><div class="search-bar"><input class="search-input" id="marche-searchCours" placeholder="Rechercher un titre..." oninput="filterCours()"><button class="filter-btn active" onclick="setCoursFilter('all',this)">Tous</button><button class="filter-btn" onclick="setCoursFilter('up',this)">Hausse</button><button class="filter-btn" onclick="setCoursFilter('down',this)">Baisse</button><button class="filter-btn" onclick="setCoursFilter('banque',this)">Banque</button><button class="filter-btn" onclick="setCoursFilter('agro',this)">Agro</button><button class="filter-btn" onclick="setCoursFilter('industrie',this)">Industrie</button><button class="filter-btn" onclick="setCoursFilter('telecom',this)">Telecom</button></div><div class="card"><div class="card-header"><div class="card-title">Séance du <span id="marche-coursDate">—</span></div><div class="card-meta" id="marche-coursCount">—</div></div><div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours (FCFA)</th><th class="right">Variation</th><th class="right">+ Haut</th><th class="right">+ Bas</th><th class="right">Volume</th><th class="right">Capitalisation</th><th>Secteur</th></tr></thead><tbody id="marche-coursTable"></tbody></table></div></div></div><div class="section" id="palmares"><div class="section-title">Palmarès</div><div class="section-sub">Meilleures et moins bonnes performances de la séance</div><div class="grid-2"><div class="card"><div class="card-header"><div class="card-title">Top Hausses</div></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead><tbody id="marche-topHausses"></tbody></table></div></div><div class="card"><div class="card-header"><div class="card-title">Top Baisses</div></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th></tr></thead><tbody id="marche-topBaisses"></tbody></table></div></div></div><div class="card mb20"><div class="card-header"><div class="card-title">Top Volumes échangés</div></div><div class="table-wrap"><table><thead><tr><th>Titre</th><th class="right">Volume</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Valeur échangée</th></tr></thead><tbody id="marche-topVolumes"></tbody></table></div></div></div></div></div>
 
-<!-- Scripts métier : ordre critique conservé -->
+<!-- Scripts métier : ordre du bootstrap contractuel conservé -->
 <script src="/app/js/fetch.js"></script>
 <script src="/app/js/loader.js"></script>
 <script src="/app/js/table-sort.js"></script>
@@ -252,26 +252,15 @@
 <script>
 (function(){
   'use strict';
-  function routeFromTarget(target){
-    var route = target && target.getAttribute('data-route');
-    return route || '';
-  }
-  function activateRoute(route){
-    if(!route || typeof window.nav !== 'function') return;
-    window.nav(route);
-  }
-  function closeMenus(){
-    if(typeof window.closeDropdowns === 'function') window.closeDropdowns();
-  }
   function bind(){
     document.addEventListener('click', function(event){
       var routeTarget = event.target.closest && event.target.closest('[data-route]');
-      if(routeTarget){
-        var route = routeFromTarget(routeTarget);
-        if(route){
+      if(routeTarget && routeTarget.closest('header,aside')){
+        var route = routeTarget.getAttribute('data-route');
+        if(route && typeof window.nav === 'function'){
           event.preventDefault();
-          activateRoute(route);
-          closeMenus();
+          window.nav(route);
+          if(typeof window.closeDropdowns === 'function') window.closeDropdowns();
           if(typeof window.closeSidebar === 'function') window.closeSidebar();
           return;
         }
@@ -282,11 +271,14 @@
         window.toggleDropdown(dropdown.getAttribute('data-dropdown'));
         return;
       }
-      if(!event.target.closest('.nav-dropdown') && typeof window.closeDropdowns === 'function') closeMenus();
+      if(!event.target.closest('.nav-dropdown') && typeof window.closeDropdowns === 'function') window.closeDropdowns();
+      var logout = event.target.closest && event.target.closest('[data-action="logout"]');
+      if(logout && typeof window.doLogout === 'function') window.doLogout();
     });
     document.addEventListener('keydown', function(event){
-      var item = event.target.closest && event.target.closest('[data-route],.nav-dropdown-item,.nav-dropdown-btn,.sidebar-logo,.topnav-logo');
-      if(!item || (event.key !== 'Enter' && event.key !== ' ')) return;
+      if(event.key !== 'Enter' && event.key !== ' ') return;
+      var item = event.target.closest && event.target.closest('[data-route],[data-dropdown],.nav-dropdown-item,.sidebar-logo,.topnav-logo');
+      if(!item) return;
       event.preventDefault();
       item.click();
     });
@@ -297,10 +289,6 @@
     try{ localStorage.removeItem('tc_session'); }catch(e){}
     window.location.replace('/login.html');
   };
-  document.addEventListener('click', function(event){
-    var logout = event.target.closest && event.target.closest('[data-action="logout"]');
-    if(logout) window.doLogout();
-  });
 })();
 </script>
 </main>
