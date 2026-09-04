@@ -72,13 +72,15 @@
 
   function getSession(){
 
-    if(
-      window.tcSession &&
-      window.tcSession.access_token
-    ){
-
-      return window.tcSession;
-
+    try{
+      if(window.TC_ENV && typeof window.TC_ENV.getSession === 'function'){
+        const envSession = window.TC_ENV.getSession();
+        if(envSession && envSession.access_token && tokenIsValid(envSession.access_token)){
+          return envSession;
+        }
+      }
+    }catch(error){
+      console.warn('[INIT] Session TC_ENV indisponible:', error);
     }
 
     try{
@@ -147,6 +149,8 @@
 
     if(session){
 
+      // Compatibility bridge for legacy consumers. New code should use
+      // TC_ENV.getSession()/getToken() instead of reading these globals.
       window.tcSession =
         session;
 
@@ -269,70 +273,45 @@
   // ENRICHISSEMENTS
   // ----------------------------------------------------------
 
-  function loadSecondaryModules(){
+  function loadScript(src){
+    return new Promise(function(resolve){
+      if(document.querySelector('script[data-tc-secondary="' + src.replace(/"/g,'') + '"]')){
+        resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = src;
+      script.async = false;
+      script.dataset.tcSecondary = src;
+      script.onload = function(){ resolve(); };
+      script.onerror = function(){
+        console.warn('[INIT] Module secondaire indisponible:', src);
+        resolve();
+      };
+      document.head.appendChild(script);
+    });
+  }
+
+  async function loadSecondaryModules(){
 
     /*
-     * Les modules complémentaires ne doivent
-     * jamais empêcher l'affichage de l'app.
+     * Chargement séquentiel volontaire : l'ordre déclaré est l'ordre d'exécution.
+     * Cela retire la dépendance à la latence réseau tout en conservant
+     * l'indépendance fonctionnelle de chaque module.
      */
-
     const modules = [
-
       '/app/js/views/overview-fixes.js?v=1',
       '/app/js/views/brvm-market-hours.js?v=20260827.3',
       '/app/js/market-ux.js?v=20260827.2',
       '/app/js/views/technique/data-bridge.js?v=20260826',
       '/app/js/views/user-data-patch.js?v=7',
       '/app/js/views/fundamental-ratios.js?v=1'
-
     ];
 
-    modules.forEach(
-      function(src){
-
-        if(
-          document.querySelector(
-            'script[data-tc-secondary="' +
-            src.replace(/"/g,'') +
-            '"]'
-          )
-        ){
-
-          return;
-
-        }
-
-        const script =
-          document.createElement(
-            'script'
-          );
-
-        script.src = src;
-
-        /*
-         * Ces scripts ne sont pas critiques.
-         */
-        script.async = true;
-
-        script.dataset.tcSecondary =
-          src;
-
-        script.onerror =
-          function(){
-
-            console.warn(
-              '[INIT] Module secondaire indisponible:',
-              src
-            );
-
-          };
-
-        document.head.appendChild(
-          script
-        );
-
-      }
-    );
+    for(const src of modules){
+      await loadScript(src);
+    }
 
   }
 
@@ -340,7 +319,7 @@
   // INITIALISATION
   // ----------------------------------------------------------
 
-  function init(){
+  async function init(){
 
     if(
       !requireAuth()
@@ -404,27 +383,15 @@
     }
 
     /*
-     * Modules secondaires après affichage.
+     * Modules secondaires après affichage, mais dans un ordre déterministe.
      */
-    setTimeout(
-      function(){
+    try{
+      await loadSecondaryModules();
+    }catch(error){
+      console.warn('[INIT] Modules secondaires:', error);
+    }
 
-        try{
-
-          loadSecondaryModules();
-
-        }catch(error){
-
-          console.warn(
-            '[INIT] Modules secondaires:',
-            error
-          );
-
-        }
-
-      },
-      100
-    );
+    safeRender();
 
   }
 
