@@ -53,6 +53,8 @@
     loadStyle('/app/css/header-final.css', 'data-tc-header-final');
     loadStyle('/app/css/theme-system.css', 'data-tc-theme-system');
     loadStyle('/app/css/visual-contrast.css', 'data-tc-visual-contrast');
+    loadStyle('/app/css/shell-overhaul.css', 'data-tc-shell-overhaul');
+    loadScript('/app/js/shell-overhaul.js');
 
     // loadScript() gère déjà la déduplication (statique + dynamique), donc
     // pas besoin de re-tester ici.
