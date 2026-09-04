@@ -43,10 +43,11 @@
     if (!view) { console.warn('[ROUTER] Vue introuvable:', id); return false; }
     if (typeof destroyAllCharts === 'function') destroyAllCharts();
     document.querySelectorAll('.view').forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
-    document.querySelectorAll('.nav-dropdown-item,.nav-dropdown-btn').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-dropdown-item,.nav-dropdown-btn,[data-route]').forEach(el => el.classList.remove('active'));
     view.classList.add('active'); view.style.display = '';
-    const navEl = document.getElementById('nav-' + id);
-    if (navEl) navEl.classList.add('active');
+    const navEls = Array.from(document.querySelectorAll('[data-route=\"' + id + '\"]'));
+    navEls.forEach(el => el.classList.add('active'));
+    const navEl = document.getElementById('nav-' + id) || navEls.find(el => el.closest('.nav-dropdown')) || navEls[0];
     const parentMenu = navEl?.closest('.nav-dropdown');
     if (parentMenu) parentMenu.querySelector('.nav-dropdown-btn')?.classList.add('active');
     if (!noHash) setHashForView(id);
