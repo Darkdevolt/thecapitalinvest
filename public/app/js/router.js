@@ -45,7 +45,7 @@
     document.querySelectorAll('.view').forEach(v => { v.classList.remove('active'); v.style.display = 'none'; });
     document.querySelectorAll('.nav-dropdown-item,.nav-dropdown-btn,[data-route]').forEach(el => el.classList.remove('active'));
     view.classList.add('active'); view.style.display = '';
-    const navEls = Array.from(document.querySelectorAll('[data-route=\"' + id + '\"]'));
+    const navEls = Array.from(document.querySelectorAll('[data-route="' + id + '"]'));
     navEls.forEach(el => el.classList.add('active'));
     const navEl = document.getElementById('nav-' + id) || navEls.find(el => el.closest('.nav-dropdown')) || navEls[0];
     const parentMenu = navEl?.closest('.nav-dropdown');
@@ -87,8 +87,20 @@
   window.updateBreadcrumb = function(viewId) {
     const bc=document.getElementById('breadcrumb'); if(!bc) return;
     const items=BREADCRUMBS[viewId]||BREADCRUMBS.overview;
-    bc.innerHTML=items.map((item,i)=>i===items.length-1?`<span class="bc-current">${escapeHtml(item.label)}</span>`:`<a href="#${item.view}" onclick="nav('${item.view}');return false;">${escapeHtml(item.label)}</a><span class="bc-sep">›</span>`).join('');
+    bc.innerHTML=items.map((item,i)=>i===items.length-1?`<span class="bc-current">${escapeHtml(item.label)}</span>`:`<a href="#${encodeURIComponent(item.view)}" data-breadcrumb-route="${escapeHtml(item.view)}">${escapeHtml(item.label)}</a><span class="bc-sep">›</span>`).join('');
   };
+
+  if (!window.__TC_BREADCRUMB_EVENTS__) {
+    window.__TC_BREADCRUMB_EVENTS__ = true;
+    document.addEventListener('click', function (event) {
+      const link = event.target.closest?.('[data-breadcrumb-route]');
+      if (!link) return;
+      const id = link.getAttribute('data-breadcrumb-route');
+      if (!id || typeof window.nav !== 'function') return;
+      event.preventDefault();
+      window.nav(id);
+    });
+  }
 
   window.setHashForView = function(id) {
     const hashMap={overview:'',titres:'#titres',boc:'#boc',marche:'#marche',analyses:'#analyses','analyse-detail':'#analyse-detail','analyse-technique':'#analyse-technique','analyse-fondamentale':'#analyse-fondamentale',screener:'#screener',portefeuille:'#portefeuille',alertes:'#alertes',financials:'#financials','financials-detail':'#financials-detail',fiche:'#fiche',publications:'#publications',comparison:'#comparison','dividend-screener':'#dividend-screener'};
