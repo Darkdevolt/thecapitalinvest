@@ -9,7 +9,19 @@
   ];
 
   function loadScript(src) {
-    if (document.querySelector('script[data-tc-header-module="' + src + '"]')) return;
+    // On détecte les doublons de deux façons : un script déjà injecté par
+    // header.js (attribut data-tc-header-module) OU un script déjà présent
+    // en statique dans la page (ex: mode.js / comparison.js / dividend-
+    // screener.js sont inclus en dur en bas de index.html). Sans ce second
+    // test, ces fichiers étaient chargés une seconde fois, ce qui casse
+    // silencieusement leur exécution (erreurs "already declared", listeners
+    // dupliqués, vues à moitié initialisées).
+    if (
+      document.querySelector('script[data-tc-header-module="' + src + '"]') ||
+      document.querySelector('script[src="' + src + '"]')
+    ) {
+      return;
+    }
 
     var script = document.createElement('script');
     script.src = src;
@@ -42,9 +54,9 @@
     loadStyle('/app/css/theme-system.css', 'data-tc-theme-system');
     loadStyle('/app/css/visual-contrast.css', 'data-tc-visual-contrast');
 
-    MODULES.forEach(function (src) {
-      loadScript(src);
-    });
+    // loadScript() gère déjà la déduplication (statique + dynamique), donc
+    // pas besoin de re-tester ici.
+    MODULES.forEach(loadScript);
   }
 
   // ---- Menu compte -------------------------------------------------------
