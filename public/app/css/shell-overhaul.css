@@ -1,0 +1,27 @@
+/* The Capital — canonical application-shell compatibility layer */
+:root{--tc-shell-header:64px;--tc-shell-sidebar:252px;--tc-shell-radius:14px}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{min-width:320px;overflow-x:hidden}
+body.menu-open{overflow:hidden}
+.header{min-height:var(--tc-shell-header);height:auto;position:sticky;top:0;z-index:10000}
+.topnav{min-width:0;overflow:visible}
+.topnav-right{min-width:0;gap:10px}
+.global-search{min-width:220px;max-width:420px;flex:1 1 320px}
+.global-search input{width:100%;min-width:0}
+.global-search-results{z-index:10060}
+.header-market-status{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;min-height:34px}
+.header-market-status .market-status-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.65;flex:0 0 auto}
+.header-market-status.tc-open .market-status-dot{opacity:1}
+.header-market-status.tc-closed .market-status-dot{opacity:.42}
+.sidebar{z-index:10020}.overlay{z-index:10010}.nav-dropdown-menu{z-index:10040}.tc-account-menu{z-index:10070}
+.main,.view,.tci-row{min-width:0}.page-header{margin-bottom:18px}.page-header h1{line-height:1.08;letter-spacing:-.02em}.page-header p{max-width:72ch}
+#view-overview .stat-card{min-width:0;overflow:hidden}#view-overview .stat-value{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#view-overview .grid-7030{align-items:stretch}#view-overview .grid-7030>.card{min-width:0}#view-overview .chart-container,#view-overview canvas{min-width:0;max-width:100%}
+[data-route]:focus-visible,[data-dropdown]:focus-visible,.nav-dropdown-item:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold,#c7a15b);outline-offset:2px}
+.tc-nav-icon{display:inline-flex!important;align-items:center;justify-content:center;width:16px;height:16px;flex:0 0 16px}.tc-nav-icon svg,.tc-ui-icon svg,.tc-account-icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}.nav-dropdown-btn .tc-nav-icon,.nav-item .tc-nav-icon{margin-right:7px}.tc-account-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex:0 0 16px}
+[data-tc-state="loading"]:empty::after{content:"Chargement…";display:block;padding:14px 16px;color:var(--muted,#777);font-size:12px}[data-tc-state="empty"]:empty::after{content:"Aucune donnée disponible.";display:block;padding:14px 16px;color:var(--muted,#777);font-size:12px}
+@media (max-width:1200px){.topnav-right{gap:8px}.global-search{max-width:300px}.topnav-username{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+@media (max-width:980px){.topnav{display:none}.header{display:flex;align-items:center;justify-content:space-between;padding-inline:12px}.topnav-right{width:100%;flex:1 1 auto}.global-search{order:1;max-width:none;flex:1 1 auto}.header-market-status{order:2}.header-time{order:3}.topnav-user{order:4}.topnav-logout{order:5}.global-search input{height:38px}.main{padding-bottom:calc(24px + env(safe-area-inset-bottom))}}
+@media (max-width:768px){:root{--tc-shell-header:58px}.header{min-height:58px}.header-time{min-width:0;max-width:92px;overflow:hidden}.header-time .tc-clock-list,.header-time .tc-clock-kicker,.header-time .tc-clock-primary small{display:none!important}.header-time .tc-clock-primary{display:block!important}.header-market-status span:last-child{font-size:10px}.global-search{max-width:none}.main{padding-inline:12px!important}.page-header{margin-bottom:14px}.page-header h1{font-size:clamp(22px,6vw,30px)}#view-overview .grid-3,#view-overview .grid-7030,#view-overview .tci-row-2{grid-template-columns:1fr!important}#view-overview .grid-7030{gap:14px}.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}table{min-width:640px}}
+@media (max-width:480px){.topnav-right{gap:6px}.topnav-user{min-width:34px}.topnav-username{display:none}.topnav-logout{width:34px}.header-market-status{display:none}.global-search input{font-size:13px}#view-overview .stat-card{padding:14px}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
