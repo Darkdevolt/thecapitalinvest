@@ -1,0 +1,33 @@
+/* THE CAPITAL — Dashboard visual polish */
+#view-overview{background:transparent;color:var(--cream);}
+#view-overview.view{padding:24px 28px 48px;max-width:1500px;}
+#view-overview .page-header{margin-bottom:20px;padding:0 0 18px;border-bottom:1px solid rgba(184,150,78,.16)}
+#view-overview .page-header h1{font-size:clamp(26px,2.4vw,36px);letter-spacing:-.035em}
+#view-overview .page-header p{font-size:13px;color:var(--muted);margin-top:8px}
+#view-overview #overviewStats{gap:16px;margin:0 0 22px}
+#view-overview #overviewStats .stat-card{min-height:126px;padding:20px;background:linear-gradient(145deg,rgba(31,26,17,.98),rgba(19,16,11,.98));border:1px solid rgba(184,150,78,.22);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+#view-overview .stat-label{font-size:10px;color:var(--dim);letter-spacing:.14em}
+#view-overview .stat-value{font-size:28px;color:var(--cream);margin-top:6px}
+#view-overview .stat-change{font-size:12px;font-weight:600}
+#view-overview .dashboard-news,#view-overview .tci-card,#view-overview>.card{background:linear-gradient(145deg,rgba(25,21,15,.98),rgba(16,14,10,.98));border:1px solid rgba(184,150,78,.17);border-radius:14px;box-shadow:0 8px 26px rgba(0,0,0,.16)}
+#view-overview .card-header,#view-overview .dashboard-news-head,#view-overview .tci-head{padding:16px 20px;min-height:56px;background:rgba(255,255,255,.012);border-bottom:1px solid rgba(184,150,78,.1)}
+#view-overview .card-body{padding:20px}
+#view-overview .chart-container{height:340px;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,rgba(255,255,255,.012),transparent);border-radius:0 0 14px 14px}
+#view-overview #chartComposite{max-height:340px}
+#view-overview .dashboard-news-grid{gap:0}
+#view-overview .news-item{padding:18px 20px;border-right:1px solid rgba(184,150,78,.1)}
+#view-overview .news-item:last-child{border-right:0}
+#view-overview .empty-state{padding:34px 20px;color:var(--muted);font-size:13px}
+#view-overview .loading,#view-overview .skeleton,#view-overview [class*="loading"]{color:var(--muted)}
+#view-overview table{border-collapse:separate;border-spacing:0;width:100%;background:transparent;color:var(--cream)}
+#view-overview table thead th{background:rgba(184,150,78,.06);color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:12px 14px;border-bottom:1px solid rgba(184,150,78,.14)}
+#view-overview table tbody tr{background:transparent!important}
+#view-overview table tbody td{background:transparent!important;color:var(--cream);padding:13px 14px;border-bottom:1px solid rgba(184,150,78,.09);font-size:12px}
+#view-overview table tbody tr:hover td{background:rgba(184,150,78,.045)!important}
+#view-overview .mover-row,#view-overview .top-mover-row,#view-overview .movers-row{background:transparent!important;color:var(--cream)!important;border-bottom:1px solid rgba(184,150,78,.1)}
+#view-overview .mover-row *,#view-overview .top-mover-row *,#view-overview .movers-row *{color:inherit}
+#view-overview .variation-up,#view-overview .up,.mover-up{color:var(--green)!important}
+#view-overview .variation-down,#view-overview .down,.mover-down{color:var(--red)!important}
+#view-overview .chart-tabs{padding:10px 16px}
+@media(max-width:900px){#view-overview.view{padding:20px 16px 36px}#view-overview .dashboard-news-grid{grid-template-columns:1fr}#view-overview .news-item{border-right:0;border-bottom:1px solid rgba(184,150,78,.1)}#view-overview .chart-container{height:280px}}
+@media(max-width:600px){#view-overview #overviewStats{grid-template-columns:1fr}#view-overview .stat-value{font-size:26px}}
