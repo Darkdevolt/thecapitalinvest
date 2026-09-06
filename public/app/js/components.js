@@ -1,21 +1,24 @@
 // ═══════════════════════════════════════
-// UTILITAIRES & COMPONENTS (CORRIGÉ, protégé contre redéclaration)
+// UTILITAIRES & COMPONENTS (corrigé)
 // ═══════════════════════════════════════
-// Ce fichier est chargé APRÈS utils.js, donc les fonctions peuvent déjà exister.
-// On utilise des gardes pour éviter "Identifier 'xxx' has already been declared"
+// Chargé après utils.js. Les helpers restent protégés pour éviter les
+// redéclarations et conservent une sortie cohérente en cas de donnée absente.
 
-// ─── FORMATTERS (protégés) ───────────────────────────────────────────────────
 if (typeof window.fmt === 'undefined') {
   window.fmt = function(n, d) {
-    if (n == null || isNaN(n)) return ', ';
-    d = d || 0;
-    return Number(n).toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
+    if (n == null || Number.isNaN(Number(n))) return '—';
+    d = Number.isFinite(Number(d)) ? Number(d) : 0;
+    return Number(n).toLocaleString('fr-FR', {
+      minimumFractionDigits: d,
+      maximumFractionDigits: d
+    });
   };
 }
 
 if (typeof window.fmtM === 'undefined') {
   window.fmtM = function(n) {
-    if (n == null || isNaN(n)) return ', ';
+    if (n == null || Number.isNaN(Number(n))) return '—';
+    n = Number(n);
     if (Math.abs(n) >= 1e9) return fmt(n / 1e9, 2) + ' Mds';
     if (Math.abs(n) >= 1e6) return fmt(n / 1e6, 2) + ' M';
     if (Math.abs(n) >= 1e3) return fmt(n / 1e3, 2) + ' K';
@@ -25,20 +28,24 @@ if (typeof window.fmtM === 'undefined') {
 
 if (typeof window.fmtDate === 'undefined') {
   window.fmtDate = function(d) {
-    if (!d) return ', ';
+    if (!d) return '—';
     const date = new Date(d);
-    if (isNaN(date)) return String(d);
-    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    if (Number.isNaN(date.getTime())) return String(d);
+    return date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
   };
 }
 
-// ─── SECTOR & PAYS HELPERS (protégés) ─────────────────────────────────────────
 if (typeof window.getSector === 'undefined') {
   window.getSector = function(ticker) {
     const e = (typeof entMap !== 'undefined' && entMap) ? entMap[ticker] : null;
     const s = e && e.secteur ? e.secteur : 'Autre';
     return s.toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
       .replace(/[^-a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
   };
@@ -51,55 +58,55 @@ if (typeof window.getPays === 'undefined') {
   };
 }
 
-// ─── EMPTY STATE (protégé) ───────────────────────────────────────────────────
 if (typeof window.emptyState === 'undefined') {
   window.emptyState = function(msg) {
-    return '<tr><td colspan="99" class="tc-empty">' + (msg || 'Aucun donnée') + '</td></tr>';
+    return '<tr><td colspan="99" class="tc-empty">' + (msg || 'Aucune donnée disponible.') + '</td></tr>';
   };
 }
 
-// ─── TICKER ROW (protégé) ──────────────────────────────────────────────────────
 if (typeof window.tickerRow === 'undefined') {
   window.tickerRow = function(c, opts) {
     opts = opts || {};
-    const v = parseFloat(c.variation) || 0;
-    const cls = v > 0 ? 'up' : v < 0 ? 'down' : 'neutral';
-    const sign = v > 0 ? '+' : '';
-    const sector = getSector(c.ticker);
-    const sectorClass = sector.replace(/[^a-z-]/g, '');
-    const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[c.ticker] : null;
-    const nom = ent && ent.nom ? ent.nom : '';
-    const pays = getPays(c.ticker);
+    c = c || {};
 
-    let html = '<tr onclick="openFiche(\'' + c.ticker + '\')">' +
-      '<td class="ticker-cell">' + c.ticker + '</td>';
+    const v = Number.parseFloat(c.variation);
+    const variation = Number.isFinite(v) ? v : 0;
+    const cls = variation > 0 ? 'up' : variation < 0 ? 'down' : 'neutral';
+    const sign = variation > 0 ? '+' : '';
+    const ticker = String(c.ticker || '');
+    const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[ticker] : null;
+    const nom = ent && ent.nom ? ent.nom : '—';
+    const secteur = ent && ent.secteur ? ent.secteur : 'Autre';
+    const sectorClass = getSector(ticker).replace(/[^a-z-]/g, '');
+
+    let html = '<tr data-ticker="' + escapeHtml(ticker) + '" role="button" tabindex="0">' +
+      '<td class="ticker-cell">' + escapeHtml(ticker) + '</td>';
 
     if (opts.showCompany) {
-      html += '<td class="company-cell">' + nom + '</td>';
+      html += '<td class="company-cell">' + escapeHtml(nom) + '</td>';
     }
 
     html += '<td class="price-cell right">' + fmt(c.cours, 0) + '</td>' +
-      '<td class="var-cell right"><span class="pill ' + cls + '">' + sign + v.toFixed(2) + '%</span></td>';
+      '<td class="var-cell right"><span class="pill ' + cls + '">' + sign + variation.toFixed(2) + '%</span></td>';
 
     if (opts.show52Week) {
-      html += '<td class="right mono">' + (c.high_52 || ', ') + '</td>' +
-        '<td class="right mono">' + (c.low_52 || ', ') + '</td>';
+      html += '<td class="right mono">' + (c.high_52 != null ? fmt(c.high_52, 0) : '—') + '</td>' +
+        '<td class="right mono">' + (c.low_52 != null ? fmt(c.low_52, 0) : '—') + '</td>';
     }
 
-    html += '<td class="vol-cell right">' + fmt(c.volume) + '</td>';
+    html += '<td class="vol-cell right">' + fmt(c.volume, 0) + '</td>';
 
     if (opts.showCapital) {
-      html += '<td class="cap-cell right">' + (c.capitalisation ? fmtM(c.capitalisation) : ', ') + '</td>';
+      html += '<td class="cap-cell right">' + (c.capitalisation != null ? fmtM(c.capitalisation) : '—') + '</td>';
     }
 
-    html += '<td class="sector-cell right"><span class="sector-badge ' + sectorClass + '">' + (ent && ent.secteur ? ent.secteur : 'Autre') + '</span></td>' +
+    html += '<td class="sector-cell right"><span class="sector-badge ' + sectorClass + '">' + escapeHtml(secteur) + '</span></td>' +
       '</tr>';
 
     return html;
   };
 }
 
-// ─── TOAST (protégé) ──────────────────────────────────────────────────────────
 if (typeof window.toast === 'undefined') {
   window.toast = function(msg, type) {
     type = type || 'info';
@@ -112,7 +119,7 @@ if (typeof window.toast === 'undefined') {
 
     const t = document.createElement('div');
     t.className = 'toast ' + type;
-    t.textContent = msg;
+    t.textContent = String(msg == null ? '' : msg);
     container.appendChild(t);
 
     setTimeout(function() {
@@ -123,56 +130,87 @@ if (typeof window.toast === 'undefined') {
   };
 }
 
-// ─── GLOBAL SEARCH (protégé) ──────────────────────────────────────────────────
 if (typeof window.initGlobalSearch === 'undefined') {
   window.initGlobalSearch = function() {
-    const input = document.getElementById('globalSearch');
+    const input = document.getElementById('globalSearchInput');
     const results = document.getElementById('globalSearchResults');
-    if (!input || !results) return;
+    if (!input || !results || input.dataset.tcInitialized === '1') return;
+    input.dataset.tcInitialized = '1';
+
+    const renderResults = function(matches) {
+      if (!matches.length) {
+        results.innerHTML = '<div class="gsr-item"><span class="gsr-name">Aucun résultat</span></div>';
+      } else {
+        results.innerHTML = matches.map(function(c) {
+          const ticker = String(c.ticker || '');
+          const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[ticker] : null;
+          const name = ent && ent.nom ? ent.nom : ticker;
+          const sector = ent && ent.secteur ? ent.secteur : 'Autre';
+          return '<div class="gsr-item" data-search-ticker="' + escapeHtml(ticker) + '" role="option" tabindex="-1">' +
+            '<div><span class="gsr-ticker">' + escapeHtml(ticker) + '</span><span class="gsr-name">' + escapeHtml(name) + '</span></div>' +
+            '<span class="gsr-sector">' + escapeHtml(sector) + '</span>' +
+          '</div>';
+        }).join('');
+      }
+      results.classList.add('open');
+    };
 
     input.addEventListener('input', debounce(function(e) {
       const q = e.target.value.toLowerCase().trim();
       if (!q) {
         results.classList.remove('open');
+        results.innerHTML = '';
         return;
       }
 
-      const matches = ((typeof allCours !== 'undefined' && allCours) || []).filter(function(c) {
-        return c && c.ticker && (
-          c.ticker.toLowerCase().includes(q) ||
-          ((typeof entMap !== 'undefined' && entMap[c.ticker]) && entMap[c.ticker].nom && entMap[c.ticker].nom.toLowerCase().includes(q))
-        );
+      const source = Array.isArray(window.allCours) ? window.allCours : [];
+      const byTicker = {};
+      source.forEach(function(c) {
+        if (c && c.ticker && !byTicker[c.ticker]) byTicker[c.ticker] = c;
+      });
+
+      const matches = Object.values(byTicker).filter(function(c) {
+        const ticker = String(c.ticker || '').toLowerCase();
+        const name = ((entMap[c.ticker] && entMap[c.ticker].nom) || '').toLowerCase();
+        return ticker.includes(q) || name.includes(q);
       }).slice(0, 8);
 
-      if (!matches.length) {
-        results.innerHTML = '<div class="gsr-item"><span class="gsr-name">Aucun résultat</span></div>';
-      } else {
-        results.innerHTML = matches.map(function(c) {
-          const ent = (typeof entMap !== 'undefined' && entMap) ? entMap[c.ticker] : null;
-          return '<div class="gsr-item" onclick="openFiche(\'' + c.ticker + '\');document.getElementById(\'globalSearchResults\').classList.remove(\'open\');">' +
-            '<div><span class="gsr-ticker">' + c.ticker + '</span><span class="gsr-name">' + (ent && ent.nom ? ', ' + ent.nom : '') + '</span></div>' +
-            '<span class="gsr-sector">' + (ent && ent.secteur ? ent.secteur : 'Autre') + '</span>' +
-          '</div>';
-        }).join('');
-      }
-      results.classList.add('open');
+      renderResults(matches);
     }, 200));
 
-    document.addEventListener('click', function(e) {
-      if (!e.target.closest('.global-search')) {
+    results.addEventListener('click', function(e) {
+      const item = e.target.closest('[data-search-ticker]');
+      if (!item) return;
+      const ticker = item.getAttribute('data-search-ticker');
+      if (ticker && typeof window.openFiche === 'function') window.openFiche(ticker, 'overview');
+      results.classList.remove('open');
+      input.value = '';
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
         results.classList.remove('open');
+        input.blur();
       }
+    });
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('#globalSearch')) results.classList.remove('open');
     });
   };
 }
 
-// ─── DEBOUNCE HELPER (si non défini) ──────────────────────────────────────────
 if (typeof window.debounce === 'undefined') {
   window.debounce = function(fn, ms) {
     let timer;
+    const wait = Number.isFinite(Number(ms)) ? Number(ms) : 0;
     return function() {
+      const context = this;
+      const args = arguments;
       clearTimeout(timer);
-      timer = setTimeout(fn.apply(this, arguments), ms);
+      timer = setTimeout(function() {
+        fn.apply(context, args);
+      }, wait);
     };
   };
 }
