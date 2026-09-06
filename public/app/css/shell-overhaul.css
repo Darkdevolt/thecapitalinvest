@@ -25,3 +25,144 @@ body.menu-open{overflow:hidden}
 @media (max-width:768px){:root{--tc-shell-header:58px}.header{min-height:58px}.header-time{min-width:0;max-width:92px;overflow:hidden}.header-time .tc-clock-list,.header-time .tc-clock-kicker,.header-time .tc-clock-primary small{display:none!important}.header-time .tc-clock-primary{display:block!important}.header-market-status span:last-child{font-size:10px}.global-search{max-width:none}.main{padding-inline:12px!important}.page-header{margin-bottom:14px}.page-header h1{font-size:clamp(22px,6vw,30px)}#view-overview .grid-3,#view-overview .grid-7030,#view-overview .tci-row-2{grid-template-columns:1fr!important}#view-overview .grid-7030{gap:14px}.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}table{min-width:640px}}
 @media (max-width:480px){.topnav-right{gap:6px}.topnav-user{min-width:34px}.topnav-username{display:none}.topnav-logout{width:34px}.header-market-status{display:none}.global-search input{font-size:13px}#view-overview .stat-card{padding:14px}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+
+/* ------------------------------------------------------------------
+   ACCOUNT MENU — canonical styling
+   header.js injecte #tcAccountMenu directement dans <body>.
+   Ces règles sont obligatoires : sans elles le menu reste dans le flux
+   normal du document et son contenu apparaît "brut" en bas de page.
+   ------------------------------------------------------------------ */
+#tcAccountMenu.tc-account-menu{
+  position:fixed!important;
+  top:0;
+  left:0;
+  width:min(300px,calc(100vw - 20px));
+  max-width:calc(100vw - 20px);
+  box-sizing:border-box!important;
+  margin:0;
+  padding:10px;
+  display:none;
+  flex-direction:column;
+  gap:2px;
+  overflow:hidden;
+  background:var(--panel,#15110c);
+  color:var(--cream,#f5f0e8);
+  border:1px solid var(--border,rgba(184,150,78,.22));
+  border-radius:12px;
+  box-shadow:0 18px 48px rgba(0,0,0,.45),0 4px 18px rgba(0,0,0,.24);
+  z-index:10070!important;
+  isolation:isolate;
+}
+#tcAccountMenu.tc-account-menu.open{display:flex!important}
+#tcAccountMenu .tc-account-head{
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+  padding:8px 9px 10px;
+  margin-bottom:2px;
+  border-bottom:1px solid var(--border2,rgba(184,150,78,.10));
+}
+#tcAccountMenu .tc-account-kicker{
+  color:var(--gold,#b8964e);
+  font:600 9px/1.2 var(--mono,DM Mono,monospace);
+  letter-spacing:.14em;
+  text-transform:uppercase;
+}
+#tcAccountMenu .tc-account-title{
+  color:var(--cream,#f5f0e8);
+  font:500 16px/1.2 var(--serif,Georgia,serif);
+}
+#tcAccountMenu .tc-account-item{
+  display:flex!important;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+  padding:9px 10px;
+  border:1px solid transparent;
+  border-radius:9px;
+  color:var(--cream,#f5f0e8)!important;
+  background:transparent;
+  text-decoration:none!important;
+  transition:background .16s ease,border-color .16s ease,color .16s ease;
+}
+#tcAccountMenu .tc-account-item:hover,
+#tcAccountMenu .tc-account-item:focus-visible{
+  background:rgba(184,150,78,.08);
+  border-color:rgba(184,150,78,.18);
+  color:var(--cream,#f5f0e8)!important;
+  outline:none;
+}
+#tcAccountMenu .tc-account-item>span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:28px;
+  height:28px;
+  flex:0 0 28px;
+  border-radius:8px;
+  background:rgba(184,150,78,.08);
+  color:var(--gold2,#e0c176);
+  font-size:14px;
+}
+#tcAccountMenu .tc-account-item>div{min-width:0;display:flex;flex-direction:column;gap:2px}
+#tcAccountMenu .tc-account-item b{
+  color:inherit;
+  font:600 12px/1.25 var(--sans,'DM Sans',sans-serif);
+}
+#tcAccountMenu .tc-account-item small{
+  color:var(--dim,rgba(245,240,232,.48));
+  font:400 10px/1.35 var(--sans,'DM Sans',sans-serif);
+  white-space:normal;
+}
+#tcAccountMenu .tc-account-separator{
+  height:1px;
+  margin:5px 5px;
+  background:var(--border2,rgba(184,150,78,.10));
+}
+#tcAccountMenu .tc-account-theme{
+  width:100%;
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-height:38px;
+  padding:8px 10px;
+  border:1px solid transparent;
+  border-radius:9px;
+  background:transparent;
+  color:var(--cream,#f5f0e8);
+  font:500 11px/1.2 var(--sans,'DM Sans',sans-serif);
+  text-align:left;
+  cursor:pointer;
+  transition:background .16s ease,border-color .16s ease;
+}
+#tcAccountMenu .tc-account-theme:hover,
+#tcAccountMenu .tc-account-theme:focus-visible{
+  background:rgba(184,150,78,.08);
+  border-color:rgba(184,150,78,.18);
+  outline:none;
+}
+#tcAccountMenu .tc-account-theme>span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:20px;
+  color:var(--gold2,#e0c176);
+  font-size:14px;
+}
+#tcAccountMenu .tc-account-theme strong{
+  margin-left:auto;
+  color:var(--gold2,#e0c176);
+  font:600 10px/1 var(--mono,DM Mono,monospace);
+  letter-spacing:.05em;
+  text-transform:uppercase;
+}
+
+@media (max-width:768px){
+  #tcAccountMenu.tc-account-menu{
+    width:min(310px,calc(100vw - 16px));
+    max-width:calc(100vw - 16px);
+    padding:8px;
+    border-radius:11px;
+  }
+  #tcAccountMenu .tc-account-item{padding:9px 9px}
+}
