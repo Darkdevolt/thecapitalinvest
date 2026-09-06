@@ -1,0 +1,28 @@
+/* THE CAPITAL — dashboard runtime safety layer
+ * Scoped to #view-overview so it cannot alter other application views.
+ */
+#view-overview{min-width:0;box-sizing:border-box;overflow-x:hidden}
+#view-overview *{box-sizing:border-box}
+#view-overview .page-header,#view-overview .grid-7030,#view-overview #overviewStats,#view-overview .card,#view-overview .dashboard-news,#view-overview .tci-card{min-width:0;max-width:100%}
+#view-overview canvas{display:block;max-width:100%}
+#view-overview .chart-container{min-width:0;overflow:hidden}
+#view-overview .grid-7030{width:100%}
+#view-overview #topMovers,#view-overview #recentActivity,#view-overview #newsFeed,#view-overview #pubFeed{min-width:0;overflow-x:auto}
+#view-overview table{width:100%;max-width:100%;table-layout:auto}
+#view-overview .stat-value,#view-overview .stat-change{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#view-overview .tc-dashboard-fallback-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-bottom:1px solid var(--dash-border-soft,rgba(184,150,78,.1));font-size:12px;color:var(--muted)}
+#view-overview .tc-dashboard-fallback-row:last-child{border-bottom:0}
+#view-overview .tc-dashboard-fallback-row strong{font-family:var(--mono,monospace);color:var(--cream);font-weight:500;white-space:nowrap}
+@media(max-width:900px){
+  #view-overview{padding-left:16px!important;padding-right:16px!important}
+  #view-overview .grid-7030{grid-template-columns:minmax(0,1fr)!important}
+  #view-overview #overviewStats{grid-template-columns:minmax(0,1fr)!important}
+  #view-overview .chart-container{height:300px!important;min-height:300px!important}
+}
+@media(max-width:560px){
+  #view-overview{padding-left:12px!important;padding-right:12px!important}
+  #view-overview .chart-container{height:260px!important;min-height:260px!important}
+  #view-overview .page-header h1{font-size:28px!important}
+  #view-overview .tc-dashboard-fallback-row{padding-inline:12px}
+}
+@media(prefers-reduced-motion:reduce){#view-overview *{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
