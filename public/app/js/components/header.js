@@ -9,7 +9,8 @@
     '/app/js/mode.js',
     '/app/js/theme.js',
     '/app/js/views/comparison.js',
-    '/app/js/views/dividend-screener.js'
+    '/app/js/views/dividend-screener.js',
+    '/app/js/views/technique/experience.js'
   ];
 
   function loadScript(src){
