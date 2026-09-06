@@ -1,105 +1,74 @@
 # The Capital Invest — Refactor map
 
-This document is the authoritative map for the repository reorganization. It is intentionally non-destructive: existing runtime paths remain valid until their consumers are migrated.
+Cette carte décrit la stratégie de réorganisation. La branche de refactor ne modifie ni Supabase, ni les routes API publiques, ni les données métier.
 
-## Admin
-
-| Current path | Target domain | Action |
-|---|---|---|
-| `public/admin/js/api.js` | `core` | central shared API client |
-| `public/admin/js/config.js` | `core` | configuration/auth bootstrap |
-| `public/admin/js/main.js` | `core` | admin shell/bootstrap |
-| `public/admin/js/dashboard-overview.js` | `dashboard` | active dashboard implementation |
-| `public/admin/js/dashboard.js` | `dashboard` | compatibility/legacy wrapper; do not delete blindly |
-| `public/admin/js/cours.js` | `cours` | current quotations orchestration |
-| `public/admin/js/cours-control.js` | `cours` | quotation validation/control |
-| `public/admin/js/cours-control-editor.js` | `cours` | quotation editor |
-| `public/admin/js/cours-historique.js` | `historique` + `seances` | split by responsibility before deletion |
-| `public/admin/js/cours-history-entry-delete.js` | `historique` | historical-row deletion |
-| `public/admin/js/historique.js` | `historique` | historical data UI |
-| `public/admin/js/historique-session-delete.js` | `seances` | session deletion |
-| `public/admin/js/seance.js` | `seances` | session UI |
-| `public/admin/js/analyses.js` | `analyses` | analyses admin |
-| `public/admin/js/boc-admin.js` | `boc` | BOC admin |
-| `public/admin/js/boc-importer.js` | `boc` | BOC import |
-| `public/admin/js/diagnostic.js` | `diagnostic` | diagnostics |
-
-## Public application
-
-The main app already has a substantially better feature hierarchy under `public/app/js/views/`. Keep that hierarchy. Do not flatten it into a generic `public/js` bucket.
+## Admin — structure cible
 
 ```text
-public/app/js/
-├── components/
-├── views/
-│   ├── technique/
-│   └── portefeuille/
-├── init.js
-├── loader.js
-├── fetch.js
-├── ui.js
-├── utils.js
-└── ...
+public/admin/js/
+├── core/           API, configuration, utilitaires, bootstrap, diagnostics
+├── dashboard/      dashboard d'administration
+├── cours/          cotations et historique
+├── marche/         indices et scraping BRVM
+├── entreprises/    référentiel sociétés
+├── financials/     états financiers + schema/excel
+├── analyses/       analyses et recommandations
+├── dividendes/     calendrier des dividendes
+├── boc/            Bulletins Officiels de la Cote
+├── imports/        imports
+├── utilisateurs/   comptes, abonnements, clientèle
+├── reporting/      reporting et exports
+├── diagnostic/     diagnostics
+└── institute/      The Capital Institute
 ```
 
-## Public shared JS
+Le shell `public/admin.html` charge désormais ces chemins par domaine. Les gros
+modules administratifs ont été déplacés sans changement de contenu afin de
+réduire le risque : le déplacement est donc réversible et n'altère pas la
+logique métier.
 
-`public/js` contains cross-page/public functionality. It should only contain truly shared modules. Feature-specific modules such as session management should progressively move to a feature folder with a compatibility loader at the old path until all consumers are migrated.
+## Deuxième étape : factorisation interne
+
+Les fichiers encore volumineux ne doivent pas être découpés arbitrairement.
+Pour chaque candidat, suivre cette séquence :
+
+1. identifier les responsabilités distinctes ;
+2. identifier les globals exposés et les dépendances implicites ;
+3. extraire `view/`, `data/`, `actions/`, `validation/` ou `services/` selon le cas ;
+4. conserver un point d'entrée unique par domaine ;
+5. vérifier les références dans HTML, JS et CSS ;
+6. parser/tester chaque module ;
+7. vérifier le navigateur avant suppression de l'ancien code.
+
+Priorité initiale : modules > 30 Ko, puis les fichiers contenant plusieurs
+responsabilités ou des correctifs suffixés `-fix`, `-patch`, `-polish`.
+
+## Application publique
+
+Conserver la hiérarchie existante de `public/app/js/views/`. Les sous-domaines
+`technique/`, `technique/pro/`, `technique/ind/`, `portefeuille/` et
+`fondamentale/` sont déjà la bonne direction. Il faut poursuivre cette
+factorisation plutôt que recréer un dossier global fourre-tout.
 
 ## API
 
-Keep public API filenames stable because Vercel maps them to HTTP routes. Reorganization of internal logic should happen under `lib/` without changing route names.
-
-```text
-api/
-├── market/       process-brvm, scrape-brvm, sync-brvm, marche
-├── boc/          boc, boc-upload
-├── portfolio/    portfolio-transactions
-├── users/        user-data, preferences
-└── ai/           capital-ai
-```
-
-The physical move of Vercel API entrypoints is deliberately deferred unless `vercel.json`/routing is updated in the same change.
-
-## Server library
-
-```text
-lib/
-├── infrastructure/  config, cors, jwt, middleware, ratelimit, response, supabase
-├── market/          market-instrument-matcher
-└── validation/      validate
-```
-
-The current files remain in place until all imports are migrated; server paths are runtime-sensitive.
+Les fichiers `api/*.js` restent des entrypoints Vercel. Ils ne doivent pas être
+renommés ou déplacés tant que `vercel.json` et tous les consommateurs n'ont pas
+été migrés ensemble. La factorisation interne se fait dans `lib/`.
 
 ## CSS
 
-Use the same feature boundaries as JS where possible:
+Les styles doivent progressivement suivre les mêmes frontières fonctionnelles
+que le JS. Aucun nouveau fichier CSS ne doit recopier le reset, les variables
+ou les règles globales existantes.
 
-```text
-public/admin/css/
-├── core/
-├── cours/
-├── historique/
-├── seances/
-├── dashboard/
-├── boc/
-└── ...
-```
+## Règle de suppression
 
-Do not duplicate global variables or reset rules into feature CSS.
+Un ancien fichier ne peut être supprimé que si :
 
-## Deletion policy
-
-A file is eligible for deletion only when:
-
-1. repository-wide search finds no runtime reference;
-2. no inline HTML handler depends on a global it defines;
-3. its API calls have an equivalent active owner;
-4. its CSS is still loaded or deliberately migrated;
-5. the feature passes browser verification;
-6. the replacement has been live for at least one verification cycle.
-
-## Known retired code
-
-`ARCHIVE/admin-legacy-manifest.md` records `dashboard.js` and `scraper-legacy.js` as retired from runtime. The archive itself must never be loaded in production.
+- aucune référence runtime ne subsiste ;
+- aucun global ou handler inline n'en dépend ;
+- ses appels API ont un propriétaire actif ;
+- son CSS est migré ou explicitement inutile ;
+- le build/parsing passe ;
+- la fonctionnalité a été vérifiée dans le navigateur.
