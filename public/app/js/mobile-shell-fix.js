@@ -1,13 +1,11 @@
-/* THE CAPITAL — mobile shell compatibility
- * Keeps the existing sidebar component intact while normalizing its public
- * state classes and mirroring the canonical header navigation into mobile.
- */
+/* THE CAPITAL — mobile shell compatibility */
 (function(w){
   'use strict';
   if(w.__TC_MOBILE_SHELL_FIX__) return;
   w.__TC_MOBILE_SHELL_FIX__=true;
   function el(id){return document.getElementById(id)}
   function syncButton(open){var b=el('tcMobileMenu');if(!b)return;b.setAttribute('aria-expanded',open?'true':'false');b.setAttribute('aria-label',open?'Fermer le menu':'Ouvrir le menu')}
+  function syncIdentity(){var s=w.tcSession||{},u=s.user||{},m=u.user_metadata||{},name=String(m.full_name||m.fullName||m.name||[m.first_name||m.firstname,m.last_name||m.lastname].filter(Boolean).join(' ')||'').trim()||String(u.email||'').split('@')[0]||'—';var n=el('headerName'),a=el('headerAvatar');if(n)n.textContent=name;if(a){var parts=name.split(/\s+/).filter(Boolean).slice(0,2),initials=parts.map(function(x){return x.charAt(0).toUpperCase()}).join('');a.textContent=initials||'TC'}}
   function syncOverlay(open){var o=el('overlay');if(!o)return;o.classList.toggle('mobile-open',open);o.setAttribute('aria-hidden',open?'false':'true')}
   function close(){var s=el('sidebar');if(s)s.classList.remove('mobile-open','open');syncOverlay(false);syncButton(false);document.body.classList.remove('menu-open')}
   function open(){var s=el('sidebar');if(!s)return;s.classList.add('mobile-open');s.classList.remove('open');syncOverlay(true);syncButton(true);document.body.classList.add('menu-open')}
@@ -24,7 +22,7 @@
     sidebar.insertBefore(generated,bottom);sidebar.querySelectorAll(':scope > .sidebar-section,:scope > .nav-item').forEach(function(node){node.remove()});
   }
   function boot(){
-    buildMobileNavigation();w.openSidebar=open;w.closeSidebar=close;w.toggleSidebar=toggle;
+    buildMobileNavigation();syncIdentity();w.openSidebar=open;w.closeSidebar=close;w.toggleSidebar=toggle;
     var b=el('tcMobileMenu');if(b&&b.dataset.tcMobileFix!=='1'){b.dataset.tcMobileFix='1';b.addEventListener('click',function(e){e.preventDefault();e.stopImmediatePropagation();toggle()},true)}
     var o=el('overlay');if(o&&o.dataset.tcMobileFix!=='1'){o.dataset.tcMobileFix='1';o.addEventListener('click',function(){close()})}
     syncOverlay(false);syncButton(false)
