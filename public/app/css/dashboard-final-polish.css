@@ -1,0 +1,25 @@
+/* The Capital — final dashboard polish */
+#view-overview{padding:28px 32px 48px!important;max-width:1440px!important;margin:0 auto!important}
+#view-overview .page-header{margin-bottom:24px!important;padding-bottom:18px!important}
+#view-overview .page-header h1{font-size:clamp(28px,3vw,42px)!important;line-height:1.1!important;letter-spacing:-.03em!important}
+#view-overview .page-header p{margin-top:8px!important;color:var(--muted)!important}
+#view-overview #overviewStats{gap:16px!important;margin-bottom:22px!important}
+#view-overview .stat-card{min-height:126px!important;padding:22px!important;background:linear-gradient(145deg,rgba(29,25,17,.98),rgba(18,16,12,.98))!important;border:1px solid rgba(184,150,78,.2)!important;border-radius:14px!important;box-shadow:0 8px 24px rgba(0,0,0,.12)!important}
+#view-overview .stat-label{font-size:10px!important;letter-spacing:.14em!important;color:var(--dim)!important}
+#view-overview .stat-value{margin-top:14px!important;font-size:30px!important;line-height:1!important}
+#view-overview .stat-change{margin-top:10px!important;font-size:12px!important;font-weight:600!important}
+#view-overview .grid-7030{display:grid!important;grid-template-columns:minmax(0,2fr) minmax(320px,1fr)!important;gap:18px!important;align-items:stretch!important;margin-top:22px!important}
+#view-overview .grid-7030>.card{min-width:0!important;overflow:hidden!important}
+#view-overview .grid-7030>.card:first-child{min-height:430px!important}
+#view-overview .chart-container{height:360px!important;min-height:360px!important;padding:18px 20px 20px!important}
+#view-overview #chartComposite{display:block!important;width:100%!important;height:100%!important}
+#view-overview #topMovers{padding:0 14px 14px!important;background:transparent!important}
+#view-overview #topMovers>*{background:rgba(255,255,255,.025)!important;color:var(--cream)!important;border:1px solid rgba(184,150,78,.12)!important;border-radius:8px!important;margin-top:8px!important;min-height:52px!important}
+#view-overview #topMovers td,#view-overview #topMovers span,#view-overview #topMovers div{color:inherit!important;background:transparent!important}
+#view-overview #topMovers .up,#view-overview #topMovers .positive{color:var(--green)!important}
+#view-overview #recentActivity{background:transparent!important}
+#view-overview #recentActivity>*{background:rgba(255,255,255,.018)!important;border-bottom:1px solid rgba(184,150,78,.1)!important;padding:14px 18px!important}
+#view-overview .tci-row:empty,#view-overview #tciPortfolio:empty,#view-overview #tciBreadth:empty,#view-overview #tciActivity:empty,#view-overview #tciWatch:empty{display:none!important}
+#view-overview .loading,#view-overview .skeleton,#view-overview [class*="skeleton"]{background:transparent!important;color:var(--dim)!important}
+@media(max-width:900px){#view-overview{padding:22px 16px 36px!important}.grid-7030{grid-template-columns:1fr!important}#view-overview .grid-7030>.card:first-child{min-height:360px!important}.chart-container{height:300px!important;min-height:300px!important}}
+@media(max-width:560px){#view-overview .grid-3{grid-template-columns:1fr!important}#view-overview .stat-card{min-height:110px!important}.chart-container{height:260px!important;min-height:260px!important}}
