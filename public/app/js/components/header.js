@@ -72,6 +72,7 @@
     loadScript('/app/js/shell-overhaul.js');
     loadScript('/app/js/overview-runtime-fix.js');
     loadScript('/app/js/mobile-shell-fix.js');
+    loadScript('/app/js/render-dispatch-fix.js');
     MODULES.forEach(loadScript);
     window.dispatchEvent(new CustomEvent('tc:header-ready'));
   }
