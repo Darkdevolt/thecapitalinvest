@@ -14,35 +14,18 @@
 
   function loadScript(src){
     if(document.querySelector('script[data-tc-header-module="'+src+'"]')||document.querySelector('script[src="'+src+'"]')) return;
-    var s=document.createElement('script');
-    s.src=src;
-    s.async=false;
-    s.dataset.tcHeaderModule=src;
-    s.onerror=function(){console.warn('[HEADER] Module indisponible:',src);};
-    document.body.appendChild(s);
+    var s=document.createElement('script');s.src=src;s.async=false;s.dataset.tcHeaderModule=src;s.onerror=function(){console.warn('[HEADER] Module indisponible:',src)};document.body.appendChild(s);
   }
-
   function loadStyle(href,attr){
     if(document.querySelector('link['+attr+'="'+href+'"]')) return;
-    var l=document.createElement('link');
-    l.rel='stylesheet';
-    l.href=href;
-    l.setAttribute(attr,href);
-    document.head.appendChild(l);
+    var l=document.createElement('link');l.rel='stylesheet';l.href=href;l.setAttribute(attr,href);document.head.appendChild(l);
   }
-
   function buildSimpleHeader(){
-    var header=document.querySelector('header.header');
-    if(!header) return;
-    if(header.classList.contains('tc-simple-header')) return;
-
-    header.className='header tc-simple-header';
-    header.setAttribute('role','banner');
+    var header=document.querySelector('header.header');if(!header||header.classList.contains('tc-simple-header'))return;
+    header.className='header tc-simple-header';header.setAttribute('role','banner');
     header.innerHTML=''+
       '<div class="tc-header-inner">'+
-        '<button class="tc-brand" type="button" data-route="overview" aria-label="Retour au tableau de bord">'+
-          '<img class="tc-header-logo" src="/assets/the-capital-logo.png" alt="The Capital">'+
-        '</button>'+ 
+        '<button class="tc-brand" type="button" data-route="overview" aria-label="Retour au tableau de bord"><img class="tc-header-logo" src="/assets/the-capital-logo.png" alt="The Capital"></button>'+ 
         '<nav class="tc-primary-nav" aria-label="Navigation principale">'+
           '<button class="tc-nav-link active" type="button" data-route="overview">Tableau de bord</button>'+ 
           '<button class="tc-nav-link" type="button" data-route="marche">Marché</button>'+ 
@@ -67,10 +50,7 @@
         '</nav>'+ 
         '<div class="tc-header-tools">'+
           '<button id="tcMobileMenu" type="button" class="tc-mobile-menu-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="sidebar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></button>'+
-          '<div class="global-search" id="globalSearch">'+
-            '<input type="search" id="globalSearchInput" placeholder="Rechercher…" aria-label="Rechercher un titre, une société ou un ticker" autocomplete="off">'+
-            '<div class="global-search-results" id="globalSearchResults" role="listbox"></div>'+ 
-          '</div>'+ 
+          '<div class="global-search" id="globalSearch"><input type="search" id="globalSearchInput" placeholder="Rechercher…" aria-label="Rechercher un titre, une société ou un ticker" autocomplete="off"><div class="global-search-results" id="globalSearchResults" role="listbox"></div></div>'+ 
           '<div class="header-market-status" id="headerMarketStatus" aria-live="polite"><span class="market-status-dot" aria-hidden="true"></span><span id="headerMarketStatusText">Marché</span></div>'+ 
           '<div class="header-time" id="headerTime" aria-label="Heure actuelle"></div>'+ 
           '<a class="tc-account-link" id="topnavUser" href="/app/account.html" aria-label="Mon compte"><span class="topnav-avatar" id="headerAvatar">TC</span><span class="topnav-username" id="headerName">—</span></a>'+ 
@@ -78,38 +58,24 @@
         '</div>'+ 
       '</div>';
   }
-
-  function markSidebarLogo(){
-    var logo=document.querySelector('.sidebar-logo');
-    if(!logo||logo.querySelector('.tc-sidebar-logo-img')) return;
-    logo.innerHTML='<img class="tc-sidebar-logo-img" src="/assets/the-capital-logo.png" alt="The Capital">';
-  }
-
+  function markSidebarLogo(){var logo=document.querySelector('.sidebar-logo');if(!logo||logo.querySelector('.tc-sidebar-logo-img'))return;logo.innerHTML='<img class="tc-sidebar-logo-img" src="/assets/the-capital-logo.png" alt="The Capital">'}
   function boot(){
-    buildSimpleHeader();
-    markSidebarLogo();
-
+    buildSimpleHeader();markSidebarLogo();
     loadStyle('/app/css/header-simple.css','data-tc-header-simple');
     loadStyle('/app/css/scale-100.css','data-tc-scale-100');
     loadStyle('/app/css/theme-system.css','data-tc-theme-system');
     loadStyle('/app/css/visual-contrast.css','data-tc-visual-contrast');
     loadStyle('/app/css/shell-overhaul.css','data-tc-shell-overhaul');
-
+    loadStyle('/app/css/dashboard-runtime.css','data-tc-dashboard-runtime');
     loadScript('/app/js/header-runtime-fix.js');
     loadScript('/app/js/header-polish.js');
     loadScript('/app/js/shell-overhaul.js');
+    loadScript('/app/js/overview-runtime-fix.js');
     loadScript('/app/js/mobile-shell-fix.js');
     MODULES.forEach(loadScript);
-
     window.dispatchEvent(new CustomEvent('tc:header-ready'));
   }
-
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',boot,{once:true});
-  }else{
-    boot();
-  }
-
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
   window.TCHeader={boot:boot};
   console.log('[HEADER] Header simplifié chargé');
 })();
