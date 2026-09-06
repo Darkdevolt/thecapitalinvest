@@ -5,6 +5,7 @@
   window.__TC_SIMPLE_HEADER__=true;
 
   var MODULES=[
+    '/app/js/market-ux.js',
     '/app/js/mode.js',
     '/app/js/theme.js',
     '/app/js/views/comparison.js',
@@ -65,6 +66,7 @@
           '</div>'+ 
         '</nav>'+ 
         '<div class="tc-header-tools">'+
+          '<button id="tcMobileMenu" type="button" class="tc-mobile-menu-toggle" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="sidebar"><span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span></button>'+
           '<div class="global-search" id="globalSearch">'+
             '<input type="search" id="globalSearchInput" placeholder="Rechercher…" aria-label="Rechercher un titre, une société ou un ticker" autocomplete="off">'+
             '<div class="global-search-results" id="globalSearchResults" role="listbox"></div>'+ 
@@ -87,7 +89,6 @@
     buildSimpleHeader();
     markSidebarLogo();
 
-    // Une seule feuille possède la géométrie du nouveau header.
     loadStyle('/app/css/header-simple.css','data-tc-header-simple');
     loadStyle('/app/css/scale-100.css','data-tc-scale-100');
     loadStyle('/app/css/theme-system.css','data-tc-theme-system');
