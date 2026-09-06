@@ -98,6 +98,7 @@
     loadScript('/app/js/header-runtime-fix.js');
     loadScript('/app/js/header-polish.js');
     loadScript('/app/js/shell-overhaul.js');
+    loadScript('/app/js/mobile-shell-fix.js');
     MODULES.forEach(loadScript);
 
     window.dispatchEvent(new CustomEvent('tc:header-ready'));
