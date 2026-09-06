@@ -1,7 +1,0 @@
-/*
- * Retired compatibility stylesheet.
- *
- * header-final.css is the single canonical header layout. Keeping this file
- * inert prevents older dynamic loaders from reintroducing a second flex/grid
- * contract with different breakpoints and dimensions.
- */
