@@ -16,7 +16,6 @@
     boc.js                      Liste des Bulletins Officiels de la Cote (public)
     boc-upload.js               Dépôt d'un BOC (administrateur)
     scrape-brvm.js              Récupération d'une séance depuis brvm.org (admin ou machine)
-    sync-brvm.js                Alias de compatibilité de la précédente
     process-brvm.js             Pipeline complet : récupération, contrôles, écriture
     portfolio-transactions.js   Journal des transactions (utilisateur authentifié)
     preferences.js              Mode d'affichage Simple / Pro
@@ -62,35 +61,46 @@
     views/portefeuille/         Portefeuille (store, CRUD, calculs, rendu)
     views/technique/            Analyse technique
 
-### public/admin/js/ — administration, par domaine métier
+### public/admin/js/ — administration par domaine métier
 
-Chaque dossier porte un README décrivant son périmètre et listant ses fichiers.
+Les modules administratifs sont maintenant rangés par domaine. `core/` contient
+le socle partagé ; les autres dossiers ne contiennent que les fonctionnalités
+du domaine correspondant.
 
-    core/           Configuration, appels API, utilitaires, amorçage
+    core/           Configuration, API, utilitaires, amorçage, diagnostics
     dashboard/      Vue d'accueil
-    cours/          Cotations : saisie, édition, contrôle, historique
-    seances/        Séances de bourse : CRUD, vue annuelle, vue globale
-    historique/     Historique des cotations, qualité, suppression
+    cours/          Cotations et historique
     marche/         Indices et scraping
     entreprises/    Référentiel des sociétés
-    financials/     États financiers
-    analyses/       Recommandations
+    financials/     États financiers et sous-modules Excel/schema
+    analyses/       Recommandations et analyses
     dividendes/     Calendrier des dividendes
     boc/            Bulletins Officiels de la Cote
     imports/        Import de fichiers
-    utilisateurs/   Comptes, abonnements, analyse de clientèle
+    utilisateurs/   Comptes, abonnements et clientèle
+    reporting/      Reporting et exports
     diagnostic/     Contrôles de cohérence
+    institute/      Administration de The Capital Institute
+
+### Règle d'organisation front
+
+Un dossier représente un domaine fonctionnel. Un module ne doit pas devenir un
+nouveau « correctif global » chargé depuis `app.html` ou `admin.html`. Les
+correctifs qui deviennent pérennes doivent être absorbés par le module qu'ils
+corrigent, puis supprimés après vérification des références.
 
 ## Ce que la réorganisation n'a pas fait
 
-Les fichiers ont été rangés par domaine ; leur contenu n'a pas été fusionné.
+Cette étape est volontairement structurelle : elle déplace les gros modules
+administratifs vers leurs domaines sans modifier leur logique métier, leurs
+appels API, les tables Supabase ou les routes Vercel.
 
-Le domaine `cours/` compte encore six fichiers issus de correctifs successifs, et
-plusieurs modules suffixés `-patch`, `-fixes` ou `-hardening` redéfinissent à
-l'exécution des fonctions déclarées ailleurs. Ranger des fichiers est une
-opération mécanique, vérifiable par le contrôle d'intégrité. Fusionner leur
-contenu suppose de décider quelle version d'une fonction redéfinie trois fois
-fait autorité — ce qui ne se vérifie qu'en exécutant l'application.
+La seconde étape doit traiter la **factorisation interne** des fichiers encore
+volumineux. Les candidats prioritaires sont les modules qui dépassent environ
+30 Ko ou mélangent plusieurs responsabilités. Ils doivent être découpés en
+`view/`, `data/`, `validation/`, `actions/` ou sous-domaines cohérents, avec un
+point d'entrée stable.
 
-Cette étape reste donc à mener domaine par domaine, après une première mise en
-service et en s'appuyant sur la page `/diagnostic.html` et la bannière d'erreurs.
+Aucun fichier ne doit être supprimé ou fusionné uniquement parce que son nom
+semble ancien. Suppression et fusion nécessitent une recherche des références,
+un contrôle de parsing et une vérification navigateur.
