@@ -1,0 +1,41 @@
+/* THE CAPITAL — portfolio runtime layer */
+#view-portefeuille{min-width:0}
+#view-portefeuille .pf-tabs{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+#view-portefeuille .pf-subpanel{display:none}
+#view-portefeuille .pf-subpanel.active{display:block}
+#view-portefeuille .form-hint{min-height:18px;color:var(--dim);font-size:12px;line-height:1.5}
+#view-portefeuille .portfolio-periods{display:flex;gap:6px;flex-wrap:wrap}
+#view-portefeuille .chart-card-body{height:300px;min-height:300px}
+#view-portefeuille .chart-card-body canvas{width:100%!important;height:100%!important;display:block}
+#view-portefeuille .portfolio-table-toolbar{display:flex;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap}
+#view-portefeuille .portfolio-table-toolbar .search-input{flex:1 1 260px;min-width:220px}
+#view-portefeuille .portfolio-table-wrap{overflow:auto}
+#view-portefeuille .portfolio-table{min-width:1180px}
+#view-portefeuille .portfolio-table th{white-space:nowrap}
+#view-portefeuille .portfolio-table td{vertical-align:top}
+#view-portefeuille .pf-bestworst{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;background:var(--border2)}
+#view-portefeuille .pf-bestworst>div{background:var(--card);padding:18px}
+#view-portefeuille .pf-bestworst span{display:block;color:var(--dim);font-size:11px;margin-bottom:6px}
+#view-portefeuille .pf-bestworst strong{font-family:var(--mono);font-size:16px;color:var(--cream)}
+#view-portefeuille .watchlist-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+#view-portefeuille .watchlist-card{position:relative;padding:14px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+#view-portefeuille .wl-remove{position:absolute;right:8px;top:8px;border:0;background:none;color:var(--dim);cursor:pointer}
+#view-portefeuille .wl-ticker{font-family:var(--mono);color:var(--gold);font-weight:700}
+#view-portefeuille .wl-price{margin-top:7px;font-family:var(--mono);font-size:14px;color:var(--cream)}
+#view-portefeuille .portfolio-mini-list{border-top:1px solid var(--border2)}
+#view-portefeuille .portfolio-bulkbar{position:sticky;bottom:16px;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+#view-portefeuille .portfolio-bulkbar button{border:1px solid var(--red);background:none;color:var(--red);border-radius:7px;padding:7px 12px;cursor:pointer}
+#view-portefeuille .pf-modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.65);z-index:1000;padding:20px}
+#view-portefeuille .pf-modal.open{display:flex}
+#view-portefeuille .pf-modal-card{width:min(620px,100%);max-height:90vh;overflow:auto;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
+#view-portefeuille .pf-modal-card .card-header{display:flex;align-items:center;justify-content:space-between}
+#view-portefeuille .pf-modal-card .card-header button{border:0;background:none;color:var(--dim);font-size:22px;cursor:pointer}
+@media(max-width:900px){
+  #view-portefeuille .pf-bestworst{grid-template-columns:1fr}
+  #view-portefeuille .chart-card-body{height:260px;min-height:260px}
+}
+@media(max-width:560px){
+  #view-portefeuille .chart-card-body{height:230px;min-height:230px}
+  #view-portefeuille .portf-form{display:grid;grid-template-columns:1fr}
+  #view-portefeuille .portf-form input,#view-portefeuille .portf-form select,#view-portefeuille .portf-form button{width:100%;min-height:42px}
+}
