@@ -5,11 +5,11 @@
 #view-overview .page-header h1{font-size:clamp(26px,2.5vw,36px);line-height:1.2;letter-spacing:-.035em}
 #view-overview .page-header p{margin-top:8px;font-size:13px;line-height:1.55;color:var(--muted)}
 #view-overview>.card,#view-overview .dashboard-news,#view-overview .tci-card,#view-overview .stat-card{background:linear-gradient(145deg,var(--dash-surface-2),var(--dash-surface));border:1px solid var(--dash-border);border-radius:var(--dash-radius);box-shadow:0 8px 26px rgba(0,0,0,.16);min-width:0;box-sizing:border-box;overflow:hidden}
-#view-overview #overviewStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 22px;width:100%}
-#view-overview #overviewStats .stat-card{min-height:126px;padding:20px}
-#view-overview .stat-label{margin-bottom:12px;font-size:10px;letter-spacing:.14em;color:var(--dim)}
+#view-overview #overviewStats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:0 0 22px;width:100%;align-items:stretch}
+#view-overview #overviewStats .stat-card{height:112px;min-height:112px;padding:18px 20px;display:flex;flex-direction:column;justify-content:center}
+#view-overview .stat-label{margin-bottom:10px;font-size:10px;letter-spacing:.14em;color:var(--dim)}
 #view-overview .stat-value{font-size:28px;line-height:1;color:var(--cream);font-variant-numeric:tabular-nums}
-#view-overview .stat-change{margin-top:9px;font-size:12px;font-weight:600}
+#view-overview .stat-change{margin-top:8px;font-size:12px;font-weight:600}
 #view-overview .card-header,#view-overview .dashboard-news-head,#view-overview .tci-head{min-height:56px;padding:16px 20px;background:rgba(255,255,255,.012);border-bottom:1px solid var(--dash-border-soft)}
 #view-overview .card-title,#view-overview .tci-title{font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 #view-overview .card-body{padding:20px;min-width:0}
@@ -29,3 +29,4 @@
 #view-overview .chart-tabs{padding:10px 16px}
 @media (max-width:900px){#view-overview.view{padding:20px 16px 36px}#view-overview #overviewStats{grid-template-columns:1fr}#view-overview .dashboard-news-grid{grid-template-columns:1fr}#view-overview .news-item{border-right:0;border-bottom:1px solid var(--dash-border-soft)}#view-overview .chart-container{height:280px}}
 @media (max-width:600px){#view-overview.view{padding-inline:12px}#view-overview .stat-value{font-size:25px}#view-overview .card-header,#view-overview .card-body{padding:14px}}
+@media(prefers-reduced-motion:reduce){#view-overview *{transition:none!important}}
