@@ -1,168 +1,146 @@
-/* The Capital — canonical application-shell compatibility layer */
-:root{--tc-shell-header:64px;--tc-shell-sidebar:252px;--tc-shell-radius:14px}
-*{box-sizing:border-box}
+/* THE CAPITAL — canonical shell compatibility layer
+   The simplified header owns all header geometry. This file provides only
+   shared shell, layering, accessibility and responsive safety rules. */
+:root{
+  --tc-shell-header:68px;
+  --tc-shell-sidebar:252px;
+  --tc-shell-radius:14px;
+}
+
+*,*::before,*::after{box-sizing:border-box}
 html{scroll-behavior:smooth}
 body{min-width:320px;overflow-x:hidden}
 body.menu-open{overflow:hidden}
-.header{min-height:var(--tc-shell-header);height:auto;position:sticky;top:0;z-index:10000}
-.topnav{min-width:0;overflow:visible}
-.topnav-right{min-width:0;gap:10px}
-.global-search{min-width:220px;max-width:420px;flex:1 1 320px}
-.global-search input{width:100%;min-width:0}
+
+/* Shared application layering. Header geometry remains in header-simple.css. */
+.sidebar{z-index:10020}
+.overlay{z-index:10010}
+.nav-dropdown-menu{z-index:10040}
 .global-search-results{z-index:10060}
-.header-market-status{white-space:nowrap;display:inline-flex;align-items:center;gap:7px;min-height:34px}
-.header-market-status .market-status-dot{width:7px;height:7px;border-radius:50%;background:currentColor;opacity:.65;flex:0 0 auto}
+.toast-container{z-index:10080}
+.modal{z-index:10090}
+
+.header-market-status{
+  white-space:nowrap;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-height:34px;
+}
+.header-market-status .market-status-dot{
+  width:7px;
+  height:7px;
+  border-radius:50%;
+  background:currentColor;
+  opacity:.65;
+  flex:0 0 auto;
+}
 .header-market-status.tc-open .market-status-dot{opacity:1}
 .header-market-status.tc-closed .market-status-dot{opacity:.42}
-.sidebar{z-index:10020}.overlay{z-index:10010}.nav-dropdown-menu{z-index:10040}.tc-account-menu{z-index:10070}
-.main,.view,.tci-row{min-width:0}.page-header{margin-bottom:18px}.page-header h1{line-height:1.08;letter-spacing:-.02em}.page-header p{max-width:72ch}
-#view-overview .stat-card{min-width:0;overflow:hidden}#view-overview .stat-value{font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}#view-overview .grid-7030{align-items:stretch}#view-overview .grid-7030>.card{min-width:0}#view-overview .chart-container,#view-overview canvas{min-width:0;max-width:100%}
-[data-route]:focus-visible,[data-dropdown]:focus-visible,.nav-dropdown-item:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold,#c7a15b);outline-offset:2px}
-.tc-nav-icon{display:inline-flex!important;align-items:center;justify-content:center;width:16px;height:16px;flex:0 0 16px}.tc-nav-icon svg,.tc-ui-icon svg,.tc-account-icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}.nav-dropdown-btn .tc-nav-icon,.nav-item .tc-nav-icon{margin-right:7px}.tc-account-icon{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex:0 0 16px}
-[data-tc-state="loading"]:empty::after{content:"Chargement…";display:block;padding:14px 16px;color:var(--muted,#777);font-size:12px}[data-tc-state="empty"]:empty::after{content:"Aucune donnée disponible.";display:block;padding:14px 16px;color:var(--muted,#777);font-size:12px}
-@media (max-width:1200px){.topnav-right{gap:8px}.global-search{max-width:300px}.topnav-username{max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-@media (max-width:980px){.topnav{display:none}.header{display:flex;align-items:center;justify-content:space-between;padding-inline:12px}.topnav-right{width:100%;flex:1 1 auto}.global-search{order:1;max-width:none;flex:1 1 auto}.header-market-status{order:2}.header-time{order:3}.topnav-user{order:4}.topnav-logout{order:5}.global-search input{height:38px}.main{padding-bottom:calc(24px + env(safe-area-inset-bottom))}}
-@media (max-width:768px){:root{--tc-shell-header:58px}.header{min-height:58px}.header-time{min-width:0;max-width:92px;overflow:hidden}.header-time .tc-clock-list,.header-time .tc-clock-kicker,.header-time .tc-clock-primary small{display:none!important}.header-time .tc-clock-primary{display:block!important}.header-market-status span:last-child{font-size:10px}.global-search{max-width:none}.main{padding-inline:12px!important}.page-header{margin-bottom:14px}.page-header h1{font-size:clamp(22px,6vw,30px)}#view-overview .grid-3,#view-overview .grid-7030,#view-overview .tci-row-2{grid-template-columns:1fr!important}#view-overview .grid-7030{gap:14px}.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}table{min-width:640px}}
-@media (max-width:480px){.topnav-right{gap:6px}.topnav-user{min-width:34px}.topnav-username{display:none}.topnav-logout{width:34px}.header-market-status{display:none}.global-search input{font-size:13px}#view-overview .stat-card{padding:14px}}
-@media (prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
 
-/* ------------------------------------------------------------------
-   ACCOUNT MENU — canonical styling
-   header.js injecte #tcAccountMenu directement dans <body>.
-   Ces règles sont obligatoires : sans elles le menu reste dans le flux
-   normal du document et son contenu apparaît "brut" en bas de page.
-   ------------------------------------------------------------------ */
-#tcAccountMenu.tc-account-menu{
-  position:fixed!important;
-  top:0;
-  left:0;
-  width:min(300px,calc(100vw - 20px));
-  max-width:calc(100vw - 20px);
-  box-sizing:border-box!important;
-  margin:0;
-  padding:10px;
-  display:none;
-  flex-direction:column;
-  gap:2px;
+.main,.view,.tci-row{min-width:0}
+.page-header{margin-bottom:18px}
+.page-header h1{line-height:1.08;letter-spacing:-.02em}
+.page-header p{max-width:72ch}
+
+#view-overview .stat-card{min-width:0;overflow:hidden}
+#view-overview .stat-value{
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
   overflow:hidden;
-  background:var(--panel,#15110c);
-  color:var(--cream,#f5f0e8);
-  border:1px solid var(--border,rgba(184,150,78,.22));
-  border-radius:12px;
-  box-shadow:0 18px 48px rgba(0,0,0,.45),0 4px 18px rgba(0,0,0,.24);
-  z-index:10070!important;
-  isolation:isolate;
+  text-overflow:ellipsis;
 }
-#tcAccountMenu.tc-account-menu.open{display:flex!important}
-#tcAccountMenu .tc-account-head{
-  display:flex;
-  flex-direction:column;
-  gap:3px;
-  padding:8px 9px 10px;
-  margin-bottom:2px;
-  border-bottom:1px solid var(--border2,rgba(184,150,78,.10));
+#view-overview .grid-7030{align-items:stretch}
+#view-overview .grid-7030>.card{min-width:0}
+#view-overview .chart-container,
+#view-overview canvas{min-width:0;max-width:100%}
+
+[data-tc-state="loading"]:empty::after{
+  content:"Chargement…";
+  display:block;
+  padding:14px 16px;
+  color:var(--muted,#777);
+  font-size:12px;
 }
-#tcAccountMenu .tc-account-kicker{
-  color:var(--gold,#b8964e);
-  font:600 9px/1.2 var(--mono,DM Mono,monospace);
-  letter-spacing:.14em;
-  text-transform:uppercase;
+[data-tc-state="empty"]:empty::after{
+  content:"Aucune donnée disponible.";
+  display:block;
+  padding:14px 16px;
+  color:var(--muted,#777);
+  font-size:12px;
 }
-#tcAccountMenu .tc-account-title{
-  color:var(--cream,#f5f0e8);
-  font:500 16px/1.2 var(--serif,Georgia,serif);
+
+[data-route]:focus-visible,
+[data-dropdown]:focus-visible,
+.nav-dropdown-item:focus-visible,
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible{
+  outline:2px solid var(--gold,#c7a15b);
+  outline-offset:2px;
 }
-#tcAccountMenu .tc-account-item{
-  display:flex!important;
+
+.tc-nav-icon{
+  display:inline-flex!important;
   align-items:center;
-  gap:10px;
-  min-width:0;
-  padding:9px 10px;
-  border:1px solid transparent;
-  border-radius:9px;
-  color:var(--cream,#f5f0e8)!important;
-  background:transparent;
-  text-decoration:none!important;
-  transition:background .16s ease,border-color .16s ease,color .16s ease;
+  justify-content:center;
+  width:16px;
+  height:16px;
+  flex:0 0 16px;
 }
-#tcAccountMenu .tc-account-item:hover,
-#tcAccountMenu .tc-account-item:focus-visible{
-  background:rgba(184,150,78,.08);
-  border-color:rgba(184,150,78,.18);
-  color:var(--cream,#f5f0e8)!important;
-  outline:none;
+.tc-nav-icon svg,
+.tc-ui-icon svg,
+.tc-account-icon svg{
+  width:14px;
+  height:14px;
+  stroke:currentColor;
+  fill:none;
+  stroke-width:1.55;
+  stroke-linecap:round;
+  stroke-linejoin:round;
 }
-#tcAccountMenu .tc-account-item>span{
+.tc-account-icon{
   display:inline-flex;
   align-items:center;
   justify-content:center;
-  width:28px;
-  height:28px;
-  flex:0 0 28px;
-  border-radius:8px;
-  background:rgba(184,150,78,.08);
-  color:var(--gold2,#e0c176);
-  font-size:14px;
+  width:16px;
+  height:16px;
+  flex:0 0 16px;
 }
-#tcAccountMenu .tc-account-item>div{min-width:0;display:flex;flex-direction:column;gap:2px}
-#tcAccountMenu .tc-account-item b{
-  color:inherit;
-  font:600 12px/1.25 var(--sans,'DM Sans',sans-serif);
+
+@media (max-width:1200px){
+  .page-header{margin-bottom:16px}
 }
-#tcAccountMenu .tc-account-item small{
-  color:var(--dim,rgba(245,240,232,.48));
-  font:400 10px/1.35 var(--sans,'DM Sans',sans-serif);
-  white-space:normal;
-}
-#tcAccountMenu .tc-account-separator{
-  height:1px;
-  margin:5px 5px;
-  background:var(--border2,rgba(184,150,78,.10));
-}
-#tcAccountMenu .tc-account-theme{
-  width:100%;
-  display:flex;
-  align-items:center;
-  gap:9px;
-  min-height:38px;
-  padding:8px 10px;
-  border:1px solid transparent;
-  border-radius:9px;
-  background:transparent;
-  color:var(--cream,#f5f0e8);
-  font:500 11px/1.2 var(--sans,'DM Sans',sans-serif);
-  text-align:left;
-  cursor:pointer;
-  transition:background .16s ease,border-color .16s ease;
-}
-#tcAccountMenu .tc-account-theme:hover,
-#tcAccountMenu .tc-account-theme:focus-visible{
-  background:rgba(184,150,78,.08);
-  border-color:rgba(184,150,78,.18);
-  outline:none;
-}
-#tcAccountMenu .tc-account-theme>span{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  width:20px;
-  color:var(--gold2,#e0c176);
-  font-size:14px;
-}
-#tcAccountMenu .tc-account-theme strong{
-  margin-left:auto;
-  color:var(--gold2,#e0c176);
-  font:600 10px/1 var(--mono,DM Mono,monospace);
-  letter-spacing:.05em;
-  text-transform:uppercase;
+
+@media (max-width:980px){
+  :root{--tc-shell-header:60px}
+  .main{padding-bottom:calc(24px + env(safe-area-inset-bottom))}
 }
 
 @media (max-width:768px){
-  #tcAccountMenu.tc-account-menu{
-    width:min(310px,calc(100vw - 16px));
-    max-width:calc(100vw - 16px);
-    padding:8px;
-    border-radius:11px;
+  :root{--tc-shell-header:58px}
+  .main{padding-inline:12px!important}
+  .page-header{margin-bottom:14px}
+  .page-header h1{font-size:clamp(22px,6vw,30px)}
+  #view-overview .grid-3,
+  #view-overview .grid-7030,
+  #view-overview .tci-row-2{grid-template-columns:1fr!important}
+  #view-overview .grid-7030{gap:14px}
+  .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{min-width:640px}
+}
+
+@media (max-width:480px){
+  :root{--tc-shell-header:54px}
+  #view-overview .stat-card{padding:14px}
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    scroll-behavior:auto!important;
+    animation-duration:.001ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.001ms!important;
   }
-  #tcAccountMenu .tc-account-item{padding:9px 9px}
 }
