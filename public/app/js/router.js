@@ -102,6 +102,22 @@
     });
   }
 
+  // New command-shell navigation bridge.
+  // The new header/rail are deliberately outside the legacy sidebar/dropdown
+  // system, so the router owns their navigation explicitly.
+  if (!window.__TC_COMMAND_NAV_EVENTS__) {
+    window.__TC_COMMAND_NAV_EVENTS__ = true;
+    document.addEventListener('click', function (event) {
+      const target = event.target.closest?.('.tc-brand[data-route], .tc-navitem[data-route], .tc-rail-link[data-route]');
+      if (!target) return;
+      const id = target.getAttribute('data-route');
+      if (!id || typeof window.nav !== 'function') return;
+      event.preventDefault();
+      event.stopPropagation();
+      window.nav(id);
+    }, true);
+  }
+
   window.setHashForView = function(id) {
     const hashMap={overview:'',titres:'#titres',boc:'#boc',marche:'#marche',analyses:'#analyses','analyse-detail':'#analyse-detail','analyse-technique':'#analyse-technique','analyse-fondamentale':'#analyse-fondamentale',screener:'#screener',portefeuille:'#portefeuille',alertes:'#alertes',financials:'#financials','financials-detail':'#financials-detail',fiche:'#fiche',publications:'#publications',comparison:'#comparison','dividend-screener':'#dividend-screener'};
     const h=hashMap[id]||'';
