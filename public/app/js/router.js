@@ -38,6 +38,22 @@
     fiche:'renderFiche', publications:'renderPublications', comparison:'renderComparison','dividend-screener':'renderDividendScreener'
   };
 
+  function injectDashboardStability(){
+    if(document.getElementById('tc-dashboard-stability')) return;
+    const style=document.createElement('style');
+    style.id='tc-dashboard-stability';
+    style.textContent=`
+      #view-overview{min-width:0!important}
+      #view-overview #overviewStats{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:16px!important;width:100%!important;min-width:0!important;align-items:stretch!important}
+      #view-overview #overviewStats .stat-card{height:auto!important;min-height:122px!important;min-width:0!important;overflow:hidden!important;box-sizing:border-box!important;padding:18px 20px!important}
+      #view-overview #overviewStats .stat-value{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important;line-height:1.15!important;font-variant-numeric:tabular-nums!important}
+      #view-overview #overviewStats .stat-label,#view-overview #overviewStats .stat-change{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
+      @media(max-width:1050px){#view-overview #overviewStats{grid-template-columns:repeat(3,minmax(180px,1fr))!important;overflow-x:auto!important;padding-bottom:3px!important}#view-overview #overviewStats .stat-card{min-width:180px!important}}
+      @media(max-width:900px){#view-overview #overviewStats{grid-template-columns:1fr!important;overflow:visible!important}#view-overview #overviewStats .stat-card{min-width:0!important}}
+    `;
+    document.head.appendChild(style);
+  }
+
   window.nav = function(id, noHash) {
     const view = document.getElementById('view-' + id);
     if (!view) { console.warn('[ROUTER] Vue introuvable:', id); return false; }
@@ -102,9 +118,6 @@
     });
   }
 
-  // New command-shell navigation bridge.
-  // The new header/rail are deliberately outside the legacy sidebar/dropdown
-  // system, so the router owns their navigation explicitly.
   if (!window.__TC_COMMAND_NAV_EVENTS__) {
     window.__TC_COMMAND_NAV_EVENTS__ = true;
     document.addEventListener('click', function (event) {
@@ -136,6 +149,7 @@
   if(!window.__TC_ROUTER_POPSTATE__){window.__TC_ROUTER_POPSTATE__=true;window.addEventListener('popstate',function(){if(typeof parseHash==='function')parseHash();});}
   window.escapeHtml=function(text){const d=document.createElement('div');d.textContent=text==null?'':String(text);return d.innerHTML;};
 
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>console.log('[ROUTER] Single-app router chargé — navigation uniquement'),{once:true});
-  else console.log('[ROUTER] Single-app router chargé — navigation uniquement');
+  injectDashboardStability();
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',()=>console.log('[ROUTER] Single-app router chargé — navigation + command shell'),{once:true});
+  else console.log('[ROUTER] Single-app router chargé — navigation + command shell');
 })();
