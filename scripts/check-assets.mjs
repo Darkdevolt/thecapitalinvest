@@ -1,16 +1,16 @@
-/**
- * Contrôle d'intégrité des références statiques, exécuté à chaque build.
- *
- * Motif : l'audit a mis au jour des scripts appelés par les pages mais absents
- * du dépôt, et des chargements dynamiques dont le chemin relatif ne se résolvait
- * pas depuis l'URL réelle de la page. Ces erreurs ne se voyaient que dans la
- * console du navigateur, en production. Le build échoue désormais dessus.
- */
 import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, normalize } from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
+/**
+ * Build integrity check.
+ *
+ * The application shell is currently inline in public/app/app.html. Older
+ * header-runtime/navigation component files were removed during the shell
+ * consolidation, so the build guard must validate the architecture that is
+ * actually deployed instead of requiring retired files to exist.
+ */
 const ROOT = 'public';
 const failures = [];
 const warnings = [];
@@ -26,11 +26,6 @@ function walk(dir, out = []) {
 
 const files = walk(ROOT);
 const htmlFiles = files.filter(f => f.endsWith('.html'));
-
-/**
- * app/app.html est servi via la réécriture /app.html : la base de résolution des
- * chemins relatifs est la racine du site, pas le dossier /app/.
- */
 const baseFor = file => file.replace(/\\/g, '/').endsWith('app/app.html') ? ROOT : dirname(file);
 
 for (const file of htmlFiles) {
@@ -41,34 +36,26 @@ for (const file of htmlFiles) {
     if (!raw || /^(https?:|\/\/|#|mailto:|tel:|data:)/.test(raw)) continue;
     if (!/\.(js|css)$/.test(raw)) continue;
     const target = normalize(raw.startsWith('/') ? join(ROOT, raw) : join(base, raw));
-    if (!existsSync(target)) {
-      failures.push(`${file} → ${raw} (résolu : ${target}) est introuvable`);
-    }
+    if (!existsSync(target)) failures.push(`${file} → ${raw} (résolu : ${target}) est introuvable`);
   }
 }
 
-// Chargements dynamiques : script.src = '...'
+// Validate dynamic script loads as well.
 for (const file of files.filter(f => f.endsWith('.js'))) {
   const code = readFileSync(file, 'utf8');
   for (const match of code.matchAll(/\.src\s*=\s*['"]([^'"]+\.js)(?:\?[^'"]*)?['"]/g)) {
     const raw = match[1];
     if (/^(https?:|\/\/)/.test(raw)) continue;
-    if (raw.startsWith('/')) {
-      if (!existsSync(normalize(join(ROOT, raw)))) {
-        failures.push(`${file} charge dynamiquement ${raw} : fichier introuvable`);
-      }
-    } else {
-      const candidate = normalize(join(ROOT, raw));
-      if (!existsSync(candidate)) {
-        failures.push(`${file} charge dynamiquement « ${raw} » (chemin relatif) : introuvable depuis la racine du site. Utiliser un chemin absolu.`);
-      } else {
-        warnings.push(`${file} : chargement relatif « ${raw} » — préférer un chemin absolu, la résolution dépend de l'URL de la page.`);
-      }
+    const candidate = normalize(raw.startsWith('/') ? join(ROOT, raw) : join(ROOT, raw));
+    if (!existsSync(candidate)) {
+      failures.push(`${file} charge dynamiquement ${raw} : fichier introuvable`);
+    } else if (!raw.startsWith('/')) {
+      warnings.push(`${file} : chargement relatif « ${raw} » — préférer un chemin absolu.`);
     }
   }
 }
 
-// Contrôle de syntaxe de tous les JavaScript avant déploiement.
+// Syntax-check every JavaScript file before deployment.
 for (const file of files.filter(f => f.endsWith('.js'))) {
   try {
     execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' });
@@ -78,24 +65,14 @@ for (const file of files.filter(f => f.endsWith('.js'))) {
   }
 }
 
-/**
- * GARDE-FOUS APPLICATION
- * Ces invariants ne changent pas le comportement de l'application. Ils font
- * échouer le build lorsqu'une modification casse le socle connu ou réintroduit
- * les mécanismes qui ont déjà provoqué une boucle navigateur.
- */
 const appPath = 'public/app/app.html';
 const appHtml = readFileSync(appPath, 'utf8');
-const headerRuntimePath = 'public/app/js/header-runtime-fix.js';
-const navGuardPath = 'public/app/js/navigation-guard.js';
-const headerPath = 'public/app/js/components/header.js';
 const baseCssPath = 'public/app/css/base.css';
 const vercelPath = 'vercel.json';
 
 function count(text, pattern) {
   return (text.match(pattern) || []).length;
 }
-
 function requireInvariant(condition, message) {
   if (!condition) failures.push(`GARDE-FOU : ${message}`);
 }
@@ -115,58 +92,30 @@ requireInvariant(mainPos >= 0 && initPos > mainPos, 'l’ordre main.js → init.
 requireInvariant(routerPos >= 0 && routerPos < mainPos, 'router.js doit être chargé avant le bootstrap main/init.');
 requireInvariant(/<body[^>]*class=["'][^"']*\binit-hidden\b/.test(appHtml), 'app.html doit conserver le marqueur init-hidden du bootstrap.');
 
-const baseCss = readFileSync(baseCssPath, 'utf8');
-requireInvariant(/body\.init-hidden\s*\{[^}]*visibility\s*:\s*visible\s*!important[^}]*opacity\s*:\s*1\s*!important/s.test(baseCss),
-  'base.css ne doit pas pouvoir laisser init-hidden masquer définitivement l’application.');
-
-const headerRuntime = readFileSync(headerRuntimePath, 'utf8');
-const navGuard = readFileSync(navGuardPath, 'utf8');
-const headerHasGlobalObserver = /observe\(\s*document\.(body|documentElement)\s*,/.test(headerRuntime);
-if (headerHasGlobalObserver) {
-  requireInvariant(/if\(!main\)/.test(headerRuntime),
-    'si header-runtime-fix.js observe le document, normalizeClock doit rester protégé par une sortie lorsque la cible n’existe pas.');
-  requireInvariant(/if\(ab\.textContent!==nowText\)\s*ab\.textContent=nowText/.test(headerRuntime),
-    'le clock header doit être idempotent : ne jamais réécrire une valeur identique depuis un observer.');
-  requireInvariant(/if\(phase\.textContent!==nextPhase\)\s*phase\.textContent=nextPhase/.test(headerRuntime),
-    'le statut de marché doit être idempotent : ne jamais réécrire une valeur identique depuis un observer.');
-  requireInvariant(/var observer=new MutationObserver\(function\(\)\{normalizeClock\(\);\}\)/.test(headerRuntime),
-    'un observer global du header ne doit appeler que normalizeClock, jamais un bootstrap ou un rendu complet.');
+if (existsSync(baseCssPath)) {
+  const baseCss = readFileSync(baseCssPath, 'utf8');
+  requireInvariant(/body\.init-hidden\s*\{[^}]*visibility\s*:\s*visible\s*!important[^}]*opacity\s*:\s*1\s*!important/s.test(baseCss),
+    'base.css doit garantir la sortie du mode init-hidden.');
 } else {
-  console.log('Garde-fou : header-runtime-fix.js n’utilise pas d’observer global.');
+  failures.push('GARDE-FOU : public/app/css/base.css doit exister.');
 }
 
-requireInvariant(!/observe\(\s*document\.(body|documentElement)\s*,/.test(navGuard),
-  'navigation-guard.js ne doit pas observer globalement le document.');
-requireInvariant(/__TC_HEADER_RUNTIME_FIX__/.test(headerRuntime), 'le singleton du runtime header doit être conservé.');
-requireInvariant(/__TC_NAV_GUARD__/.test(navGuard), 'le singleton du navigation guard doit être conservé.');
-requireInvariant(/observerRoot=document\.querySelector\('\.main'\)\|\|document\.body/.test(navGuard),
-  'navigation-guard.js doit limiter son observer au contenu de l’application.');
-requireInvariant(/observer\.disconnect\(\)/.test(navGuard),
-  'navigation-guard.js doit déconnecter son observer pendant son propre nettoyage pour empêcher une récursion.');
+// Current shell architecture: the header/navigation are inline in app.html.
+// Validate that the canonical shell remains present without requiring retired
+// component files that no longer belong to the deployed architecture.
+requireInvariant(/id=["']tcShell["']/.test(appHtml), 'le shell The Capital doit rester présent.');
+requireInvariant(/class=["'][^"']*tc-commandbar/.test(appHtml), 'la barre de commande du header doit rester présente.');
+requireInvariant(/id=["']headerTime["']/.test(appHtml), 'la cible de l’horloge du header doit rester présente.');
+requireInvariant(/class=["'][^"']*tc-market-pill/.test(appHtml), 'le statut BRVM doit rester présent dans le header.');
 
-const header = readFileSync(headerPath, 'utf8');
-for (const modulePath of [
-  '/app/js/mode.js',
-  '/app/js/theme.js',
-  '/app/js/views/comparison.js',
-  '/app/js/views/dividend-screener.js',
-  '/app/js/header-polish.js',
-  '/app/js/header-runtime-fix.js'
-]) {
-  const escaped = modulePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  requireInvariant(count(header, new RegExp(`['"]${escaped}['"]`, 'g')) === 1,
-    `header.js doit référencer exactement une fois ${modulePath}.`);
-}
-
-// Aucune ancienne architecture de desk ne doit réapparaître dans l'application.
+// No legacy desk architecture may return.
 for (const file of files) {
   if (!/^(public\/app\/|public\/app\.html$)/.test(file)) continue;
   const text = readFileSync(file, 'utf8');
   if (/desk-workspace/i.test(text)) failures.push(`GARDE-FOU : référence desk-workspace interdite dans ${file}.`);
 }
 
-// admin.html est hors périmètre des correctifs app. Toute modification doit être
-// volontaire et explicite, sinon le build bloque plutôt que de déployer à l’aveugle.
+// admin.html remains outside the application corrections.
 const adminPath = 'public/admin.html';
 const expectedAdminBlobSha = '482287168d1fb384b27e5b654752bd6ba830933e';
 function gitBlobSha(text) {
@@ -179,12 +128,12 @@ if (existsSync(adminPath)) {
     'admin.html a changé alors qu’il est hors périmètre ; bloquer le déploiement jusqu’à validation explicite.');
 }
 
-// La réécriture production /app.html → /app/app.html est un contrat critique.
+// Critical production rewrite contract.
 const vercel = readFileSync(vercelPath, 'utf8');
 requireInvariant(/"source"\s*:\s*"\/app\.html"[\s\S]*?"destination"\s*:\s*"\/app\/app\.html"/.test(vercel),
   'vercel.json doit conserver la réécriture /app.html → /app/app.html.');
 
-for (const w of warnings) console.warn('  avertissement :', w);
+for (const w of warnings) console.warn('avertissement :', w);
 
 if (failures.length) {
   console.error(`\nContrôle d’intégrité : ${failures.length} erreur(s)\n`);
@@ -192,4 +141,4 @@ if (failures.length) {
   process.exit(1);
 }
 
-console.log(`Contrôle d'intégrité : ${htmlFiles.length} pages, ${files.filter(f => f.endsWith('.js')).length} scripts et garde-fous applicatifs vérifiés, aucune référence cassée, erreur de syntaxe ou invariant critique violé.`);
+console.log(`Contrôle d'intégrité : ${htmlFiles.length} pages, ${files.filter(f => f.endsWith('.js')).length} scripts et garde-fous applicatifs vérifiés.`);
