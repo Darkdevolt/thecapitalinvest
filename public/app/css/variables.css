@@ -1,0 +1,19 @@
+/*
+ * Canonical design tokens for the application shell.
+ * Kept intentionally small: component/view styles own their layout rules.
+ * This file is a stable dependency of app.html and must remain loadable.
+ */
+:root {
+  --tc-ink: #171310;
+  --tc-panel: #1e1a16;
+  --tc-panel-2: #252019;
+  --tc-line: rgba(255,255,255,.09);
+  --tc-gold: #c9a24a;
+  --tc-gold-2: #e6c979;
+  --tc-white: #f7f3eb;
+  --tc-muted: #9e978e;
+  --tc-green: #72c38a;
+  --tc-red: #d86f6f;
+  --tc-header: 74px;
+  --tc-rail: 248px;
+}
