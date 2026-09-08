@@ -30,9 +30,34 @@
     d.head.appendChild(script);
   }
 
+  /* A portfolio with only positive sessions has no detractor. The previous
+     renderer repeated the same positive line as both contributor and detractor.
+     This only cleans the presentation; the portfolio calculation is untouched. */
+  function normalizePortfolioContributors() {
+    var rows = d.querySelectorAll('#tciPortfolio .tci-contribs .tci-contrib');
+    if (rows.length < 2) return;
+    var detractor = rows[rows.length - 1];
+    var value = detractor.querySelector('.tci-val');
+    if (!value) return;
+    var text = String(value.textContent || '').trim();
+    var negative = /^[-−]/.test(text);
+    if (!negative) detractor.hidden = true;
+  }
+
+  function observePortfolio() {
+    if (!d.body || w.__TC_DASHBOARD_PORTFOLIO_OBSERVER__) return;
+    w.__TC_DASHBOARD_PORTFOLIO_OBSERVER__ = true;
+    var observer = new MutationObserver(function () {
+      normalizePortfolioContributors();
+    });
+    observer.observe(d.body, { childList: true, subtree: true });
+    normalizePortfolioContributors();
+  }
+
   function apply() {
     loadStylesheet();
     loadCalendarRuntime();
+    observePortfolio();
   }
 
   if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', apply, { once: true });
