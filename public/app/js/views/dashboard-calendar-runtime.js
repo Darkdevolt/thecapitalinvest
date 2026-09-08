@@ -7,6 +7,9 @@
   if (w.__TC_DASHBOARD_CALENDAR_RUNTIME__) return;
   w.__TC_DASHBOARD_CALENDAR_RUNTIME__ = true;
 
+  var retryCount = 0;
+  var retryTimer = null;
+
   function dateInfo(value) {
     if (!value) return null;
     var date = new Date(value);
@@ -32,9 +35,7 @@
       var pay = dateInfo(row && row.date_paiement);
       rows.push({
         instrument: row && row.ticker || row && row.code || '',
-        nature: 'Dividende',
-        detach: detach,
-        pay: pay,
+        nature: 'Dividende', detach: detach, pay: pay,
         status: row && row.statut || 'confirmé',
         detail: row && row.annee ? 'Exercice ' + row.annee : ''
       });
@@ -44,9 +45,7 @@
       var pay = dateInfo(row && row.date_paiement);
       rows.push({
         instrument: row && (row.code || row.isin || row.ticker) || '',
-        nature: 'Coupon',
-        detach: detach,
-        pay: pay,
+        nature: 'Coupon', detach: detach, pay: pay,
         status: row && row.statut || 'prévisionnel',
         detail: row && row.numero_coupon != null ? 'Coupon n°' + row.numero_coupon : ''
       });
@@ -56,7 +55,7 @@
 
   function render() {
     var container = d.getElementById('newsFeed') || d.getElementById('pubFeed');
-    if (!container) return false;
+    if (!container) return { rendered: false, hasData: false };
 
     var rows = buildRows();
     var now = Date.now();
@@ -85,13 +84,13 @@
       if (cardTitle) cardTitle.textContent = title;
       if (refresh) {
         refresh.removeAttribute('onclick');
-        refresh.onclick = function () { render(); };
+        refresh.onclick = function () { retryCount = 0; schedule(0); };
       }
     }
 
     if (!upcoming.length) {
       container.innerHTML = '<div class="tc-calendar-empty">Aucune échéance réelle renseignée.</div>';
-      return true;
+      return { rendered: true, hasData: rows.length > 0 };
     }
 
     container.innerHTML = upcoming.map(function (row) {
@@ -105,18 +104,27 @@
         '<div class="tc-calendar-desc">' + esc(details.join(' · ')) + '</div></div>' +
         '<span class="tc-calendar-badge">' + esc(row.status) + '</span></div>';
     }).join('');
-    return true;
+    return { rendered: true, hasData: true };
   }
 
-  function schedule() {
-    setTimeout(render, 50);
+  function schedule(delay) {
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = setTimeout(function () {
+      retryTimer = null;
+      var result = render();
+      /* Data can arrive after the first dashboard render. Retry only while the
+         source arrays are genuinely absent/empty; never invent a calendar row. */
+      if (result && !result.hasData && retryCount < 20) {
+        retryCount += 1;
+        schedule(250);
+      } else {
+        retryCount = 0;
+      }
+    }, delay == null ? 50 : delay);
   }
 
-  w.addEventListener('tc:dataready', function (event) {
-    var phase = event && event.detail && event.detail.phase;
-    if (phase === 'enrichment' || phase === 'ondemand') schedule();
-  });
-  w.addEventListener('load', schedule);
-  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', schedule, { once: true });
-  else schedule();
+  w.addEventListener('tc:dataready', function () { retryCount = 0; schedule(30); });
+  w.addEventListener('load', function () { retryCount = 0; schedule(50); });
+  if (d.readyState === 'loading') d.addEventListener('DOMContentLoaded', function () { schedule(50); }, { once: true });
+  else schedule(50);
 })(window, document);
