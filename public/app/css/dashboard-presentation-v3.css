@@ -1,0 +1,108 @@
+/* THE CAPITAL — BRVM dashboard presentation v3
+ * Final presentation guard against legacy CSS/runtime conflicts.
+ * Data, APIs, authentication and business logic are intentionally untouched.
+ */
+
+#view-overview{--dash-bg:#171310;--dash-panel:#1e1a16;--dash-line:rgba(201,162,74,.18);--dash-soft:rgba(255,255,255,.07);--dash-text:#f7f3eb;--dash-muted:#a8a096;--dash-dim:#756e66;--dash-gold:#c9a24a;--dash-green:#43d982;--dash-red:#ef7272;}
+
+/* ===== Header: one compact, readable command line ===== */
+.tc-commandbar{height:62px!important;grid-template-columns:auto minmax(260px,1fr) auto!important;padding:0 18px!important;gap:18px!important;}
+.tc-brand{height:44px!important;gap:10px!important;min-width:168px!important;}
+.tc-brand img{width:38px!important;height:38px!important;}
+.tc-brand-copy{display:block!important;}
+.tc-brand-name{font-size:15px!important;letter-spacing:.12em!important;}
+.tc-brand-sub{font-size:7px!important;margin-top:4px!important;}
+.tc-command-center{min-width:0!important;display:grid!important;grid-template-columns:minmax(180px,1fr) auto!important;align-items:center!important;gap:12px!important;}
+.tc-search{max-width:none!important;min-width:0!important;}
+.tc-search input{height:34px!important;font-size:11px!important;}
+.tc-market-pill{height:34px!important;order:2!important;padding:0 10px!important;gap:7px!important;}
+.tc-market-label{font-size:9px!important;}
+.tc-market-time{font-size:9px!important;}
+.tc-command-actions{gap:7px!important;min-width:0!important;}
+.tc-clock{display:none!important;}
+.tc-user{max-width:150px!important;padding:4px 6px!important;}
+.tc-user-name{max-width:105px!important;font-size:10px!important;}
+.tc-logout{width:32px!important;height:32px!important;}
+.tc-navstrip{height:39px!important;padding:0 18px 0 18px!important;gap:2px!important;}
+.tc-navitem{height:29px!important;padding:0 10px!important;font-size:9px!important;}
+.tc-rail{top:101px!important;}
+body.tc-command-layout .main{min-height:calc(100vh - 101px)!important;}
+
+/* Hide redundant time/status fragments produced by legacy writers when the
+   modern command shell is present. The central market UX writes one source. */
+.tc-commandbar [data-market-clock-legacy],
+.tc-commandbar .legacy-market-clock,
+.tc-commandbar .market-clock-duplicate{display:none!important;}
+
+/* ===== Dashboard header ===== */
+#view-overview .page-header{margin:0 0 16px!important;padding:0 0 13px!important;min-height:0!important;}
+#view-overview .page-header h1{font-size:clamp(30px,2.8vw,38px)!important;line-height:1.04!important;margin:0!important;}
+#view-overview .page-header p{margin:6px 0 0!important;font-size:11px!important;line-height:1.35!important;}
+
+/* ===== Calendar ===== */
+#view-overview .dashboard-news{margin:0 0 14px!important;min-height:0!important;border-radius:12px!important;}
+#view-overview .dashboard-news-head{min-height:50px!important;padding:0 15px!important;}
+#view-overview .dashboard-news-head .eyebrow{margin:0 0 3px!important;font-size:8px!important;}
+#view-overview .dashboard-news-head .card-title{font-size:11px!important;}
+#view-overview .news-refresh{height:28px!important;padding:0 10px!important;font-size:9px!important;}
+#view-overview .tc-calendar-body{min-height:0!important;padding:0!important;}
+#view-overview .tc-calendar-item{grid-template-columns:56px minmax(0,1fr) auto!important;min-height:51px!important;padding:6px 15px!important;gap:10px!important;}
+#view-overview .tc-calendar-date strong{font-size:18px!important;}
+#view-overview .tc-calendar-date{font-size:9px!important;}
+#view-overview .tc-calendar-ticker{font-size:10px!important;}
+#view-overview .tc-calendar-desc{font-size:9px!important;margin-top:2px!important;}
+#view-overview .tc-calendar-badge{font-size:8px!important;padding:4px 7px!important;}
+#view-overview .tc-calendar-empty{min-height:42px!important;height:42px!important;padding:0 12px!important;display:grid!important;place-items:center!important;font-size:10px!important;}
+
+/* ===== Index cards: never clip the actual quote ===== */
+#view-overview #overviewStats{gap:12px!important;margin:0 0 14px!important;}
+#view-overview #overviewStats .stat-card{min-height:116px!important;height:116px!important;padding:15px 17px!important;overflow:visible!important;}
+#view-overview #overviewStats .stat-label{font-size:8px!important;line-height:1.2!important;}
+#view-overview #overviewStats .stat-value{height:auto!important;min-height:36px!important;margin:9px 0 3px!important;padding:0!important;overflow:visible!important;text-overflow:clip!important;line-height:1.08!important;font-size:clamp(25px,2.15vw,31px)!important;}
+#view-overview #overviewStats .stat-change{height:auto!important;min-height:15px!important;overflow:visible!important;text-overflow:clip!important;font-size:10px!important;line-height:1.25!important;}
+
+/* ===== Empty portfolio: compact state, not a giant blank panel ===== */
+#view-overview #tciPortfolio .tci-empty{min-height:0!important;height:auto!important;padding:20px 20px 18px!important;display:flex!important;flex-direction:column!important;align-items:center!important;justify-content:center!important;text-align:center!important;}
+#view-overview #tciPortfolio .tci-empty-title{font-size:13px!important;line-height:1.25!important;margin:0!important;}
+#view-overview #tciPortfolio .tci-empty-text{max-width:540px!important;margin:7px 0 12px!important;font-size:10px!important;line-height:1.45!important;}
+#view-overview #tciPortfolio .tci-btn{min-height:30px!important;height:30px!important;padding:0 14px!important;font-size:10px!important;border-radius:6px!important;}
+
+/* ===== Breadth ===== */
+#view-overview #tciBreadth .tci-card{padding:15px!important;}
+#view-overview #tciBreadth .tci-head{min-height:25px!important;margin-bottom:9px!important;padding-bottom:8px!important;}
+#view-overview #tciBreadth .tci-bar{height:8px!important;margin:10px 0 8px!important;}
+#view-overview #tciBreadth .tci-legend{gap:8px 14px!important;font-size:8px!important;}
+#view-overview #tciBreadth .tci-reading{margin-top:8px!important;font-size:9px!important;}
+
+/* ===== Lower dashboard: keep columns aligned and avoid oversized blanks ===== */
+#view-overview .tci-row-2{grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr)!important;gap:12px!important;margin-top:12px!important;}
+#view-overview #topMovers,#view-overview #recentActivity{min-width:0!important;overflow:hidden!important;}
+#view-overview .card,#view-overview .dashboard-news,#view-overview .tci-card{box-sizing:border-box!important;}
+
+/* ===== Global contrast/readability ===== */
+#view-overview .stat-value,#view-overview .tci-value{font-variant-numeric:tabular-nums!important;font-feature-settings:'tnum' 1!important;}
+#view-overview .stat-value:empty::after,#view-overview .stat-change:empty::after{content:'—';color:var(--dash-dim);}
+
+@media(max-width:1100px){
+  .tc-commandbar{grid-template-columns:auto minmax(200px,1fr) auto!important;}
+  .tc-brand-copy{display:none!important;}
+  .tc-brand{min-width:48px!important;}
+  .tc-navstrip{padding-left:10px!important;}
+}
+@media(max-width:900px){
+  #view-overview #overviewStats{grid-template-columns:1fr!important;}
+  #view-overview #overviewStats .stat-card{height:auto!important;min-height:112px!important;}
+  #view-overview .tci-row-2{grid-template-columns:1fr!important;}
+}
+@media(max-width:700px){
+  .tc-commandbar{height:58px!important;grid-template-columns:auto minmax(0,1fr) auto!important;padding:0 10px!important;gap:8px!important;}
+  .tc-brand{min-width:40px!important;}
+  .tc-brand img{width:34px!important;height:34px!important;}
+  .tc-command-center{display:block!important;}
+  .tc-market-pill{display:none!important;}
+  .tc-navstrip{height:38px!important;padding:0 6px!important;overflow-x:auto!important;}
+  .tc-navitem{padding:0 8px!important;font-size:8px!important;}
+  .tc-rail{top:96px!important;}
+  #view-overview .tc-calendar-item{grid-template-columns:48px minmax(0,1fr)!important;}
+  #view-overview .tc-calendar-badge{display:none!important;}
+}
