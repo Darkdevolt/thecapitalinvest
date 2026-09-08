@@ -4,418 +4,116 @@
 // ============================================================
 
 (function(){
-
   'use strict';
-
-  if(window.__TC_INIT_LOADED__){
-    return;
-  }
-
+  if(window.__TC_INIT_LOADED__){ return; }
   window.__TC_INIT_LOADED__ = true;
-
-  const SESSION_KEY =
-    'tc_session';
-
-  // ----------------------------------------------------------
-  // TOKEN
-  // ----------------------------------------------------------
+  const SESSION_KEY = 'tc_session';
 
   function decodeBase64Url(value){
-
-    let input =
-      String(value || '')
-        .replace(/-/g,'+')
-        .replace(/_/g,'/');
-
-    while(
-      input.length % 4
-    ){
-      input += '=';
-    }
-
+    let input = String(value || '').replace(/-/g,'+').replace(/_/g,'/');
+    while(input.length % 4){ input += '='; }
     return atob(input);
-
   }
 
   function tokenIsValid(token){
-
     try{
-
-      const parts =
-        String(token || '')
-          .split('.');
-
-      if(parts.length !== 3){
-        return false;
-      }
-
-      const payload =
-        JSON.parse(
-          decodeBase64Url(parts[1])
-        );
-
-      return !!payload.exp &&
-        payload.exp * 1000 >
-        Date.now();
-
-    }catch(error){
-
-      return false;
-
-    }
-
+      const parts = String(token || '').split('.');
+      if(parts.length !== 3){ return false; }
+      const payload = JSON.parse(decodeBase64Url(parts[1]));
+      return !!payload.exp && payload.exp * 1000 > Date.now();
+    }catch(error){ return false; }
   }
 
-  // ----------------------------------------------------------
-  // SESSION
-  // ----------------------------------------------------------
-
   function getSession(){
-
     try{
       if(window.TC_ENV && typeof window.TC_ENV.getSession === 'function'){
         const envSession = window.TC_ENV.getSession();
-        if(envSession && envSession.access_token && tokenIsValid(envSession.access_token)){
-          return envSession;
-        }
+        if(envSession && envSession.access_token && tokenIsValid(envSession.access_token)) return envSession;
       }
-    }catch(error){
-      console.warn('[INIT] Session TC_ENV indisponible:', error);
-    }
-
+    }catch(error){ console.warn('[INIT] Session TC_ENV indisponible:', error); }
     try{
-
-      const raw =
-        localStorage.getItem(
-          SESSION_KEY
-        );
-
-      if(!raw){
-        return null;
-      }
-
-      const parsed =
-        JSON.parse(raw);
-
-      const session =
-        (
-          parsed &&
-          parsed.data &&
-          parsed.data.session
-        ) ||
-        (
-          parsed &&
-          parsed.session
-        ) ||
-        parsed;
-
-      if(
-        !session ||
-        !session.access_token
-      ){
-
-        return null;
-
-      }
-
-      if(
-        !tokenIsValid(
-          session.access_token
-        )
-      ){
-
-        return null;
-
-      }
-
+      const raw = localStorage.getItem(SESSION_KEY);
+      if(!raw){ return null; }
+      const parsed = JSON.parse(raw);
+      const session = (parsed && parsed.data && parsed.data.session) || (parsed && parsed.session) || parsed;
+      if(!session || !session.access_token || !tokenIsValid(session.access_token)) return null;
       return session;
-
-    }catch(error){
-
-      return null;
-
-    }
-
+    }catch(error){ return null; }
   }
-
-  // ----------------------------------------------------------
-  // AUTH
-  // ----------------------------------------------------------
 
   function requireAuth(){
-
-    const session =
-      getSession();
-
+    const session = getSession();
     if(session){
-
-      // Compatibility bridge for legacy consumers. New code should use
-      // TC_ENV.getSession()/getToken() instead of reading these globals.
-      window.tcSession =
-        session;
-
-      window.tcAccessToken =
-        session.access_token;
-
+      window.tcSession = session;
+      window.tcAccessToken = session.access_token;
       return true;
-
     }
-
-    /*
-     * DESTINATION UNIQUE :
-     * toujours /app.html
-     */
-    const target =
-      '/app.html';
-
-    window.location.replace(
-      '/login.html?redirect=' +
-      encodeURIComponent(target)
-    );
-
+    const target = '/app.html';
+    window.location.replace('/login.html?redirect=' + encodeURIComponent(target));
     return false;
-
   }
-
-  // ----------------------------------------------------------
-  // DOCUMENT
-  // ----------------------------------------------------------
 
   function normalizeDocument(){
-
-    /*
-     * Aucun Desk Workspace.
-     * On retire uniquement les anciennes balises base
-     * qui peuvent perturber les chemins.
-     */
-
-    const bases =
-      document.querySelectorAll(
-        'base'
-      );
-
-    bases.forEach(
-      function(base){
-
-        base.remove();
-
+    document.querySelectorAll('base').forEach(function(base){ base.remove(); });
+    document.querySelectorAll('a[href]').forEach(function(link){
+      const href = link.getAttribute('href') || '';
+      if(href && href.charAt(0) !== '#' && !/^(https?:|mailto:|tel:|javascript:)/i.test(href)){
+        link.removeAttribute('target');
+        link.removeAttribute('rel');
       }
-    );
-
-    /*
-     * Liens internes en navigation normale.
-     */
-    const links =
-      document.querySelectorAll(
-        'a[href]'
-      );
-
-    links.forEach(
-      function(link){
-
-        const href =
-          link.getAttribute(
-            'href'
-          ) || '';
-
-        if(
-          href &&
-          href.charAt(0) !== '#' &&
-          !/^(https?:|mailto:|tel:|javascript:)/i.test(
-            href
-          )
-        ){
-
-          link.removeAttribute(
-            'target'
-          );
-
-          link.removeAttribute(
-            'rel'
-          );
-
-        }
-
-      }
-    );
-
+    });
   }
-
-  // ----------------------------------------------------------
-  // RENDU
-  // ----------------------------------------------------------
 
   function safeRender(){
-
     try{
-
-      if(
-        typeof window.renderCurrentView ===
-        'function'
-      ){
-
-        window.renderCurrentView();
-
-      }
-
-    }catch(error){
-
-      console.error(
-        '[INIT] Rendu:',
-        error
-      );
-
-    }
-
+      if(typeof window.renderCurrentView === 'function') window.renderCurrentView();
+    }catch(error){ console.error('[INIT] Rendu:', error); }
   }
-
-  // ----------------------------------------------------------
-  // ENRICHISSEMENTS
-  // ----------------------------------------------------------
 
   function loadScript(src){
     return new Promise(function(resolve){
-      if(document.querySelector('script[data-tc-secondary="' + src.replace(/"/g,'') + '"]')){
-        resolve();
-        return;
-      }
-
+      if(document.querySelector('script[data-tc-secondary="' + src.replace(/"/g,'') + '"]')){ resolve(); return; }
       const script = document.createElement('script');
       script.src = src;
       script.async = false;
       script.dataset.tcSecondary = src;
       script.onload = function(){ resolve(); };
-      script.onerror = function(){
-        console.warn('[INIT] Module secondaire indisponible:', src);
-        resolve();
-      };
+      script.onerror = function(){ console.warn('[INIT] Module secondaire indisponible:', src); resolve(); };
       document.head.appendChild(script);
     });
   }
 
   async function loadSecondaryModules(){
-
-    /*
-     * Chargement séquentiel volontaire : l'ordre déclaré est l'ordre d'exécution.
-     * Cela retire la dépendance à la latence réseau tout en conservant
-     * l'indépendance fonctionnelle de chaque module.
-     */
     const modules = [
       '/app/js/views/overview-fixes.js?v=1',
       '/app/js/views/brvm-market-hours.js?v=20260827.3',
       '/app/js/market-ux.js?v=20260827.2',
       '/app/js/views/technique/data-bridge.js?v=20260826',
       '/app/js/views/user-data-patch.js?v=7',
-      '/app/js/views/fundamental-ratios.js?v=1'
+      '/app/js/views/fundamental-ratios.js?v=1',
+      '/app/js/views/dashboard-presentation-v2.js?v=20260908.1'
     ];
-
-    for(const src of modules){
-      await loadScript(src);
-    }
-
+    for(const src of modules){ await loadScript(src); }
   }
-
-  // ----------------------------------------------------------
-  // INITIALISATION
-  // ----------------------------------------------------------
 
   async function init(){
-
-    if(
-      !requireAuth()
-    ){
-
-      return;
-
-    }
-
+    if(!requireAuth()) return;
     normalizeDocument();
-
-    console.log(
-      '[INIT] Session authentifiée.'
-    );
-
-    /*
-     * MAIN.JS doit être déjà chargé.
-     */
+    console.log('[INIT] Session authentifiée.');
     try{
-
-      if(
-        typeof window.initApp ===
-        'function'
-      ){
-
-        window.initApp();
-
-      }else{
-
-        console.error(
-          '[INIT] initApp() absent.'
-        );
-
-      }
-
-    }catch(error){
-
-      console.error(
-        '[INIT] initApp:',
-        error
-      );
-
-    }
-
-    /*
-     * Sécurité absolue :
-     * on affiche l'application quoi qu'il arrive.
-     */
+      if(typeof window.initApp === 'function') window.initApp();
+      else console.error('[INIT] initApp() absent.');
+    }catch(error){ console.error('[INIT] initApp:', error); }
     if(document.body){
-
-      document.body.classList.remove(
-        'init-hidden'
-      );
-
-      document.body.style.opacity =
-        '1';
-
-      document.body.style.visibility =
-        'visible';
-
+      document.body.classList.remove('init-hidden');
+      document.body.style.opacity = '1';
+      document.body.style.visibility = 'visible';
     }
-
-    /*
-     * Modules secondaires après affichage, mais dans un ordre déterministe.
-     */
-    try{
-      await loadSecondaryModules();
-    }catch(error){
-      console.warn('[INIT] Modules secondaires:', error);
-    }
-
+    try{ await loadSecondaryModules(); }
+    catch(error){ console.warn('[INIT] Modules secondaires:', error); }
     safeRender();
-
   }
 
-  // ----------------------------------------------------------
-  // BOOT
-  // ----------------------------------------------------------
-
-  if(
-    document.readyState ===
-    'loading'
-  ){
-
-    document.addEventListener(
-      'DOMContentLoaded',
-      init,
-      {
-        once:true
-      }
-    );
-
-  }else{
-
-    init();
-
-  }
-
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init, {once:true});
+  else init();
 })();
