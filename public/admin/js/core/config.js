@@ -16,7 +16,10 @@ TC.env = {
     SUPABASE_ANON: window.TC_ENV.SUPABASE_ANON_KEY,
     REST: window.TC_ENV.SUPABASE_URL + '/rest/v1',
     AUTH: window.TC_ENV.SUPABASE_URL + '/auth/v1',
-    LOGO: '/assets/the-capital-logo.png'
+    LOGO: '/assets/the-capital-logo.png',
+    /* Bannière du reporting « La séance du jour en 1 minute ».
+       Fichier absent -> le générateur compose une bannière de repli. */
+    BANNER: '/assets/banniere-seance-1min.png'
 };
 
 /* Codes traités comme indices de marché et non comme sociétés cotées. */

@@ -50,6 +50,8 @@
     ];
 
     let logoData = null;
+    let bannerData = null;
+    let bannerRatio = 0;
     let report = null;
 
     /* ── Vue ─────────────────────────────────────────────── */
@@ -329,67 +331,78 @@
         /* — Fond blanc — */
         parts.push('<rect width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>');
 
-        /* — Bannière « La séance du jour en 1 minute » — */
-        const banH = Math.max(Math.round(W * 0.150), Math.round(H * 0.104));
-        parts.push('<defs><linearGradient id="tcBanner" x1="0" y1="0" x2="1" y2="1">' +
-            '<stop offset="0" stop-color="#171009"/><stop offset="0.5" stop-color="#0C0906"/>' +
-            '<stop offset="1" stop-color="#1E1509"/></linearGradient></defs>');
-        parts.push('<rect x="0" y="0" width="' + W + '" height="' + banH + '" fill="url(#tcBanner)"/>');
-        parts.push('<rect x="0" y="0" width="' + W + '" height="3" fill="' + C.goldBright + '"/>');
-        parts.push('<rect x="0" y="' + (banH - 2) + '" width="' + W + '" height="2" fill="' + C.goldBright + '" fill-opacity="0.55"/>');
+        /* — Bannière — l'image fournie (/assets) est posée telle quelle en
+           pleine largeur ; elle contient déjà le logo et les titres. Sans
+           fichier, une composition SVG de repli reprend le même gabarit. */
+        if (bannerData) {
+            const bh = Math.min(Math.round(H * 0.30), Math.round(W * (bannerRatio || 0.32)));
+            parts.push('<image href="' + bannerData + '" x="0" y="0" width="' + W + '" height="' + bh +
+                '" preserveAspectRatio="xMidYMid meet"/>');
+            parts.push('<rect x="0" y="' + bh + '" width="' + W + '" height="2" fill="' + C.goldBright + '" fill-opacity="0.5"/>');
+            y = bh + Math.round(pad * 0.62) + 18;
+            parts.push(text(options.surtitre || 'BRVM · Bourse Régionale des Valeurs Mobilières',
+                pad, y, { size: 14, fill: C.muted, spacing: 1.6 }));
+            if (options.bulletin) {
+                parts.push(text(options.bulletin, W - pad, y, { size: 14, fill: C.gold, anchor: 'end', family: "'DM Mono',monospace" }));
+            }
+        } else {
+            const banH = Math.max(Math.round(W * 0.150), Math.round(H * 0.104));
+            parts.push('<defs><linearGradient id="tcBanner" x1="0" y1="0" x2="1" y2="1">' +
+                '<stop offset="0" stop-color="#171009"/><stop offset="0.5" stop-color="#0C0906"/>' +
+                '<stop offset="1" stop-color="#1E1509"/></linearGradient></defs>');
+            parts.push('<rect x="0" y="0" width="' + W + '" height="' + banH + '" fill="url(#tcBanner)"/>');
+            parts.push('<rect x="0" y="0" width="' + W + '" height="3" fill="' + C.goldBright + '"/>');
+            parts.push('<rect x="0" y="' + (banH - 2) + '" width="' + W + '" height="2" fill="' + C.goldBright + '" fill-opacity="0.55"/>');
 
-        /* pastille logo */
-        const lr = Math.round(banH * 0.30);
-        const lcx = pad + lr;
-        const lcy = Math.round(banH / 2);
-        parts.push('<circle cx="' + lcx + '" cy="' + lcy + '" r="' + lr + '" fill="none" stroke="' + C.goldBright + '" stroke-width="2"/>');
-        if (logoData) {
-            const li = Math.round(lr * 1.42);
-            parts.push('<image href="' + logoData + '" x="' + (lcx - li / 2) + '" y="' + (lcy - li / 2) +
-                '" width="' + li + '" height="' + li + '" preserveAspectRatio="xMidYMid meet"/>');
-        }
+            const lr = Math.round(banH * 0.30);
+            const lcx = pad + lr;
+            const lcy = Math.round(banH / 2);
+            parts.push('<circle cx="' + lcx + '" cy="' + lcy + '" r="' + lr + '" fill="none" stroke="' + C.goldBright + '" stroke-width="2"/>');
+            if (logoData) {
+                const li = Math.round(lr * 1.42);
+                parts.push('<image href="' + logoData + '" x="' + (lcx - li / 2) + '" y="' + (lcy - li / 2) +
+                    '" width="' + li + '" height="' + li + '" preserveAspectRatio="xMidYMid meet"/>');
+            }
 
-        /* titres de la bannière */
-        const bx = lcx + lr + Math.round(banH * 0.30);
-        parts.push('<line x1="' + (bx - Math.round(banH * 0.16)) + '" y1="' + Math.round(banH * 0.22) +
-            '" x2="' + (bx - Math.round(banH * 0.16)) + '" y2="' + Math.round(banH * 0.78) +
-            '" stroke="' + C.goldBright + '" stroke-opacity="0.5" stroke-width="1"/>');
-        const bs = Math.round(banH * 0.29);
-        const b1y = Math.round(banH * 0.42);
-        parts.push(text('LA SÉANCE DU JOUR', bx, b1y, {
-            family: "'Playfair Display',serif", size: bs, weight: 700, fill: '#FBF7EF', spacing: 0.5
-        }));
-        parts.push(text('EN 1 MINUTE', bx, b1y + Math.round(bs * 1.05), {
-            family: "'Playfair Display',serif", size: bs, weight: 700, fill: C.goldBright, spacing: 0.5
-        }));
-        parts.push(text("L'AFRIQUE FINANCIÈRE EN TEMPS RÉEL", bx,
-            b1y + Math.round(bs * 1.05) + Math.round(banH * 0.19), {
-            size: Math.max(10, Math.round(banH * 0.095)), fill: '#C9B58B', spacing: 3
-        }));
+            const bx = lcx + lr + Math.round(banH * 0.30);
+            parts.push('<line x1="' + (bx - Math.round(banH * 0.16)) + '" y1="' + Math.round(banH * 0.22) +
+                '" x2="' + (bx - Math.round(banH * 0.16)) + '" y2="' + Math.round(banH * 0.78) +
+                '" stroke="' + C.goldBright + '" stroke-opacity="0.5" stroke-width="1"/>');
+            const bs = Math.round(banH * 0.29);
+            const b1y = Math.round(banH * 0.42);
+            parts.push(text('LA SÉANCE DU JOUR', bx, b1y, {
+                family: "'Playfair Display',serif", size: bs, weight: 700, fill: '#FBF7EF', spacing: 0.5
+            }));
+            parts.push(text('EN 1 MINUTE', bx, b1y + Math.round(bs * 1.05), {
+                family: "'Playfair Display',serif", size: bs, weight: 700, fill: C.goldBright, spacing: 0.5
+            }));
+            parts.push(text("L'AFRIQUE FINANCIÈRE EN TEMPS RÉEL", bx,
+                b1y + Math.round(bs * 1.05) + Math.round(banH * 0.19), {
+                size: Math.max(10, Math.round(banH * 0.095)), fill: '#C9B58B', spacing: 3
+            }));
 
-        /* motif points — évoque la carte pointillée du visuel */
-        for (let di = 0; di < 24; di++) {
-            const dcol = di % 6;
-            const drow = Math.floor(di / 6);
-            const dx = W - pad - Math.round(banH * 0.86) + dcol * Math.round(banH * 0.17);
-            const dy = Math.round(banH * 0.22) + drow * Math.round(banH * 0.17);
-            if (dx > W - pad || dy > banH - 6) continue;
-            parts.push('<circle cx="' + dx + '" cy="' + dy + '" r="2.2" fill="' + C.goldBright +
-                '" fill-opacity="' + (0.22 + 0.13 * ((di * 7) % 4)) + '"/>');
-        }
+            for (let di = 0; di < 24; di++) {
+                const dcol = di % 6;
+                const drow = Math.floor(di / 6);
+                const dx = W - pad - Math.round(banH * 0.86) + dcol * Math.round(banH * 0.17);
+                const dy = Math.round(banH * 0.22) + drow * Math.round(banH * 0.17);
+                if (dx > W - pad || dy > banH - 6) continue;
+                parts.push('<circle cx="' + dx + '" cy="' + dy + '" r="2.2" fill="' + C.goldBright +
+                    '" fill-opacity="' + (0.22 + 0.13 * ((di * 7) % 4)) + '"/>');
+            }
 
-        /* — En-tête — */
-        y = banH + Math.round(pad * 0.55) + 22;
-        if (logoData) {
-            parts.push('<image href="' + logoData + '" x="' + pad + '" y="' + (y - 32) + '" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>');
-        }
-        parts.push(text('THE · CAPITAL', pad + (logoData ? 58 : 0), y, {
-            family: "'Playfair Display',serif", size: 25, weight: 700, spacing: 3.4
-        }));
-        parts.push(text(options.surtitre || 'BRVM · Bourse Régionale des Valeurs Mobilières',
-            pad + (logoData ? 58 : 0), y + 21, { size: 14, fill: C.muted, spacing: 1.6 }));
-        if (options.bulletin) {
-            parts.push(text(options.bulletin, W - pad, y, { size: 14, fill: C.gold, anchor: 'end', family: "'DM Mono',monospace" }));
+            y = banH + Math.round(pad * 0.55) + 22;
+            if (logoData) {
+                parts.push('<image href="' + logoData + '" x="' + pad + '" y="' + (y - 32) + '" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>');
+            }
+            parts.push(text('THE · CAPITAL', pad + (logoData ? 58 : 0), y, {
+                family: "'Playfair Display',serif", size: 25, weight: 700, spacing: 3.4
+            }));
+            parts.push(text(options.surtitre || 'BRVM · Bourse Régionale des Valeurs Mobilières',
+                pad + (logoData ? 58 : 0), y + 21, { size: 14, fill: C.muted, spacing: 1.6 }));
+            if (options.bulletin) {
+                parts.push(text(options.bulletin, W - pad, y, { size: 14, fill: C.gold, anchor: 'end', family: "'DM Mono',monospace" }));
+            }
         }
 
         y += 50;
@@ -555,6 +568,33 @@
         return logoData;
     }
 
+    /* ── Bannière fournie (image /assets), en base64 comme le logo ── */
+
+    async function loadBanner() {
+        if (bannerData !== null) return bannerData;
+        try {
+            const r = await fetch(TC.env.BANNER, { cache: 'force-cache' });
+            if (!r.ok) throw new Error('bannière absente');
+            const blob = await r.blob();
+            bannerData = await new Promise(function (resolve, reject) {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(blob);
+            });
+            /* Ratio réel de l'image, pour poser la bande à la bonne hauteur. */
+            bannerRatio = await new Promise(function (resolve) {
+                const img = new Image();
+                img.onload = () => resolve(img.naturalWidth ? img.naturalHeight / img.naturalWidth : 0.32);
+                img.onerror = () => resolve(0.32);
+                img.src = bannerData;
+            });
+        } catch (e) {
+            bannerData = '';
+        }
+        return bannerData;
+    }
+
     /* ── Génération ──────────────────────────────────────── */
 
     async function generate() {
@@ -565,7 +605,7 @@
         TC.say('rep-msg', 'Lecture des données…', 'info');
         TC.el('rep-stage').innerHTML = '<div class="loading"><div class="spinner"></div>Agrégation de la période…</div>';
 
-        await loadLogo();
+        await Promise.all([loadLogo(), loadBanner()]);
         const data = await collect(w);
 
         if (!data) {
