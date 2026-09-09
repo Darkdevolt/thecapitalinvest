@@ -45,7 +45,7 @@ function filterBoc() {
 
   document.getElementById('bocCount').textContent = (window._bocRows || []).length;
   const lastSession = window._bocRows?.[0];
-  document.getElementById('bocLastDate').textContent = lastSession ? fmtDate(lastSession.date_seance) : ', ';
+  document.getElementById('bocLastDate').textContent = lastSession ? fmtDate(lastSession.date_seance) : '—';
   document.getElementById('bocResultCount').textContent = rows.length + ' séance(s)';
   document.getElementById('bocCurrentYear').textContent = new Date().getFullYear();
 

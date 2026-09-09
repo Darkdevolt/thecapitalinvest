@@ -150,7 +150,7 @@
         rows.forEach(r => {
           const value = Number(r.value || 0);
           const sector = r.sector || (typeof window.getSector === 'function' ? window.getSector(r.ticker) : 'Autre');
-          const country = r.pays || (typeof window.getPays === 'function' ? window.getPays(r.ticker) : ', ');
+          const country = r.pays || (typeof window.getPays === 'function' ? window.getPays(r.ticker) : '—');
           sectors[sector] = (sectors[sector] || 0) + value;
           pays[country] = (pays[country] || 0) + value;
         });
@@ -187,9 +187,9 @@
         if (pfPL) { pfPL.textContent = `${latestPL >= 0 ? '+' : ''}${money(latestPL)} FCFA`; pfPL.style.color = latestPL >= 0 ? 'var(--green)' : 'var(--red)'; }
         if (pfPLSub) { pfPLSub.textContent = `${globalReturn >= 0 ? '+' : ''}${number(globalReturn,2)}% de performance globale`; pfPLSub.style.color = globalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
         if (pfReturn) { pfReturn.textContent = `${number(globalReturn,2)}%`; pfReturn.style.color = globalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
-        if (pfVol) pfVol.textContent = returns.length >= 2 ? `${number(vol * 100,2)}%` : ', ';
-        if (pfSharpe) pfSharpe.textContent = returns.length >= 2 ? number(sharpe,2) : ', ';
-        if (pfDD) pfDD.textContent = (hist.values || []).length >= 2 ? `-${number(maxDD,2)}%` : ', ';
+        if (pfVol) pfVol.textContent = returns.length >= 2 ? `${number(vol * 100,2)}%` : '—';
+        if (pfSharpe) pfSharpe.textContent = returns.length >= 2 ? number(sharpe,2) : '—';
+        if (pfDD) pfDD.textContent = (hist.values || []).length >= 2 ? `-${number(maxDD,2)}%` : '—';
 
         const tickers = [...new Set(rows.map(r => String(r.ticker || '').toUpperCase().trim()).filter(Boolean))];
         if (typeof window.hydratePortfolioHistoricalPrices === 'function') {

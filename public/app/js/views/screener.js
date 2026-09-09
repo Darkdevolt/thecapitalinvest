@@ -24,9 +24,9 @@ function financialRow(ticker, c) {
   const yieldValue = finNumber(f,'dividend_yield','rendement_dividende') ?? (f?.dpa && c?.cours ? Number(f.dpa)/Number(c.cours)*100 : null);
   const debt = finNumber(f,'dette_nette','dette_fin','dettes_financieres');
   const growth = financialGrowth(ticker);
-  const pct = v => v == null ? ', ' : `${Number(v).toFixed(2)}%`;
+  const pct = v => v == null ? '—' : `${Number(v).toFixed(2)}%`;
   const companyName = window.entMap?.[ticker]?.nom || c?.nom || c?.entreprise || c?.name || ticker;
-  return `<tr><td><strong style="color:var(--gold)">${escapeHtml(ticker)}</strong></td><td>${escapeHtml(companyName)}</td><td class="right">${fmt(c.cours)}</td><td class="right">${fmt(c.variation)}%</td><td class="right">${fmt(c.volume)}</td><td>${escapeHtml(getSector(ticker)||', ')}</td><td class="right pro-only">${pct(roe)}</td><td class="right pro-only">${pct(margin)}</td><td class="right pro-only">${pct(yieldValue)}</td><td class="right pro-only">${debt==null?', ':fmt(debt)}</td><td class="right pro-only">${pct(growth)}</td></tr>`;
+  return `<tr><td><strong style="color:var(--gold)">${escapeHtml(ticker)}</strong></td><td>${escapeHtml(companyName)}</td><td class="right">${fmt(c.cours)}</td><td class="right">${fmt(c.variation)}%</td><td class="right">${fmt(c.volume)}</td><td>${escapeHtml(getSector(ticker)|| '—')}</td><td class="right pro-only">${pct(roe)}</td><td class="right pro-only">${pct(margin)}</td><td class="right pro-only">${pct(yieldValue)}</td><td class="right pro-only">${debt==null? '—':fmt(debt)}</td><td class="right pro-only">${pct(growth)}</td></tr>`;
 }
 
 function ensureFundamentalFilters() {
