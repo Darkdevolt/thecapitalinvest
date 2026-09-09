@@ -9,7 +9,7 @@
   }
   async function request(method,endpoint,body,options){
     const url=normalizeEndpoint(endpoint),opts=options||{};
-    const key=method==='GET'?endpoint:null;
+    const key=method==='GET'?url:null;
     if(key&&inflight.has(key))return inflight.get(key);
     const promise=(async()=>{
       const token=getToken();
@@ -39,6 +39,28 @@
   window.apiGetCours=()=>window.apiGet('/marche?type=cours');
   window.apiGetIndices=()=>window.apiGet('/marche?type=indices');
   window.apiGetIndicesHistory=(limit=30)=>window.apiGet('/marche?type=indices_historique&limit='+encodeURIComponent(limit));
+  window.apiGetHistorique=(ticker,limit=1000,offset=0,dateFrom=null,dateTo=null)=>{
+    const params=new URLSearchParams({type:'historique',ticker:String(ticker||'').trim().toUpperCase(),limit:String(Math.max(1,Math.min(Number(limit)||1000,1000))),offset:String(Math.max(0,Number(offset)||0))});
+    if(dateFrom)params.set('date_from',dateFrom);
+    if(dateTo)params.set('date_to',dateTo);
+    return window.apiGet('/marche?'+params.toString(),{cache:'no-store'});
+  };
+  window.apiGetHistoriqueComplet=async(ticker,options={})=>{
+    const canonical=String(ticker||'').trim().toUpperCase();
+    if(!canonical)return [];
+    const pageSize=Math.max(1,Math.min(Number(options.pageSize)||1000,1000));
+    const maxPages=Math.max(1,Math.min(Number(options.maxPages)||50,200));
+    const all=[];
+    for(let page=0;page<maxPages;page++){
+      const rows=await window.apiGetHistorique(canonical,pageSize,page*pageSize,options.dateFrom,options.dateTo);
+      if(!Array.isArray(rows)||!rows.length)break;
+      all.push(...rows);
+      if(rows.length<pageSize)break;
+    }
+    const byKey=new Map();
+    all.forEach(row=>{const key=(row?.ticker||canonical)+'|'+(row?.date_seance||row?.date||'');if(!byKey.has(key))byKey.set(key,row);});
+    return Array.from(byKey.values()).sort((a,b)=>String(a?.date_seance||a?.date||'').localeCompare(String(b?.date_seance||b?.date||'')));
+  };
   window.apiGetEntreprises=()=>window.apiGet('/marche?type=entreprises');
   window.apiGetAnalyses=()=>window.apiGet('/marche?type=analyses');
   window.apiGetFinancials=()=>window.apiGet('/marche?type=financials');
@@ -47,5 +69,5 @@
   window.api={get:window.apiGet,post:window.apiPost,put:window.apiPut,patch:window.apiPatch,delete:window.apiDelete};
   function loadTitleFixes(){if(document.getElementById('tc-title-fixes-script'))return;const s=document.createElement('script');s.id='tc-title-fixes-script';s.src='/app/js/views/titres-navigation-fixes.js?v=20260815';s.async=false;s.onload=()=>console.log('[FETCH] Patch Titres/Fiche chargé');s.onerror=()=>console.warn('[FETCH] Patch Titres/Fiche indisponible');(document.head||document.documentElement).appendChild(s);}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',loadTitleFixes,{once:true});else loadTitleFixes();
-  console.log('[FETCH] API client chargé, CRUD HTTP complet + déduplication GET');
+  console.log('[FETCH] API client chargé, CRUD HTTP complet + historique unifié');
 })();
