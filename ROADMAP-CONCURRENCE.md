@@ -61,7 +61,7 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 | Screening des sociétés (critères combinables) | `#view-screener` (secteur, cours, variation, volume) | 🟡 | + PER, PBR, ROE, marge, rendement, dette, croissance ; presets ; permalien de filtre |
 | Ranking (classement par indicateur) | — | ❌ | Classements PBR/PER/rendement/liquidité/volatilité/marge/rotation/perf (Premium chez eux) |
 | Comparaison de sociétés | `#view-comparison` | 🟡 | 2→6 sociétés, radar, tableau exportable |
-| Sélection du moment / radar micro-trading | — | ❌ | Écran « opportunités » : proche 52-bas, volume anormal, cassure |
+| Sélection du moment / radar micro-trading | ✅ `#view-opportunites` | Balayage de la cote : volume anormal, proche plus-haut/plus-bas fenêtre, écart MM20, forte variation, détachement imminent. Filtres par signal, tri, carte → fiche. Fenêtre historique ~3 mois |
 | Watchlist « mes actions suivies » | watchlist (table `watchlist`) | 🟡 | Alertes par ligne, notes, groupes |
 | Calculatrices (intérêts composés, obligations, plus-values futures) | ✅ `#view-outils` | 4 onglets : intérêts composés, rendement obligataire (courant + à l'échéance), fourchette de fluctuation BRVM, score maison /100 (ratios réels vs médiane secteur) |
 | Market Map BRVM | — | ❌ | Treemap capitalisation × variation |
