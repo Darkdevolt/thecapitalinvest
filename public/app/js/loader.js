@@ -15,7 +15,8 @@
   window.loadAll=async function(){if(window.__tcLoadPromise)return window.__tcLoadPromise;window.__tcLoadPromise=(async()=>{console.log('[LOADER] Chargement optimisé…');await loadCritical();await loadEnrichment();console.log('[LOADER] Données prêtes | cours:',window.allCours.length,'| analyses:',window.allAnalyses.length);})();return window.__tcLoadPromise;};
   window.__tcOptimizedLoadAll=window.loadAll;
   const styles=[
-    ['/app/css/dashboard-final-polish.css?v=1','tc-dashboard-final-polish'],
+    // dashboard-final-polish.css retiré : sa présentation est reprise, en une
+    // seule couche lisible, par /app/css/dashboard.css chargé dans app.html.
     ['/app/css/dashboard-final-runtime.css?v=1','tc-dashboard-final-runtime']
   ];
   styles.forEach(([href,id])=>{if(document.getElementById(id))return;const style=document.createElement('link');style.id=id;style.rel='stylesheet';style.href=href;document.head.appendChild(style);});

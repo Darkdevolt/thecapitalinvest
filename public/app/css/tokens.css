@@ -1,0 +1,200 @@
+/* ============================================================================
+   THE CAPITAL — TOKENS CANONIQUES  (couche unique de variables de thème)
+   ----------------------------------------------------------------------------
+   POURQUOI CE FICHIER EXISTE
+   app.html ne chargeait AUCUN fichier définissant --bg, --surface, --card,
+   --gold, --cream, --sans, --mono, --border… en thème sombre.
+   Ces jetons ne sont définis que dans /public/style.css (page vitrine, jamais
+   chargée par l'app) et dans des blocs [data-theme="light"].
+
+   Conséquence en thème sombre (défaut) : chaque règle
+       background: var(--surface);  color: var(--cream);  border:1px solid var(--border);
+   de components.css / views.css / marche.css / technique*.css / des ~20 <style>
+   injectés par le JS se résout dans le vide → cartes transparentes, pas de
+   bordure, polices système. D'où l'empilement de 8 "dashboard-*.css" et des
+   dizaines de !important qui repeignent la même zone à la main.
+
+   Ce fichier rétablit la palette de référence sur :root et fait pointer les
+   deux jeux de noms utilisés dans le code (--x  ET  --tc-x) vers les MÊMES
+   valeurs. À charger EN PREMIER, avant toute autre feuille de l'app.
+   Palette de référence = celle de /public/style.css (or #B8964E), déjà
+   supposée partout via les rgba(184,150,78,…).
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* — Fonds & surfaces — */
+  --bg:        #0A0804;
+  --surface:   #13110C;
+  --card:      #181410;
+  --card2:     #1E1A14;
+  --panel:     #16130D;
+  --panel-2:   #1E1B13;
+
+  /* — Lignes / bordures — */
+  --border:      rgba(184,150,78,.15);
+  --border2:     rgba(184,150,78,.08);
+  --line:        rgba(184,150,78,.14);
+  --line-soft:   rgba(184,150,78,.075);
+
+  /* — Or (accent unique) — */
+  --gold:        #B8964E;
+  --gold-l:      #D4AF6A;
+  --gold-light:  #D4AF6A;
+  --gold-2:      #E6C979;
+  --gold-bg:     rgba(184,150,78,.08);
+  --gold-dim:    rgba(184,150,78,.40);
+
+  /* — Texte — */
+  --cream:  #F5F0E8;
+  --white:  #F5F0E8;
+  --text:   #F5F0E8;
+  --muted:  rgba(245,240,232,.60);
+  --dim:    rgba(245,240,232,.34);
+  --faint:  rgba(245,240,232,.12);
+
+  /* — Sémantique marché — */
+  --green:     #4ADE80;
+  --green-bg:  rgba(74,222,128,.10);
+  --red:       #F87171;
+  --red-bg:    rgba(248,113,113,.10);
+  --orange:    #FB923C;
+  --warn:      #F0A72A;
+  --blue:      #60A5FA;
+  --blue-bg:   rgba(96,165,250,.10);
+
+  /* — Typographie — */
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans:  'DM Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --mono:  'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* — Divers — */
+  --shadow:   0 2px 16px rgba(0,0,0,.40);
+  --radius:   10px;
+  --radius-lg:12px;
+  --r:        6px;
+  --bg-row:   rgba(255,255,255,.025);
+
+  /* — Alias "tc-" : le shell (app.html), variables.css et global-unified.css
+       emploient ces noms. On les fait converger vers la MÊME palette pour
+       supprimer le conflit "deux ors" (#B8964E vs #c9a24a). — */
+  --tc-ink:      #0A0804;
+  --tc-bg:       #0A0804;
+  --tc-panel:    #16130D;
+  --tc-panel-2:  #1E1B13;
+  --tc-panel-alt:#181410;
+  --tc-surface:  #13110C;
+  --tc-card:     #181410;
+  --tc-card-2:   #1E1A14;
+  --tc-line:     rgba(184,150,78,.15);
+  --tc-line-soft:rgba(184,150,78,.08);
+  --tc-border:   rgba(184,150,78,.15);
+  --tc-border-soft: rgba(184,150,78,.08);
+  --tc-gold:     #B8964E;
+  --tc-gold-2:   #E6C979;
+  --tc-gold-light:#D4AF6A;
+  --tc-white:    #F5F0E8;
+  --tc-text:     #F5F0E8;
+  --tc-muted:    rgba(245,240,232,.60);
+  --tc-faint:    rgba(245,240,232,.30);
+  --tc-green:    #4ADE80;
+  --tc-red:      #F87171;
+  --tc-warn:     #F0A72A;
+  --tc-serif:    'Playfair Display', Georgia, serif;
+  --tc-sans:     'DM Sans', system-ui, sans-serif;
+  --tc-mono:     'DM Mono', ui-monospace, monospace;
+  --tc-header:   74px;
+  --tc-rail:     248px;
+  --tc-radius:   10px;
+  --tc-radius-lg:12px;
+  --tc-gap:      16px;
+}
+
+/* ----------------------------------------------------------------------------
+   THÈME CLAIR
+   Reprend les valeurs déjà présentes dans theme-system.css / visual-contrast.css
+   / dashboard-utility.css, rassemblées ici pour une seule source de vérité.
+   Ne PAS supprimer ces autres fichiers sans revalidation visuelle : ils portent
+   aussi des règles composant par composant. Ce bloc ne fait que les jetons.
+   -------------------------------------------------------------------------- */
+:root[data-theme="light"],
+body[data-theme="light"] {
+  color-scheme: light;
+
+  --bg:        #F4F1EA;
+  --surface:   #FFFFFF;
+  --card:      #FFFDF9;
+  --card2:     #F8F5EE;
+  --panel:     #FFFFFF;
+  --panel-2:   #F8F5EE;
+
+  --border:      rgba(55,45,28,.14);
+  --border2:     rgba(55,45,28,.08);
+  --line:        rgba(55,45,28,.14);
+  --line-soft:   rgba(55,45,28,.08);
+
+  --gold:        #9A7430;
+  --gold-l:      #B18A43;
+  --gold-light:  #B18A43;
+  --gold-2:      #B18A43;
+  --gold-bg:     rgba(154,116,48,.08);
+  --gold-dim:    rgba(154,116,48,.35);
+
+  --cream:  #1D1A15;
+  --white:  #FFFFFF;
+  --text:   #1D1A15;
+  --muted:  rgba(29,26,21,.64);
+  --dim:    rgba(29,26,21,.42);
+  --faint:  rgba(29,26,21,.12);
+
+  --green:     #18834A;
+  --green-bg:  rgba(24,131,74,.08);
+  --red:       #C43D3D;
+  --red-bg:    rgba(196,61,61,.08);
+  --blue:      #2869A8;
+  --blue-bg:   rgba(40,105,168,.08);
+
+  --shadow:   0 8px 24px rgba(38,31,20,.06);
+
+  /* alias tc- en clair */
+  --tc-ink:      #F4F1EA;
+  --tc-bg:       #F4F1EA;
+  --tc-panel:    #FFFFFF;
+  --tc-panel-2:  #F8F5EE;
+  --tc-panel-alt:#FFFDF9;
+  --tc-surface:  #FFFFFF;
+  --tc-card:     #FFFDF9;
+  --tc-card-2:   #F8F5EE;
+  --tc-line:     rgba(55,45,28,.14);
+  --tc-line-soft:rgba(55,45,28,.08);
+  --tc-border:   rgba(55,45,28,.14);
+  --tc-border-soft: rgba(55,45,28,.08);
+  --tc-gold:     #9A7430;
+  --tc-gold-2:   #B18A43;
+  --tc-gold-light:#B18A43;
+  --tc-white:    #1D1A15;
+  --tc-text:     #1D1A15;
+  --tc-muted:    rgba(29,26,21,.64);
+  --tc-faint:    rgba(29,26,21,.42);
+  --tc-green:    #18834A;
+  --tc-red:      #C43D3D;
+}
+
+/* ----------------------------------------------------------------------------
+   Correctifs de base visibles à l'écran (capture 2026-09-09)
+   -------------------------------------------------------------------------- */
+
+/* Le lien d'évitement s'affichait en clair, en haut à gauche. Masqué hors focus. */
+.tc-skip-link{
+  position:fixed;top:0;left:0;z-index:100000;
+  margin:10px;padding:10px 16px;
+  background:var(--gold);color:#0a0804;
+  font:600 12px/1 var(--sans);text-decoration:none;border-radius:8px;
+  transform:translateY(-160%);transition:transform .16s ease;
+}
+.tc-skip-link:focus{transform:translateY(0);outline:2px solid var(--gold-2);outline-offset:2px}
+
+/* Filet de sécurité : le corps de page reste lisible même si une feuille de
+   vue échoue à se charger. */
+body{background:var(--bg);color:var(--cream);font-family:var(--sans)}
