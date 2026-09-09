@@ -1,90 +1,218 @@
-// THE CAPITAL, Fundamental comparison (2 to 4 companies)
+// ============================================================================
+// COMPARAISON DE SOCIÉTÉS v2  (P1 roadmap) — 2 à 6 sociétés
+// Tableau multi-indicateurs + radar normalisé + export CSV.
+// Sources : allEntreprises · allCours · allFinancials. Absent = « — ».
+// ============================================================================
 (function () {
-  if (window.__TC_COMPARISON_LOADED__) return;
-  window.__TC_COMPARISON_LOADED__ = true;
+  'use strict';
+  if (window.__TC_COMPARISON_V2__) return;
+  window.__TC_COMPARISON_V2__ = true;
 
-  const esc = value => {
-    const d = document.createElement('div'); d.textContent = value == null ? '' : String(value); return d.innerHTML;
-  };
-  const num = value => Number.isFinite(Number(value)) ? Number(value) : null;
-  const fmt = value => value == null ? 'Donnée non disponible' : Number(value).toLocaleString('fr-FR', { maximumFractionDigits: 2 });
-  const pct = value => value == null ? 'Donnée non disponible' : `${Number(value).toFixed(2)} %`;
+  var chart = null;
+  var picks = [];
 
-  function latestByTicker(ticker) {
-    const rows = (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(x => x.ticker === ticker)
-      .sort((a,b) => Number(b.annee || 0) - Number(a.annee || 0));
-    return rows[0] || null;
+  function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
+  function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
+  function nf(v, dec) { var n = Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
+  function money(v) {
+    var n = Number(v); if (!isFinite(n)) return '—';
+    var a = Math.abs(n);
+    if (a >= 1e9) return (n / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Md';
+    if (a >= 1e6) return (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M';
+    return nf(n);
   }
 
-  function companyName(ticker) {
-    const e = (Array.isArray(window.allEntreprises) ? window.allEntreprises : []).find(x => x.ticker === ticker);
-    return e?.nom || e?.nom_court || ticker;
+  function ent(t) { return (window.entMap && window.entMap[t]) || {}; }
+  function cours(t) { return (Array.isArray(window.allCours) ? window.allCours : []).find(function (c) { return c && String(c.ticker).toUpperCase() === t; }) || {}; }
+  function fins(t) {
+    return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
+      .filter(function (f) { return f && String(f.ticker).toUpperCase() === t; })
+      .sort(function (a, b) { return Number(b.annee || 0) - Number(a.annee || 0); });
   }
 
-  function currentPrice(ticker) {
-    return (Array.isArray(window.allCours) ? window.allCours : []).find(x => x.ticker === ticker)?.cours ?? null;
+  function snapshot(t) {
+    var e = ent(t), c = cours(t), fs = fins(t), f = fs[0] || null, f1 = fs[1] || null;
+    var cp = num(c.cloture != null ? c.cloture : c.cours);
+    var bpa = f ? num(f.bpa) : null, dpa = f ? num(f.dpa) : null;
+    var fp = f ? num(f.fonds_propres != null ? f.fonds_propres : f.capitaux_propres) : null;
+    var na = (f && num(f.nombre_actions)) || num(e.nombre_actions) || num(e.nb_actions);
+    var roe = f ? num(f.roe) : null; if (roe != null && roe <= 1.5) roe *= 100;
+    if (roe == null && f && num(f.resultat_net) != null && fp) roe = f.resultat_net / fp * 100;
+    var marge = f ? num(f.marge_nette) : null; if (marge != null && marge <= 1.5) marge *= 100;
+    if (marge == null && f && num(f.resultat_net) != null && num(f.chiffre_affaires)) marge = f.resultat_net / f.chiffre_affaires * 100;
+    var yld = f ? num(f.dividend_yield != null ? f.dividend_yield : f.rendement_dividende) : null;
+    if (yld != null && yld <= 1.5) yld *= 100;
+    if (yld == null && dpa != null && cp) yld = dpa / cp * 100;
+    var dette = f ? num(f.dette_nette != null ? f.dette_nette : f.dettes_financieres) : null;
+    var croiss = (f && f1 && num(f.chiffre_affaires) != null && num(f1.chiffre_affaires)) ? (f.chiffre_affaires / f1.chiffre_affaires - 1) * 100 : null;
+    return {
+      ticker: t, nom: e.nom || e.nom_court || t, secteur: e.secteur || '—',
+      cours: cp, capi: num(c.capitalisation) || (cp && na ? cp * na : null),
+      per: (cp != null && bpa != null && bpa > 0) ? cp / bpa : null,
+      pbr: (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null,
+      roe: roe, marge: marge, rdt: yld,
+      detteFp: (dette != null && fp) ? dette / fp : null,
+      croissance: croiss, exercice: f ? f.annee : null
+    };
   }
 
-  function metric(fin, ticker, key) {
-    if (!fin) return null;
-    if (key === 'pe') {
-      const price = currentPrice(ticker);
-      return fin.bpa && Number(fin.bpa) > 0 && price != null ? Number(price) / Number(fin.bpa) : null;
-    }
-    if (key === 'roe') return num(fin.roe) ?? (fin.resultat_net && fin.fonds_propres ? Number(fin.resultat_net) / Number(fin.fonds_propres) * 100 : null);
-    if (key === 'yield') {
-      return num(fin.dividend_yield) ?? num(fin.rendement_dividende) ?? (fin.dpa != null && currentPrice(ticker) > 0 ? Number(fin.dpa) / Number(currentPrice(ticker)) * 100 : null);
-    }
-    if (key === 'debt') return num(fin.dette_nette) ?? num(fin.dette_fin) ?? num(fin.dettes_financieres);
-    return null;
+  var ROWS = [
+    { k: 'cours', l: 'Cours (FCFA)', f: function (v) { return nf(v); }, hi: null },
+    { k: 'capi', l: 'Capitalisation', f: money, hi: null },
+    { k: 'per', l: 'PER', f: function (v) { return v != null ? v.toFixed(1) + 'x' : '—'; }, hi: 'low' },
+    { k: 'pbr', l: 'P/B', f: function (v) { return v != null ? v.toFixed(2) + 'x' : '—'; }, hi: 'low' },
+    { k: 'roe', l: 'ROE', f: function (v) { return v != null ? v.toFixed(1) + ' %' : '—'; }, hi: 'high' },
+    { k: 'marge', l: 'Marge nette', f: function (v) { return v != null ? v.toFixed(1) + ' %' : '—'; }, hi: 'high' },
+    { k: 'rdt', l: 'Rendement div.', f: function (v) { return v != null ? v.toFixed(2) + ' %' : '—'; }, hi: 'high' },
+    { k: 'detteFp', l: 'Dette / FP', f: function (v) { return v != null ? v.toFixed(2) + 'x' : '—'; }, hi: 'low' },
+    { k: 'croissance', l: 'Croissance CA', f: function (v) { return v != null ? (v > 0 ? '+' : '') + v.toFixed(0) + ' %' : '—'; }, hi: 'high' }
+  ];
+  var RADAR = ['roe', 'marge', 'rdt', 'croissance', 'per', 'pbr'];
+
+  function injectCss() {
+    if (document.getElementById('tc-cmp-v2-css')) return;
+    var s = document.createElement('style');
+    s.id = 'tc-cmp-v2-css';
+    s.textContent = [
+      '#view-comparison{padding:24px clamp(14px,3vw,32px) 56px;max-width:1240px;margin-inline:auto}',
+      '#view-comparison .cmp-pick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}',
+      '#view-comparison .cmp-pick select{background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--cream);padding:8px 12px;font:400 12px var(--sans);min-width:200px}',
+      '#view-comparison .cmp-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--gold);background:var(--gold-bg);color:var(--gold-l);border-radius:999px;padding:5px 8px 5px 12px;font:600 11px var(--mono)}',
+      '#view-comparison .cmp-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:13px;line-height:1}',
+      '#view-comparison .cmp-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:18px;align-items:start}',
+      '#view-comparison .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px}',
+      '#view-comparison table{width:100%;border-collapse:collapse;font-size:12px}',
+      '#view-comparison th,#view-comparison td{padding:9px 11px;border-bottom:1px solid var(--border2);text-align:right;font-variant-numeric:tabular-nums;color:var(--cream);white-space:nowrap}',
+      '#view-comparison th:first-child,#view-comparison td:first-child{text-align:left;color:var(--muted)}',
+      '#view-comparison thead th{font:600 8px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}',
+      '#view-comparison thead th b{display:block;color:var(--gold);font:600 12px var(--mono)}',
+      '#view-comparison td.best{color:var(--green);font-weight:600}',
+      '#view-comparison .cmp-radar{height:360px}',
+      '#view-comparison .cmp-bar{display:flex;justify-content:flex-end;gap:8px;margin:14px 0 8px}',
+      '#view-comparison .cmp-bar button{border:1px solid var(--border2);background:transparent;color:var(--gold-l);border-radius:7px;padding:6px 12px;font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}',
+      '#view-comparison .fch-muted{color:var(--dim);font-size:12px}',
+      '@media(max-width:900px){#view-comparison .cmp-cols{grid-template-columns:1fr}}'
+    ].join('\n');
+    document.head.appendChild(s);
   }
 
-  function growthCA(ticker) {
-    const rows = (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(x => x.ticker === ticker)
-      .sort((a,b) => Number(b.annee || 0) - Number(a.annee || 0));
-    if (rows.length < 2 || rows[0].chiffre_affaires == null || rows[1].chiffre_affaires == null || Number(rows[1].chiffre_affaires) === 0) return null;
-    return (Number(rows[0].chiffre_affaires) / Number(rows[1].chiffre_affaires) - 1) * 100;
+  function bestIndex(vals, hi) {
+    if (!hi) return -1;
+    var idx = -1, best = null;
+    vals.forEach(function (v, i) {
+      if (v == null || !isFinite(v)) return;
+      if (best == null || (hi === 'high' ? v > best : v < best)) { best = v; idx = i; }
+    });
+    return idx;
   }
 
-  function renderComparison() {
-    const view = document.getElementById('view-comparison');
-    if (!view) return;
-    const companies = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])
-      .filter(x => x.actif !== false)
-      .sort((a,b) => String(a.ticker).localeCompare(String(b.ticker)));
-    if (!companies.length) { view.innerHTML = '<div class="empty-state">Données sociétés indisponibles.</div>'; return; }
-    const selected = new Set(Array.from(view.querySelectorAll('[data-compare-ticker]:checked')).map(x => x.value));
-    const choices = selected.size ? Array.from(selected).slice(0,4) : companies.slice(0,2).map(x => x.ticker);
-
-    view.innerHTML = `
-      <div class="page-header"><h1>Comparaison <span style="color:var(--gold)">Fondamentale</span></h1><p>Comparez 2 à 4 sociétés à partir des données financières réellement disponibles.</p></div>
-      <div class="card mb20"><div class="card-body"><div class="comparison-select-grid">
-        ${companies.map(c => `<label class="comparison-choice"><input type="checkbox" data-compare-ticker value="${esc(c.ticker)}" ${choices.includes(c.ticker) ? 'checked' : ''}> <strong>${esc(c.ticker)}</strong><span>${esc(c.nom || c.nom_court || '')}</span></label>`).join('')}
-      </div><button class="filter-btn active" id="comparisonApply">Comparer</button></div></div>
-      <div class="card"><div class="table-wrap"><table class="comparison-table"><thead><tr><th>Indicateur</th>${choices.map(t => `<th>${esc(t)}<br><span class="comparison-company-name">${esc(companyName(t))}</span></th>`).join('')}</tr></thead><tbody>
-        ${comparisonRows(choices)}
-      </tbody></table></div></div>`;
-
-    view.querySelector('#comparisonApply')?.addEventListener('click', () => {
-      const picks = Array.from(view.querySelectorAll('[data-compare-ticker]:checked')).map(x => x.value).slice(0,4);
-      if (picks.length < 2) { if (typeof toast === 'function') toast('Sélectionnez au moins 2 sociétés.', 'warn'); return; }
-      const current = new Set(picks); view.querySelectorAll('[data-compare-ticker]').forEach(x => x.checked = current.has(x.value));
-      renderComparison();
+  function drawRadar(snaps) {
+    var cv = document.getElementById('cmpRadar');
+    if (!cv || typeof Chart === 'undefined') return;
+    var palette = ['#B8964E', '#60a5fa', '#4ade80', '#f87171', '#e6c979', '#c084fc'];
+    var ranges = {};
+    RADAR.forEach(function (k) {
+      var vs = snaps.map(function (s) { return s[k]; }).filter(function (v) { return v != null && isFinite(v); });
+      ranges[k] = vs.length ? { min: Math.min.apply(null, vs), max: Math.max.apply(null, vs) } : null;
+    });
+    var labels = { roe: 'ROE', marge: 'Marge', rdt: 'Rendement', croissance: 'Croiss. CA', per: 'PER (inv.)', pbr: 'P/B (inv.)' };
+    var datasets = snaps.map(function (s, i) {
+      var col = palette[i % palette.length];
+      return {
+        label: s.ticker,
+        data: RADAR.map(function (k) {
+          var r = ranges[k], v = s[k];
+          if (!r || v == null || !isFinite(v) || r.max === r.min) return r && v != null ? 50 : 0;
+          var t = (v - r.min) / (r.max - r.min) * 100;
+          return (k === 'per' || k === 'pbr') ? 100 - t : t; // valorisation : plus bas = mieux
+        }),
+        borderColor: col, backgroundColor: col + '22', borderWidth: 2, pointRadius: 2
+      };
+    });
+    if (chart) { try { chart.destroy(); } catch (e) {} }
+    chart = new Chart(cv, {
+      type: 'radar',
+      data: { labels: RADAR.map(function (k) { return labels[k]; }), datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: 'rgba(184,150,78,.12)' }, angleLines: { color: 'rgba(184,150,78,.12)' }, pointLabels: { color: 'rgba(245,240,232,.6)', font: { size: 10 } } } },
+        plugins: { legend: { position: 'bottom', labels: { color: 'rgba(245,240,232,.7)', boxWidth: 10, font: { size: 10 } } } }
+      }
     });
   }
 
-  function comparisonRows(choices) {
-    const rows = [
-      ['P/E', t => { const f = latestByTicker(t); const v = metric(f, t, 'pe'); return v == null ? 'Donnée non disponible' : `${v.toFixed(2)}x`; }],
-      ['ROE', t => pct(metric(latestByTicker(t), t, 'roe'))],
-      ['Croissance CA', t => pct(growthCA(t))],
-      ['Dividend Yield', t => pct(metric(latestByTicker(t), t, 'yield'))],
-      ['Dette', t => fmt(metric(latestByTicker(t), t, 'debt'))]
-    ];
-    return rows.map(([label, fn], i) => `<tr><td>${label}</td>${choices.map(t => `<td class="${i > 2 ? 'pro-only' : ''}">${esc(fn(t))}</td>`).join('')}</tr>`).join('');
+  function csv(snaps) {
+    var head = 'Indicateur;' + snaps.map(function (s) { return s.ticker; }).join(';');
+    var lines = ROWS.map(function (row) {
+      return row.l + ';' + snaps.map(function (s) { var v = s[row.k]; return v == null ? '' : String(v).replace('.', ','); }).join(';');
+    });
+    var blob = new Blob(['﻿' + head + '\n' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'comparaison-brvm.csv'; a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 2000);
   }
 
-  window.renderComparison = renderComparison;
+  function render() {
+    var view = document.getElementById('view-comparison');
+    if (!view) return;
+    injectCss();
+    var companies = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])
+      .filter(function (e) { return e && e.ticker && e.actif !== false; })
+      .sort(function (a, b) { return String(a.ticker).localeCompare(String(b.ticker)); });
+    if (!companies.length) { view.innerHTML = '<div class="page-header"><h1>Comparaison</h1></div><div class="fch-muted">Données sociétés indisponibles.</div>'; return; }
+    if (!picks.length) {
+      var m = (location.hash || '').match(/^#comparison=(.+)$/);
+      picks = m ? decodeURIComponent(m[1]).split(',').map(function (x) { return x.toUpperCase(); }).filter(Boolean).slice(0, 6)
+        : companies.slice(0, 3).map(function (c) { return String(c.ticker).toUpperCase(); });
+    }
+    var snaps = picks.map(snapshot);
+
+    view.innerHTML =
+      '<div class="page-header"><h1>Comparaison <span style="color:var(--gold)">de sociétés</span></h1>'
+      + '<p>2 à 6 valeurs — tableau, radar normalisé et export. Meilleure valeur par ligne en vert.</p></div>'
+      + '<div class="cmp-pick">'
+      + picks.map(function (t) { return '<span class="cmp-chip">' + esc(t) + '<button type="button" data-rm="' + esc(t) + '">×</button></span>'; }).join('')
+      + (picks.length < 6 ? '<select id="cmpAdd"><option value="">+ Ajouter une société…</option>'
+        + companies.filter(function (c) { return picks.indexOf(String(c.ticker).toUpperCase()) < 0; })
+          .map(function (c) { return '<option value="' + esc(c.ticker) + '">' + esc(c.ticker) + ' — ' + esc(c.nom || c.nom_court || '') + '</option>'; }).join('')
+        + '</select>' : '')
+      + '</div>'
+      + '<div class="cmp-bar"><button type="button" id="cmpCsv">Export CSV</button></div>'
+      + '<div class="cmp-cols">'
+      + '<div class="card" style="overflow-x:auto"><table><thead><tr><th>Indicateur</th>'
+      + snaps.map(function (s) { return '<th><b>' + esc(s.ticker) + '</b>' + esc(s.nom) + '</th>'; }).join('')
+      + '</tr></thead><tbody>'
+      + ROWS.map(function (row) {
+        var vals = snaps.map(function (s) { return s[row.k]; });
+        var bi = bestIndex(vals, row.hi);
+        return '<tr><td>' + row.l + '</td>' + vals.map(function (v, i) {
+          return '<td class="' + (i === bi ? 'best' : '') + '">' + row.f(v) + '</td>';
+        }).join('') + '</tr>';
+      }).join('')
+      + '</tbody></table></div>'
+      + '<div class="card"><div class="fch-muted" style="margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--gold)">Profil relatif</div>'
+      + '<div class="cmp-radar"><canvas id="cmpRadar"></canvas></div></div>'
+      + '</div>';
+
+    drawRadar(snaps);
+    try { history.replaceState(null, '', '#comparison=' + encodeURIComponent(picks.join(','))); } catch (e) {}
+
+    var add = document.getElementById('cmpAdd');
+    if (add) add.addEventListener('change', function () {
+      var v = String(this.value || '').toUpperCase();
+      if (v && picks.indexOf(v) < 0 && picks.length < 6) { picks.push(v); render(); }
+    });
+    view.querySelectorAll('[data-rm]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var t = b.getAttribute('data-rm');
+        picks = picks.filter(function (x) { return x !== t; });
+        if (picks.length < 2) { var c0 = companies.find(function (c) { return picks.indexOf(String(c.ticker).toUpperCase()) < 0; }); if (c0) picks.push(String(c0.ticker).toUpperCase()); }
+        render();
+      });
+    });
+    var cx = document.getElementById('cmpCsv');
+    if (cx) cx.addEventListener('click', function () { csv(snaps); });
+  }
+
+  window.renderComparison = render;
 })();
