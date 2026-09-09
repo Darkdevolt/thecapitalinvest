@@ -93,7 +93,7 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
       <div class="tc-clock" id="headerTime">—</div>
       <a class="tc-institute" href="/the-capital-institute/index.html" aria-label="The Capital Institute"><img src="/assets/the-capital-logo.png" alt=""><span class="tc-institute-label">Institute</span></a>
       <a class="tc-iconbtn" href="/app/architecture.html" title="Guide de navigation" aria-label="Guide de navigation">◈</a>
-      <a class="tc-iconbtn" href="/admin.html" title="Administration" aria-label="Administration">⚙</a>
+      <!-- Aucun lien vers /admin.html : l'accès admin se fait par saisie directe de l'URL, réservé aux administrateurs. -->
       <a class="tc-user" id="topnavUser" href="/app/account.html" aria-label="Mon compte et préférences"><div class="tc-avatar" id="headerAvatar">TC</div><span class="tc-user-name" id="headerName">—</span></a>
       <button class="tc-logout" type="button" data-action="logout" aria-label="Se déconnecter">↪</button>
     </div>
@@ -107,7 +107,9 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
   </nav>
 </div>
 
-<div class="breadcrumb" id="breadcrumb" aria-label="Fil d’Ariane"></div>
+<!-- Fil d'Ariane global retiré : doublon avec les barres « ← Retour » propres
+     aux vues de détail (fiche, note d'analyse). updateBreadcrumb() reste
+     no-op (garde `if(!bc)return`). -->
 <main class="main" id="main-content">
 <div class="view active" id="view-overview"><div class="page-header"><h1>Tableau de Bord <span style="color:var(--gold)">BRVM</span></h1><p>Bourse Régionale des Valeurs Mobilières, Données de marché</p></div><div class="grid-3" id="overviewStats"><div class="stat-card"><div class="stat-label">BRVM Composite</div><div class="stat-value" id="idx-composite">—</div><div class="stat-change" id="idx-composite-chg">—</div></div><div class="stat-card"><div class="stat-label">BRVM 30</div><div class="stat-value" id="idx-30">—</div><div class="stat-change" id="idx-30-chg">—</div></div><div class="stat-card"><div class="stat-label">BRVM Prestige</div><div class="stat-value" id="idx-prestige">—</div><div class="stat-change" id="idx-prestige-chg">—</div></div></div><div id="tciPortfolio"></div><div class="tci-row tci-row-2"><div id="tciBreadth"></div><div id="tciActivity"></div></div><div id="tciWatch" class="tci-row"></div><div class="grid-7030"><div class="card"><div class="card-header"><div class="card-title">BRVM Composite, 30 séances</div><div class="card-meta" id="lastSession">—</div></div><div class="card-body"><div class="chart-container"><canvas id="chartComposite"></canvas></div></div></div><div class="card"><div class="card-header"><div class="card-title">Top Mouvements</div></div><div id="topMovers"></div></div></div><div class="card mt20"><div class="card-header"><div class="card-title">Activité récente</div></div><div id="recentActivity"></div></div></div>
 <div class="view" id="view-titres"><div class="page-header"><h1>Titres <span style="color:var(--gold)">BRVM</span></h1><p>Univers coté, performances et informations de marché</p></div><div id="titresContent"></div></div>
@@ -470,10 +472,16 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
 <script src="/app/js/state.js"></script>
 <script src="/app/js/fetch.js"></script>
 <script src="/app/js/utils.js"></script>
+<!-- ui.js : populateTickerSelects() + sortTable(). N'était chargé nulle part
+     → tous les menus déroulants de tickers restaient vides. -->
+<script src="/app/js/ui.js?v=2"></script>
 <script src="/app/js/router.js"></script>
 <script src="/app/js/main.js"></script>
 <script src="/app/js/init.js"></script>
 <script src="/app/js/loader.js"></script>
+<!-- overview-insights.js : blocs Portefeuille / Largeur / Activité / Suivi du
+     tableau de bord. N'était chargé nulle part → dashboard sans ces blocs. -->
+<script src="/app/js/views/overview-insights.js?v=2"></script>
 <script>
 (function(){
   'use strict';
