@@ -104,13 +104,9 @@
     var original = window.openFiche;
     if (typeof original !== 'function' || original.__tcWrapped) return;
     function wrappedOpenFiche(ticker, from, noHash) {
-      var target = from || 'titres';
-      var result = original.apply(this, arguments);
-      Promise.resolve(result).then(function () {
-        var view = document.getElementById('view-fiche');
-        installBackBar(view, 'Titres BRVM', target, String(ticker || '').toUpperCase());
-      });
-      return result;
+      // La fiche société v2 dessine son propre bouton « ← Retour ».
+      // On ne surajoute plus de barre ici (évitait un double bouton).
+      return original.apply(this, arguments);
     }
     wrappedOpenFiche.__tcWrapped = true;
     window.openFiche = wrappedOpenFiche;
