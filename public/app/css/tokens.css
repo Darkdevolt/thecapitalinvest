@@ -180,3 +180,21 @@ body[data-theme="light"] {
   --tc-green:    #18834A;
   --tc-red:      #C43D3D;
 }
+
+/* ----------------------------------------------------------------------------
+   Correctifs de base visibles à l'écran (capture 2026-09-09)
+   -------------------------------------------------------------------------- */
+
+/* Le lien d'évitement s'affichait en clair, en haut à gauche. Masqué hors focus. */
+.tc-skip-link{
+  position:fixed;top:0;left:0;z-index:100000;
+  margin:10px;padding:10px 16px;
+  background:var(--gold);color:#0a0804;
+  font:600 12px/1 var(--sans);text-decoration:none;border-radius:8px;
+  transform:translateY(-160%);transition:transform .16s ease;
+}
+.tc-skip-link:focus{transform:translateY(0);outline:2px solid var(--gold-2);outline-offset:2px}
+
+/* Filet de sécurité : le corps de page reste lisible même si une feuille de
+   vue échoue à se charger. */
+body{background:var(--bg);color:var(--cream);font-family:var(--sans)}
