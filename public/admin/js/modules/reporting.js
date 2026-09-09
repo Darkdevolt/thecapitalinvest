@@ -572,9 +572,12 @@
 
     async function loadBanner() {
         if (bannerData !== null) return bannerData;
+        /* Ne dépend pas d'un config.js éventuellement en cache : l'URL a un
+           repli en dur. */
+        const url = (TC.env && TC.env.BANNER) || '/assets/banniere-seance-1min.png';
         try {
-            const r = await fetch(TC.env.BANNER, { cache: 'force-cache' });
-            if (!r.ok) throw new Error('bannière absente');
+            const r = await fetch(url, { cache: 'no-cache' });
+            if (!r.ok) throw new Error('bannière absente (' + r.status + ')');
             const blob = await r.blob();
             bannerData = await new Promise(function (resolve, reject) {
                 const reader = new FileReader();
@@ -591,6 +594,7 @@
             });
         } catch (e) {
             bannerData = '';
+            console.warn('[REPORTING] Bannière /assets non chargée, repli SVG :', e && e.message);
         }
         return bannerData;
     }

@@ -116,8 +116,9 @@ for (const file of files) {
 }
 
 // admin.html remains outside the application corrections.
+// Bump 2026-09-09 : cache-bust ?v= de config.js + reporting.js (bannière séance).
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '482287168d1fb384b27e5b654752bd6ba830933e';
+const expectedAdminBlobSha = '8e6023e6bcdc62366caff31c022f7d5136acfab8';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
