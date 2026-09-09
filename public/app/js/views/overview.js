@@ -151,12 +151,12 @@
     };
     const setIdx = (id,val,chgId,chg) => {
       const el=document.getElementById(id), ce=document.getElementById(chgId);
-      if(el) el.textContent=(val!=null&&!isNaN(+val))?fmt(+val,2):', ';
-      if(ce){const n=parseFloat(chg),cls=isNaN(n)?'neutral':n>0?'up':n<0?'down':'neutral';ce.className=`stat-change ${cls}`;ce.textContent=isNaN(n)?', ':(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(2)+' pts';}
+      if(el) el.textContent=(val!=null&&!isNaN(+val))?fmt(+val,2): '—';
+      if(ce){const n=parseFloat(chg),cls=isNaN(n)?'neutral':n>0?'up':n<0?'down':'neutral';ce.className=`stat-change ${cls}`;ce.textContent=isNaN(n)? '—':(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(2)+' pts';}
     };
     let lastDate=null;
     Object.values(mapCard).forEach(card=>{const realName=findIndice(card.candidates),data=realName?latest[realName]:null;if(data){setIdx(card.id,data.valeur,card.chgId,data.variation);if(data.date_seance)lastDate=data.date_seance;const history=getIndiceHistory(realName,20);if(history.length>=2)drawSparkline(card.sparkId,history.map(d=>d.valeur));}else setIdx(card.id,null,card.chgId,null);});
-    const lastSessionEl=document.getElementById('lastSession');if(lastSessionEl)lastSessionEl.textContent=lastDate?'Séance '+fmtDate(lastDate):', ';
+    const lastSessionEl=document.getElementById('lastSession');if(lastSessionEl)lastSessionEl.textContent=lastDate?'Séance '+fmtDate(lastDate): '—';
   }
 
   window.renderCompositeChart=function(){
@@ -243,7 +243,7 @@
     }).join('');
   }
 
-  function renderPubFeed(){const container=document.getElementById('pubFeed');if(!container)return;const upcoming=(window.allFinancials||[]).filter(f=>f.periode==='annuel'||f.periode==='s1').sort((a,b)=>(b.annee||0)-(a.annee||0)).slice(0,5);if(!upcoming.length){container.innerHTML='<div class="empty-state">Aucune publication prévue</div>';return;}container.innerHTML=upcoming.map(p=>{const ticker=p.ticker||', ',year=p.annee||new Date().getFullYear(),isPublished=p.resultat_net!=null,month=isPublished?'03':'06';return `<div class="pub-item"><div class="pub-date"><span class="day">15</span><span class="month">${month}</span></div><div class="pub-info"><span class="ticker">${escapeHtml(ticker)}</span><span class="period">${escapeHtml(p.periode)} ${year}</span></div></div>`;}).join('');}
+  function renderPubFeed(){const container=document.getElementById('pubFeed');if(!container)return;const upcoming=(window.allFinancials||[]).filter(f=>f.periode==='annuel'||f.periode==='s1').sort((a,b)=>(b.annee||0)-(a.annee||0)).slice(0,5);if(!upcoming.length){container.innerHTML='<div class="empty-state">Aucune publication prévue</div>';return;}container.innerHTML=upcoming.map(p=>{const ticker=p.ticker|| '—',year=p.annee||new Date().getFullYear(),isPublished=p.resultat_net!=null,month=isPublished?'03':'06';return `<div class="pub-item"><div class="pub-date"><span class="day">15</span><span class="month">${month}</span></div><div class="pub-info"><span class="ticker">${escapeHtml(ticker)}</span><span class="period">${escapeHtml(p.periode)} ${year}</span></div></div>`;}).join('');}
 
   function renderAlertFeed(){const container=document.getElementById('alertFeed');if(!container)return;const alerts=safeJSON(localStorage.getItem('tc_alerts'),[]),active=alerts.filter(a=>!a.triggered).slice(0,5);if(!active.length){container.innerHTML='<div class="empty-state">Aucune alerte active</div>';return;}const byTicker={};(window.allCours||[]).forEach(c=>{if(c?.ticker)byTicker[c.ticker]=c;});container.innerHTML=active.map(a=>{const c=byTicker[a.ticker],current=c?.cours||0,triggered=a.condition==='above'?current>=a.price:current<=a.price;return `<div class="alert-item ${triggered?'triggered':''}"><span class="ticker">${escapeHtml(a.ticker)}</span><span class="condition">${a.condition==='above'?'>':'<'} ${a.price} FCFA</span><span class="current">${fmt(current)}</span></div>`;}).join('');}
 

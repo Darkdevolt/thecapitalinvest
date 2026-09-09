@@ -90,8 +90,8 @@
       if (!row) return;
       var value = document.getElementById(d.ids[0]);
       var change = document.getElementById(d.ids[1]);
-      if (value && (value.textContent === '—' || value.textContent === ', ' || !value.textContent.trim())) value.textContent = fmt(row.valeur, 2);
-      if (change && (change.textContent === '—' || change.textContent === ', ' || !change.textContent.trim())) {
+      if (value && (value.textContent === '—' || value.textContent === '—' || !value.textContent.trim())) value.textContent = fmt(row.valeur, 2);
+      if (change && (change.textContent === '—' || change.textContent === '—' || !change.textContent.trim())) {
         var v = num(row.variation);
         change.textContent = v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v).toFixed(2) + ' pts';
         change.classList.toggle('up', v > 0);

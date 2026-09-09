@@ -249,7 +249,7 @@ window.validatePortfolioTradePrice = async function(ticker, dateStr, price) {
   const p = Number(price);
   if (!Number.isFinite(p) || p <= 0) return { ok: false, message: 'Le prix doit être supérieur à zéro.' };
   if (p < session.low || p > session.high) {
-    const f = v => Number.isFinite(v) ? Number(v).toLocaleString('fr-FR',{maximumFractionDigits:2}) : ', ';
+    const f = v => Number.isFinite(v) ? Number(v).toLocaleString('fr-FR',{maximumFractionDigits:2}) : '—';
     return { ok: false, message: `Prix invalide pour ${ticker} le ${session.date}. Fourchette autorisée : ${f(session.low)}, ${f(session.high)} FCFA. Ouverture : ${f(session.open)} · Clôture : ${f(session.close)}.` };
   }
   return { ok: true, session };
@@ -257,7 +257,7 @@ window.validatePortfolioTradePrice = async function(ticker, dateStr, price) {
 
 function _tradeHintText(session) {
   if (!session) return '';
-  const f = v => Number.isFinite(v) ? (typeof window.fmt === 'function' ? window.fmt(v, 2) : Number(v).toFixed(2)) : ', ';
+  const f = v => Number.isFinite(v) ? (typeof window.fmt === 'function' ? window.fmt(v, 2) : Number(v).toFixed(2)) : '—';
   return `Séance ${session.date} · Ouv. <strong>${f(session.open)}</strong> · Haut <strong>${f(session.high)}</strong> · Bas <strong>${f(session.low)}</strong> · Clôt. <strong>${f(session.close)}</strong> FCFA`;
 }
 

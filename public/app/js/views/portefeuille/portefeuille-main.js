@@ -126,9 +126,9 @@ window.renderPortfolio = function() {
     if (pfPL) { pfPL.textContent = (totalPL >= 0 ? '+' : '') + (typeof fmtM === 'function' ? fmtM(totalPL) : totalPL.toFixed(0)) + ' FCFA'; pfPL.style.color = totalPL >= 0 ? 'var(--green)' : 'var(--red)'; }
     if (pfPLSub) { pfPLSub.textContent = `${totalReturn >= 0 ? '+' : ''}${typeof fmt === 'function' ? fmt(totalReturn, 2) : totalReturn.toFixed(2)}% de rentabilité`; pfPLSub.style.color = totalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
     if (pfReturn) { pfReturn.textContent = (typeof fmt === 'function' ? fmt(totalReturn, 2) : totalReturn.toFixed(2)) + '%'; pfReturn.style.color = totalReturn >= 0 ? 'var(--green)' : 'var(--red)'; }
-    if (pfVol) pfVol.textContent = vol > 0 && hist.values.length >= 2 ? (typeof fmt === 'function' ? fmt(vol * 100, 2) : (vol * 100).toFixed(2)) + '%' : ', ';
-    if (pfSharpe) pfSharpe.textContent = sharpe !== 0 && hist.values.length >= 2 ? (typeof fmt === 'function' ? fmt(sharpe, 2) : sharpe.toFixed(2)) : ', ';
-    if (pfDD) pfDD.textContent = maxDD > 0 && hist.values.length >= 2 ? '-' + (typeof fmt === 'function' ? fmt(maxDD, 2) : maxDD.toFixed(2)) + '%' : ', ';
+    if (pfVol) pfVol.textContent = vol > 0 && hist.values.length >= 2 ? (typeof fmt === 'function' ? fmt(vol * 100, 2) : (vol * 100).toFixed(2)) + '%' : '—';
+    if (pfSharpe) pfSharpe.textContent = sharpe !== 0 && hist.values.length >= 2 ? (typeof fmt === 'function' ? fmt(sharpe, 2) : sharpe.toFixed(2)) : '—';
+    if (pfDD) pfDD.textContent = maxDD > 0 && hist.values.length >= 2 ? '-' + (typeof fmt === 'function' ? fmt(maxDD, 2) : maxDD.toFixed(2)) + '%' : '—';
     const sortedByPL = [...rows].sort((a, b) => b.plPct - a.plPct), best = sortedByPL[0], worst = sortedByPL[sortedByPL.length - 1];
     const bestEl = document.getElementById('pfBestPos'), worstEl = document.getElementById('pfWorstPos');
     if (bestEl && best) bestEl.innerHTML = `${best.ticker} <span style="color:var(--green)">+${typeof fmt === 'function' ? fmt(best.plPct, 1) : best.plPct.toFixed(1)}%</span>`;
@@ -160,8 +160,8 @@ window.renderPortfolio = function() {
           <td style="padding:14px 12px;text-align:right"><span class="badge ${p.plPct >= 0 ? 'badge-green' : 'badge-red'}" style="font-size:12px;padding:5px 8px">${p.plPct >= 0 ? '+' : ''}${typeof fmt === 'function' ? fmt(p.plPct, 2) : p.plPct.toFixed(2)}%</span></td>
           <td style="padding:14px 12px;text-align:right;font-size:14px">${typeof fmtM === 'function' ? fmtM(p.value) : p.value.toFixed(0)}</td>
           <td style="padding:14px 12px;text-align:right;font-size:14px">${typeof fmt === 'function' ? fmt(p.allocation, 2) : p.allocation.toFixed(2)}%</td>
-          <td style="padding:14px 12px;text-align:right;font-size:14px">${high52 ? (typeof fmt === 'function' ? fmt(high52, 2) : high52.toFixed(2)) : ', '}</td>
-          <td style="padding:14px 12px;text-align:right;font-size:14px">${low52 ? (typeof fmt === 'function' ? fmt(low52, 2) : low52.toFixed(2)) : ', '}</td>
+          <td style="padding:14px 12px;text-align:right;font-size:14px">${high52 ? (typeof fmt === 'function' ? fmt(high52, 2) : high52.toFixed(2)) : '—'}</td>
+          <td style="padding:14px 12px;text-align:right;font-size:14px">${low52 ? (typeof fmt === 'function' ? fmt(low52, 2) : low52.toFixed(2)) : '—'}</td>
           <td style="padding:14px 12px;text-align:center;min-width:285px">
             <div class="row-actions" style="display:flex;justify-content:center;gap:8px;flex-wrap:wrap">
               ${pfActionButton('Modifier', `openEditModal(${p.id})`)}

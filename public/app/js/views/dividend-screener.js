@@ -75,7 +75,7 @@
     if (!tbody) return;
     document.getElementById('divCount').textContent = `${out.length} résultat(s)`;
     tbody.innerHTML = out.length
-      ? out.sort((a,b) => (b.yieldValue ?? -Infinity) - (a.yieldValue ?? -Infinity)).map(r => `<tr><td><strong style="color:var(--gold)">${esc(r.ticker)}</strong></td><td>${esc(r.exercice ?? r.annee ?? ', ')}</td><td class="right">${r.montant_net ?? r.montant ?? 'Donnée non disponible'}</td><td class="right">${pct(r.yieldValue)}</td><td class="right pro-only">${pct(r.growth)}</td><td>${esc(r.date_detachement ?? r.ex_date ?? ', ')}</td><td>${esc(r.date_paiement_cal ?? r.date_paiement ?? ', ')}</td></tr>`).join('')
+      ? out.sort((a,b) => (b.yieldValue ?? -Infinity) - (a.yieldValue ?? -Infinity)).map(r => `<tr><td><strong style="color:var(--gold)">${esc(r.ticker)}</strong></td><td>${esc(r.exercice ?? r.annee ?? '—')}</td><td class="right">${r.montant_net ?? r.montant ?? 'Donnée non disponible'}</td><td class="right">${pct(r.yieldValue)}</td><td class="right pro-only">${pct(r.growth)}</td><td>${esc(r.date_detachement ?? r.ex_date ?? '—')}</td><td>${esc(r.date_paiement_cal ?? r.date_paiement ?? '—')}</td></tr>`).join('')
       : '<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--dim)">Aucune société ne correspond aux critères.</td></tr>';
 
     if (window.TCDisplayMode) window.TCDisplayMode.set(document.body.dataset.mode);

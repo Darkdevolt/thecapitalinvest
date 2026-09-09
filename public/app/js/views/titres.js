@@ -85,6 +85,23 @@
     "TG": "Togo", "ML": "Mali", "NE": "Niger", "GW": "Guinée-Bissau"
   };
 
+  /* La base `entreprises` stocke le pays en toutes lettres (« Côte d'Ivoire »,
+     « Sénégal »…). Les pastilles de filtre utilisent le code ISO à 2 lettres.
+     Sans conversion, le filtre pays ne renvoyait jamais aucun titre. */
+  var PAYS_CODE_BY_NAME = {};
+  Object.keys(PAYS_NAMES).forEach(function (k) {
+    PAYS_CODE_BY_NAME[PAYS_NAMES[k].toLowerCase()] = k;
+  });
+  var PAYS_ALIASES = { "cote d'ivoire": "CI", "cote d ivoire": "CI", "guinee-bissau": "GW", "guinee bissau": "GW", "civ": "CI", "sen": "SN", "bfa": "BF", "ben": "BJ", "tgo": "TG", "mli": "ML", "ner": "NE", "gnb": "GW" };
+  function toPaysCode(v) {
+    if (!v) return "CI";
+    var s = String(v).trim();
+    if (PAYS_NAMES[s.toUpperCase()]) return s.toUpperCase();
+    var low = s.toLowerCase();
+    var noAccent = low.normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return PAYS_CODE_BY_NAME[low] || PAYS_ALIASES[low] || PAYS_ALIASES[noAccent] || s;
+  }
+
   var PAYS_COLORS = {
     "CI": "#FF8200", "SN": "#00853F", "BF": "#EF2B2D", "BJ": "#FCD116",
     "TG": "#006A4E", "ML": "#14B53A", "NE": "#E05206", "GW": "#FFD700"
@@ -203,7 +220,12 @@
     if (typeof entMap !== "undefined" && entMap && entMap[ticker] && entMap[ticker].secteur) {
       return normalizeSector(entMap[ticker].secteur);
     }
-    if (typeof getSector === "function") return getSector(ticker);
+    if (typeof getSector === "function") {
+      var s = getSector(ticker);
+      // getSector peut renvoyer un slug ; on repasse par normalizeSector pour
+      // que la valeur corresponde EXACTEMENT à celle des pastilles de filtre.
+      return s && s !== "Divers" ? normalizeSector(s) : "Autre";
+    }
     return "Autre";
   }
 
@@ -317,7 +339,7 @@
 
     window._titresRows.forEach(function (row) {
       var ent = (typeof entMap !== "undefined" && entMap) ? entMap[row.ticker] : null;
-      row._pays = (ent && ent.pays) || "CI";
+      row._pays = toPaysCode(ent && ent.pays);
       row._secteur = getSectorFromEntMap(row.ticker);
       row._nom = (ent && ent.nom) || row.ticker;
 
@@ -382,8 +404,8 @@
       }
       .tc-titres-title {
         font-family: var(--serif);
-        font-size: clamp(28px, 4vw, 48px);
-        font-weight: 900;
+        font-size: clamp(26px, 3.4vw, 40px);
+        font-weight: 700;
         line-height: 1.05;
         color: var(--cream);
         letter-spacing: -1px;
@@ -538,7 +560,7 @@
       /* ─── FIX CRITIQUE : Carte individuelle ─── */
       .tc-titre-card {
         background: var(--card);
-        padding: 28px 24px;
+        padding: 18px 18px;
         cursor: pointer;
         transition: background 0.3s;
         position: relative;
@@ -576,7 +598,7 @@
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        margin-bottom: 16px;
+        margin-bottom: 11px;
       }
       .tc-card-pays {
         font-size: 10px;
@@ -632,16 +654,16 @@
 
       .tc-card-ticker {
         font-family: var(--serif);
-        font-size: 24px;
+        font-size: 20px;
         font-weight: 700;
         color: var(--cream);
         letter-spacing: -0.5px;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
       }
       .tc-card-nom {
-        font-size: 13px;
+        font-size: 12px;
         color: var(--muted);
-        margin-bottom: 20px;
+        margin-bottom: 12px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -650,12 +672,12 @@
         display: flex;
         align-items: baseline;
         justify-content: space-between;
-        margin-bottom: 16px;
+        margin-bottom: 10px;
       }
       .tc-card-price {
-        font-family: var(--serif);
-        font-size: 28px;
-        font-weight: 700;
+        font-family: var(--mono);
+        font-size: 21px;
+        font-weight: 600;
         color: var(--cream);
         font-variant-numeric: tabular-nums;
       }
@@ -678,8 +700,8 @@
       .tc-card-var.neutral { background: rgba(245,240,232,0.05); color: var(--muted); border: 1px solid var(--border2); }
 
       .tc-sparkline-wrap {
-        height: 50px;
-        margin-bottom: 16px;
+        height: 34px;
+        margin-bottom: 10px;
       }
       .tc-sparkline-wrap canvas {
         width: 100%;
@@ -691,9 +713,9 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-top: 14px;
+        padding-top: 10px;
         border-top: 1px solid var(--border2);
-        font-size: 12px;
+        font-size: 11px;
         color: var(--muted);
       }
       .tc-card-footer .tc-sector-tag {
@@ -706,15 +728,15 @@
         letter-spacing: 0.05em;
       }
       .tc-card-compare {
-        margin-top: 14px;
-        padding-top: 14px;
+        margin-top: 8px;
+        padding-top: 8px;
         border-top: 1px solid var(--border2);
       }
       .tc-card-compare label {
         display: flex;
         align-items: center;
         gap: 8px;
-        font-size: 12px;
+        font-size: 11px;
         color: var(--muted);
         cursor: pointer;
       }
