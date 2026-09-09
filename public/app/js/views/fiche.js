@@ -66,29 +66,35 @@ function ficheSortHistory(arr) {
     return da - db;
   });
 }
+// Historique par titre : on privilégie le helper canonique (fetch.js) livré
+// par la refonte data-layer, avec repli local. Toujours borné dans le temps :
+// une API lente ne doit jamais figer la fiche sur « Chargement… ».
 async function loadCompleteFicheHistorique(ticker) {
-  var pageSize = 1000, maxPages = 50, all = [];
-  for (var page = 0; page < maxPages; page++) {
-    var offset = page * pageSize;
-    var response = await window.apiGet('/marche?type=historique&ticker=' + encodeURIComponent(ticker) + '&limit=' + pageSize + '&offset=' + offset + '&_=' + Date.now());
-    var payload = response && typeof response === 'object' && 'data' in response ? response.data : response;
-    var batch = Array.isArray(payload) ? payload : [];
-    if (!batch.length) break;
-    all.push.apply(all, batch);
-    if (batch.length < pageSize) break;
-  }
-  var byKey = new Map();
-  all.forEach(function (row) {
-    if (!row) return;
-    var key = String(row.ticker || ticker).trim().toUpperCase() + '|' + String(row.date_seance || '');
-    var prev = byKey.get(key);
-    if (!prev) { byKey.set(key, row); return; }
-    var score = function (v) { return v == null || v === '' ? 0 : 1; };
-    var cs = Object.values(row).reduce(function (s, v) { return s + score(v); }, 0);
-    var ps = Object.values(prev).reduce(function (s, v) { return s + score(v); }, 0);
-    if (cs > ps) byKey.set(key, row);
-  });
-  return ficheSortHistory(Array.from(byKey.values()));
+  var run = (async function () {
+    if (typeof window.apiGetHistoriqueComplet === 'function') {
+      var rows = await window.apiGetHistoriqueComplet(ticker, { pageSize: 1000, maxPages: 12 });
+      return ficheSortHistory(Array.isArray(rows) ? rows : []);
+    }
+    var all = [], pageSize = 1000;
+    for (var page = 0; page < 12; page++) {
+      var response = await window.apiGet('/marche?type=historique&ticker=' + encodeURIComponent(ticker) + '&limit=' + pageSize + '&offset=' + (page * pageSize) + '&_=' + Date.now(), { cache: 'no-store' });
+      var payload = response && typeof response === 'object' && 'data' in response ? response.data : response;
+      var batch = Array.isArray(payload) ? payload : [];
+      if (!batch.length) break;
+      all.push.apply(all, batch);
+      if (batch.length < pageSize) break;
+    }
+    var byKey = new Map();
+    all.forEach(function (row) {
+      if (!row) return;
+      var key = String(row.ticker || ticker).trim().toUpperCase() + '|' + String(row.date_seance || '');
+      if (!byKey.has(key)) byKey.set(key, row);
+    });
+    return ficheSortHistory(Array.from(byKey.values()));
+  })();
+  var guard = new Promise(function (resolve) { setTimeout(function () { resolve('__timeout__'); }, 9000); });
+  var res = await Promise.race([run, guard]);
+  return res === '__timeout__' ? [] : res;
 }
 function histClose(r) { return Number(r && (r.cours_cloture != null ? r.cours_cloture : r.cours_normal != null ? r.cours_normal : r.cours)); }
 
@@ -303,6 +309,7 @@ async function openFiche(ticker, from, noHash) {
   view.innerHTML = '<button class="fch-back" type="button" onclick="nav(\'' + prevView + '\')">← Retour</button>'
     + '<div class="fch-muted">Chargement de ' + fchEsc(T) + '…</div>';
 
+  try {
   var entList = Array.isArray(window.allEntreprises) ? window.allEntreprises : [];
   var coursList = Array.isArray(window.allCours) ? window.allCours : [];
   var finList = Array.isArray(window.allFinancials) ? window.allFinancials : [];
@@ -453,6 +460,18 @@ async function openFiche(ticker, from, noHash) {
   ficheChartPeriod = 252;
   renderFicheChart();
   return true;
+  } catch (err) {
+    console.error('[FICHE] rendu:', err);
+    try {
+      var vv = document.getElementById('view-fiche');
+      if (vv && vv.classList.contains('active')) {
+        vv.innerHTML = '<button class="fch-back" type="button" onclick="nav(\'' + prevView + '\')">← Retour</button>'
+          + '<div class="fch-sec"><div class="fch-sec-t">' + fchEsc(T) + '</div>'
+          + '<div class="fch-card fch-muted">Le détail de cette valeur n\'a pas pu s\'afficher (' + fchEsc(err && err.message || 'erreur') + ').<br>Réessayez depuis la liste des titres.</div></div>';
+      }
+    } catch (e2) {}
+    return false;
+  }
 }
 
 function renderFiche() {
