@@ -140,6 +140,16 @@
     return 'Divers';
   };
 
+  // getPays : jumeau de getSector. Vivait dans components.js, qui n'est plus
+  // chargé par app.html — d'où `ReferenceError: getPays is not defined` dans
+  // portefeuille-main.js (allocation par pays). Rétabli ici, à côté de getSector.
+  window.getPays = function(t) {
+    if (!t) return 'UEMOA';
+    const ref = (typeof entMap !== 'undefined' && entMap) ? entMap[t] : null;
+    if (ref && ref.pays && String(ref.pays).trim()) return String(ref.pays).trim();
+    return 'UEMOA';
+  };
+
   // ═══════════════════════════════════════
   // CHART DEFAULTS (chartOpts, alias chartDefaults)
   // ═══════════════════════════════════════
