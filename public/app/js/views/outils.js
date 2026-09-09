@@ -242,48 +242,12 @@
     var t = g('ouScoreTicker') ? String(g('ouScoreTicker').value || '').toUpperCase() : '';
     var out = g('ouScoreOut');
     if (!t) { out.innerHTML = '<div class="ou-err">Sélectionnez une valeur.</div>'; return; }
-    var s = snapshot(t);
-    var med = sectorMedians(s.secteur);
-
-    var comps = [];
-    // Valorisation /25 — décote vs médiane secteur = bon
-    (function () {
-      var pts = null, detail = [];
-      if (s.per != null && s.per > 0 && med.per) { var rp = s.per / med.per; detail.push('PER ' + s.per.toFixed(1) + 'x vs médiane ' + med.per.toFixed(1) + 'x'); pts = clamp(1 - (rp - 1), 0, 1.5) / 1.5 * 12.5; }
-      if (s.pbr != null && s.pbr > 0 && med.pbr) { var rb = s.pbr / med.pbr; detail.push('P/B ' + s.pbr.toFixed(2) + 'x vs médiane ' + med.pbr.toFixed(2) + 'x'); var p2 = clamp(1 - (rb - 1), 0, 1.5) / 1.5 * 12.5; pts = pts == null ? p2 * 2 : pts + p2; }
-      comps.push({ l: 'Valorisation', max: 25, pts: pts, detail: detail.join(' · ') || 'PER / P&B ou médiane secteur indisponibles' });
-    })();
-    // Rentabilité /25 — ROE + marge
-    (function () {
-      var pts = null, detail = [];
-      if (s.roe != null) { detail.push('ROE ' + s.roe.toFixed(1) + ' %'); pts = clamp(s.roe / 20, 0, 1) * 15; }
-      if (s.marge != null) { detail.push('marge nette ' + s.marge.toFixed(1) + ' %'); var p2 = clamp(s.marge / 20, 0, 1) * 10; pts = pts == null ? p2 : pts + p2; }
-      comps.push({ l: 'Rentabilité', max: 25, pts: pts, detail: detail.join(' · ') || 'ROE / marge indisponibles' });
-    })();
-    // Croissance /20 — CA YoY
-    (function () {
-      var pts = null, detail = [];
-      if (s.croissance != null) { detail.push('CA ' + (s.croissance >= 0 ? '+' : '') + s.croissance.toFixed(1) + ' % sur un an'); pts = clamp((s.croissance + 5) / 20, 0, 1) * 20; }
-      comps.push({ l: 'Croissance', max: 20, pts: pts, detail: detail.join(' · ') || 'Deux exercices de CA requis' });
-    })();
-    // Rendement /15
-    (function () {
-      var pts = null, detail = [];
-      if (s.rdt != null) { detail.push('rendement ' + s.rdt.toFixed(2) + ' %'); pts = clamp(s.rdt / 7, 0, 1) * 15; }
-      comps.push({ l: 'Rendement', max: 15, pts: pts, detail: detail.join(' · ') || 'Dividende / rendement indisponible' });
-    })();
-    // Solidité /15 — dette / FP
-    (function () {
-      var pts = null, detail = [];
-      if (s.detteFp != null) { detail.push('dette nette / FP ' + s.detteFp.toFixed(2) + 'x'); pts = clamp(1 - s.detteFp / 1.5, 0, 1) * 15; }
-      comps.push({ l: 'Solidité financière', max: 15, pts: pts, detail: detail.join(' · ') || 'Endettement indisponible' });
-    })();
-
-    var scored = comps.filter(function (c) { return c.pts != null; });
-    var gotMax = scored.reduce(function (a, c) { return a + c.max; }, 0);
-    var gotPts = scored.reduce(function (a, c) { return a + c.pts; }, 0);
-    var score = gotMax > 0 ? Math.round(gotPts / gotMax * 100) : null;
-    var label = score == null ? '—' : score >= 75 ? 'Solide' : score >= 55 ? 'Correct' : score >= 40 ? 'Fragile' : 'À risque';
+    if (typeof window.tcScoreMaison !== 'function') { out.innerHTML = '<div class="ou-err">Module de score indisponible.</div>'; return; }
+    var R = window.tcScoreMaison(t);
+    var comps = R.components;
+    var score = R.score;
+    var label = R.label;
+    var s = { ticker: R.ticker, nom: R.nom, secteur: R.secteur, exercice: R.exercice };
 
     out.innerHTML = ''
       + '<div class="card"><div class="card-body">'

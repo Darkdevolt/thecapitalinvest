@@ -38,6 +38,7 @@
 
   // Un enregistrement par titre, tous indicateurs calculés une fois.
   function buildRows() {
+    var secMedCache = {};
     var coursByT = {};
     (Array.isArray(window.allCours) ? window.allCours : []).forEach(function (c) {
       if (!c || !c.ticker) return;
@@ -62,19 +63,29 @@
       if (yld == null && dpa != null && cp) yld = (dpa / cp) * 100;
       var dette = f ? num(f.dette_nette != null ? f.dette_nette : f.dettes_financieres) : null;
       var detteFp = (dette != null && fp) ? dette / fp : null;
+      var secteur = e.secteur || (typeof getSector === 'function' ? getSector(t) : '') || '—';
+      var per = (cp != null && bpa != null && bpa > 0) ? cp / bpa : null;
+      var pbr = (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null;
+      var croissance = caGrowth(t);
+      var score = null;
+      if (typeof window.tcScoreFromMetrics === 'function') {
+        if (!(secteur in secMedCache)) secMedCache[secteur] = (typeof window.tcSectorMedians === 'function') ? window.tcSectorMedians(secteur) : {};
+        score = window.tcScoreFromMetrics({ per: per, pbr: pbr, roe: roe, marge: marge, rdt: yld, detteFp: detteFp, croissance: croissance }, secMedCache[secteur]).score;
+      }
       return {
         ticker: t,
         nom: e.nom || e.nom_court || t,
-        secteur: e.secteur || (typeof getSector === 'function' ? getSector(t) : '') || '—',
+        secteur: secteur,
         pays: e.pays || '',
         cours: cp,
         variation: num(c.variation_pct != null ? c.variation_pct : c.variation),
         volume: num(c.volume),
         capi: num(c.capitalisation) || (cp && na ? cp * na : null),
-        per: (cp != null && bpa != null && bpa > 0) ? cp / bpa : null,
-        pbr: (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null,
+        per: per,
+        pbr: pbr,
         roe: roe, marge: marge, rdt: yld, detteFp: detteFp,
-        croissance: caGrowth(t),
+        croissance: croissance,
+        score: score,
         exercice: f ? f.annee : null
       };
     });
@@ -84,6 +95,7 @@
     { k: 'ticker', l: 'Ticker', fmt: function (r) { return '<strong style="color:var(--gold)">' + esc(r.ticker) + '</strong>'; }, cls: '' },
     { k: 'nom', l: 'Société', fmt: function (r) { return esc(r.nom); }, cls: '' },
     { k: 'secteur', l: 'Secteur', fmt: function (r) { return '<span style="color:var(--muted);font-size:11px">' + esc(r.secteur) + '</span>'; }, cls: '' },
+    { k: 'score', l: 'Score', fmt: function (r) { return r.score != null ? '<strong style="color:var(--gold-l)">' + r.score + '</strong>' : '—'; }, cls: 'right' },
     { k: 'cours', l: 'Cours', fmt: function (r) { return nf(r.cours); }, cls: 'right' },
     { k: 'variation', l: 'Var.', fmt: function (r) { return '<span style="color:' + (r.variation > 0 ? 'var(--green)' : r.variation < 0 ? 'var(--red)' : 'var(--dim)') + '">' + pf(r.variation, 2) + '</span>'; }, cls: 'right' },
     { k: 'volume', l: 'Volume', fmt: function (r) { return nf(r.volume); }, cls: 'right' },
@@ -102,6 +114,7 @@
     ['fMinPrice', 'Cours min', 'cours', 'min'], ['fMaxPrice', 'Cours max', 'cours', 'max'],
     ['fMinVar', 'Var. min %', 'variation', 'min'], ['fMaxVar', 'Var. max %', 'variation', 'max'],
     ['fMinVol', 'Volume min', 'volume', 'min'],
+    ['fMinScore', 'Score min', 'score', 'min'],
     ['fMaxPer', 'PER max', 'per', 'max'], ['fMaxPbr', 'P/B max', 'pbr', 'max'],
     ['fMinRoe', 'ROE min %', 'roe', 'min'], ['fMinMarge', 'Marge min %', 'marge', 'min'],
     ['fMinRdt', 'Rdt div. min %', 'rdt', 'min'], ['fMaxDette', 'Dette/FP max', 'detteFp', 'max'],
@@ -113,7 +126,8 @@
     'Dividende': { fMinRdt: 5 },
     'Qualité': { fMinRoe: 15, fMinMarge: 12 },
     'Momentum': { fMinVar: 0, fMinVol: 1000 },
-    'Croissance': { fMinCroiss: 10 }
+    'Croissance': { fMinCroiss: 10 },
+    'Score élevé': { fMinScore: 70 }
   };
 
   function sectorOptions() {
