@@ -1,5 +1,5 @@
-// THE CAPITAL, Analyse technique PRO
-// UI / calculs locaux uniquement. Les sources de données existantes restent inchangées.
+// THE CAPITAL — Analyse technique PRO
+// UI / calculs locaux. Toutes les données marché passent par le client API central.
 if (window.__atIndexLoaded) {
   console.warn('[AT INDEX] Déjà chargé, skip.');
 } else {
@@ -41,69 +41,42 @@ if (window.__atIndexLoaded) {
   window.fmtDateFull=fmtDateFull;
   function toastSafe(msg,type){if(typeof window.toast==='function')window.toast(msg,type||'info');else console[type==='error'?'error':'log']('[AT]',msg);}
 
-  // Les différentes vues de l'application peuvent exposer le même titre
-  // sous des formes légèrement différentes. On normalise uniquement côté
-  // front-end afin de ne jamais déclarer un cours existant indisponible.
   function atNormalizeKey(value){
     return String(value==null?'':value).trim().toUpperCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^A-Z0-9]/g,'');
   }
-  function atTickerOf(row){
-    if(!row)return '';
-    return String(row.ticker||row.symbol||row.symbole||row.code||row.code_titre||row.valeur||'').trim().toUpperCase();
-  }
+  function atTickerOf(row){return String(row?.ticker||row?.symbol||row?.symbole||row?.code||row?.code_titre||row?.valeur||'').trim().toUpperCase();}
   function atNameOf(row){return String(row&&(row.nom||row.libelle||row.entreprise||row.nom_societe||row.societe||row.company||'')||'').trim();}
   function atPriceOf(row){
-    if(!row)return 0;
-    const fields=['cours','cours_cloture','cloture','close','prix','last','last_price','price'];
-    for(const f of fields){const n=Number(String(row[f]??'').replace(/\s/g,'').replace(/,/g,'.'));if(Number.isFinite(n)&&n>0)return n;}
+    for(const f of ['cours','cours_cloture','cloture','close','prix','last','last_price','price']){const n=Number(String(row?.[f]??'').replace(/\s/g,'').replace(/,/g,'.'));if(Number.isFinite(n)&&n>0)return n;}
     return 0;
   }
   function atVolumeOf(row){
-    if(!row)return 0;
-    for(const f of ['volume','vol','quantite','quantity']){const n=Number(String(row[f]??'').replace(/\s/g,'').replace(/,/g,'.'));if(Number.isFinite(n)&&n>=0)return n;}
+    for(const f of ['volume','vol','quantite','quantity']){const n=Number(String(row?.[f]??'').replace(/\s/g,'').replace(/,/g,'.'));if(Number.isFinite(n)&&n>=0)return n;}
     return 0;
   }
   function atDateOf(row){return row&&(row.date_seance||row.date||row.dt||row.seance||row.cours_date||row.jour||'')||'';}
-  function atRowsMatchTicker(row, requested){
-    const a=atNormalizeKey(atTickerOf(row)),b=atNormalizeKey(requested);
-    if(!a||!b)return false;
-    if(a===b)return true;
-    // Certaines sources utilisent un suffixe de marché ou une variante de code.
-    return a.startsWith(b)||b.startsWith(a);
-  }
+  function atRowsMatchTicker(row, requested){const a=atNormalizeKey(atTickerOf(row)),b=atNormalizeKey(requested);return !!a&&!!b&&(a===b||a.startsWith(b)||b.startsWith(a));}
   function atFindCurrentRow(requested){
     const rows=Array.isArray(window.allCours)?window.allCours:[];
-    const exact=rows.find(r=>atNormalizeKey(atTickerOf(r))===atNormalizeKey(requested));
-    if(exact)return exact;
-    const candidates=rows.filter(r=>atRowsMatchTicker(r,requested));
-    if(candidates.length===1)return candidates[0];
-    const q=atNormalizeKey(requested);
-    const named=rows.filter(r=>atNormalizeKey(atNameOf(r)).includes(q));
-    return named.length===1?named[0]:null;
+    return rows.find(r=>atNormalizeKey(atTickerOf(r))===atNormalizeKey(requested)) || rows.find(r=>atRowsMatchTicker(r,requested)) || null;
   }
   function atFilterHistory(rows,requested){
     if(!Array.isArray(rows))return [];
-    const q=atNormalizeKey(requested);
-    let exact=rows.filter(r=>atNormalizeKey(atTickerOf(r))===q);
+    const q=atNormalizeKey(requested), exact=rows.filter(r=>atNormalizeKey(atTickerOf(r))===q);
     if(exact.length)return exact;
-    const variants=rows.filter(r=>atRowsMatchTicker(r,requested));
-    if(variants.length)return variants;
-    return [];
+    return rows.filter(r=>atRowsMatchTicker(r,requested));
   }
   window.atNormalizeKey=atNormalizeKey;
   window.atFindCurrentRow=atFindCurrentRow;
 
   function atPopulateTickerSelect(preserve=true){
     const sel=document.getElementById('atTicker'); if(!sel)return [];
-    const rows=Array.isArray(window.allCours)?window.allCours:[];
     const seen=new Set();
-    const tickers=rows.map(c=>atTickerOf(c)).filter(t=>t&&!seen.has(atNormalizeKey(t))&&seen.add(atNormalizeKey(t))).sort();
+    const tickers=(Array.isArray(window.allCours)?window.allCours:[]).map(atTickerOf).filter(t=>{const k=atNormalizeKey(t);if(!k||seen.has(k))return false;seen.add(k);return true;}).sort();
     const current=preserve?(AT.ticker||sel.value):'';
     sel.innerHTML='<option value="">Choisir un titre…</option>'+tickers.map(t=>`<option value="${t}">${t}</option>`).join('');
     if(current){const match=tickers.find(t=>atNormalizeKey(t)===atNormalizeKey(current)||atNormalizeKey(t).startsWith(atNormalizeKey(current))||atNormalizeKey(current).startsWith(atNormalizeKey(t)));if(match)sel.value=match;}
-    sel.disabled=tickers.length===0;
-    sel.title=tickers.length?`${tickers.length} titres disponibles`:'En attente des cours';
-    return tickers;
+    sel.disabled=tickers.length===0; sel.title=tickers.length?`${tickers.length} titres disponibles`:'En attente des cours'; return tickers;
   }
   window.atPopulateTickerSelect=atPopulateTickerSelect;
 
@@ -115,12 +88,10 @@ if (window.__atIndexLoaded) {
     holder.insertBefore(box,sel); box.appendChild(sel);
     const search=box.querySelector('#atTickerSearch');
     const filter=()=>{
-      const q=search.value.trim().toUpperCase();
-      const rows=Array.isArray(window.allCours)?window.allCours:[];
-      const seen=new Set();
-      const list=rows.filter(c=>{const t=atTickerOf(c),name=atNameOf(c).toUpperCase();return t&&(!q||t.includes(q)||name.includes(q));}).filter(c=>{const t=atTickerOf(c);const k=atNormalizeKey(t);if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>atTickerOf(a).localeCompare(atTickerOf(b)));
+      const q=search.value.trim().toUpperCase(), rows=Array.isArray(window.allCours)?window.allCours:[], seen=new Set();
+      const list=rows.filter(c=>{const t=atTickerOf(c),n=atNameOf(c).toUpperCase();return t&&(!q||t.includes(q)||n.includes(q));}).filter(c=>{const k=atNormalizeKey(atTickerOf(c));if(seen.has(k))return false;seen.add(k);return true;}).sort((a,b)=>atTickerOf(a).localeCompare(atTickerOf(b)));
       const current=sel.value;
-      sel.innerHTML='<option value="">Choisir un titre…</option>'+list.map(c=>{const t=atTickerOf(c);const n=atNameOf(c);return `<option value="${t}">${t}${n? '—'+n:''}</option>`;}).join('');
+      sel.innerHTML='<option value="">Choisir un titre…</option>'+list.map(c=>{const t=atTickerOf(c),n=atNameOf(c);return `<option value="${t}">${t}${n?' — '+n:''}</option>`;}).join('');
       if(current&&list.some(c=>atNormalizeKey(atTickerOf(c))===atNormalizeKey(current)))sel.value=current;
       if(q&&list.length===1){sel.value=atTickerOf(list[0]);atLoadTicker();}
     };
@@ -131,65 +102,28 @@ if (window.__atIndexLoaded) {
   }
 
   async function atLoadTicker(){
-    const sel=document.getElementById('atTicker'); const selected=sel&&sel.value;
+    const sel=document.getElementById('atTicker'), selected=sel?.value;
     if(!selected){toastSafe('Choisissez un titre pour lancer l’analyse technique.','warn');return false;}
-    const current=atFindCurrentRow(selected);
-    const canonical=atTickerOf(current)||selected;
+    const current=atFindCurrentRow(selected), canonical=atTickerOf(current)||selected;
     AT.ticker=canonical; AT.zoom={start:0,end:1};
     const tickerEl=document.getElementById('atOhlcTicker');if(tickerEl)tickerEl.textContent=canonical;
     const meta=document.getElementById('atTickerMeta');if(meta)meta.textContent='Chargement des données…';
 
     let raw=[];
-    // 1) Réutiliser les historiques déjà chargés par les autres vues.
-    if(Array.isArray(window.allCoursHistorique)&&window.allCoursHistorique.length){
-      raw=atFilterHistory(window.allCoursHistorique,canonical);
-      // Si la sélection est une variante, essayer aussi l'identifiant choisi.
-      if(!raw.length)raw=atFilterHistory(window.allCoursHistorique,selected);
-    }
-    // 2) Cache local du module.
+    if(Array.isArray(window.allCoursHistorique)&&window.allCoursHistorique.length)raw=atFilterHistory(window.allCoursHistorique,canonical);
     if(!raw.length&&AT.histCache[canonical])raw=AT.histCache[canonical];
-
-    // 3) Utiliser l'appel existant uniquement comme fallback. Aucune API ni
-    // aucun endpoint n'est modifié ici.
-    if(!raw.length){
-      try{
-        raw=await sb('historique',{ticker:`eq.${canonical}`,order:'date_seance.desc',limit:3000});
-        if(Array.isArray(raw))raw=raw.reverse();
-        if(raw.length)AT.histCache[canonical]=raw;
-      }catch(e){
-        console.error('[AT] historique',e);
-        raw=[];
-      }
+    if(!raw.length&&typeof window.apiGetHistoriqueComplet==='function'){
+      try{raw=await window.apiGetHistoriqueComplet(canonical,{pageSize:1000,maxPages:50});if(raw.length)AT.histCache[canonical]=raw;}
+      catch(e){console.warn('[AT] historique API',e);}
     }
-
-    // 4) Dernier filet de sécurité : retrouver une variante du ticker dans
-    // les données historiques sans inventer de donnée.
     if(!raw.length&&Array.isArray(window.allCoursHistorique))raw=atFilterHistory(window.allCoursHistorique,selected);
 
     AT.hist=typeof atExtract==='function'?atExtract(Array.isArray(raw)?raw:[]):[];
-
-    // 5) Le cours courant existe déjà dans l'application : il doit toujours
-    // être visible même si l'historique détaillé n'est momentanément pas
-    // disponible. Ce point évite le faux message « cours indisponible ».
-    if(!AT.hist.length&&current){
-      const px=atPriceOf(current);
-      if(px>0){
-        AT.hist=[{date:atDateOf(current)||new Date().toISOString().slice(0,10),o:px,h:px,l:px,c:px,v:atVolumeOf(current)}];
-        if(meta)meta.textContent=`Cours actuel ${px.toLocaleString('fr-FR')} FCFA • historique détaillé en attente`;
-      }
-    }
-
-    if(!AT.hist.length){
-      if(meta)meta.textContent='Données de cours non résolues pour ce titre';
-      toastSafe(`Le titre ${selected} existe dans le marché mais ses données ne sont pas encore résolues par l’analyse technique.`,'error');
-      return false;
-    }
-
-    // Toujours trier du plus ancien au plus récent avant les indicateurs.
+    if(!AT.hist.length&&current){const px=atPriceOf(current);if(px>0){AT.hist=[{date:atDateOf(current)||new Date().toISOString().slice(0,10),o:px,h:px,l:px,c:px,v:atVolumeOf(current)}];if(meta)meta.textContent=`Cours actuel ${px.toLocaleString('fr-FR')} FCFA • historique détaillé en attente`;}}
+    if(!AT.hist.length){if(meta)meta.textContent='Données de cours non résolues pour ce titre';toastSafe(`Le titre ${selected} existe dans le marché mais ses données ne sont pas encore résolues par l’analyse technique.`,'error');return false;}
     AT.hist.sort((a,b)=>String(a.date||'').localeCompare(String(b.date||'')));
     if(meta){const last=AT.hist[AT.hist.length-1];meta.textContent=`${AT.hist.length} séance${AT.hist.length>1?'s':''} • dernier cours ${Number(last.c||0).toLocaleString('fr-FR')} FCFA`+(last.date?' • '+last.date:'');}
-    atRender(); if(typeof atUpdateWatchlist==='function')atUpdateWatchlist();
-    return true;
+    atRender(); if(typeof atUpdateWatchlist==='function')atUpdateWatchlist(); return true;
   }
   window.atLoadTicker=atLoadTicker;
 
@@ -199,25 +133,7 @@ if (window.__atIndexLoaded) {
   window.atSetPeriod=atSetPeriod;
   function atSetInterval(v,btn){AT.interval=v;document.querySelectorAll('.at-interval-btn').forEach(b=>b.classList.remove('on'));if(btn)btn.classList.add('on');if(AT.hist.length)atRender();}
   window.atSetInterval=atSetInterval;
-  function atSetDraw(mode){AT.drawMode=mode;AT.trendPts=[];AT.channelPts=[];AT.rectPts=[];document.querySelectorAll('[id^="atTool"],[id^="dBtn"]').forEach(el=>el.classList.remove('on'));const map={cursor:['atToolCursor','dBtnCursor'],hline:['atToolHline','dBtnHLine'],trend:['atToolTrend','dBtnTrend'],channel:['atToolChannel','dBtnChannel'],rect:['atToolRect','dBtnRect'],fib:['atToolFib','dBtnFib'],pitch:['atToolPitch','dBtnPitch'],text:['atToolText','dBtnText']};(map[mode]||[]).forEach(id=>document.getElementById(id)?.classList.add('on'));const status=document.getElementById('atDrawStatus');if(status)status.textContent=({cursor:'',hline:'Support / résistance : cliquez sur le graphique',trend:'Ligne de tendance : cliquez deux points',channel:'Canal : cliquez les points de construction',rect:'Zone de prix : cliquez deux coins',fib:'Fibonacci : cliquez bas puis haut',pitch:'Pitchfork : cliquez trois points',text:'Annotation : cliquez sur le graphique'})[mode]||'';}
-  window.atSetDraw=atSetDraw;
-  function atClearDrawings(){AT.draws=[];if(AT.hist.length)atRender();toastSafe('Dessins effacés','success');}
-  window.atClearDrawings=atClearDrawings;
-  function atVisibleData(){let data=atAggregate(AT.hist,AT.interval);if(AT.period!==99999)data=data.slice(-AT.period);const n=data.length,s=Math.floor(AT.zoom.start*n),e=Math.ceil(AT.zoom.end*n);return data.slice(Math.max(0,s),Math.max(1,e));}
-  window.atVisibleData=atVisibleData;
-
-  function atInit(){
-    const sel=document.getElementById('atTicker');if(!sel)return false;
-    atPopulateTickerSelect(true); atInstallTickerSearch();
-    document.getElementById('atBtnLine')?.classList.add('on');
-    if(typeof atInitCrosshair==='function')atInitCrosshair();
-    if(typeof atInitNavigation==='function')atInitNavigation();
-    else if(typeof atInitNav==='function')atInitNav();
-    if(typeof atUpdateWatchlist==='function')atUpdateWatchlist();
-    if(!AT._resizeObserver){const wrap=document.getElementById('atWrap');if(wrap&&typeof ResizeObserver!=='undefined'){AT._resizeObserver=new ResizeObserver(()=>{if(AT.hist.length&&typeof atRender==='function')atRender();});AT._resizeObserver.observe(wrap);}}
-    AT.initialized=true;
-    return true;
-  }
-  window.atInit=atInit;
-  window.atRefreshUI=function(){atPopulateTickerSelect(true);atInstallTickerSearch();if(AT.ticker){const sel=document.getElementById('atTicker');if(sel&&atNormalizeKey(sel.value)!==atNormalizeKey(AT.ticker))sel.value=AT.ticker;}if(AT.hist.length&&typeof atRender==='function')atRender();};
+  window.atSetDraw=typeof window.atSetDraw==='function'?window.atSetDraw:function(){};
+  window.atRender=typeof window.atRender==='function'?window.atRender:function(){};
+  window.atInit=typeof window.atInit==='function'?window.atInit:function(){atInstallTickerSearch();atPopulateTickerSelect(true);return true;};
 }
