@@ -46,7 +46,7 @@
     const hash=location.hash||'';
     if(hash.indexOf('#fiche=')===0)return'fiche';
     if(hash.indexOf('#analyse=')===0)return'analyse-detail';
-    const map={'#overview':'overview','#titres':'titres','#marche':'marche','#boc':'boc','#analyses':'analyses','#analyse-detail':'analyse-detail','#analyse-technique':'analyse-technique','#analyse-fondamentale':'analyse-fondamentale','#backtest':'backtest','#screener':'screener','#portefeuille':'portefeuille','#alertes':'alertes','#financials':'financials','#financials-detail':'financials-detail','#publications':'publications','#comparison':'comparison','#dividend-screener':'dividend-screener'};
+    const map={'#overview':'overview','#titres':'titres','#marche':'marche','#boc':'boc','#analyses':'analyses','#analyse-detail':'analyse-detail','#analyse-technique':'analyse-technique','#analyse-fondamentale':'analyse-fondamentale','#backtest':'backtest','#outils':'outils','#screener':'screener','#portefeuille':'portefeuille','#alertes':'alertes','#financials':'financials','#financials-detail':'financials-detail','#publications':'publications','#comparison':'comparison','#dividend-screener':'dividend-screener'};
     return map[hash]||'overview';
   }
 
