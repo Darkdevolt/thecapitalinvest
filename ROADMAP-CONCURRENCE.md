@@ -32,8 +32,8 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 ### Analyse — « pourquoi ce titre évolue-t-il ? »
 | Fonction | The Capital | Statut | Aller plus loin |
 |---|---|---|---|
-| Graphique action (période, type) | `#view-analyse-technique` (barre d'outils complète, indicateurs, dessin) | 🟡 | Fiabiliser le rendu ; sauvegarde des dessins par ticker |
-| Analyse technique (indicateurs) | idem (RSI, MACD, Stoch, ADX, CCI, OBV, BB…) | 🟡 | Séparer **données / indicateurs calculés / interprétation auto / opinion éditoriale** (recommandation du rapport) |
+| Graphique action (période, type) | `#view-analyse-technique` v3 (reconstruite) | ✅ | Chart.js : cours + SMA20/50 + Bollinger, fenêtre 6 m / 1 an / 2 ans / tout, toggle ajusté/brut. Outils de dessin abandonnés (non fonctionnels) |
+| Analyse technique (indicateurs) | `#view-analyse-technique` v3 | ✅ | **4 sections séparées** : Données · Indicateurs calculés (SMA/EMA/RSI/MACD/Bollinger/ATR/volatilité/perf, formule rappelée) · Interprétation auto (tendance/momentum/bandes/volume + confiance) · Opinion pondérée (indice −1..+1, « pas un conseil ») |
 | Détection de configurations | signaux `sigGlob/sigTrend/…` | 🟡 | Bandeau « lecture » explicite + niveau de confiance |
 | Graphique indice / droit / OPCVM / obligation | indice ✅, reste ❌ | 🟡 | Étendre le moteur graphique aux 4 instruments |
 | Comparaison de cours (superposition) | `#view-comparison` | 🟡 | Base 100, corrélation, tracking error |
