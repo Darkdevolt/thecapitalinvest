@@ -21,7 +21,7 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 |---|---|---|---|
 | Actualités de séance | `#view-overview` (activité, top mouvements) | 🟡 | Fil éditorial daté + archivage ; relier chaque item à une fiche |
 | Cotations A→Z | `#view-titres` (cartes + tableau, filtres pays/secteur) | ✅ | Tri multi-colonnes, pagination virtuelle, export CSV |
-| Palmarès hausses/baisses/volumes | `#view-overview` Top Mouvements, `#view-marche` | 🟡 | Palmarès par période (jour/semaine/mois/YTD) + filtre liquidité |
+| Palmarès hausses/baisses/volumes | `#view-palmares` (dédié) + `#view-overview` Top Mouvements | ✅ | Hausses / baisses / échanges sur jour / semaine / 1 mois / 3 mois / YTD ; compte des valeurs à historique suffisant affiché ; lignes → fiche |
 | Dividendes (dates, brut/net, historique) | `dividendes_calendrier` (191 l.) → `#view-publications`, dividend-screener | 🟡 | Fiche « rente » par société : historique, taux distribution, régularité |
 | Rapports d'activité / documents | `financials.source_url` | 🟡 | Bibliothèque documentaire indexée (année, type, société) |
 | Historique des cours (normaux + ajustés) | `historique` (150 k l.) | ✅ | **Cours ajustés** des dividendes/OST + toggle brut/ajusté |
