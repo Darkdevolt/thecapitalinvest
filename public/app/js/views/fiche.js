@@ -417,6 +417,35 @@ async function openFiche(ticker, from, noHash) {
     + fchBenchRow('Marge nette', r.marge, bench.marge, ' %', 1)
     + '</div></div></div>'));
 
+  // 4b · Score maison The Capital
+  if (typeof window.tcScoreFromMetrics === 'function') {
+    var caG = (fins[0] && fins[1] && Number(fins[0].chiffre_affaires) && Number(fins[1].chiffre_affaires))
+      ? (fins[0].chiffre_affaires / fins[1].chiffre_affaires - 1) * 100 : null;
+    var fpS = f0 ? Number(f0.fonds_propres != null ? f0.fonds_propres : f0.capitaux_propres) : NaN;
+    var detteS = f0 ? Number(f0.dette_nette != null ? f0.dette_nette : f0.dettes_financieres) : NaN;
+    var sMed = (typeof window.tcSectorMedians === 'function') ? window.tcSectorMedians(secteur || '—') : {};
+    var sc = window.tcScoreFromMetrics({
+      per: isFinite(r.per) ? r.per : null,
+      pbr: isFinite(r.pbr) ? r.pbr : null,
+      roe: isFinite(r.roe) ? r.roe : null,
+      marge: isFinite(r.marge) ? r.marge : null,
+      rdt: isFinite(r.rdt) ? r.rdt : null,
+      detteFp: (isFinite(detteS) && isFinite(fpS) && fpS) ? detteS / fpS : null,
+      croissance: caG
+    }, sMed);
+    H.push(fchSec('Score The Capital', '<div class="fch-card">'
+      + '<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
+      + '<span style="font-family:var(--serif);font-size:40px;line-height:1">' + (sc.score == null ? '—' : sc.score) + '</span>'
+      + '<span class="fch-muted">/ 100</span><b style="color:var(--gold);font-size:15px">' + fchEsc(sc.label) + '</b></div>'
+      + '<div style="overflow-x:auto"><table class="fch-fin"><thead><tr><th>Critère</th><th>Points</th><th>Lecture</th></tr></thead><tbody>'
+      + sc.components.map(function (c) {
+        return '<tr><td>' + fchEsc(c.l) + '</td><td>' + (c.pts == null ? '<span class="fch-muted">non noté</span>' : c.pts.toFixed(1) + ' / ' + c.max) + '</td>'
+          + '<td class="fch-muted" style="white-space:normal">' + fchEsc(c.detail) + '</td></tr>';
+      }).join('') + '</tbody></table></div>'
+      + '<div class="fch-muted" style="margin-top:8px;font-size:11px">Pondération valorisation 25 · rentabilité 25 · croissance 20 · rendement 15 · solidité 15, ramenée sur 100 en ne comptant que les critères calculables depuis la base. Ce n\'est pas un conseil d\'investissement.</div>'
+      + '</div>'));
+  }
+
   // 5 · Dividendes
   H.push(fchSec('Dividendes', divs.length
     ? '<div class="fch-card" style="overflow-x:auto"><table class="fch-fin"><thead><tr><th>Exercice</th><th>Montant net</th><th>Rendement</th><th>Détachement</th><th>Paiement</th><th>Statut</th></tr></thead><tbody>'

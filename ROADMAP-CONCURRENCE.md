@@ -37,7 +37,7 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 | Détection de configurations | signaux `sigGlob/sigTrend/…` | 🟡 | Bandeau « lecture » explicite + niveau de confiance |
 | Graphique indice / droit / OPCVM / obligation | indice ✅, reste ❌ | 🟡 | Étendre le moteur graphique aux 4 instruments |
 | Comparaison de cours (superposition) | `#view-comparison` | 🟡 | Base 100, corrélation, tracking error |
-| Notations financières | 🟡 `#view-outils` (Score maison) | Note /100 valorisation/rentabilité/croissance/rendement/solidité, ventilation affichée ; reste à relier à la fiche et au screener |
+| Notations financières | ✅ helper `tcScoreMaison` (fiche + screener + outils) | Note /100 (valo/renta/croissance/rendement/solidité) ramenée sur les critères calculables ; bloc ventilé dans la fiche, colonne triable + filtre + preset « Score élevé » au screener |
 
 ### Sociétés — « que vaut cette entreprise ? »
 | Bloc de fiche (structure recommandée du rapport) | The Capital `#view-fiche` | Statut |
