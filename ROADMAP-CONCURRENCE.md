@@ -77,7 +77,7 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 ### Portefeuille virtuel — le cœur de la fidélisation
 | Fonction | The Capital | Statut | Aller plus loin |
 |---|---|---|---|
-| Portefeuilles (1 par SGI + consolidé) | `#view-portefeuille` (mono) | 🟡 | Multi-comptes + vue consolidée |
+| Portefeuilles (1 par SGI + consolidé) | `#view-portefeuille` + couche multi-comptes | ✅ | Sélecteur de compte, vue consolidée = comportement d'origine, filtrage du journal avant le moteur, opérations rattachées au compte actif (tag `note`, sans migration). Reste : rattacher les créations via glisser/sync |
 | Import relevé SGI | — | ❌ | Assistant d'import (CSV/PDF) + **détection des oublis** (rapport §9) |
 | Espèces + titres, chronologie | 🟡 | Journal unifié titres/espèces avec solde après opération |
 | Opérations : achat/vente/dividende/dépôt/retrait/frais/**DPS**/**attribution**/souscription | achat/vente/dividende/dépôt | 🟡 | Ajouter OST (droits, actions nouvelles) |
