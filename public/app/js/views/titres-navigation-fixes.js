@@ -123,9 +123,12 @@
       var args = arguments;
       return refreshTitleCourses(false).then(function () {
         var result = original.apply(this, args);
+        // Barre « ← Retour » retirée pour Titres (vue de 1er niveau) : elle
+        // faisait doublon. Elle reste utile sur la fiche (vue de détail).
         setTimeout(function () {
           var view = document.getElementById('view-titres');
-          if (view && view.classList.contains('active')) installBackBar(view, 'Marché / Titres BRVM', 'overview');
+          var bar = view && view.querySelector(':scope > .tc-title-backbar');
+          if (bar) bar.remove();
         }, 0);
         return result;
       });
