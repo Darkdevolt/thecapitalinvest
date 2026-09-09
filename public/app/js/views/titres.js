@@ -53,6 +53,31 @@
   var _isInitialized = false;
   var _sparkRafId = null;
   var _globalKeydownAttached = false;
+  var _histLoaded = false, _histLoading = false;
+
+  /**
+   * Historique des cours EN MASSE (toutes valeurs).
+   * Sans lui, `allCoursHistorique` reste indéfini et buildHistoryIndex()
+   * renvoie {} : aucune sparkline ne se dessine, sauf pour les titres dont
+   * la fiche a déjà été ouverte. On charge une fenêtre courte pour toutes
+   * les valeurs, puis on redéclenche le rendu.
+   */
+  function loadCoursHistorique() {
+    if (_histLoaded || _histLoading || typeof window.apiGet !== "function") return;
+    _histLoading = true;
+    var from = new Date(Date.now() - 45 * 864e5).toISOString().slice(0, 10);
+    window.apiGet("/marche?type=historique&limit=1000&date_from=" + from + "&_=" + Date.now())
+      .then(function (payload) {
+        var rows = (payload && payload.data) || payload || [];
+        if (Array.isArray(rows) && rows.length) {
+          window.allCoursHistorique = rows;
+          _histLoaded = true;
+          if (_isInitialized) updateDataAndRender();
+        }
+      })
+      .catch(function (e) { console.warn("[TITRES] Historique groupé indisponible:", e && e.message); })
+      .finally(function () { _histLoading = false; });
+  }
 
   // ─── DONNÉES PAYS (UEMOA) ─────────────────────────────────────────
   var PAYS_NAMES = {
@@ -185,6 +210,7 @@
   // ─── RENDER PRINCIPAL ─────────────────────────────────────────────
   function renderTitres() {
     log("=== renderTitres() appelé ===");
+    loadCoursHistorique();
 
     var dataStatus = hasData();
     if (!dataStatus.ready) {

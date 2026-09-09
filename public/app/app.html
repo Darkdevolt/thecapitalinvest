@@ -41,6 +41,8 @@
 <link rel="stylesheet" href="/app/css/global-unified.css">
 <!-- Couche de présentation unique du tableau de bord (remplace dashboard-final-polish.css) -->
 <link rel="stylesheet" href="/app/css/dashboard.css">
+<!-- Vue Recommandations (fichier absent du dépôt jusqu'ici → vue en texte brut) -->
+<link rel="stylesheet" id="tc-recommendations-client-css" href="/app/css/recommendations-client.css?v=1">
 <style id="tc-command-shell">
 /* Shell « header unique » — plus de barre latérale. Palette alignée sur tokens.css. */
 :root{--tc-ink:#0A0804;--tc-panel:#16130D;--tc-panel-2:#1E1B13;--tc-line:rgba(255,255,255,.09);--tc-gold:#B8964E;--tc-gold-2:#E6C979;--tc-white:#F5F0E8;--tc-muted:#9e978e;--tc-green:#72c38a;--tc-header:64px;--tc-nav:44px}
@@ -64,6 +66,10 @@ body{background:var(--tc-ink)}
 .tc-navstrip{height:var(--tc-nav);display:flex;align-items:center;padding:0 22px;gap:4px;background:#1b1714;border-bottom:1px solid var(--tc-line);overflow-x:auto;scrollbar-width:none}.tc-navstrip::-webkit-scrollbar{display:none}.tc-navitem{height:31px;border:0;border-radius:6px;background:transparent;color:var(--tc-muted);padding:0 12px;cursor:pointer;font:600 10px 'DM Sans',sans-serif;letter-spacing:.03em;white-space:nowrap}.tc-navitem:hover,.tc-navitem.active{background:rgba(184,150,78,.09);color:var(--tc-white)}.tc-navitem.active{box-shadow:inset 0 -2px 0 var(--tc-gold)}.tc-navsep{height:18px;width:1px;background:var(--tc-line);margin:0 5px;flex:0 0 auto}
 body.tc-command-layout .main{min-height:calc(100vh - var(--tc-header) - var(--tc-nav))}
 body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!important}
+/* Garde-fou : le routeur bascule les vues (classe .active + style inline).
+   Sans cette règle, les 16 conteneurs #view-* s'empilent au 1er rendu. */
+#main-content>.view{display:none}
+#main-content>.view.active{display:block}
 @media(max-width:1180px){.tc-brand-copy{display:none}}
 @media(max-width:1000px){.tc-market-pill{display:none}.tc-institute .tc-institute-label{display:none}.tc-institute{padding:0 9px}}
 @media(max-width:800px){.tc-clock{display:none}.tc-user-name{display:none}.tc-commandbar{gap:12px;padding:0 14px}.tc-navstrip{padding:0 12px}}
@@ -108,19 +114,357 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
 <div class="view" id="view-boc"><div class="page-header"><h1>BOC <span style="color:var(--gold)">/ Emprunts</span></h1><p>Bulletin Officiel de la Cote et obligations</p></div><div id="bocContent"></div></div>
 <div class="view" id="view-analyses"><div class="page-header"><h1>Recommandations <span style="color:var(--gold)">Marché</span></h1><p>Analyses et recommandations sur les valeurs BRVM</p></div><div id="analysesList" data-legacy-id="analysesGrid"></div></div>
 <div class="view" id="view-analyse-detail"><div id="analyseDetailContent"></div></div>
-<!-- ============================================================================
-     NOTE AUDIT 2026-09-09 — CONTENEURS DE VUES MANQUANTS
-     Le routeur (js/router.js) déclare 17 routes mais app.html ne fournit que 5
-     conteneurs #view-* ci-dessus. Les modules js/views/portefeuille.js,
-     comparison.js et dividend-screener.js se montent eux-mêmes ; en revanche
-     marche, screener, alertes, financials, publications, fiche,
-     analyse-technique et analyse-fondamentale attendent un squelette DOM
-     (#finGrid, #alertsList, #publicationsGrid, #view-marche, #scrSector, …)
-     qui N'EXISTE NULLE PART dans le dépôt → ces entrées de menu ne rendent
-     rien (le routeur logge « Vue introuvable »).
-     Correctif à trancher ensemble : soit re-livrer les squelettes ici, soit
-     rendre chaque module auto-montant. Voir AUDIT-DASHBOARD-2026-09-09.md §3.
-     ========================================================================= -->
+
+<!-- ═══ FICHE TITRE ═══ -->
+<div class="view" id="view-fiche">
+  <button class="back-btn" id="ficheBackBtn" onclick="nav('titres')">← Retour</button>
+  <div class="fiche-hero">
+    <div class="fiche-ticker-label" id="ficheTickerLabel"></div>
+    <div class="fiche-company" id="ficheCompany">—</div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+      <span class="sector-tag" id="ficheSector"></span>
+      <span style="font-size:11px;color:var(--dim)" id="fichePays"></span>
+    </div>
+    <div class="fiche-price-row">
+      <div class="fiche-price" id="fichePrice">—</div>
+      <div style="font-size:14px;color:var(--muted)">FCFA</div>
+      <div id="ficheChange" style="font-family:var(--mono);font-size:18px;font-weight:500"></div>
+    </div>
+    <div class="fiche-meta" id="ficheMeta"></div>
+    <div class="ratios-grid" id="ficheRatios">
+      <div class="ratio-item"><div class="ratio-label">P/E Ratio</div><div class="ratio-value" id="r-per">—</div></div>
+      <div class="ratio-item"><div class="ratio-label">Div. Yield</div><div class="ratio-value" id="r-rdt">—</div></div>
+      <div class="ratio-item"><div class="ratio-label">P / Actif Net</div><div class="ratio-value" id="r-pan">—</div></div>
+      <div class="ratio-item"><div class="ratio-label">Capitalisation</div><div class="ratio-value" id="r-cap">—</div></div>
+    </div>
+  </div>
+  <div class="grid-7030">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Historique des cours</div>
+        <div style="display:flex;gap:6px">
+          <button class="year-tab active" onclick="setChartPeriod(30,this)">1M</button>
+          <button class="year-tab" onclick="setChartPeriod(90,this)">3M</button>
+          <button class="year-tab" onclick="setChartPeriod(180,this)">6M</button>
+          <button class="year-tab" onclick="setChartPeriod(252,this)">1A</button>
+          <button class="year-tab" onclick="setChartPeriod(99999,this)">Tout</button>
+        </div>
+      </div>
+      <div class="card-body"><div class="chart-container tall"><canvas id="chartFiche"></canvas></div></div>
+    </div>
+    <div>
+      <div class="card mb20" style="margin-bottom:16px">
+        <div class="card-header"><div class="card-title">Description</div></div>
+        <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7" id="ficheDesc">—</div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">Informations</div></div>
+        <div id="ficheInfo" style="padding:0 20px"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card mb20" style="margin-bottom:16px">
+    <div class="card-header"><div class="card-title">Dernières Analyses</div></div>
+    <div id="ficheAnalyseList" class="card-body"></div>
+  </div>
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Données Financières</div>
+      <div style="display:flex;gap:6px" id="fichYearTabs"></div>
+    </div>
+    <div class="card-body" id="ficheFinBody"></div>
+  </div>
+</div>
+
+<!-- ═══ MARCHÉ BRVM (le contenu est injecté par marche.js) ═══ -->
+<div class="view" id="view-marche"></div>
+
+<!-- ═══ ANALYSE TECHNIQUE ═══ -->
+<div class="view" id="view-analyse-technique">
+  <div class="at-wrap" id="atWrap">
+    <div class="at-toolbar">
+      <div class="at-tb-group">
+        <select class="at-select" id="atTicker" onchange="atLoadTicker()">
+          <option value="">Ticker...</option>
+        </select>
+      </div>
+      <div class="at-tb-group">
+        <span class="at-tb-label">Type</span>
+        <button class="at-btn on" id="atBtnLine" onclick="atSetType('line',this)">Ligne</button>
+        <button class="at-btn" id="atBtnCandle" onclick="atSetType('candle',this)">Chandelier</button>
+        <button class="at-btn" id="atBtnHA" onclick="atSetType('ha',this)">Heikin-Ashi</button>
+        <button class="at-btn" id="atBtnBar" onclick="atSetType('bar',this)">Barres</button>
+      </div>
+      <div class="at-tb-group">
+        <span class="at-tb-label">Période</span>
+        <button class="at-btn" onclick="atSetPeriod(5,this)">5J</button>
+        <button class="at-btn" onclick="atSetPeriod(20,this)">1M</button>
+        <button class="at-btn" onclick="atSetPeriod(60,this)">3M</button>
+        <button class="at-btn" onclick="atSetPeriod(120,this)">6M</button>
+        <button class="at-btn on" onclick="atSetPeriod(252,this)">1A</button>
+        <button class="at-btn" onclick="atSetPeriod(504,this)">2A</button>
+        <button class="at-btn" onclick="atSetPeriod(99999,this)">Max</button>
+      </div>
+      <div class="at-tb-group">
+        <span class="at-tb-label">Intervalle</span>
+        <button class="at-btn on" onclick="atSetInterval('daily',this)">Daily</button>
+        <button class="at-btn" onclick="atSetInterval('weekly',this)">Hebdo</button>
+        <button class="at-btn" onclick="atSetInterval('monthly',this)">Mensuel</button>
+      </div>
+      <div class="at-tb-group">
+        <button class="at-btn" onclick="atOpenIndModal()">＋ Indicateur</button>
+        <button class="at-btn" onclick="atCompare()">⇌ Comparer</button>
+        <button class="at-btn" onclick="atExportPNG()">📥 PNG</button>
+        <button class="at-btn" onclick="atExportReport()">📄 Rapport</button>
+        <button class="at-btn" id="atBtnFocus" onclick="atToggleFocus()">⛶ Focus</button>
+      </div>
+    </div>
+    <div class="at-drawtb">
+      <span class="at-tb-label">Dessin</span>
+      <button class="at-btn" id="dBtnCursor" onclick="atSetDraw('cursor')" title="Curseur">↖ Curseur</button>
+      <div class="at-sep"></div>
+      <button class="at-btn" id="dBtnHLine" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">— Support / Résistance</button>
+      <button class="at-btn" id="dBtnTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱ Ligne de tendance</button>
+      <button class="at-btn" id="dBtnChannel" onclick="atSetDraw('channel')" title="Canal de tendance">⫴ Canal</button>
+      <button class="at-btn" id="dBtnRect" onclick="atSetDraw('rect')" title="Zone de prix">▭ Zone de prix</button>
+      <div class="at-sep"></div>
+      <button class="at-btn" id="dBtnFib" onclick="atSetDraw('fib')" title="Retracements de Fibonacci">🌀 Fibonacci</button>
+      <button class="at-btn" id="dBtnPitch" onclick="atSetDraw('pitch')" title="Pitchfork d'Andrews">⑂ Pitchfork</button>
+      <div class="at-sep"></div>
+      <button class="at-btn" id="dBtnText" onclick="atSetDraw('text')" title="Annotation texte">T Annotation</button>
+      <div class="at-sep"></div>
+      <button class="at-btn danger" onclick="atClearDrawings()">🗑 Effacer tout</button>
+      <span class="draw-status" id="atDrawStatus"></span>
+    </div>
+    <div class="at-body">
+      <div class="at-left">
+        <div class="at-tool on" id="atToolCursor" onclick="atSetDraw('cursor')" title="Curseur">↖</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" id="atToolHline" onclick="atSetDraw('hline')" title="Support / Résistance Horizontale">—</div>
+        <div class="at-tool" id="atToolTrend" onclick="atSetDraw('trend')" title="Ligne de tendance">╱</div>
+        <div class="at-tool" id="atToolChannel" onclick="atSetDraw('channel')" title="Canal de tendance">⫴</div>
+        <div class="at-tool" id="atToolRect" onclick="atSetDraw('rect')" title="Zone de prix">▭</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" id="atToolFib" onclick="atSetDraw('fib')" title="Retracements de Fibonacci">🌀</div>
+        <div class="at-tool" id="atToolPitch" onclick="atSetDraw('pitch')" title="Pitchfork d'Andrews">⑂</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" id="atToolText" onclick="atSetDraw('text')" title="Annotation texte">T</div>
+        <div class="at-tool-sep"></div>
+        <div class="at-tool" style="color:var(--red)" onclick="atClearDrawings()" title="Effacer tous les dessins">🗑</div>
+      </div>
+      <div class="at-center" id="atCenter">
+        <div class="at-ohlc" id="atOHLC">
+          <span style="font-family:var(--mono);font-size:12px;color:var(--gold);font-weight:600" id="atOhlcTicker">—</span>
+          <div class="ohlc-item"><span class="ohlc-lbl">Ouverture</span><span class="ohlc-v" id="atO">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Plus Haut</span><span class="ohlc-v up" id="atH">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Plus Bas</span><span class="ohlc-v down" id="atL">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Clôture</span><span class="ohlc-v" id="atC">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Volume</span><span class="ohlc-v" style="color:var(--dim)" id="atV">—</span></div>
+          <div class="ohlc-item"><span class="ohlc-lbl">Variation</span><span class="ohlc-v" id="atVar">—</span></div>
+          <div class="ohlc-item" style="margin-left:auto"><span class="ohlc-lbl">Dernière Mise à Jour</span><span class="ohlc-v" style="color:var(--dim);font-size:10px" id="atLastUpdate">—</span></div>
+        </div>
+        <div class="at-chart-main" id="atMainChart">
+          <canvas id="cvMain"></canvas>
+          <canvas id="cvOverlay" style="z-index:3"></canvas>
+          <div class="at-legend" id="atLegend"></div>
+          <div class="at-axis-y" id="atAxisY"></div>
+          <div class="at-axis-x" id="atAxisX"></div>
+          <div class="at-price-tag" id="atPriceTag" style="display:none"></div>
+          <div class="at-crosshair-tooltip" id="atTooltip"></div>
+          <div id="atAggInfo" style="display:none"></div>
+        </div>
+        <div class="at-sub" id="subVol" style="height:70px">
+          <canvas id="cvVol"></canvas>
+          <div class="at-sub-label" id="lblVol">Volume</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subVol')"></div>
+        </div>
+        <div class="at-sub" id="subRSI" style="height:70px;display:none">
+          <canvas id="cvRSI"></canvas>
+          <div class="at-sub-label" id="lblRSI">RSI (14)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subRSI')"></div>
+        </div>
+        <div class="at-sub" id="subMACD" style="height:70px;display:none">
+          <canvas id="cvMACD"></canvas>
+          <div class="at-sub-label" id="lblMACD">MACD (12,26,9)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subMACD')"></div>
+        </div>
+        <div class="at-sub" id="subStoch" style="height:70px;display:none">
+          <canvas id="cvStoch"></canvas>
+          <div class="at-sub-label" id="lblStoch">Stochastique (14,3)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subStoch')"></div>
+        </div>
+        <div class="at-sub" id="subADX" style="height:70px;display:none">
+          <canvas id="cvADX"></canvas>
+          <div class="at-sub-label" id="lblADX">ADX (14)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subADX')"></div>
+        </div>
+        <div class="at-sub" id="subCCI" style="height:70px;display:none">
+          <canvas id="cvCCI"></canvas>
+          <div class="at-sub-label" id="lblCCI">CCI (20)</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subCCI')"></div>
+        </div>
+        <div class="at-sub" id="subOBV" style="height:70px;display:none">
+          <canvas id="cvOBV"></canvas>
+          <div class="at-sub-label" id="lblOBV">OBV</div>
+          <div class="at-sub-resize" onmousedown="atStartResize(event,'subOBV')"></div>
+        </div>
+        <div class="at-bottom">
+          <span class="at-bb-item">BRVM Composite <span style="color:var(--green)" id="atIdxComp">—</span></span>
+          <span class="at-bb-item">BRVM 30 <span style="color:var(--green)" id="atIdx30">—</span></span>
+          <span class="at-bb-item" style="margin-left:auto" id="atBBTime">—</span>
+        </div>
+      </div>
+      <div class="at-right" id="atRight">
+        <div style="border-bottom:1px solid var(--border2)">
+          <div class="at-rp-title">Signaux</div>
+          <div class="at-sig-row"><span class="at-sig-label">Global</span><span class="sig-badge sig-n" id="sigGlob">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Tendance</span><span class="sig-badge sig-n" id="sigTrend">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Momentum</span><span class="sig-badge sig-n" id="sigMom">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Volatilité</span><span class="sig-badge sig-n" id="sigVol">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Volume</span><span class="sig-badge sig-n" id="sigVolTrend">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">RSI (14)</span><span class="sig-badge sig-n" id="sigRSI">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">MACD</span><span class="sig-badge sig-n" id="sigMACD">—</span></div>
+          <div class="at-sig-row"><span class="at-sig-label">Stoch</span><span class="sig-badge sig-n" id="sigStoch">—</span></div>
+        </div>
+        <div style="border-bottom:1px solid var(--border2);flex-shrink:0">
+          <div class="at-rp-title">Indicateurs actifs</div>
+          <div id="atActiveInds"></div>
+          <div class="at-add-ind" onclick="atOpenIndModal()">＋ Ajouter un indicateur</div>
+        </div>
+        <div style="flex:1;overflow-y:auto">
+          <div class="at-rp-title">Watchlist</div>
+          <div id="atWatchlist"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="at-ind-modal" id="atIndModal">
+    <div class="at-ind-modal-bg" onclick="atCloseIndModal()"></div>
+    <div class="at-ind-modal-box">
+      <div class="at-ind-modal-head">
+        <div class="at-ind-modal-title">Ajouter un indicateur</div>
+        <button class="at-btn danger" onclick="atCloseIndModal()">✕ Fermer</button>
+      </div>
+      <div class="at-ind-modal-body" id="atIndModalBody"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ANALYSE FONDAMENTALE ═══ -->
+<div class="view" id="view-analyse-fondamentale">
+  <div class="page-header">
+    <h1>Analyse <span style="color:var(--gold)">Fondamentale</span></h1>
+    <p>Forecast, DCF, TCAM &amp; régression, paramétrez vos hypothèses</p>
+  </div>
+  <div class="search-bar">
+    <select class="search-input" id="fundTickerSelect" onchange="loadFundAnalysis()" style="flex:0 0 220px">
+      <option value="">Choisir un ticker...</option>
+    </select>
+    <button class="filter-btn active" onclick="setFundMethod('tcam',this)">TCAM</button>
+    <button class="filter-btn" onclick="setFundMethod('regression',this)">Régression</button>
+  </div>
+  <div id="fundContent">
+    <div class="empty-state">
+      <div class="empty-icon">⊛</div>
+      <div class="empty-title">Sélectionnez un titre</div>
+      <div class="empty-text">Choisissez un ticker pour lancer l'analyse fondamentale approfondie.</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SCREENER ═══ -->
+<div class="view" id="view-screener">
+  <div class="page-header">
+    <h1>Screener <span style="color:var(--gold)">BRVM</span></h1>
+    <p>Filtrer les titres selon vos critères de valorisation et de performance</p>
+  </div>
+  <div class="card mb20">
+    <div class="card-body">
+      <div class="screener-filters">
+        <div><label>Secteur</label><select id="scrSector" onchange="runScreener()"><option value="">Tous</option><option value="Banque">Banque</option><option value="Agro">Agro</option><option value="Industrie">Industrie</option><option value="Telecom">Telecom</option></select></div>
+        <div><label>Cours min</label><input type="number" id="scrMinPrice" placeholder="0" oninput="runScreener()"></div>
+        <div><label>Cours max</label><input type="number" id="scrMaxPrice" placeholder="∞" oninput="runScreener()"></div>
+        <div><label>Variation min %</label><input type="number" id="scrMinVar" placeholder="-100" oninput="runScreener()"></div>
+        <div><label>Variation max %</label><input type="number" id="scrMaxVar" placeholder="100" oninput="runScreener()"></div>
+        <div><label>Volume min</label><input type="number" id="scrMinVol" placeholder="0" oninput="runScreener()"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-header"><div class="card-title">Résultats</div><div style="font-size:12px;color:var(--dim)" id="scrCount"></div></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours</th><th class="right">Variation</th><th class="right">Volume</th><th>Secteur</th></tr></thead>
+        <tbody id="screenerTable"><tr><td colspan="6" style="text-align:center;padding:24px;color:var(--dim)">Ajustez les filtres pour voir les résultats</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ COMPARATEUR (contenu injecté par comparison.js) ═══ -->
+<div class="view" id="view-comparison"></div>
+
+<!-- ═══ SCREENER DIVIDENDES (contenu injecté par dividend-screener.js) ═══ -->
+<div class="view" id="view-dividend-screener"></div>
+
+<!-- ═══ ALERTES ═══ -->
+<div class="view" id="view-alertes">
+  <div class="page-header">
+    <h1>Alertes <span style="color:var(--gold)">de Prix</span></h1>
+    <p>Recevez une notification quand un titre atteint votre seuil</p>
+  </div>
+  <div class="card mb20">
+    <div class="card-header"><div class="card-title">Nouvelle alerte</div></div>
+    <div class="card-body">
+      <div class="portf-form">
+        <select id="alertTicker"><option value="">Ticker...</option></select>
+        <select id="alertCondition">
+          <option value="above">Cours supérieur à</option>
+          <option value="below">Cours inférieur à</option>
+        </select>
+        <input type="number" id="alertPrice" placeholder="Seuil (FCFA)">
+        <button onclick="addAlert()">Créer l'alerte</button>
+      </div>
+    </div>
+  </div>
+  <div id="alertsList"></div>
+</div>
+
+<!-- ═══ ÉTATS FINANCIERS ═══ -->
+<div class="view" id="view-financials">
+  <div class="page-header">
+    <h1>États <span style="color:var(--gold)">Financiers</span></h1>
+    <p>Comptes annuels, semestriels, trimestriels et données fondamentales</p>
+  </div>
+  <div class="search-bar" style="padding-bottom:16px">
+    <input class="search-input" id="searchFin" placeholder="🔍  Chercher une société..." oninput="filterFin()">
+  </div>
+  <div id="finGrid"><div class="empty-state"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></div></div>
+</div>
+
+<!-- ═══ DÉTAIL FINANCIER ═══ -->
+<div class="view" id="view-financials-detail">
+  <button class="back-btn" onclick="nav('financials')">← Retour</button>
+  <div id="finDetailContent"></div>
+</div>
+
+<!-- ═══ CALENDRIER DES PUBLICATIONS ═══ -->
+<div class="view" id="view-publications">
+  <div class="page-header">
+    <h1>Calendrier de <span style="color:var(--gold)">Publication</span></h1>
+    <p>États financiers publiés vs en attente, détection automatique via le résultat net</p>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="searchPubs" placeholder="🔍  Filtrer par ticker, société..." oninput="filterPublications()">
+    <button class="filter-btn active" onclick="setPubFilter('all',this)">Tous</button>
+    <button class="filter-btn" onclick="setPubFilter('annuel',this)">Annuel</button>
+    <button class="filter-btn" onclick="setPubFilter('s1',this)">Semestriel</button>
+    <button class="filter-btn" onclick="setPubFilter('t1',this)">T1</button>
+    <button class="filter-btn" onclick="setPubFilter('t2',this)">T2</button>
+    <button class="filter-btn" onclick="setPubFilter('t3',this)">T3</button>
+  </div>
+  <div id="publicationsGrid"><div class="empty-state"><div class="skeleton skeleton-text" style="width:200px;margin:0 auto"></div></div></div>
+</div>
 </main>
 <script src="/app/js/core/module-registry.js?v=1"></script>
 <script src="/app/js/state.js"></script>

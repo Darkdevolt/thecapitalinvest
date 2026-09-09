@@ -6,7 +6,7 @@
 
 function ensureRecommendationStyles(){
   if(document.getElementById('tc-recommendations-client-css'))return;
-  const link=document.createElement('link');link.id='tc-recommendations-client-css';link.rel='stylesheet';link.href='app/css/recommendations-client.css?v=1';document.head.appendChild(link);
+  const link=document.createElement('link');link.id='tc-recommendations-client-css';link.rel='stylesheet';link.href='/app/css/recommendations-client.css?v=1';document.head.appendChild(link);
 }
 function analyseRecType(value){const rec=String(value||'').toLowerCase();if(rec.includes('achat')||rec.includes('buy')||rec.includes('renforcer'))return'buy';if(rec.includes('vend')||rec.includes('sell')||rec.includes('alléger'))return'sell';return'hold';}
 function analyseRecLabel(type){return{buy:'Acheter',sell:'Vendre',hold:'Conserver'}[type]||'Conserver';}
