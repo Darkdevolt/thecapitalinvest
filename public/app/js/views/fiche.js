@@ -10,6 +10,7 @@
 var ficheChartPeriod = 252;
 var ficheChartInst = null;
 var prevView = 'titres';
+var ficheAdjusted = true; // cours ajustés des dividendes par défaut (recommandation rapport)
 
 // ── Formats ────────────────────────────────────────────────────────────────
 function fchNum(v, dec) {
@@ -96,7 +97,10 @@ async function loadCompleteFicheHistorique(ticker) {
   var res = await Promise.race([run, guard]);
   return res === '__timeout__' ? [] : res;
 }
-function histClose(r) { return Number(r && (r.cours_cloture != null ? r.cours_cloture : r.cours_normal != null ? r.cours_normal : r.cours)); }
+function histClose(r) {
+  if (ficheAdjusted && r && r.cours_ajuste != null && isFinite(Number(r.cours_ajuste))) return Number(r.cours_ajuste);
+  return Number(r && (r.cours_cloture != null ? r.cours_cloture : r.cours_normal != null ? r.cours_normal : r.cours));
+}
 
 // ── Calculs ──────────────────────────────────────────────────────────────
 function fchRatios(f, cp, nbActions) {
@@ -327,7 +331,9 @@ async function openFiche(ticker, from, noHash) {
 
   var hist = [];
   try { hist = await loadCompleteFicheHistorique(T); } catch (e) { hist = []; }
+  try { if (typeof window.tcAdjustedSeries === 'function' && hist.length) hist = window.tcAdjustedSeries(T, hist); } catch (e) {}
   window.ficheHistorique = hist;
+  window.__ficheHasAdj = hist.length && hist.some(function (r) { return r && r.cours_ajuste != null && Number(r.cours_ajuste) !== Number(r.cours_cloture != null ? r.cours_cloture : r.cours); });
   var last = hist.length ? hist[hist.length - 1] : null;
 
   var av = document.querySelector('.view.active');
@@ -429,8 +435,10 @@ async function openFiche(ticker, from, noHash) {
   // 6 · Marché
   H.push(fchSec('Marché', '<div class="fch-card">'
     + '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px">'
-    + '<div class="fch-sec-t" style="margin:0">Cours' + (isFinite(perf.volAnnuel) ? ' · volatilité annualisée ' + perf.volAnnuel.toFixed(0) + ' %' : '') + '</div>'
-    + '<div style="display:flex;gap:6px">'
+    + '<div class="fch-sec-t" style="margin:0">Cours ' + (ficheAdjusted && window.__ficheHasAdj ? '<span style="color:var(--muted)">(ajusté des dividendes)</span>' : '') + (isFinite(perf.volAnnuel) ? ' · volatilité annualisée ' + perf.volAnnuel.toFixed(0) + ' %' : '') + '</div>'
+    + '<div style="display:flex;gap:6px;flex-wrap:wrap">'
+    + (window.__ficheHasAdj ? '<button class="year-tab ' + (ficheAdjusted ? 'active' : '') + '" onclick="setFicheAdjusted(true)">Ajusté</button>'
+      + '<button class="year-tab ' + (ficheAdjusted ? '' : 'active') + '" onclick="setFicheAdjusted(false)">Brut</button><span style="width:8px"></span>' : '')
     + [['1M', 30], ['3M', 90], ['6M', 180], ['1A', 252], ['Tout', 99999]].map(function (p) {
       return '<button class="year-tab ' + (p[1] === 252 ? 'active' : '') + '" onclick="setFichePeriod(' + p[1] + ',this)">' + p[0] + '</button>';
     }).join('') + '</div></div>'
@@ -508,6 +516,16 @@ function setFichePeriod(n, btn) {
   renderFicheChart();
 }
 function setChartPeriod(n, btn) { setFichePeriod(n, btn); }
+function setFicheAdjusted(on) {
+  ficheAdjusted = !!on;
+  document.querySelectorAll('#view-fiche .year-tab').forEach(function (b) {
+    var lbl = (b.textContent || '').trim();
+    if (lbl === 'Ajusté') b.classList.toggle('active', ficheAdjusted);
+    if (lbl === 'Brut') b.classList.toggle('active', !ficheAdjusted);
+  });
+  renderFicheChart();
+}
+window.setFicheAdjusted = setFicheAdjusted;
 
 window.openFiche = openFiche;
 window.renderFiche = renderFiche;
