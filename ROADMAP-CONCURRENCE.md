@@ -37,7 +37,7 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 | Détection de configurations | signaux `sigGlob/sigTrend/…` | 🟡 | Bandeau « lecture » explicite + niveau de confiance |
 | Graphique indice / droit / OPCVM / obligation | indice ✅, reste ❌ | 🟡 | Étendre le moteur graphique aux 4 instruments |
 | Comparaison de cours (superposition) | `#view-comparison` | 🟡 | Base 100, corrélation, tracking error |
-| Notations financières | — | ❌ | Score maison (qualité, valorisation, momentum, risque) documenté |
+| Notations financières | 🟡 `#view-outils` (Score maison) | Note /100 valorisation/rentabilité/croissance/rendement/solidité, ventilation affichée ; reste à relier à la fiche et au screener |
 
 ### Sociétés — « que vaut cette entreprise ? »
 | Bloc de fiche (structure recommandée du rapport) | The Capital `#view-fiche` | Statut |
@@ -63,7 +63,7 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 | Comparaison de sociétés | `#view-comparison` | 🟡 | 2→6 sociétés, radar, tableau exportable |
 | Sélection du moment / radar micro-trading | — | ❌ | Écran « opportunités » : proche 52-bas, volume anormal, cassure |
 | Watchlist « mes actions suivies » | watchlist (table `watchlist`) | 🟡 | Alertes par ligne, notes, groupes |
-| Calculatrices (intérêts composés, obligations, plus-values futures) | — | ❌ | Petits simulateurs autonomes reliés aux fiches |
+| Calculatrices (intérêts composés, obligations, plus-values futures) | ✅ `#view-outils` | 4 onglets : intérêts composés, rendement obligataire (courant + à l'échéance), fourchette de fluctuation BRVM, score maison /100 (ratios réels vs médiane secteur) |
 | Market Map BRVM | — | ❌ | Treemap capitalisation × variation |
 | Profil d'investisseur | — | ❌ | Quiz → allocation cible |
 | Question à un analyste | `capital-ai.html` | 🟡 | Intégrer dans la fiche + Premium |
@@ -71,7 +71,7 @@ Légende statut : ✅ en place · 🟡 partiel / à fiabiliser · ❌ à constru
 ### Backtesting & quantitatif (Premium chez eux)
 | Élément | Statut | Exigence rapport |
 |---|---|---|
-| Backtesting dividendes / plus-values | ❌ | Afficher **toutes** les hypothèses dans le résultat : capital initial, dates, frais, liquidité, réinvestissement dividendes, cours utilisés, titres radiés, survivorship bias |
+| Backtesting dividendes / plus-values | ✅ `#view-backtest` | Moteur buy & hold : capital, période, frais achat+vente, base cours (bruts+div / ajustés), réinvestissement. Sorties : valeur nette, perf totale/annualisée, dividendes, volatilité, max drawdown, vs BRVM Composite, journal, CSV. Panneau **Hypothèses** complet (période effective, frais, dividendes, exécution clôture, biais du survivant, limites benchmark) |
 | Saisonnalité, réaction aux publications, corrélation matières premières | ❌ | Phase 4 |
 
 ### Portefeuille virtuel — le cœur de la fidélisation
