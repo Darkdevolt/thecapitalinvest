@@ -16,10 +16,13 @@
 
 (function (TC) {
 
+    /* Palette sur fond blanc. `cream` reste la clé du texte principal mais
+       porte désormais une encre sombre : tous les appels text() suivent. */
     const C = {
-        bg: '#0A0804', panel: '#13110C', line: '#241C10',
-        cream: '#F5F0E8', gold: '#B8964E', goldLight: '#D4AF6A',
-        muted: '#8F887F', green: '#4ADE80', red: '#F87171'
+        bg: '#FFFFFF', panel: '#F7F3EA', line: '#E6DECC',
+        cream: '#1C1813', ink: '#1C1813',
+        gold: '#8C6D2E', goldBright: '#B8964E', goldLight: '#A9884A',
+        muted: '#8A8172', green: '#1F9B57', red: '#CC3B3B'
     };
 
     const FORMATS = [
@@ -323,25 +326,73 @@
             '<line x1="' + pad + '" y1="' + ty + '" x2="' + (W - pad) + '" y2="' + ty +
             '" stroke="' + C.gold + '" stroke-opacity="' + (opacity || 0.24) + '" stroke-width="1"/>';
 
-        /* — Fond — */
+        /* — Fond blanc — */
         parts.push('<rect width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>');
-        parts.push('<rect x="0" y="0" width="' + W + '" height="' + Math.round(H * 0.004) + '" fill="' + C.gold + '"/>');
+
+        /* — Bannière « La séance du jour en 1 minute » — */
+        const banH = Math.max(Math.round(W * 0.150), Math.round(H * 0.104));
+        parts.push('<defs><linearGradient id="tcBanner" x1="0" y1="0" x2="1" y2="1">' +
+            '<stop offset="0" stop-color="#171009"/><stop offset="0.5" stop-color="#0C0906"/>' +
+            '<stop offset="1" stop-color="#1E1509"/></linearGradient></defs>');
+        parts.push('<rect x="0" y="0" width="' + W + '" height="' + banH + '" fill="url(#tcBanner)"/>');
+        parts.push('<rect x="0" y="0" width="' + W + '" height="3" fill="' + C.goldBright + '"/>');
+        parts.push('<rect x="0" y="' + (banH - 2) + '" width="' + W + '" height="2" fill="' + C.goldBright + '" fill-opacity="0.55"/>');
+
+        /* pastille logo */
+        const lr = Math.round(banH * 0.30);
+        const lcx = pad + lr;
+        const lcy = Math.round(banH / 2);
+        parts.push('<circle cx="' + lcx + '" cy="' + lcy + '" r="' + lr + '" fill="none" stroke="' + C.goldBright + '" stroke-width="2"/>');
+        if (logoData) {
+            const li = Math.round(lr * 1.42);
+            parts.push('<image href="' + logoData + '" x="' + (lcx - li / 2) + '" y="' + (lcy - li / 2) +
+                '" width="' + li + '" height="' + li + '" preserveAspectRatio="xMidYMid meet"/>');
+        }
+
+        /* titres de la bannière */
+        const bx = lcx + lr + Math.round(banH * 0.30);
+        parts.push('<line x1="' + (bx - Math.round(banH * 0.16)) + '" y1="' + Math.round(banH * 0.22) +
+            '" x2="' + (bx - Math.round(banH * 0.16)) + '" y2="' + Math.round(banH * 0.78) +
+            '" stroke="' + C.goldBright + '" stroke-opacity="0.5" stroke-width="1"/>');
+        const bs = Math.round(banH * 0.29);
+        const b1y = Math.round(banH * 0.42);
+        parts.push(text('LA SÉANCE DU JOUR', bx, b1y, {
+            family: "'Playfair Display',serif", size: bs, weight: 700, fill: '#FBF7EF', spacing: 0.5
+        }));
+        parts.push(text('EN 1 MINUTE', bx, b1y + Math.round(bs * 1.05), {
+            family: "'Playfair Display',serif", size: bs, weight: 700, fill: C.goldBright, spacing: 0.5
+        }));
+        parts.push(text("L'AFRIQUE FINANCIÈRE EN TEMPS RÉEL", bx,
+            b1y + Math.round(bs * 1.05) + Math.round(banH * 0.19), {
+            size: Math.max(10, Math.round(banH * 0.095)), fill: '#C9B58B', spacing: 3
+        }));
+
+        /* motif points — évoque la carte pointillée du visuel */
+        for (let di = 0; di < 24; di++) {
+            const dcol = di % 6;
+            const drow = Math.floor(di / 6);
+            const dx = W - pad - Math.round(banH * 0.86) + dcol * Math.round(banH * 0.17);
+            const dy = Math.round(banH * 0.22) + drow * Math.round(banH * 0.17);
+            if (dx > W - pad || dy > banH - 6) continue;
+            parts.push('<circle cx="' + dx + '" cy="' + dy + '" r="2.2" fill="' + C.goldBright +
+                '" fill-opacity="' + (0.22 + 0.13 * ((di * 7) % 4)) + '"/>');
+        }
 
         /* — En-tête — */
-        y = pad + 22;
+        y = banH + Math.round(pad * 0.55) + 22;
         if (logoData) {
-            parts.push('<image href="' + logoData + '" x="' + pad + '" y="' + (y - 34) + '" width="52" height="52" preserveAspectRatio="xMidYMid meet"/>');
+            parts.push('<image href="' + logoData + '" x="' + pad + '" y="' + (y - 32) + '" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>');
         }
-        parts.push(text('THE · CAPITAL', pad + (logoData ? 66 : 0), y, {
-            family: "'Playfair Display',serif", size: 27, weight: 700, spacing: 3.4
+        parts.push(text('THE · CAPITAL', pad + (logoData ? 58 : 0), y, {
+            family: "'Playfair Display',serif", size: 25, weight: 700, spacing: 3.4
         }));
         parts.push(text(options.surtitre || 'BRVM · Bourse Régionale des Valeurs Mobilières',
-            pad + (logoData ? 66 : 0), y + 22, { size: 14, fill: C.muted, spacing: 1.6 }));
+            pad + (logoData ? 58 : 0), y + 21, { size: 14, fill: C.muted, spacing: 1.6 }));
         if (options.bulletin) {
             parts.push(text(options.bulletin, W - pad, y, { size: 14, fill: C.gold, anchor: 'end', family: "'DM Mono',monospace" }));
         }
 
-        y += 52;
+        y += 50;
         parts.push(rule(y, 0.3));
 
         /* — Titre de période — */
