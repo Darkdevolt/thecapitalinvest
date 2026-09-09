@@ -1,1 +1,25 @@
-<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>The Capital — Connexion</title><script>location.replace('/login.html'+location.search+location.hash);</script></head><body>Redirection vers la connexion The Capital…</body></html>
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>The Capital — Connexion</title>
+<!--
+  Cette page n'est qu'une REDIRECTION. La vraie connexion est /login.html.
+  Elle existe pour que /app/login.html (lien historique) ne renvoie pas un 404.
+  On préserve ?redirect=… et le #hash éventuels.
+  Triple filet : refresh meta (sans JS), script (immédiat), lien noscript.
+-->
+<meta http-equiv="refresh" content="0;url=/login.html">
+<script>location.replace('/login.html' + location.search + location.hash);</script>
+<style>
+  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+       background:#0A0804;color:#F5F0E8;font:14px/1.6 'DM Sans',Arial,sans-serif}
+  a{color:#D4AF6A}
+</style>
+</head>
+<body>
+<p>Redirection vers la connexion The Capital… <noscript><a href="/login.html">Continuer</a></noscript></p>
+</body>
+</html>
