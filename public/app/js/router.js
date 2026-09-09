@@ -9,7 +9,7 @@
     'analyse-fondamentale':'Analyse Fondamentale','analyse-detail':'Détail Analyse','analyse-technique':'Analyse Technique', screener:'Screener BRVM',
     portefeuille:'Portefeuille', alertes:'Alertes de Prix', financials:'États Financiers','financials-detail':'Détail Financier', fiche:'Fiche Titre',
     publications:'Calendrier des Publications', comparison:'Comparateur de valeurs','dividend-screener':'Screener Dividendes',
-    backtest:'Backtesting BRVM', outils:'Outils & Simulateurs'
+    backtest:'Backtesting BRVM', outils:'Outils & Simulateurs', opportunites:"Écran d'opportunités"
   };
 
   window.BREADCRUMBS = {
@@ -31,7 +31,8 @@
     comparison:[{label:'Tableau de bord',view:'overview'},{label:'Comparateur',view:'comparison'}],
     'dividend-screener':[{label:'Tableau de bord',view:'overview'},{label:'Screener Dividendes',view:'dividend-screener'}],
     backtest:[{label:'Tableau de bord',view:'overview'},{label:'Backtesting',view:'backtest'}],
-    outils:[{label:'Tableau de bord',view:'overview'},{label:'Outils & Simulateurs',view:'outils'}]
+    outils:[{label:'Tableau de bord',view:'overview'},{label:'Outils & Simulateurs',view:'outils'}],
+    opportunites:[{label:'Tableau de bord',view:'overview'},{label:"Écran d'opportunités",view:'opportunites'}]
   };
 
   window.renderMap = {
@@ -39,7 +40,7 @@
     'analyse-detail':'renderAnalyseDetail','analyse-technique':'renderAnalyseTechnique','analyse-fondamentale':'renderAnalyseFondamentale',
     screener:'renderScreener', portefeuille:'renderPortfolio', alertes:'renderAlertes', financials:'renderFinancials','financials-detail':'renderFinancialsDetail',
     fiche:'renderFiche', publications:'renderPublications', comparison:'renderComparison','dividend-screener':'renderDividendScreener',
-    backtest:'renderBacktest', outils:'renderOutils'
+    backtest:'renderBacktest', outils:'renderOutils', opportunites:'renderOpportunites'
   };
 
   function injectDashboardStability(){
@@ -136,7 +137,7 @@
   }
 
   window.setHashForView = function(id) {
-    const hashMap={overview:'',titres:'#titres',boc:'#boc',marche:'#marche',analyses:'#analyses','analyse-detail':'#analyse-detail','analyse-technique':'#analyse-technique','analyse-fondamentale':'#analyse-fondamentale',backtest:'#backtest',outils:'#outils',screener:'#screener',portefeuille:'#portefeuille',alertes:'#alertes',financials:'#financials','financials-detail':'#financials-detail',fiche:'#fiche',publications:'#publications',comparison:'#comparison','dividend-screener':'#dividend-screener'};
+    const hashMap={overview:'',titres:'#titres',boc:'#boc',marche:'#marche',analyses:'#analyses','analyse-detail':'#analyse-detail','analyse-technique':'#analyse-technique','analyse-fondamentale':'#analyse-fondamentale',backtest:'#backtest',outils:'#outils',opportunites:'#opportunites',screener:'#screener',portefeuille:'#portefeuille',alertes:'#alertes',financials:'#financials','financials-detail':'#financials-detail',fiche:'#fiche',publications:'#publications',comparison:'#comparison','dividend-screener':'#dividend-screener'};
     const h=hashMap[id]||'';
     if(h!==location.hash){ if(window.__TC_HASH_SET__) history.pushState({view:id},'',h||location.pathname); else history.replaceState({view:id},'',h||location.pathname); window.__TC_HASH_SET__=true; }
     if(TITLES[id]) document.title=TITLES[id]+', The Capital';
@@ -146,7 +147,7 @@
     const h=location.hash;
     if(h.startsWith('#fiche=')){const t=decodeURIComponent(h.slice(7));if(typeof openFiche==='function')openFiche(t,'titres',true);return;}
     if(h.startsWith('#analyse=')){const id=h.slice(9);if(typeof openAnalyseDetail==='function')openAnalyseDetail(+id,true);return;}
-    const map={'#titres':'titres','#boc':'boc','#marche':'marche','#analyses':'analyses','#analyse-detail':'analyse-detail','#analyse-technique':'analyse-technique','#analyse-fondamentale':'analyse-fondamentale','#backtest':'backtest','#outils':'outils','#screener':'screener','#portefeuille':'portefeuille','#alertes':'alertes','#financials':'financials','#financials-detail':'financials-detail','#publications':'publications','#comparison':'comparison','#dividend-screener':'dividend-screener'};
+    const map={'#titres':'titres','#boc':'boc','#marche':'marche','#analyses':'analyses','#analyse-detail':'analyse-detail','#analyse-technique':'analyse-technique','#analyse-fondamentale':'analyse-fondamentale','#backtest':'backtest','#outils':'outils','#opportunites':'opportunites','#screener':'screener','#portefeuille':'portefeuille','#alertes':'alertes','#financials':'financials','#financials-detail':'financials-detail','#publications':'publications','#comparison':'comparison','#dividend-screener':'dividend-screener'};
     nav(map[h]||'overview',true);
   };
 
