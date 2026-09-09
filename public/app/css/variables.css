@@ -1,9 +1,17 @@
 /*
  * Canonical design tokens for the application shell.
- * Kept intentionally small: component/view styles own their layout rules.
  * This file is a stable dependency of app.html and must remain loadable.
+ *
+ * Two token families coexist here on purpose:
+ *   --tc-*  : the current "command-center" shell (header, rail, search).
+ *   legacy  : --gold / --cream / --dim / --serif / ... used by every view
+ *             stylesheet (global-unified.css, marche.css, technique*.css,
+ *             fondamentale-pro.css, financials-documents.css, etc.).
+ * The legacy set was dropped during a refactor, which left all view text
+ * with no colour and made the app unreadable. It is restored below.
  */
 :root {
+  /* ─── Shell (command-center) ─── */
   --tc-ink: #171310;
   --tc-panel: #1e1a16;
   --tc-panel-2: #252019;
@@ -16,4 +24,78 @@
   --tc-red: #d86f6f;
   --tc-header: 74px;
   --tc-rail: 248px;
+
+  /* ─── Surfaces ─── */
+  --bg: #0a0804;
+  --surface: #16130d;
+  --card: #1a1610;
+  --card2: #1e1b13;
+  --border: rgba(184,150,78,.15);
+  --border2: rgba(184,150,78,.08);
+
+  /* ─── Brand / accents ─── */
+  --gold: #c9a24a;
+  --gold-light: #e6c979;
+  --gold-dim: rgba(201,162,74,.4);
+
+  /* ─── Text ─── */
+  --cream: #f5f0e8;
+  --muted: rgba(245,240,232,.62);
+  --dim: rgba(245,240,232,.4);
+
+  /* ─── Status ─── */
+  --green: #6fd08a;
+  --green-bg: rgba(111,208,138,.1);
+  --red: #f08a8a;
+  --red-bg: rgba(240,138,138,.1);
+  --blue: #7cb3f0;
+  --blue-bg: rgba(124,179,240,.1);
+
+  /* ─── Type ─── */
+  --serif: 'Playfair Display', Georgia, serif;
+  --sans: 'DM Sans', system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --mono: 'DM Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ─── Geometry ─── */
+  --sidebar-w: 0px;
+  --header-h: 64px;
 }
+
+/* Document-level defaults for the application body. The shell's own inline
+   <style> sets the background; here we guarantee legible text and the base
+   font, which nothing else provided after the refactor. */
+body {
+  font-family: var(--sans);
+  color: var(--cream);
+  font-weight: 300;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Subtle film-grain, matches the historical look. Purely decorative. */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: .5;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+/* Skip link: off-screen until focused (it was rendering as visible text). */
+.tc-skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 2000;
+  padding: 10px 16px;
+  background: var(--tc-panel-2);
+  color: var(--tc-white);
+  border: 1px solid var(--tc-gold);
+  border-radius: 0 0 8px 0;
+  font: 600 12px/1 var(--sans);
+  text-decoration: none;
+}
+.tc-skip-link:focus { left: 0; }
