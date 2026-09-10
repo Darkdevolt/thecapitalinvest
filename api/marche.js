@@ -43,6 +43,21 @@ async function latestTradedSessionDate() {
   return data?.[0]?.date_seance || await latestDateFor('historique');
 }
 
+/**
+ * Le nom de l'indice a été écrit sous plusieurs formes selon l'époque du
+ * scraper : « BRVM COMPOSITE », « BRVM-COMPOSITE », « BRVM C », « BRVMC »…
+ * Sans unification, un consommateur qui filtre sur « COMPOSITE » ne voyait
+ * que les séances récentes (nommées avec le tiret) et ratait 28 ans
+ * d'historique nommé « BRVM C ». On ramène tout à une forme canonique.
+ */
+function canonIndice(name) {
+  const n = String(name || '').trim().toUpperCase().replace(/[\s_]+/g, ' ');
+  if (/(COMPOSITE|BRVM C\b|BRVMC)/.test(n)) return 'BRVM-COMPOSITE';
+  if (/(30)/.test(n)) return 'BRVM-30';
+  if (/(PRESTIGE|PRES\b)/.test(n)) return 'BRVM-PRESTIGE';
+  return String(name || '').trim().toUpperCase();
+}
+
 function splitVariation(row) {
   const pct = row.variation_pct ?? row.variation ?? null;
   const raw = row.variation ?? null;
@@ -187,12 +202,14 @@ async function latestIndices(sessionDate = null) {
 }
 
 async function historiqueIndices(limit = 30, dateFrom = null, dateTo = null) {
-  const safe = Math.min(Math.max(Number(limit) || 30, 1), 365);
+  // Plafond élargi : un backtest sur 5-10 ans a besoin de tout l'historique
+  // de l'indice, pas seulement des 365 dernières séances.
+  const safe = Math.min(Math.max(Number(limit) || 30, 1), 4000);
   let q = db.from('indices').select('date_seance').not('date_seance', 'is', null);
   if (dateFrom) q = q.gte('date_seance', dateFrom);
   if (dateTo) q = q.lte('date_seance', dateTo);
 
-  const { data, error } = await q.order('date_seance', { ascending: false }).limit(safe * 20);
+  const { data, error } = await q.order('date_seance', { ascending: false }).limit(Math.min(safe * 5, 25000));
   if (error) throw error;
 
   const sessions = [...new Set((data || []).map(r => r.date_seance).filter(Boolean))]
@@ -206,11 +223,19 @@ async function historiqueIndices(limit = 30, dateFrom = null, dateTo = null) {
     .order('indice', { ascending: true });
   if (e) throw e;
 
-  return {
-    data: (rows || []).map(r => String(r.indice || '').trim().toUpperCase() === 'BRVM COMPOSITE' ? { ...r, indice: 'BRVM C' } : r),
-    source: 'indices',
-    sessions: sessions.length
-  };
+  // Unifie les noms puis, si plusieurs lignes existent pour la même
+  // (séance, indice canonique), garde la plus récemment créée.
+  const seen = new Map();
+  for (const r of (rows || [])) {
+    const indice = canonIndice(r.indice);
+    const k = r.date_seance + '|' + indice;
+    const prev = seen.get(k);
+    if (!prev || String(r.created_at || '') > String(prev.created_at || '')) seen.set(k, { ...r, indice });
+  }
+  const merged = Array.from(seen.values()).sort((a, b) =>
+    String(a.date_seance).localeCompare(String(b.date_seance)) || a.indice.localeCompare(b.indice));
+
+  return { data: merged, source: 'indices', sessions: sessions.length };
 }
 
 async function historique(ticker, limit, dateFrom, dateTo, offset) {

@@ -23,7 +23,10 @@
         const res=await fetch(url,fetchOpts);clearTimeout(timeoutId);
         const contentType=res.headers.get('content-type')||'';
         const data=contentType.includes('application/json')?await res.json():await res.text();
-        if(!res.ok){const message=(data&&data.error)||(data&&data.message)||res.statusText||('HTTP '+res.status);throw new Error('HTTP '+res.status+' '+message);}
+        if(!res.ok){
+          if(res.status===401&&token){try{window.dispatchEvent(new CustomEvent('auth:expired',{detail:{endpoint:endpoint}}));}catch(_){}}
+          const message=(data&&data.error)||(data&&data.message)||res.statusText||('HTTP '+res.status);throw new Error('HTTP '+res.status+' '+message);
+        }
         if(key&&window.cacheManager&&data&&typeof data==='object')window.cacheManager.setCache(key,data);
         return data;
       }catch(err){clearTimeout(timeoutId);if(method==='GET'&&cached){console.warn('[API] fallback cache:',endpoint);return cached;}if(err.name==='AbortError')throw new Error('API timeout: '+endpoint);throw err;}
@@ -38,7 +41,7 @@
   window.apiDelete=(endpoint,data,options)=>request('DELETE',endpoint,data,options);
   window.apiGetCours=()=>window.apiGet('/marche?type=cours');
   window.apiGetIndices=()=>window.apiGet('/marche?type=indices');
-  window.apiGetIndicesHistory=(limit=30)=>window.apiGet('/marche?type=indices_historique&limit='+encodeURIComponent(limit));
+  window.apiGetIndicesHistory=(limit=30,dateFrom=null)=>window.apiGet('/marche?type=indices_historique&limit='+encodeURIComponent(limit)+(dateFrom?'&date_from='+encodeURIComponent(dateFrom):''));
   window.apiGetHistorique=(ticker,limit=1000,offset=0,dateFrom=null,dateTo=null)=>{
     const params=new URLSearchParams({type:'historique',ticker:String(ticker||'').trim().toUpperCase(),limit:String(Math.max(1,Math.min(Number(limit)||1000,1000))),offset:String(Math.max(0,Number(offset)||0))});
     if(dateFrom)params.set('date_from',dateFrom);

@@ -60,6 +60,31 @@
     window.location.replace('/login.html');
   }, true);
 
+  // ─────────────────────────────── Session expirée → redirection propre
+  // Émis par fetch.js quand une route authentifiée renvoie 401 alors qu'un
+  // jeton était présent. On redirige une seule fois vers /login.html plutôt
+  // que de laisser l'app tourner en mode dégradé (données vides, JS qui plante).
+  var _expired = false;
+  window.addEventListener('auth:expired', function () {
+    if (_expired) return;
+    _expired = true;
+    try { localStorage.removeItem('tc_session'); } catch (x) {}
+    try { sessionStorage.removeItem('tc_session'); } catch (x) {}
+    try {
+      var host = document.createElement('div');
+      host.setAttribute('style', 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(10,8,4,.86);backdrop-filter:blur(2px);font-family:system-ui,sans-serif');
+      host.innerHTML = '<div style="background:#13110C;border:1px solid rgba(184,150,78,.3);border-radius:14px;padding:26px 28px;max-width:340px;text-align:center;color:#F5F0E8">'
+        + '<div style="font-family:Georgia,serif;font-size:19px;margin-bottom:8px">Session expirée</div>'
+        + '<div style="font-size:13px;color:rgba(245,240,232,.6);line-height:1.5;margin-bottom:16px">Votre session a expiré pour des raisons de sécurité. Reconnectez-vous pour continuer.</div>'
+        + '<a href="/login.html?reason=expired&redirect=' + encodeURIComponent(location.pathname + location.hash) + '" '
+        + 'style="display:inline-block;background:#B8964E;color:#1a1408;font-weight:700;text-decoration:none;border-radius:8px;padding:10px 20px;font-size:13px">Se reconnecter</a></div>';
+      document.body.appendChild(host);
+    } catch (x) {}
+    setTimeout(function () {
+      location.replace('/login.html?reason=expired&redirect=' + encodeURIComponent(location.pathname + location.hash));
+    }, 1500);
+  });
+
   // ─────────────────────────────── Recherche globale
   function results() { return document.getElementById('globalSearchResults'); }
   function closeResults() { var r = results(); if (r) { r.classList.remove('open'); r.innerHTML = ''; } }
