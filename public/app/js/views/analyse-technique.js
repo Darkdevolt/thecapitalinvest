@@ -388,4 +388,16 @@
   }
 
   window.renderAnalyseTechnique = render;
+
+  // Filet de sécurité : si le routeur n'appelle pas renderAnalyseTechnique
+  // (course de chargement, cache négatif d'une version antérieure…), on se
+  // rend nous-même dès que la vue devient visible et vide.
+  setInterval(function () {
+    var v = document.getElementById('view-analyse-technique');
+    if (!v) return;
+    var visible = v.classList.contains('active') || v.style.display === 'block' || v.style.display === '';
+    if (visible && v.offsetParent !== null && !document.getElementById('at3Ticker') && !loading) {
+      try { render(); } catch (e) { console.error('[AT v3] auto-render', e); }
+    }
+  }, 400);
 })();

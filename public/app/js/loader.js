@@ -1,6 +1,10 @@
 (function(){
   const unwrap=v=>{if(Array.isArray(v))return v;if(v&&Array.isArray(v.data))return v.data;if(v&&Array.isArray(v.rows))return v.rows;if(v&&Array.isArray(v.results))return v.results;return[];};
-  const cached=key=>window.cacheManager?.getCache(key);
+  // cache.js n'est pas chargé dans app.html : sans ce garde, window.cacheManager
+  // vaut undefined, `cached()` renvoyait undefined, et loadMap prenait undefined
+  // pour un « hit » -> les données secondaires (financials, dividendes, BOC,
+  // coupons, historique d'indices) n'étaient JAMAIS chargées.
+  const cached=key=>{ try { return window.cacheManager ? window.cacheManager.getCache(key) : null; } catch(e){ return null; } };
   const setGlobals=(key,value)=>{window[key]=Array.isArray(value)?value:[];};
   const critical={cours:'/marche?type=cours',indices:'/marche?type=indices',entreprises:'/marche?type=entreprises',analyses:'/marche?type=analyses'};
   const secondary={indicesHistory:'/marche?type=indices_historique&limit=90',financials:'/marche?type=financials',dividendes:'/marche?type=dividendes',boc:'/boc',coupons:'/marche?type=coupons'};
@@ -20,8 +24,8 @@
     ['/app/css/dashboard-final-runtime.css?v=1','tc-dashboard-final-runtime']
   ];
   styles.forEach(([href,id])=>{if(document.getElementById(id))return;const style=document.createElement('link');style.id=id;style.rel='stylesheet';style.href=href;document.head.appendChild(style);});
-  const viewModules=['/app/js/views/overview.js?v=1','/app/js/views/titres.js?v=1','/app/js/views/boc.js?v=1','/app/js/views/marche.js?v=1','/app/js/views/analyses.js?v=1','/app/js/views/fiche.js?v=1','/app/js/views/analyse-technique.js?v=1','/app/js/views/analyse-fondamentale.js?v=1','/app/js/views/screener.js?v=1','/app/js/views/backtest.js?v=1','/app/js/views/outils.js?v=1','/app/js/views/opportunites.js?v=1','/app/js/views/palmares.js?v=1','/app/js/views/obligations.js?v=1','/app/js/views/portefeuille.js?v=1','/app/js/views/alertes.js?v=1','/app/js/views/financials.js?v=1','/app/js/views/publications.js?v=1','/app/js/views/comparison.js?v=1','/app/js/views/dividend-screener.js?v=1'];
+  const viewModules=['/app/js/views/overview.js?v=1','/app/js/views/titres.js?v=1','/app/js/views/boc.js?v=2','/app/js/views/marche.js?v=1','/app/js/views/analyses.js?v=1','/app/js/views/fiche.js?v=1','/app/js/views/analyse-technique.js?v=3','/app/js/views/analyse-fondamentale.js?v=2','/app/js/views/screener.js?v=1','/app/js/views/backtest.js?v=1','/app/js/views/outils.js?v=1','/app/js/views/opportunites.js?v=1','/app/js/views/palmares.js?v=1','/app/js/views/obligations.js?v=2','/app/js/views/portefeuille.js?v=1','/app/js/views/alertes.js?v=1','/app/js/views/financials.js?v=1','/app/js/views/publications.js?v=1','/app/js/views/comparison.js?v=1','/app/js/views/dividend-screener.js?v=1'];
   function loadScript(src){return new Promise(resolve=>{if(document.querySelector('script[data-tc-view="'+src+'"]'))return resolve();const s=document.createElement('script');s.src=src;s.async=false;s.dataset.tcView=src;s.onload=()=>{console.log('[LOADER] '+src+' chargé');resolve();};s.onerror=()=>{console.warn('[LOADER] '+src+' indisponible');resolve();};document.head.appendChild(s);});}
   const viewsReady=Promise.all(viewModules.map(loadScript)).then(()=>{window.__TC_VIEWS_READY__=true;if(typeof window.renderCurrentView==='function')window.renderCurrentView();});window.__tcViewsReady=viewsReady;
-  window.addEventListener('load',function(){loadScript('/app/js/views/recommendations-fixes.js?v=20260827');loadScript('/app/js/views/financials-per.js?v=1');loadScript('/js/accessibility-runtime.js?v=1');loadScript('/app/js/runtime-recovery.js?v=1');loadScript('/app/js/views/dashboard-final-runtime.js?v=1');loadScript('/app/js/views/dashboard-chart-runtime.js?v=1');loadScript('/app/js/views/dashboard-calendar-runtime.js?v=1');loadScript('/app/js/views/header-institute-link.js?v=1');});
+  window.addEventListener('load',function(){loadScript('/app/js/views/recommendations-fixes.js?v=20260827');loadScript('/app/js/views/financials-per.js?v=1');loadScript('/js/accessibility-runtime.js?v=1');loadScript('/app/js/runtime-recovery.js?v=1');loadScript('/app/js/views/dashboard-final-runtime.js?v=1');loadScript('/app/js/views/dashboard-chart-runtime.js?v=1');loadScript('/app/js/views/dashboard-calendar-runtime.js?v=1');});
 })();
