@@ -377,14 +377,28 @@ body{
         return;
       }
 
-      /*
-       * Le flux de récupération existant peut être branché ici.
-       * On ne touche pas à l’authentification actuelle.
-       */
-      showMessage(
-        'Utilisez la procédure de récupération de mot de passe prévue pour votre compte.',
-        'ok'
-      );
+      showMessage('Envoi du lien de réinitialisation…', 'ok');
+      fetch(
+        'https://otsiwiwlnowxeolbbgvm.supabase.co/auth/v1/recover',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            apikey: 'sb_publishable_MhaI5b-kMmb5liIMOJ4P3Q_xGTsJAFJ'
+          },
+          body: JSON.stringify({
+            email: email,
+            redirect_to: location.origin + '/login.html?reset=1'
+          })
+        }
+      ).then(function(){
+        showMessage(
+          'Si un compte existe pour ' + email + ', un lien de réinitialisation vient d’être envoyé.',
+          'ok'
+        );
+      }).catch(function(){
+        showMessage('Impossible d’envoyer le lien pour le moment. Réessayez plus tard.', 'err');
+      });
 
     }
   );

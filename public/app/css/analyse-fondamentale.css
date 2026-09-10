@@ -1,0 +1,118 @@
+/* THE CAPITAL — Analyse fondamentale (vue légère).
+   Fichier référencé par analyse-fondamentale.js ; son absence provoquait
+   une 404 récurrente en console. Styles alignés sur les tokens de l'app. */
+
+#view-analyse-fondamentale .fund-empty {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--muted, rgba(245, 240, 232, .6));
+}
+#view-analyse-fondamentale .fund-empty-mark {
+  font-family: var(--serif, 'Playfair Display', serif);
+  font-size: 34px;
+  color: var(--gold, #B8964E);
+  margin-bottom: 10px;
+}
+#view-analyse-fondamentale .fund-empty h2 {
+  font-family: var(--serif, 'Playfair Display', serif);
+  font-size: 18px;
+  margin: 0 0 6px;
+  color: var(--cream, #F5F0E8);
+}
+
+#view-analyse-fondamentale .fund-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  padding: 18px 20px;
+  border: 1px solid var(--border, rgba(184, 150, 78, .18));
+  border-radius: 12px;
+  background: var(--card, #181410);
+  margin-bottom: 16px;
+}
+#view-analyse-fondamentale .fund-kicker {
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gold, #B8964E);
+  margin-bottom: 6px;
+}
+#view-analyse-fondamentale .fund-hero h2 {
+  font-family: var(--serif, 'Playfair Display', serif);
+  font-size: 20px;
+  margin: 0 0 4px;
+}
+#view-analyse-fondamentale .fund-market-box {
+  text-align: right;
+  min-width: 150px;
+}
+#view-analyse-fondamentale .fund-market-box span { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim, rgba(245, 240, 232, .34)); }
+#view-analyse-fondamentale .fund-market-box strong { display: block; font-family: var(--mono, monospace); font-size: 18px; margin: 3px 0; }
+#view-analyse-fondamentale .fund-market-box small { font-size: 10px; color: var(--muted, rgba(245, 240, 232, .6)); }
+
+#view-analyse-fondamentale .fund-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+#view-analyse-fondamentale .fund-kpi {
+  background: var(--card, #181410);
+  border: 1px solid var(--border, rgba(184, 150, 78, .12));
+  border-radius: 10px;
+  padding: 13px 15px;
+}
+#view-analyse-fondamentale .fund-kpi span { font-size: 10px; text-transform: uppercase; letter-spacing: .07em; color: var(--dim, rgba(245, 240, 232, .34)); }
+#view-analyse-fondamentale .fund-kpi strong { display: block; font-family: var(--mono, monospace); font-size: 17px; margin: 5px 0 3px; }
+#view-analyse-fondamentale .fund-kpi small { font-size: 10px; color: var(--muted, rgba(245, 240, 232, .6)); }
+
+#view-analyse-fondamentale .fund-toolbar { margin-bottom: 16px; }
+#view-analyse-fondamentale .fund-methods { display: flex; justify-content: space-between; gap: 14px; flex-wrap: wrap; align-items: center; }
+#view-analyse-fondamentale .fund-control-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim, rgba(245, 240, 232, .34)); }
+#view-analyse-fondamentale .fund-method-switch { display: flex; gap: 6px; }
+#view-analyse-fondamentale .fund-method-switch .filter-btn { font-size: 12px; padding: 6px 12px; }
+
+#view-analyse-fondamentale .fund-main-grid { gap: 16px; margin: 16px 0; }
+#view-analyse-fondamentale .fund-params { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+#view-analyse-fondamentale .fund-params label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted, rgba(245, 240, 232, .6)); }
+#view-analyse-fondamentale .fund-params input,
+#view-analyse-fondamentale .fund-params select {
+  background: var(--surface, #13110C);
+  border: 1px solid var(--border, rgba(184, 150, 78, .18));
+  color: var(--cream, #F5F0E8);
+  border-radius: 7px;
+  padding: 8px 10px;
+  font: inherit;
+}
+#view-analyse-fondamentale .fund-value-highlight {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+#view-analyse-fondamentale .fund-value-highlight span { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: var(--dim, rgba(245, 240, 232, .34)); }
+#view-analyse-fondamentale .fund-value-highlight strong { font-family: var(--mono, monospace); font-size: 22px; }
+#view-analyse-fondamentale .fund-value-highlight b.positive { color: var(--green, #4ADE80); }
+#view-analyse-fondamentale .fund-value-highlight b.negative { color: var(--red, #F87171); }
+
+#view-analyse-fondamentale .fund-warning {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(240, 167, 42, .4);
+  border-radius: 8px;
+  background: rgba(240, 167, 42, .1);
+  color: var(--warn, #F0A72A);
+  font-size: 12px;
+}
+#view-analyse-fondamentale .fund-checks { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+#view-analyse-fondamentale .fund-check { border: 1px solid var(--border2, rgba(184, 150, 78, .12)); border-radius: 9px; padding: 12px 14px; }
+#view-analyse-fondamentale .fund-check strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--gold, #B8964E); margin-bottom: 5px; }
+#view-analyse-fondamentale .fund-check p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted, rgba(245, 240, 232, .6)); }
+#view-analyse-fondamentale .forecast-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+#view-analyse-fondamentale .forecast-table th,
+#view-analyse-fondamentale .forecast-table td { padding: 8px 10px; border-bottom: 1px solid var(--border2, rgba(184, 150, 78, .1)); text-align: right; }
+#view-analyse-fondamentale .forecast-table th:first-child,
+#view-analyse-fondamentale .forecast-table td:first-child { text-align: left; }
