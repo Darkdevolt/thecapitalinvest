@@ -688,18 +688,20 @@
             y += g(14);
         }
 
-        /* — Pied — */
-        const footY = H - Math.round(pad * 0.72);
+        /* — Pied — position idéale calée sur le format ; s'il déborde, on le
+           pose sous le contenu plutôt que par-dessus. */
+        const footYIdeal = H - Math.round(pad * 0.72);
+        const footY = Math.max(footYIdeal, Math.round(y + g(30)));
         parts.push(rule(footY - 34, 0.22));
         parts.push(text('Données de séance The Capital · sources BRVM', pad, footY, { size: 12, fill: C.muted }));
         parts.push(text('thecapitalinvest', W - pad, footY, { size: 12, fill: C.gold, anchor: 'end', family: "'DM Mono',monospace" }));
 
         /* Le contenu peut dépasser le format choisi : on prévient plutôt que
-           de tronquer silencieusement une section du palmarès. */
-        const overflow = y > (footY - 44);
+           de tronquer silencieusement une section. */
+        const overflow = y > (footYIdeal - 44);
 
         return {
-            bodyTop: bodyTop, footTop: footY - 44,
+            bodyTop: bodyTop, footTop: footYIdeal - 44,
             svg: '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H +
                 '" viewBox="0 0 ' + W + ' ' + H + '" font-family="\'DM Sans\',sans-serif">' + parts.join('') + '</svg>',
             width: W, height: H, overflow, contentBottom: Math.round(y)
