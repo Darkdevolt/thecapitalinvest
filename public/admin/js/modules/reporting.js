@@ -41,12 +41,15 @@
     ];
 
     const BLOCS = [
-        { id: 'indices', l: 'Indices de marché' },
+        { id: 'indices', l: 'Indices de marché (+ variation annuelle)' },
+        { id: 'activite', l: 'Activité du marché' },
+        { id: 'chiffres', l: 'Marché en chiffres (capi, PER, rendement, obligations)' },
         { id: 'hausses', l: 'Plus fortes hausses' },
         { id: 'baisses', l: 'Plus fortes baisses' },
         { id: 'volumes', l: 'Titres les plus échangés' },
-        { id: 'activite', l: 'Activité du marché' },
-        { id: 'note', l: 'Commentaire éditorial' }
+        { id: 'obligataire', l: 'Marché obligataire' },
+        { id: 'dividendes', l: 'Dividendes à venir' },
+        { id: 'note', l: 'Actualité / lecture du marché' }
     ];
 
     let logoData = null;
@@ -261,11 +264,98 @@
                 return rank(a) - rank(b) || a.indice.localeCompare(b.indice);
             });
 
+        /* ── Données complémentaires : obligations, dividendes, ratios ──
+           Petites tables, toujours lues ; un bloc sans données est masqué,
+           jamais estimé. */
+        const [obl, oblM, fin, divs] = await Promise.all([
+            TC.getAll('obligations', 'select=code,nom,cours,coupon_couru,taux_facial,date_maturite&order=cours.desc&limit=2000').catch(() => []),
+            TC.getAll('obligations_marche', 'select=date_seance,valeur_transactions,capitalisation_actions,capitalisation_obligations,nb_lignes&order=date_seance.desc&limit=8').catch(() => []),
+            TC.getAll('financials', 'select=ticker,annee,bpa,dpa,dividend_yield,roe,validation_status&order=annee.desc&limit=2000').catch(() => []),
+            TC.getAll('dividendes_calendrier', 'select=ticker,montant_net,montant,taux_rendement,rendement,date_detachement,date_paiement&order=date_detachement.asc&limit=800').catch(() => [])
+        ]);
+
+        const median = a => { const x = a.filter(v => isFinite(v)).sort((m, n) => m - n); if (!x.length) return null; const i = Math.floor(x.length / 2); return x.length % 2 ? x[i] : (x[i - 1] + x[i]) / 2; };
+
+        const oblSnap = (oblM || []).filter(r => !r.date_seance || r.date_seance <= w.to)[0] || (oblM || [])[0] || null;
+        const oblRows = (obl || []).filter(r => TC.toNumber(r.cours) !== null);
+
+        const finByT = {};
+        (fin || []).forEach(function (r) {
+            const k = String(r.ticker || '').toUpperCase();
+            if (!k) return;
+            if (!finByT[k] || Number(r.annee) > Number(finByT[k].annee)) finByT[k] = r;
+        });
+        const perList = [], yldList = [], roeList = [];
+        values.forEach(function (e) {
+            const f = finByT[String(e.ticker).toUpperCase()];
+            if (!f) return;
+            const bpa = TC.toNumber(f.bpa);
+            if (bpa && bpa > 0 && e.last) perList.push(e.last / bpa);
+            let y = TC.toNumber(f.dividend_yield);
+            if (y !== null && y <= 1.5) y *= 100;
+            if ((y === null || y === 0) && TC.toNumber(f.dpa) && e.last) y = (TC.toNumber(f.dpa) / e.last) * 100;
+            if (y !== null && y > 0) yldList.push(y);
+            let roe = TC.toNumber(f.roe);
+            if (roe !== null && roe <= 1.5) roe *= 100;
+            if (roe !== null) roeList.push(roe);
+        });
+
+        const dividendesAVenir = (divs || [])
+            .map(function (d) {
+                return {
+                    ticker: d.ticker,
+                    nom: names[String(d.ticker || '').toUpperCase()] || '',
+                    montant: TC.toNumber(d.montant_net != null ? d.montant_net : d.montant),
+                    rdt: TC.toNumber(d.taux_rendement != null ? d.taux_rendement : d.rendement),
+                    detach: d.date_detachement, paiement: d.date_paiement
+                };
+            })
+            .filter(d => d.detach && String(d.detach) >= w.to)
+            .sort((a, b) => String(a.detach).localeCompare(String(b.detach)))
+            .slice(0, 6);
+
+        /* Indices : performance depuis le 1er janvier. */
+        const yearStart = w.to.slice(0, 4) + '-01-01';
+        let ytdMap = {};
+        try {
+            const idxYtd = await TC.getAll('indices',
+                'select=indice,date_seance,valeur&date_seance=gte.' + yearStart + '&date_seance=lte.' + w.to + '&order=date_seance.asc&limit=4000');
+            (idxYtd || []).forEach(function (r) {
+                const k = String(r.indice || '').toUpperCase();
+                if (ytdMap[k] === undefined) ytdMap[k] = TC.toNumber(r.valeur);
+            });
+        } catch (e) { ytdMap = {}; }
+        idxList.forEach(function (e) {
+            const base = ytdMap[String(e.indice || '').toUpperCase()];
+            e.ytd = (base && base > 0 && e.last) ? ((e.last - base) / base) * 100 : null;
+        });
+
+        const chiffres = {
+            titresCotes: values.length,
+            societesCotees: (refs || []).length || values.length,
+            lignesObligataires: (oblSnap && oblSnap.nb_lignes) ? oblSnap.nb_lignes : (oblRows.length || null),
+            capiActions: oblSnap ? TC.toNumber(oblSnap.capitalisation_actions) : null,
+            capiObligations: oblSnap ? TC.toNumber(oblSnap.capitalisation_obligations) : null,
+            valeurTransactions: oblSnap ? TC.toNumber(oblSnap.valeur_transactions) : null,
+            perMedian: median(perList),
+            rdtMedian: median(yldList),
+            roeMedian: median(roeList)
+        };
+        const obligataire = {
+            snapshot: oblSnap,
+            lignes: oblRows.length,
+            top: oblRows.slice(0, 5),
+            tauxMoyen: median(oblRows.map(r => TC.toNumber(r.taux_facial)).filter(v => v && v > 0))
+        };
+
         return {
             window: w,
             sessions,
             values,
             indices: idxList,
+            dividendesAVenir,
+            chiffres,
+            obligataire,
             /* Un palmarès des baisses qui contient des hausses n'est pas un
                palmarès : sur une séance étroite, il vaut mieux trois lignes
                que cinq lignes fausses. */
@@ -447,20 +537,54 @@
             y += boxH + g(40);
         }
 
-        /* — Indices — */
+        /* — Indices — valeur, variation de période, variation depuis le 1er janvier — */
         if (options.blocs.indices && data.indices.length) {
             y = section(parts, 'Indices de marché', pad, y, W, text, rule, g);
+            const colVal = W - pad - 300, colPer = W - pad - 150, colYtd = W - pad;
+            parts.push(text('VALEUR', colVal, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
+            parts.push(text(data.window.periode === 'seance' ? 'SÉANCE' : 'PÉRIODE', colPer, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
+            parts.push(text('DEPUIS 1ᵉʳ JANV.', colYtd, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
+            y += g(26);
             data.indices.slice(0, 5).forEach(function (idx) {
-                parts.push(text(idx.indice, pad, y, { size: 17 }));
+                parts.push(text(idx.indice, pad, y, { size: 16 }));
                 parts.push(text(idx.last.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                    W - pad - 130, y, { size: 17, anchor: 'end', family: "'DM Mono',monospace" }));
-                parts.push(text(pct(idx.perf), W - pad, y, {
-                    size: 17, anchor: 'end', family: "'DM Mono',monospace",
+                    colVal, y, { size: 16, anchor: 'end', family: "'DM Mono',monospace" }));
+                parts.push(text(pct(idx.perf), colPer, y, {
+                    size: 16, anchor: 'end', family: "'DM Mono',monospace",
                     fill: TC.toNumber(idx.perf) >= 0 ? C.green : C.red
+                }));
+                parts.push(text(idx.ytd == null ? '—' : pct(idx.ytd), colYtd, y, {
+                    size: 16, anchor: 'end', family: "'DM Mono',monospace",
+                    fill: idx.ytd == null ? C.muted : TC.toNumber(idx.ytd) >= 0 ? C.green : C.red
                 }));
                 y += g(32);
             });
             y += g(18);
+        }
+
+        /* — Marché en chiffres (récapitulatif détaillé) — */
+        if (options.blocs.chiffres && data.chiffres) {
+            const c = data.chiffres;
+            const items = [
+                ['Titres cotés', c.titresCotes != null ? String(c.titresCotes) : null],
+                ['Sociétés cotées', c.societesCotees != null ? String(c.societesCotees) : null],
+                ['Lignes obligataires', c.lignesObligataires != null ? String(c.lignesObligataires) : null],
+                ['Capitalisation actions', c.capiActions != null ? money(c.capiActions) + ' F' : null],
+                ['Capitalisation obligations', c.capiObligations != null ? money(c.capiObligations) + ' F' : null],
+                ['Valeur des transactions', c.valeurTransactions != null ? money(c.valeurTransactions) + ' F' : null],
+                ['PER médian', c.perMedian != null ? c.perMedian.toFixed(1) + 'x' : null],
+                ['Rendement médian', c.rdtMedian != null ? c.rdtMedian.toFixed(2) + ' %' : null],
+                ['Rentabilité médiane (ROE)', c.roeMedian != null ? c.roeMedian.toFixed(1) + ' %' : null]
+            ].filter(it => it[1] != null);
+            if (items.length) {
+                y = section(parts, 'Le marché en chiffres', pad, y, W, text, rule, g);
+                items.forEach(function (it) {
+                    parts.push(text(it[0], pad, y, { size: 15, fill: C.muted }));
+                    parts.push(text(it[1], W - pad, y, { size: 15, anchor: 'end', family: "'DM Mono',monospace" }));
+                    y += g(28);
+                });
+                y += g(16);
+            }
         }
 
         /* — Palmarès — */
@@ -479,7 +603,15 @@
                     size: 17, anchor: 'end', family: "'DM Mono',monospace", weight: 500,
                     fill: positive ? C.green : C.red
                 }));
-                y += g(32);
+                const detail = [];
+                if (TC.toNumber(e.volume)) detail.push(money(e.volume) + ' titres');
+                if (TC.toNumber(e.valeur)) detail.push(money(e.valeur) + ' F échangés');
+                if (detail.length) {
+                    parts.push(text(detail.join(' · '), pad + 34, y + g(16), { size: 11, fill: C.muted }));
+                    y += g(44);
+                } else {
+                    y += g(32);
+                }
             });
             y += g(18);
         };
@@ -502,9 +634,53 @@
             y += g(8);
         }
 
+        /* — Marché obligataire — */
+        if (options.blocs.obligataire && data.obligataire && (data.obligataire.lignes || data.obligataire.snapshot)) {
+            const o = data.obligataire;
+            y = section(parts, 'Marché obligataire', pad, y, W, text, rule, g);
+            const lines = [];
+            if (o.lignes) lines.push(['Lignes cotées', String(o.lignes)]);
+            if (o.snapshot && TC.toNumber(o.snapshot.capitalisation_obligations) != null)
+                lines.push(['Capitalisation obligataire', money(o.snapshot.capitalisation_obligations) + ' F']);
+            if (o.tauxMoyen != null) lines.push(['Taux facial médian', o.tauxMoyen.toFixed(2) + ' %']);
+            lines.forEach(function (it) {
+                parts.push(text(it[0], pad, y, { size: 15, fill: C.muted }));
+                parts.push(text(it[1], W - pad, y, { size: 15, anchor: 'end', family: "'DM Mono',monospace" }));
+                y += g(28);
+            });
+            if (o.top && o.top.length) {
+                y += g(6);
+                parts.push(text('LIGNES LES PLUS COTÉES', pad, y, { size: 9, fill: C.muted, spacing: 1.6 }));
+                y += g(24);
+                o.top.slice(0, 5).forEach(function (b) {
+                    parts.push(text(String(b.code || ''), pad, y, { size: 14, fill: C.gold, family: "'DM Mono',monospace" }));
+                    const nm = (b.nom || '').slice(0, 34);
+                    if (nm) parts.push(text(nm, pad + 120, y, { size: 12, fill: C.muted }));
+                    parts.push(text(money(b.cours) + ' F', W - pad, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace" }));
+                    y += g(26);
+                });
+            }
+            y += g(16);
+        }
+
+        /* — Dividendes à venir — */
+        if (options.blocs.dividendes && data.dividendesAVenir && data.dividendesAVenir.length) {
+            y = section(parts, 'Dividendes à venir', pad, y, W, text, rule, g);
+            data.dividendesAVenir.forEach(function (d) {
+                parts.push(text(d.ticker, pad, y, { size: 15, fill: C.gold, family: "'Playfair Display',serif", weight: 500 }));
+                const nm = (d.nom || '').slice(0, 24);
+                if (nm) parts.push(text(nm, pad + 90, y, { size: 12, fill: C.muted }));
+                parts.push(text(typeof TC.fmtDate === 'function' ? TC.fmtDate(d.detach) : String(d.detach || ''), W - pad - 210, y, { size: 13, anchor: 'end', fill: C.muted, family: "'DM Mono',monospace" }));
+                parts.push(text(d.montant != null ? money(d.montant) + ' F' : '—', W - pad - 90, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace" }));
+                parts.push(text(d.rdt != null ? (d.rdt <= 1.5 ? (d.rdt * 100) : d.rdt).toFixed(2) + ' %' : '—', W - pad, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace", fill: C.green }));
+                y += g(30);
+            });
+            y += g(16);
+        }
+
         /* — Commentaire — */
         if (options.blocs.note && options.note) {
-            y = section(parts, 'Lecture du marché', pad, y, W, text, rule, g);
+            y = section(parts, 'Actualité / lecture du marché', pad, y, W, text, rule, g);
             wrap(options.note, Math.floor(inner / 9.6)).slice(0, 7).forEach(function (line) {
                 parts.push(text(line, pad, y, { size: 16, fill: C.cream }));
                 y += g(27);
