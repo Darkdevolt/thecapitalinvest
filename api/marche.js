@@ -203,25 +203,21 @@ async function latestIndices(sessionDate = null) {
 
 async function historiqueIndices(limit = 30, dateFrom = null, dateTo = null) {
   // Plafond élargi : un backtest sur 5-10 ans a besoin de tout l'historique
-  // de l'indice, pas seulement des 365 dernières séances.
+  // de l'indice. On lit les lignes directement par plage de dates (un IN sur
+  // des milliers de dates dépasse la limite d'URL de PostgREST et renvoyait
+  // des résultats tronqués).
   const safe = Math.min(Math.max(Number(limit) || 30, 1), 4000);
-  let q = db.from('indices').select('date_seance').not('date_seance', 'is', null);
-  if (dateFrom) q = q.gte('date_seance', dateFrom);
-  if (dateTo) q = q.lte('date_seance', dateTo);
-
-  const { data, error } = await q.order('date_seance', { ascending: false }).limit(Math.min(safe * 5, 25000));
-  if (error) throw error;
-
-  const sessions = [...new Set((data || []).map(r => r.date_seance).filter(Boolean))]
-    .sort().reverse().slice(0, safe).sort();
-  if (!sessions.length) return { data: [], source: 'indices', sessions: 0 };
-
-  const { data: rows, error: e } = await db.from('indices')
+  let rq = db.from('indices')
     .select('id,indice,date_seance,valeur,variation,variation_pct,created_at')
-    .in('date_seance', sessions)
-    .order('date_seance', { ascending: true })
-    .order('indice', { ascending: true });
+    .not('date_seance', 'is', null);
+  if (dateFrom) rq = rq.gte('date_seance', dateFrom);
+  if (dateTo) rq = rq.lte('date_seance', dateTo);
+  // ~3 indices par séance -> on ramène assez de lignes pour `safe` séances.
+  const { data: rows, error: e } = await rq
+    .order('date_seance', { ascending: false })
+    .limit(Math.min(safe * 4, 24000));
   if (e) throw e;
+  if (!rows || !rows.length) return { data: [], source: 'indices', sessions: 0 };
 
   // Unifie les noms puis, si plusieurs lignes existent pour la même
   // (séance, indice canonique), garde la plus récemment créée.
@@ -235,7 +231,8 @@ async function historiqueIndices(limit = 30, dateFrom = null, dateTo = null) {
   const merged = Array.from(seen.values()).sort((a, b) =>
     String(a.date_seance).localeCompare(String(b.date_seance)) || a.indice.localeCompare(b.indice));
 
-  return { data: merged, source: 'indices', sessions: sessions.length };
+  const sessionCount = new Set(merged.map(r => r.date_seance)).size;
+  return { data: merged, source: 'indices', sessions: sessionCount };
 }
 
 async function historique(ticker, limit, dateFrom, dateTo, offset) {

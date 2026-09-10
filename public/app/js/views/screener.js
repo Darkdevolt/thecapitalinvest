@@ -80,6 +80,7 @@
         cours: cp,
         variation: num(c.variation_pct != null ? c.variation_pct : c.variation),
         volume: num(c.volume),
+        turnover: num(c.valeur_totale != null ? c.valeur_totale : c.valeur_transigee),
         capi: num(c.capitalisation) || (cp && na ? cp * na : null),
         per: per,
         pbr: pbr,
@@ -91,23 +92,26 @@
     });
   }
 
-  var COLS = [
+  // Colonnes fixes d'identité + colonnes pilotées par le sélecteur d'indicateurs.
+  var FIXED = [
     { k: 'ticker', l: 'Ticker', fmt: function (r) { return '<strong style="color:var(--gold)">' + esc(r.ticker) + '</strong>'; }, cls: '' },
-    { k: 'nom', l: 'Société', fmt: function (r) { return esc(r.nom); }, cls: '' },
-    { k: 'secteur', l: 'Secteur', fmt: function (r) { return '<span style="color:var(--muted);font-size:11px">' + esc(r.secteur) + '</span>'; }, cls: '' },
-    { k: 'score', l: 'Score', fmt: function (r) { return r.score != null ? '<strong style="color:var(--gold-l)">' + r.score + '</strong>' : '—'; }, cls: 'right' },
-    { k: 'cours', l: 'Cours', fmt: function (r) { return nf(r.cours); }, cls: 'right' },
-    { k: 'variation', l: 'Var.', fmt: function (r) { return '<span style="color:' + (r.variation > 0 ? 'var(--green)' : r.variation < 0 ? 'var(--red)' : 'var(--dim)') + '">' + pf(r.variation, 2) + '</span>'; }, cls: 'right' },
-    { k: 'volume', l: 'Volume', fmt: function (r) { return nf(r.volume); }, cls: 'right' },
-    { k: 'capi', l: 'Capi.', fmt: function (r) { return money(r.capi); }, cls: 'right' },
-    { k: 'per', l: 'PER', fmt: function (r) { return r.per != null ? r.per.toFixed(1) + 'x' : '—'; }, cls: 'right' },
-    { k: 'pbr', l: 'P/B', fmt: function (r) { return r.pbr != null ? r.pbr.toFixed(2) + 'x' : '—'; }, cls: 'right' },
-    { k: 'roe', l: 'ROE', fmt: function (r) { return r.roe != null ? r.roe.toFixed(1) + ' %' : '—'; }, cls: 'right' },
-    { k: 'marge', l: 'Marge', fmt: function (r) { return r.marge != null ? r.marge.toFixed(1) + ' %' : '—'; }, cls: 'right' },
-    { k: 'rdt', l: 'Rdt div.', fmt: function (r) { return r.rdt != null ? r.rdt.toFixed(2) + ' %' : '—'; }, cls: 'right' },
-    { k: 'detteFp', l: 'Dette/FP', fmt: function (r) { return r.detteFp != null ? r.detteFp.toFixed(2) + 'x' : '—'; }, cls: 'right' },
-    { k: 'croissance', l: 'Croiss. CA', fmt: function (r) { return r.croissance != null ? pf(r.croissance, 0) : '—'; }, cls: 'right' }
+    { k: 'nom', l: 'Société', fmt: function (r) { return esc(r.nom); }, cls: '' }
   ];
+  var SCR_DEFAULT = ['secteur', 'score', 'cours', 'variation', 'volume', 'capi', 'per', 'pbr', 'roe', 'marge', 'rdt', 'detteFp', 'croissance'];
+  var METRICS = SCR_DEFAULT.slice();
+  function buildCols() {
+    var mp = window.TC_METRICS;
+    if (!mp) {
+      return FIXED.concat(SCR_DEFAULT.map(function (k) {
+        return { k: k, l: k, cls: 'right', fmt: function (r) { return r[k] == null ? '—' : String(r[k]); } };
+      }));
+    }
+    return FIXED.concat(METRICS.map(function (k) {
+      var m = mp.metaFor(k) || { k: k, l: k, f: function (r) { return r[k]; }, hi: null };
+      return { k: k, l: m.l, hi: m.hi, cls: (k === 'secteur' || k === 'pays') ? '' : 'right', fmt: m.f };
+    }));
+  }
+  var COLS = buildCols();
 
   // id filtre -> [label, comparateur]  (min = ≥, max = ≤)
   var FILTERS = [
@@ -248,6 +252,31 @@
 
   var ALL = [];
 
+  function renderHead() {
+    var tr = document.querySelector('#view-screener thead tr');
+    if (!tr) return;
+    tr.innerHTML = COLS.map(function (col) {
+      return '<th data-k="' + col.k + '" data-l="' + esc(col.l) + '">' + esc(col.l)
+        + (SORT.key === col.k ? (SORT.dir > 0 ? ' ▲' : ' ▼') : '') + '</th>';
+    }).join('');
+    tr.querySelectorAll('th').forEach(function (th) {
+      th.addEventListener('click', function () {
+        var k = th.dataset.k;
+        if (SORT.key === k) SORT.dir = -SORT.dir;
+        else { SORT.key = k; SORT.dir = (k === 'ticker' || k === 'nom' || k === 'secteur' || k === 'pays') ? 1 : -1; }
+        renderTable();
+      });
+    });
+  }
+
+  function onMetrics(keys) {
+    METRICS = keys.filter(function (k) { return k !== 'ticker' && k !== 'nom'; });
+    COLS = buildCols();
+    if (COLS.every(function (c) { return c.k !== SORT.key; })) { SORT = { key: 'ticker', dir: 1 }; }
+    renderHead();
+    renderTable();
+  }
+
   function renderTable() {
     var c = readForm();
     var rows = sortRows(filterRows(ALL, c));
@@ -277,13 +306,7 @@
       var el = document.getElementById(f[0]);
       if (el) el.addEventListener('input', renderTable);
     });
-    document.querySelectorAll('#view-screener thead th').forEach(function (th) {
-      th.addEventListener('click', function () {
-        var k = th.dataset.k;
-        if (SORT.key === k) SORT.dir = -SORT.dir; else { SORT.key = k; SORT.dir = (k === 'ticker' || k === 'nom' || k === 'secteur') ? 1 : -1; }
-        renderTable();
-      });
-    });
+    // Le tri des en-têtes est câblé par renderHead().
     document.querySelectorAll('#view-screener .scr-preset').forEach(function (b) {
       b.addEventListener('click', function () {
         var name = b.dataset.p;
@@ -321,14 +344,19 @@
       + FILTERS.map(function (f) { return '<div><label>' + f[1] + '</label><input type="number" step="0.1" id="' + f[0] + '" placeholder="—"></div>'; }).join('')
       + '</div>'
       + '<div class="scr-bar"><span class="cnt" id="scrCount">—</span>'
-      + '<span><button type="button" id="scrReset">Réinitialiser</button> '
-      + '<button type="button" id="scrExport">Export CSV</button></span></div>'
-      + '<div class="scr-wrap"><table><thead><tr>'
-      + COLS.map(function (col) { return '<th data-k="' + col.k + '" data-l="' + col.l + '">' + col.l + '</th>'; }).join('')
-      + '</tr></thead><tbody id="screenerTable"></tbody></table></div>';
+      + '<span id="scrActions"><button type="button" id="scrReset">Réinitialiser</button> '
+      + '<button type="button" id="scrExport">Export CSV</button> </span></div>'
+      + '<div class="scr-wrap"><table><thead><tr></tr></thead><tbody id="screenerTable"></tbody></table></div>';
+
+    if (window.TC_METRICS) {
+      METRICS = window.TC_METRICS.mount(document.getElementById('scrActions'), 'screener', SCR_DEFAULT, onMetrics)
+        .filter(function (k) { return k !== 'ticker' && k !== 'nom'; });
+      COLS = buildCols();
+    }
 
     ALL = buildRows();
     applyToForm(initial);
+    renderHead();
     bind();
     renderTable();
   };
