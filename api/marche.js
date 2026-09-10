@@ -26,6 +26,23 @@ async function latestDateFor(name) {
   return data?.[0]?.date_seance || null;
 }
 
+/**
+ * Dernière séance RÉELLE de l'historique : au moins une ligne avec du volume.
+ * Écarte les séances « placeholder » (clôture = veille, volume 0, variation 0)
+ * parfois insérées avant la publication officielle et qui, sans ce filtre,
+ * masquent la vraie dernière séance (toutes les valeurs à 0 %).
+ */
+async function latestTradedSessionDate() {
+  const { data, error } = await db.from('historique')
+    .select('date_seance')
+    .gt('volume', 0)
+    .not('date_seance', 'is', null)
+    .order('date_seance', { ascending: false })
+    .limit(1);
+  if (error) throw error;
+  return data?.[0]?.date_seance || await latestDateFor('historique');
+}
+
 function splitVariation(row) {
   const pct = row.variation_pct ?? row.variation ?? null;
   const raw = row.variation ?? null;
@@ -34,7 +51,7 @@ function splitVariation(row) {
 }
 
 async function latestCours(sessionDate = null) {
-  const latestDate = sessionDate || await latestDateFor('historique');
+  const latestDate = sessionDate || await latestTradedSessionDate();
   if (!latestDate) return { data: [], latestDate: null, source: 'historique', dates: {} };
 
   const columns = 'id,ticker,date_seance,cours_cloture,cloture,cours_normal,cours_ouverture,plus_haut,plus_bas,volume,valeur_totale,variation,variation_pct';
@@ -121,6 +138,20 @@ async function latestCours(sessionDate = null) {
       r.variation_reference_status = previousSession ? 'previous_close_missing' : 'no_previous_market_session';
     }
   }
+
+  // Capitalisation boursière = cours × nombre d'actions (référentiel entreprises).
+  try {
+    const { data: ents } = await db.from('entreprises').select('ticker,nb_actions,nombre_actions');
+    const shares = new Map((ents || []).map(e => [
+      String(e.ticker || '').trim().toUpperCase(),
+      Number(e.nb_actions || e.nombre_actions || 0)
+    ]));
+    for (const r of rows) {
+      const n = shares.get(r.ticker);
+      const c = Number(r.cours);
+      if (Number.isFinite(n) && n > 0 && Number.isFinite(c)) r.capitalisation = c * n;
+    }
+  } catch (e) { /* référentiel indisponible : capitalisation reste nulle */ }
 
   rows.sort((a, b) => String(a.ticker).localeCompare(String(b.ticker)));
   return { data: rows, latestDate, source: 'historique', dates: { [latestDate]: rows.length } };

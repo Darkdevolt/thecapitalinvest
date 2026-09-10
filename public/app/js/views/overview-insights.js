@@ -383,16 +383,36 @@
     var cibleSuivi = hote('tciWatch');
     if (cibleSuivi) {
       try {
-        var r = await fetch('/api/user-data?mode=watchlist', {
-          headers: { Authorization: 'Bearer ' + (window.TC_ENV ? window.TC_ENV.getToken() : '') },
-          cache: 'no-store'
-        });
-        var d = await r.json();
-        rendreSuivi(cibleSuivi, r.ok && d.success ? d.data : []);
+        rendreSuivi(cibleSuivi, await watchlistCache());
       } catch (e) {
         cibleSuivi.innerHTML = '';
       }
     }
+  }
+
+  // Watchlist : passe par le client API central (jeton correct) et met en
+  // cache 30 s — renderOverview est appelé à chaque navigation, l'ancien code
+  // relançait un fetch (souvent 401 faute de jeton) des dizaines de fois.
+  var _wlCache = null, _wlAt = 0, _wlInflight = null;
+  function watchlistCache() {
+    var now = Date.now();
+    if (_wlCache && now - _wlAt < 30000) return Promise.resolve(_wlCache);
+    if (_wlInflight) return _wlInflight;
+    if (typeof window.getWatchlist === 'function') {
+      var local = window.getWatchlist() || [];
+      if (local.length) { _wlCache = local; _wlAt = now; }
+    }
+    var getter = (typeof window.apiGet === 'function')
+      ? window.apiGet('/user-data?mode=watchlist')
+      : Promise.resolve(null);
+    _wlInflight = Promise.resolve(getter).then(function (d) {
+      var arr = d && (Array.isArray(d.data) ? d.data : Array.isArray(d) ? d : []);
+      _wlCache = arr || _wlCache || [];
+      _wlAt = Date.now();
+      return _wlCache;
+    }).catch(function () { return _wlCache || []; })
+      .then(function (v) { _wlInflight = null; return v; });
+    return _wlInflight;
   }
 
   /**
