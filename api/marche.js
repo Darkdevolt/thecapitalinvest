@@ -207,17 +207,27 @@ async function historiqueIndices(limit = 30, dateFrom = null, dateTo = null) {
   // des milliers de dates dépasse la limite d'URL de PostgREST et renvoyait
   // des résultats tronqués).
   const safe = Math.min(Math.max(Number(limit) || 30, 1), 4000);
-  let rq = db.from('indices')
-    .select('id,indice,date_seance,valeur,variation,variation_pct,created_at')
-    .not('date_seance', 'is', null);
-  if (dateFrom) rq = rq.gte('date_seance', dateFrom);
-  if (dateTo) rq = rq.lte('date_seance', dateTo);
-  // ~3 indices par séance -> on ramène assez de lignes pour `safe` séances.
-  const { data: rows, error: e } = await rq
-    .order('date_seance', { ascending: false })
-    .limit(Math.min(safe * 4, 24000));
-  if (e) throw e;
-  if (!rows || !rows.length) return { data: [], source: 'indices', sessions: 0 };
+  // PostgREST plafonne une réponse à ~1000 lignes : on pagine par plage de
+  // dates pour ramener tout l'historique demandé (un backtest 10 ans ≈ 7500
+  // lignes d'indice).
+  const PAGE = 1000;
+  const maxPages = Math.min(Math.ceil((safe * 4) / PAGE), 30);
+  const rows = [];
+  for (let page = 0; page < maxPages; page++) {
+    let rq = db.from('indices')
+      .select('id,indice,date_seance,valeur,variation,variation_pct,created_at')
+      .not('date_seance', 'is', null);
+    if (dateFrom) rq = rq.gte('date_seance', dateFrom);
+    if (dateTo) rq = rq.lte('date_seance', dateTo);
+    const { data, error: e } = await rq
+      .order('date_seance', { ascending: false })
+      .range(page * PAGE, page * PAGE + PAGE - 1);
+    if (e) throw e;
+    if (!data || !data.length) break;
+    rows.push(...data);
+    if (data.length < PAGE) break;
+  }
+  if (!rows.length) return { data: [], source: 'indices', sessions: 0 };
 
   // Unifie les noms puis, si plusieurs lignes existent pour la même
   // (séance, indice canonique), garde la plus récemment créée.
