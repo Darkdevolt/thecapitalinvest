@@ -279,4 +279,11 @@ main{
   .tci-user-state{display:none!important;}
   main{padding-top:30px!important;}
   .tci-stat{min-height:94px;}
+  /* Sur mobile la barre translucide laissait voir le contenu défiler « au
+     travers » : on la rend opaque et on réserve la hauteur d'ancre pour que
+     les sauts de navigation ne passent pas sous l'en-tête collant. */
+  .tci-head{background:#090908!important;}
+  :root[data-tci-theme="light"] .tci-head{background:#f7f4ed!important;}
 }
+html{scroll-padding-top:88px;}
+@media(max-width:620px){html{scroll-padding-top:132px;}}

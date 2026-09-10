@@ -82,6 +82,11 @@
   function rendre() {
     var g = avancementGlobal();
     var barre = $('#tciProgres');
+    // Barre de progression du bandeau : masquée tant que le visiteur n'a
+    // pas terminé au moins une leçon (sinon « 0 / 34 » s'affiche d'emblée à
+    // un premier visiteur et donne une impression d'interface cassée).
+    var wrap = document.querySelector('.tci-progres-w');
+    if (wrap) wrap.style.display = g.faites ? '' : 'none';
     if (barre) {
       barre.style.width = (g.pct * 100).toFixed(1) + '%';
       var t = $('#tciProgresTexte');

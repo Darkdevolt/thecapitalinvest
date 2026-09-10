@@ -303,6 +303,7 @@ async function openFiche(ticker, from, noHash) {
   if (!T) { console.warn('[FICHE] ticker vide'); return false; }
   prevView = from || 'titres';
   window._lastFicheTicker = T;
+  var _ficheToken = (window.__ficheToken = (window.__ficheToken || 0) + 1);
   injectFicheCss();
 
   if (typeof nav === 'function') nav('fiche', true);
@@ -339,8 +340,12 @@ async function openFiche(ticker, from, noHash) {
   window.__ficheHasAdj = hist.length && hist.some(function (r) { return r && r.cours_ajuste != null && Number(r.cours_ajuste) !== Number(r.cours_cloture != null ? r.cours_cloture : r.cours); });
   var last = hist.length ? hist[hist.length - 1] : null;
 
-  var av = document.querySelector('.view.active');
-  if (!av || av.id !== 'view-fiche') return false;
+  // Un rendu de fiche plus récent a été lancé pendant l'attente réseau :
+  // abandonner celui-ci (le nouveau possède désormais le placeholder).
+  // Si l'utilisateur a simplement changé de vue, on continue quand même à
+  // remplir #view-fiche pour qu'il soit prêt au retour — jamais bloqué sur
+  // « Chargement… ».
+  if (_ficheToken !== window.__ficheToken) return false;
 
   var cp = Number(coursNow.cloture != null ? coursNow.cloture : coursNow.cours);
   if (!isFinite(cp) && last) cp = histClose(last);
@@ -503,11 +508,15 @@ async function openFiche(ticker, from, noHash) {
   } catch (err) {
     console.error('[FICHE] rendu:', err);
     try {
-      var vv = document.getElementById('view-fiche');
-      if (vv && vv.classList.contains('active')) {
-        vv.innerHTML = '<button class="fch-back" type="button" onclick="nav(\'' + prevView + '\')">← Retour</button>'
-          + '<div class="fch-sec"><div class="fch-sec-t">' + fchEsc(T) + '</div>'
-          + '<div class="fch-card fch-muted">Le détail de cette valeur n\'a pas pu s\'afficher (' + fchEsc(err && err.message || 'erreur') + ').<br>Réessayez depuis la liste des titres.</div></div>';
+      // Ne pas laisser le placeholder « Chargement… » : le remplacer par un
+      // état d'erreur, sauf si un rendu plus récent a repris la main.
+      if (_ficheToken === window.__ficheToken) {
+        var vv = document.getElementById('view-fiche');
+        if (vv) {
+          vv.innerHTML = '<button class="fch-back" type="button" onclick="nav(\'' + prevView + '\')">← Retour</button>'
+            + '<div class="fch-sec"><div class="fch-sec-t">' + fchEsc(T) + '</div>'
+            + '<div class="fch-card fch-muted">Le détail de cette valeur n\'a pas pu s\'afficher (' + fchEsc(err && err.message || 'erreur') + ').<br>Réessayez depuis la liste des titres.</div></div>';
+        }
       }
     } catch (e2) {}
     return false;

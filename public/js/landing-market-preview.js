@@ -33,5 +33,11 @@ function isNewer(next,current){if(!current)return true;var a=Date.parse(next.gen
 var cached=readLocal(),currentData=null;
 if(cached){try{var localData=normalize(cached.data);if(localData){render(localData);currentData=localData}}catch(e){console.warn('[TC Landing Market] cached snapshot invalid',e)}}
 if(!currentData)loading();
-fetch(endpoint,{headers:{Accept:'application/json'},credentials:'omit',cache:'default',priority:'high'}).then(function(res){if(!res.ok)throw Error('HTTP '+res.status);return res.json()}).then(function(payload){var data=normalize(payload);if(!data)throw Error('API BRVM indisponible');if(isNewer(data,currentData)){render(data);writeLocal(data);currentData=data}else if(!currentData){render(data);writeLocal(data);currentData=data}}).catch(function(err){if(!currentData){console.warn('[TC Landing Market]',err);fallback()}else{console.warn('[TC Landing Market] silent refresh failed',err)}});
+// Un seul appel réseau par chargement de page. Il est annulé proprement si
+// l'utilisateur quitte la page avant la réponse : sans ça la requête pendante
+// apparaissait une 2e fois en net::ERR_ABORTED dans la console.
+var ac=('AbortController'in window)?new AbortController():null;
+var done=false;
+window.addEventListener('pagehide',function(){if(!done&&ac)try{ac.abort()}catch(e){}},{once:true});
+fetch(endpoint,{headers:{Accept:'application/json'},credentials:'omit',cache:'default',priority:'high',signal:ac?ac.signal:undefined}).then(function(res){if(!res.ok)throw Error('HTTP '+res.status);return res.json()}).then(function(payload){done=true;var data=normalize(payload);if(!data)throw Error('API BRVM indisponible');if(isNewer(data,currentData)){render(data);writeLocal(data);currentData=data}else if(!currentData){render(data);writeLocal(data);currentData=data}}).catch(function(err){done=true;if(err&&err.name==='AbortError')return;if(!currentData){console.warn('[TC Landing Market]',err);fallback()}else{console.warn('[TC Landing Market] silent refresh failed',err)}});
 })();
