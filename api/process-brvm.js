@@ -24,6 +24,7 @@
  */
 import { supabaseAdmin } from '../lib/supabase.js';
 import { scrapeBrvm } from '../lib/brvm-scraper.js';
+import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
 import { json, fail, readBody } from '../lib/http.js';
@@ -285,6 +286,33 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Marché obligataire : chemin distinct du pipeline actions, déclenché par
+    // POST { scope: 'obligations' } (admin ou machine). Écriture par upsert
+    // dans `obligations` (clé code) et `obligations_marche` (clé date).
+    if (req.method === 'POST') {
+      const body = await readBody(req).catch(() => ({}));
+      if (body && body.scope === 'obligations') {
+        let scraped;
+        try {
+          scraped = await scrapeBrvmObligations();
+        } catch (e) {
+          console.error('[PROCESS-BRVM] obligations source', e);
+          return json(res, 502, { success: false, error: 'Source BRVM obligations illisible.', code: 'BRVM_SOURCE_ERROR' });
+        }
+        const now = new Date().toISOString();
+        const rows = scraped.rows.map(r => ({ ...r, updated_at: now }));
+        const { error: e1 } = await supabaseAdmin.from('obligations').upsert(rows, { onConflict: 'code' });
+        if (e1) throw e1;
+        const { error: e2 } = await supabaseAdmin
+          .from('obligations_marche').upsert({ ...scraped.marche, updated_at: now }, { onConflict: 'date_seance' });
+        if (e2) throw e2;
+        return json(res, 200, {
+          success: true, scope: 'obligations',
+          date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche
+        });
+      }
+    }
+
     const current = await getSetting();
 
     // Cron Vercel : requête GET portant le secret machine.

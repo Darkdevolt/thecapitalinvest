@@ -444,8 +444,9 @@
                 TC.say('scraper-msg', 'Lecture du marché obligataire…', 'info');
                 log('Récupération obligations — écriture directe (upsert).', 'info');
                 try {
-                    const r = await TC.api('/api/obligations-sync', {
-                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', timeout: 70000
+                    const r = await TC.api('/api/process-brvm', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ scope: 'obligations' }), timeout: 70000
                     });
                     const m = r.marche || {};
                     log(r.lignes + ' ligne(s) obligataire(s) écrites — séance ' + (r.date_seance || '?') + '.', 'ok');
