@@ -19,7 +19,11 @@
 
   function loadCalendarRuntime() {
     var src = '/app/js/views/dashboard-calendar-runtime.js?v=20260908.2';
+    // loader.js charge déjà ce runtime (avec un autre ?v=). Ne pas le
+    // redoubler : sinon le calendrier du tableau de bord s'initialise 2 fois.
     if (d.querySelector('script[data-tc-dashboard-calendar-runtime]')) return;
+    if (d.querySelector('script[src*="dashboard-calendar-runtime.js"]')) return;
+    if (typeof window.tcLoadOnce === 'function') { window.tcLoadOnce(src); return; }
     var script = d.createElement('script');
     script.src = src;
     script.async = false;

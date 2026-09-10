@@ -59,11 +59,11 @@ window.addPosition = function() {
   if (!qty || qty <= 0) { toast('Quantité invalide.', 'error'); return; }
   if (!price || price <= 0) { toast("Prix d'achat invalide.", 'error'); return; }
 
-  const pf = getPortfolio();
-  pf.push({ id: Date.now(), ticker, type, qty, price, date });
-  savePortfolio(pf);
-  invalidatePortfolioCache();
+  // Une seule écriture serveur (logTransaction -> portfolioStore.addTransaction).
+  // L'ancien code appelait aussi savePortfolio -> syncPortfolio, qui POSTait
+  // l'achat une deuxième fois : position et capital investi doublés en silence.
   logTransaction({ type: 'buy', ticker, qty, price, date });
+  invalidatePortfolioCache();
 
   qtyEl.value = '';
   priceEl.value = '';
@@ -130,12 +130,11 @@ function executeSell(ticker, qty, price, date, onSuccess) {
     lot.qty = +lot.qty - take;
     remaining -= take;
   }
-  pf = pf.filter(p => (p.ticker || '').toUpperCase().trim() !== ticker || +p.qty > 0);
-  savePortfolio(pf);
   invalidatePortfolioCache();
 
   const proceeds = qty * price;
   const realizedPL = proceeds - costBasis;
+  // Une seule écriture serveur (voir note dans addPosition).
   logTransaction({ type: 'sell', ticker, qty, price, date, realizedPL });
 
   toast(`Vente enregistrée, P&L réalisé : ${realizedPL >= 0 ? '+' : ''}${typeof fmtM === 'function' ? fmtM(realizedPL) : realizedPL.toFixed(0)} FCFA`, realizedPL >= 0 ? 'success' : 'error');

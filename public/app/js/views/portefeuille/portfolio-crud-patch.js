@@ -161,4 +161,28 @@
       })
       .catch(function(error){notify(error.message||'Erreur de synchronisation.','error');});
   };
+
+  // Suppression de positions : supprime directement chaque transaction
+  // serveur cochée (l'ancienne version passait par une réconciliation qui
+  // laissait la ligne à l'écran si plusieurs transactions la composaient).
+  window.deleteSelectedPositions = function(){
+    var checked = Array.prototype.slice.call(document.querySelectorAll('.position-checkbox:checked'));
+    if(!checked.length) return;
+    var ids = [];
+    checked.forEach(function(cb){
+      (cb.getAttribute('data-ids') || cb.getAttribute('data-id') || '')
+        .split(',').map(function(s){return s.trim();}).filter(Boolean)
+        .forEach(function(id){ if(ids.indexOf(id)<0) ids.push(id); });
+    });
+    if(!ids.length) return;
+    if(!window.confirm('Supprimer '+checked.length+' position(s) sélectionnée(s) ? Les transactions correspondantes seront retirées.')) return;
+    if(!window.portfolioStore || typeof window.portfolioStore.remove !== 'function'){ notify('API portefeuille indisponible.','error'); return; }
+    Promise.all(ids.map(function(id){ return window.portfolioStore.remove(id).catch(function(e){ console.error('[PORTFOLIO] suppression',id,e); return false; }); }))
+      .then(function(res){
+        var ok = res.filter(Boolean).length;
+        notify(ok ? ok+' transaction(s) supprimée(s).' : 'Suppression impossible.', ok ? 'info' : 'error');
+        var bar = document.getElementById('bulkActionBar'); if(bar) bar.style.display='none';
+        refresh();
+      });
+  };
 })();
