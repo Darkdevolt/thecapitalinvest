@@ -66,10 +66,18 @@
       .sort(function (a, b) { return a.d < b.d ? -1 : 1; });
     return out;
   }
-  function ensureCompositeHistory() {
+  var _benchFetched = '';
+  function ensureCompositeHistory(fromDate) {
     var s = compositeSeries();
-    if (s.length >= 120 || typeof window.apiGetIndicesHistory !== 'function') return Promise.resolve(s);
-    return window.apiGetIndicesHistory(365).then(function (rows) {
+    var from = fromDate || '2015-01-01';
+    // On refait le chargement si l'historique en mémoire ne couvre pas le
+    // début de la période demandée (l'API par défaut ne renvoie que ~90 j).
+    var covers = s.length && s[0].d <= from;
+    if ((covers && s.length >= 120) || typeof window.apiGetIndicesHistory !== 'function' || _benchFetched === from) {
+      return Promise.resolve(s);
+    }
+    _benchFetched = from;
+    return window.apiGetIndicesHistory(4000, from).then(function (rows) {
       var arr = Array.isArray(rows) ? rows : (rows && rows.data) || [];
       if (arr.length) window.allIndicesHistory = arr;
       return compositeSeries();
@@ -374,9 +382,9 @@
     var histP = (typeof window.apiGetHistoriqueComplet === 'function')
       ? window.apiGetHistoriqueComplet(cfg.ticker, { pageSize: 1000, maxPages: 20, dateFrom: cfg.start, dateTo: cfg.end })
       : Promise.resolve([]);
-    var guard = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, 15000); });
+    var guard = new Promise(function (_, rej) { setTimeout(function () { rej(new Error('timeout')); }, 22000); });
 
-    Promise.race([Promise.all([histP, ensureCompositeHistory()]), guard])
+    Promise.race([Promise.all([histP, ensureCompositeHistory(cfg.start)]), guard])
       .then(function (arr) {
         var rows = arr[0] || [];
         var bench = arr[1] || [];

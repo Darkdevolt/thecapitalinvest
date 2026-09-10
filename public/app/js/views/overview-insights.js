@@ -393,26 +393,30 @@
   // Watchlist : passe par le client API central (jeton correct) et met en
   // cache 30 s — renderOverview est appelé à chaque navigation, l'ancien code
   // relançait un fetch (souvent 401 faute de jeton) des dizaines de fois.
-  var _wlCache = null, _wlAt = 0, _wlInflight = null;
+  var _wlCache = null, _wlAt = 0, _wlInflight = null, _wlFailedAt = 0;
   function watchlistCache() {
     var now = Date.now();
+    // Succès récent (<30 s) ou échec récent (<90 s) : on ne relance rien.
     if (_wlCache && now - _wlAt < 30000) return Promise.resolve(_wlCache);
+    if (now - _wlFailedAt < 90000) return Promise.resolve(_wlCache || localWatch());
     if (_wlInflight) return _wlInflight;
-    if (typeof window.getWatchlist === 'function') {
-      var local = window.getWatchlist() || [];
-      if (local.length) { _wlCache = local; _wlAt = now; }
-    }
     var getter = (typeof window.apiGet === 'function')
       ? window.apiGet('/user-data?mode=watchlist')
       : Promise.resolve(null);
     _wlInflight = Promise.resolve(getter).then(function (d) {
       var arr = d && (Array.isArray(d.data) ? d.data : Array.isArray(d) ? d : []);
-      _wlCache = arr || _wlCache || [];
-      _wlAt = Date.now();
+      _wlCache = arr || [];
+      _wlAt = Date.now(); _wlFailedAt = 0;
       return _wlCache;
-    }).catch(function () { return _wlCache || []; })
-      .then(function (v) { _wlInflight = null; return v; });
+    }).catch(function () {
+      _wlFailedAt = Date.now();      // back-off : plus de tempête de 401
+      return _wlCache || localWatch();
+    }).then(function (v) { _wlInflight = null; return v; });
     return _wlInflight;
+  }
+  function localWatch() {
+    try { return (typeof window.getWatchlist === 'function' ? window.getWatchlist() : null) || []; }
+    catch (e) { return []; }
   }
 
   /**
