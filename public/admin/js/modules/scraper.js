@@ -38,9 +38,13 @@
             '<div class="note" id="mode-note"></div>' +
             '<div class="btn-row" style="margin-top:14px;">' +
             '<button class="btn btn-primary" id="run-scraper">▶ Récupérer la séance BRVM</button>' +
-            '<button class="btn btn-blue" id="run-obligations">▶ Récupérer les obligations</button>' +
             '<button class="btn btn-blue" id="run-health">Vérifier la disponibilité de la source</button>' +
-            '</div><div class="msg" id="scraper-msg" style="margin-top:10px;"></div>' +
+            '</div>' +
+            '<div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;align-items:center;">' +
+            '<button class="btn btn-blue btn-sm" id="run-obligations">▶ Récupérer les obligations</button>' +
+            '<label style="font-size:12px;color:var(--muted);">Date de séance obligations ' +
+            '<input type="date" id="obl-date" style="margin-left:6px;"></label></div>' +
+            '<div class="msg" id="scraper-msg" style="margin-top:10px;"></div>' +
             '<div class="note" style="margin-top:12px;">La tâche planifiée Vercel exécute <span style="font-family:var(--mono);">/api/process-brvm</span> du lundi au vendredi. Le lancement manuel ci-dessus reste indépendant et ne modifie pas la planification.</div>' +
             '<div class="note" style="margin-top:8px;">« Récupérer les obligations » lit <span style="font-family:var(--mono);">brvm.org/fr/cours-obligations/0</span> et écrit directement dans <span style="font-family:var(--mono);">obligations</span> et <span style="font-family:var(--mono);">obligations_marche</span> (upsert par code / par date de séance).</div>' +
             '</div></div>' +
@@ -444,9 +448,11 @@
                 TC.say('scraper-msg', 'Lecture du marché obligataire…', 'info');
                 log('Récupération obligations — écriture directe (upsert).', 'info');
                 try {
+                    const oblDate = TC.val('obl-date') || '';
                     const r = await TC.api('/api/process-brvm', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ scope: 'obligations' }), timeout: 70000
+                        body: JSON.stringify(oblDate ? { scope: 'obligations', date: oblDate } : { scope: 'obligations' }),
+                        timeout: 70000
                     });
                     const m = r.marche || {};
                     log(r.lignes + ' ligne(s) obligataire(s) écrites — séance ' + (r.date_seance || '?') + '.', 'ok');

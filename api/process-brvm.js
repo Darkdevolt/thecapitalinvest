@@ -294,7 +294,7 @@ export default async function handler(req, res) {
       if (body && body.scope === 'obligations') {
         let scraped;
         try {
-          scraped = await scrapeBrvmObligations();
+          scraped = await scrapeBrvmObligations(body.date || body.date_seance);
         } catch (e) {
           console.error('[PROCESS-BRVM] obligations source', e);
           return json(res, 502, { success: false, error: 'Source BRVM obligations illisible.', code: 'BRVM_SOURCE_ERROR' });
