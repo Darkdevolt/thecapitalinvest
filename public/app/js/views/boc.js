@@ -9,6 +9,9 @@ function renderBoc() {
   window._bocRows = allBoc;
   filterBoc();
 }
+// Le routeur cherche renderMap.boc = 'renderBOC'.
+window.renderBOC = renderBoc;
+window.renderBoc = renderBoc;
 
 function setBocFilter(f, btn) {
   _bocFilter = f;
