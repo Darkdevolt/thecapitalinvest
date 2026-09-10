@@ -98,9 +98,15 @@
       if (row.detach) details.push('Détachement ' + row.detach.full);
       if (row.pay) details.push('Paiement ' + row.pay.full);
       if (row.detail) details.push(row.detail);
-      return '<div class="tc-calendar-item">' +
+      // Repère temporel explicite : « à venir » / « passé » relatif à
+      // aujourd'hui, pour lever l'ambiguïté quand la liste bascule sur les
+      // dernières échéances ou mélange les deux.
+      var isPast = row.next.time < now;
+      var whenLabel = isPast ? 'Passé' : 'À venir';
+      return '<div class="tc-calendar-item ' + (isPast ? 'is-past' : 'is-future') + '">' +
         '<div class="tc-calendar-date"><strong>' + esc(row.next.day) + '</strong>' + esc(row.next.month) + '</div>' +
-        '<div class="tc-calendar-info"><div class="tc-calendar-ticker">' + esc(row.instrument) + ' · ' + esc(row.nature) + '</div>' +
+        '<div class="tc-calendar-info"><div class="tc-calendar-ticker">' + esc(row.instrument) + ' · ' + esc(row.nature) +
+        ' <span class="tc-calendar-when">' + whenLabel + '</span></div>' +
         '<div class="tc-calendar-desc">' + esc(details.join(' · ')) + '</div></div>' +
         '<span class="tc-calendar-badge">' + esc(row.status) + '</span></div>';
     }).join('');

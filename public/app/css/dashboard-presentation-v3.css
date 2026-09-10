@@ -53,6 +53,11 @@ body.tc-command-layout .main{min-height:calc(100vh - 101px)!important;}
 #view-overview .tc-calendar-desc{font-size:9px!important;margin-top:2px!important;}
 #view-overview .tc-calendar-badge{font-size:8px!important;padding:4px 7px!important;}
 #view-overview .tc-calendar-empty{min-height:42px!important;height:42px!important;padding:0 12px!important;display:grid!important;place-items:center!important;font-size:10px!important;}
+/* Repère « à venir » / « passé » sur chaque échéance. */
+#view-overview .tc-calendar-when{display:inline-block!important;margin-left:6px!important;padding:1px 6px!important;border-radius:999px!important;font:600 8px/1.5 'DM Sans',sans-serif!important;letter-spacing:.04em!important;text-transform:uppercase!important;vertical-align:middle!important;}
+#view-overview .tc-calendar-item.is-future .tc-calendar-when{background:rgba(74,163,110,.14)!important;color:#7fc79c!important;}
+#view-overview .tc-calendar-item.is-past .tc-calendar-when{background:rgba(255,255,255,.06)!important;color:var(--dash-muted)!important;}
+#view-overview .tc-calendar-item.is-past{opacity:.72!important;}
 
 /* ===== Index cards: never clip the actual quote ===== */
 #view-overview #overviewStats{gap:12px!important;margin:0 0 14px!important;}

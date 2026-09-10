@@ -8,7 +8,7 @@
   w.__TC_DASHBOARD_PRESENTATION_V2__ = true;
 
   function loadStylesheet() {
-    var href = '/app/css/dashboard-presentation-v3.css?v=20260908.2';
+    var href = '/app/css/dashboard-presentation-v3.css?v=20260910';
     if (d.querySelector('link[data-tc-dashboard-presentation="v3"]')) return;
     var link = d.createElement('link');
     link.rel = 'stylesheet';
@@ -18,7 +18,7 @@
   }
 
   function loadCalendarRuntime() {
-    var src = '/app/js/views/dashboard-calendar-runtime.js?v=20260908.2';
+    var src = '/app/js/views/dashboard-calendar-runtime.js?v=20260910';
     // loader.js charge déjà ce runtime (avec un autre ?v=). Ne pas le
     // redoubler : sinon le calendrier du tableau de bord s'initialise 2 fois.
     if (d.querySelector('script[data-tc-dashboard-calendar-runtime]')) return;

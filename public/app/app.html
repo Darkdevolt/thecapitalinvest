@@ -10,9 +10,16 @@
   function b64urlDecode(str){str=String(str||'').replace(/-/g,'+').replace(/_/g,'/');while(str.length%4)str+='=';return atob(str);}
   function isTokenValid(token){try{var p=String(token||'').split('.');if(p.length!==3)return false;var payload=JSON.parse(b64urlDecode(p[1]));return !!payload.exp&&payload.exp*1000>Date.now();}catch(e){return false;}}
   function getSession(){var raw=localStorage.getItem(SK);if(!raw)return null;try{var s=JSON.parse(raw);s=(s&&s.data&&s.data.session)||(s&&s.session)||s;return s&&s.access_token?s:null;}catch(e){return null;}}
-  function redirectToLogin(){var redirect=encodeURIComponent(window.location.pathname+window.location.search+window.location.hash);window.location.replace('/login.html?redirect='+redirect);}
+  function redirectToLogin(){
+    var redirect=encodeURIComponent(window.location.pathname+window.location.search+window.location.hash);
+    window.location.replace('/login.html?redirect='+redirect);
+    // La navigation vers /login.html est engagée : couper le chargement des
+    // scripts/feuilles de l'app que le préchargeur du navigateur a déjà
+    // lancés (round-trip inutile, et rien de l'app ne doit s'exécuter).
+    try{window.stop();}catch(e){}
+  }
   var session=getSession();
-  if(!session||!isTokenValid(session.access_token)){localStorage.removeItem(SK);redirectToLogin();return;}
+  if(!session||!isTokenValid(session.access_token)){try{localStorage.removeItem(SK);}catch(e){}redirectToLogin();return;}
   window.tcSession=session;window.tcAccessToken=session.access_token;
 })();
 </script>
@@ -351,7 +358,13 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
   function bindRoutes(){qsa('[data-route]').forEach(function(el){if(el.dataset.tcRouteBound==='1')return;el.dataset.tcRouteBound='1';el.addEventListener('click',function(){var target=el.dataset.route;if(target){route(target);syncActive(target);closeMobile();}});});}
   function syncIdentity(){var s=window.tcSession||{},u=s.user||{},m=u.user_metadata||{};var name=String(m.full_name||m.fullName||[m.first_name||m.firstname,m.last_name||m.lastname].filter(Boolean).join(' ')||u.email||'').trim();if(!name)name='Investisseur';var initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(function(x){return x.charAt(0).toUpperCase();}).join('')||'TC';var n=$('headerName'),a=$('headerAvatar');if(n)n.textContent=name;if(a)a.textContent=initials;}
   function clock(){var d=new Date(),t=d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});if($('headerTime'))$('headerTime').textContent=t;if($('tcMarketClock'))$('tcMarketClock').textContent=t;}
-  function bindSearch(){var input=$('globalSearchInput'),box=$('globalSearchResults');if(!input||!box)return;var timer;input.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){var q=input.value.trim().toLowerCase();if(!q){box.innerHTML='';box.classList.remove('open');return;}var seen={},items=[];qsa('[data-route]').forEach(function(el){var r=el.dataset.route,t=(el.textContent||'').replace(/\s+/g,' ').trim();if(!r||!t||seen[r]||t.toLowerCase().indexOf(q)<0)return;if(el.classList.contains('tc-navitem')||el.classList.contains('tc-rail-link')){seen[r]=1;items.push({r:r,t:t});}});box.innerHTML=items.length?items.slice(0,8).map(function(x){return '<button type="button" class="tc-result" data-route="'+x.r+'">'+x.t+'</button>';}).join(''):'<div style="padding:11px;color:#9e978e;font:12px DM Sans,sans-serif">Aucun résultat dans la navigation</div>';box.classList.add('open');qsa('.tc-result',box).forEach(function(b){b.addEventListener('click',function(){route(b.dataset.route);syncActive(b.dataset.route);input.value='';box.classList.remove('open');});});},80);});document.addEventListener('click',function(e){if(!e.target.closest('#tcSearch'))box.classList.remove('open');});}
+  function bindSearch(){var input=$('globalSearchInput'),box=$('globalSearchResults');if(!input||!box)return;
+  // Le placeholder long est tronqué net dans le champ étroit du mobile : on
+  // le raccourcit sous 560px pour qu'il tienne entièrement.
+  var phLong=input.getAttribute('placeholder')||'Rechercher…',phShort='Rechercher…';
+  var syncPh=function(){input.setAttribute('placeholder',window.innerWidth<=560?phShort:phLong);};
+  syncPh();window.addEventListener('resize',syncPh,{passive:true});
+  var timer;input.addEventListener('input',function(){clearTimeout(timer);timer=setTimeout(function(){var q=input.value.trim().toLowerCase();if(!q){box.innerHTML='';box.classList.remove('open');return;}var seen={},items=[];qsa('[data-route]').forEach(function(el){var r=el.dataset.route,t=(el.textContent||'').replace(/\s+/g,' ').trim();if(!r||!t||seen[r]||t.toLowerCase().indexOf(q)<0)return;if(el.classList.contains('tc-navitem')||el.classList.contains('tc-rail-link')){seen[r]=1;items.push({r:r,t:t});}});box.innerHTML=items.length?items.slice(0,8).map(function(x){return '<button type="button" class="tc-result" data-route="'+x.r+'">'+x.t+'</button>';}).join(''):'<div style="padding:11px;color:#9e978e;font:12px DM Sans,sans-serif">Aucun résultat dans la navigation</div>';box.classList.add('open');qsa('.tc-result',box).forEach(function(b){b.addEventListener('click',function(){route(b.dataset.route);syncActive(b.dataset.route);input.value='';box.classList.remove('open');});});},80);});document.addEventListener('click',function(e){if(!e.target.closest('#tcSearch'))box.classList.remove('open');});}
   function bindLogout(){qsa('[data-action="logout"]').forEach(function(btn){if(btn.dataset.tcLogoutBound==='1')return;btn.dataset.tcLogoutBound='1';btn.addEventListener('click',function(){try{localStorage.removeItem('tc_session');}catch(e){}if(window.supabase&&window.supabase.auth&&typeof window.supabase.auth.signOut==='function'){window.supabase.auth.signOut().catch(function(){});}window.location.assign('/login.html');});});}
   function init(){bindRoutes();bindSearch();bindLogout();syncIdentity();clock();setInterval(clock,30000);window.dispatchEvent(new CustomEvent('tc:header-ready'));}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else init();
