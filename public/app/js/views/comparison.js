@@ -45,28 +45,50 @@
     if (yld == null && dpa != null && cp) yld = dpa / cp * 100;
     var dette = f ? num(f.dette_nette != null ? f.dette_nette : f.dettes_financieres) : null;
     var croiss = (f && f1 && num(f.chiffre_affaires) != null && num(f1.chiffre_affaires)) ? (f.chiffre_affaires / f1.chiffre_affaires - 1) * 100 : null;
+    var score = null;
+    try { if (typeof window.tcScoreMaison === 'function') score = window.tcScoreMaison(t).score; } catch (e) {}
     return {
       ticker: t, nom: e.nom || e.nom_court || t, secteur: e.secteur || '—',
-      cours: cp, capi: num(c.capitalisation) || (cp && na ? cp * na : null),
+      pays: e.pays || '—',
+      cours: cp,
+      variation: num(c.variation_pct != null ? c.variation_pct : c.variation),
+      volume: num(c.volume),
+      turnover: num(c.valeur_totale != null ? c.valeur_totale : c.valeur_transigee),
+      capi: num(c.capitalisation) || (cp && na ? cp * na : null),
       per: (cp != null && bpa != null && bpa > 0) ? cp / bpa : null,
       pbr: (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null,
       roe: roe, marge: marge, rdt: yld,
       detteFp: (dette != null && fp) ? dette / fp : null,
-      croissance: croiss, exercice: f ? f.annee : null
+      croissance: croiss, score: score, exercice: f ? f.annee : null
     };
   }
 
-  var ROWS = [
-    { k: 'cours', l: 'Cours (FCFA)', f: function (v) { return nf(v); }, hi: null },
-    { k: 'capi', l: 'Capitalisation', f: money, hi: null },
-    { k: 'per', l: 'PER', f: function (v) { return v != null ? v.toFixed(1) + 'x' : '—'; }, hi: 'low' },
-    { k: 'pbr', l: 'P/B', f: function (v) { return v != null ? v.toFixed(2) + 'x' : '—'; }, hi: 'low' },
-    { k: 'roe', l: 'ROE', f: function (v) { return v != null ? v.toFixed(1) + ' %' : '—'; }, hi: 'high' },
-    { k: 'marge', l: 'Marge nette', f: function (v) { return v != null ? v.toFixed(1) + ' %' : '—'; }, hi: 'high' },
-    { k: 'rdt', l: 'Rendement div.', f: function (v) { return v != null ? v.toFixed(2) + ' %' : '—'; }, hi: 'high' },
-    { k: 'detteFp', l: 'Dette / FP', f: function (v) { return v != null ? v.toFixed(2) + 'x' : '—'; }, hi: 'low' },
-    { k: 'croissance', l: 'Croissance CA', f: function (v) { return v != null ? (v > 0 ? '+' : '') + v.toFixed(0) + ' %' : '—'; }, hi: 'high' }
-  ];
+  // Formatteurs par valeur (le catalogue partagé formate par ligne).
+  var VF = {
+    cours: function (v) { return nf(v); },
+    variation: function (v) { return v != null ? (v > 0 ? '+' : '') + Number(v).toFixed(2) + ' %' : '—'; },
+    volume: function (v) { return nf(v); },
+    turnover: function (v) { return money(v) + ' F'; },
+    capi: function (v) { return money(v); },
+    per: function (v) { return v != null ? Number(v).toFixed(1) + 'x' : '—'; },
+    pbr: function (v) { return v != null ? Number(v).toFixed(2) + 'x' : '—'; },
+    rdt: function (v) { return v != null ? Number(v).toFixed(2) + ' %' : '—'; },
+    roe: function (v) { return v != null ? Number(v).toFixed(1) + ' %' : '—'; },
+    marge: function (v) { return v != null ? Number(v).toFixed(1) + ' %' : '—'; },
+    croissance: function (v) { return v != null ? (v > 0 ? '+' : '') + Number(v).toFixed(0) + ' %' : '—'; },
+    detteFp: function (v) { return v != null ? Number(v).toFixed(2) + 'x' : '—'; },
+    score: function (v) { return v != null ? String(v) : '—'; }
+  };
+  var CMP_DEFAULT = ['cours', 'capi', 'score', 'per', 'pbr', 'roe', 'marge', 'rdt', 'detteFp', 'croissance'];
+  function buildRows() {
+    var mp = window.TC_METRICS;
+    var keys = mp ? mp.getSelection('comparison', CMP_DEFAULT).filter(function (k) { return VF[k]; }) : CMP_DEFAULT;
+    return keys.map(function (k) {
+      var m = mp && mp.metaFor(k);
+      return { k: k, l: m ? m.l : k, f: VF[k], hi: m ? m.hi : null };
+    });
+  }
+  var ROWS = buildRows();
   var RADAR = ['roe', 'marge', 'rdt', 'croissance', 'per', 'pbr'];
 
   function injectCss() {
@@ -166,6 +188,7 @@
         : companies.slice(0, 3).map(function (c) { return String(c.ticker).toUpperCase(); });
     }
     var snaps = picks.map(snapshot);
+    ROWS = buildRows();
 
     view.innerHTML =
       '<div class="page-header"><h1>Comparaison <span style="color:var(--gold)">de sociétés</span></h1>'
@@ -177,7 +200,7 @@
           .map(function (c) { return '<option value="' + esc(c.ticker) + '">' + esc(c.ticker) + ' — ' + esc(c.nom || c.nom_court || '') + '</option>'; }).join('')
         + '</select>' : '')
       + '</div>'
-      + '<div class="cmp-bar"><button type="button" id="cmpCsv">Export CSV</button></div>'
+      + '<div class="cmp-bar"><span id="cmpActions"><button type="button" id="cmpCsv">Export CSV</button> </span></div>'
       + '<div class="cmp-cols">'
       + '<div class="card" style="overflow-x:auto"><table><thead><tr><th>Indicateur</th>'
       + snaps.map(function (s) { return '<th><b>' + esc(s.ticker) + '</b>' + esc(s.nom) + '</th>'; }).join('')
@@ -212,6 +235,10 @@
     });
     var cx = document.getElementById('cmpCsv');
     if (cx) cx.addEventListener('click', function () { csv(snaps); });
+
+    if (window.TC_METRICS && !document.getElementById('cmpActions').querySelector('.tc-mp-wrap')) {
+      window.TC_METRICS.mount(document.getElementById('cmpActions'), 'comparison', CMP_DEFAULT, function () { render(); });
+    }
   }
 
   window.renderComparison = render;
