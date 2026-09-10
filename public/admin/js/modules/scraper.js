@@ -38,9 +38,11 @@
             '<div class="note" id="mode-note"></div>' +
             '<div class="btn-row" style="margin-top:14px;">' +
             '<button class="btn btn-primary" id="run-scraper">▶ Récupérer la séance BRVM</button>' +
+            '<button class="btn btn-blue" id="run-obligations">▶ Récupérer les obligations</button>' +
             '<button class="btn btn-blue" id="run-health">Vérifier la disponibilité de la source</button>' +
             '</div><div class="msg" id="scraper-msg" style="margin-top:10px;"></div>' +
             '<div class="note" style="margin-top:12px;">La tâche planifiée Vercel exécute <span style="font-family:var(--mono);">/api/process-brvm</span> du lundi au vendredi. Le lancement manuel ci-dessus reste indépendant et ne modifie pas la planification.</div>' +
+            '<div class="note" style="margin-top:8px;">« Récupérer les obligations » lit <span style="font-family:var(--mono);">brvm.org/fr/cours-obligations/0</span> et écrit directement dans <span style="font-family:var(--mono);">obligations</span> et <span style="font-family:var(--mono);">obligations_marche</span> (upsert par code / par date de séance).</div>' +
             '</div></div>' +
 
             '<div class="card"><div class="card-head"><span class="card-title">Journal d\'exécution</span>' +
@@ -437,6 +439,24 @@
             TC.on('mode-manual', 'click', () => setMode('manual'));
             TC.on('mode-auto', 'click', () => setMode('auto'));
             TC.on('run-scraper', 'click', run);
+            TC.on('run-obligations', 'click', async function () {
+                if (!confirm('Récupérer le marché obligataire depuis brvm.org et l\'écrire dans la base ?')) return;
+                TC.say('scraper-msg', 'Lecture du marché obligataire…', 'info');
+                log('Récupération obligations — écriture directe (upsert).', 'info');
+                try {
+                    const r = await TC.api('/api/obligations-sync', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}', timeout: 70000
+                    });
+                    const m = r.marche || {};
+                    log(r.lignes + ' ligne(s) obligataire(s) écrites — séance ' + (r.date_seance || '?') + '.', 'ok');
+                    if (m.capitalisation_obligations != null) log('Capitalisation obligataire : ' + TC.fmtInt(m.capitalisation_obligations) + ' FCFA.', 'ok');
+                    if (m.valeur_transactions != null) log('Valeur des transactions : ' + TC.fmtInt(m.valeur_transactions) + ' FCFA.', 'ok');
+                    TC.say('scraper-msg', r.lignes + ' obligations mises à jour.', 'ok');
+                } catch (e) {
+                    log('Récupération obligations impossible : ' + e.message, 'err');
+                    TC.say('scraper-msg', e.message, 'err');
+                }
+            });
             TC.on('run-health', 'click', async function () {
                 TC.say('scraper-msg', 'Contrôle de la source…', 'info');
                 try {
