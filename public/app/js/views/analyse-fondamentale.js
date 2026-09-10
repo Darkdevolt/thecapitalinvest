@@ -65,3 +65,9 @@ function linearRegression(x,y){const n=x.length;if(n<2)return{slope:0,intercept:
 function calcR2(x,y){const n=x.length;if(n<3)return NaN;const r=linearRegression(x,y),ym=y.reduce((a,b)=>a+b,0)/n;let ssRes=0,ssTot=0;for(let i=0;i<n;i++){const f=r.slope*x[i]+r.intercept;ssRes+=(y[i]-f)**2;ssTot+=(y[i]-ym)**2;}return ssTot===0?1:1-ssRes/ssTot;}
 function evaluateRelevance(tcamRN,tcamCA,r2,rnSeries){let score=0,reasons=[];if(isNaN(tcamRN)){score-=2;reasons.push('TCAM RN non calculable');}else if(Math.abs(tcamRN)>40){score-=2;reasons.push('TCAM RN extrême');}if(isNaN(tcamCA)){score-=1;reasons.push('TCAM CA non calculable');}if(!isNaN(r2)&&r2<0.5){score-=1;reasons.push('R² faible');}if(rnSeries.length>=3){const c=[];for(let i=1;i<rnSeries.length;i++)if(rnSeries[i-1]!==0)c.push(Math.abs(rnSeries[i]/rnSeries[i-1]-1));if(c.length&&c.reduce((a,b)=>a+b,0)/c.length>0.3){score-=1;reasons.push('Volatilité élevée');}}if(score>=-1)return{label:'Forte',reason:'Données relativement stables'};if(score===-2)return{label:'Moyenne',reason:reasons.join('; ')||'Quelques réserves'};return{label:'Faible',reason:reasons.join('; ')||'Données instables'};}
 window.setFundMethod=setFundMethod; window.loadFundAnalysis=loadFundAnalysis;
+// Le routeur cherche renderMap['analyse-fondamentale'] = 'renderAnalyseFondamentale'.
+window.renderAnalyseFondamentale=function(){
+  try{ensureFundamentalStyles();}catch(e){}
+  if(typeof populateTickerSelects==='function'){try{populateTickerSelects();}catch(e){}}
+  try{loadFundAnalysis();}catch(e){console.warn('[FOND] render',e);}
+};
