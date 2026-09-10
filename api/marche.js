@@ -229,6 +229,8 @@ export default async function handler(req, res) {
       case 'analyses': result = await db.from('analyses').select('*').order('date_analyse', { ascending: false }).limit(500); break;
       case 'dividendes': result = await db.from('dividendes_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000); break;
       case 'coupons': result = await db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000); break;
+      case 'obligations': result = await db.from('obligations').select('*').order('code', { ascending: true }).limit(2000); break;
+      case 'obligations_marche': result = await db.from('obligations_marche').select('*').order('date_seance', { ascending: false }).limit(limit || 90); break;
       case 'apercu': {
         const snapshot = await getPublicMarketSnapshot();
         res.setHeader('Vercel-CDN-Cache-Control', PUBLIC_CDN_CACHE);
