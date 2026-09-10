@@ -61,6 +61,15 @@
     return num(row.variation_pct != null ? row.variation_pct : (row.variation != null ? row.variation : row.var));
   }
 
+  function courseSector(row) {
+    if (row.secteur || row.sector) return row.secteur || row.sector;
+    var t = courseTicker(row);
+    var ent = (window.entMap && (window.entMap[t] || window.entMap[String(t).toUpperCase()])) || null;
+    if (ent && (ent.secteur || ent.sous_secteur)) return ent.secteur || ent.sous_secteur;
+    if (typeof window.getSector === 'function') { var s = window.getSector(t); if (s) return s; }
+    return '—';
+  }
+
   function coursePrice(row) {
     return row.cours != null ? row.cours : (row.cours_cloture != null ? row.cours_cloture : (row.cloture != null ? row.cloture : row.cours_normal));
   }
@@ -74,14 +83,19 @@
   }
 
   function getIndex(names) {
+    // On veut la dernière cotation : si allIndices contient plusieurs lignes
+    // « COMPOSITE » (cas de l'historique), on garde la date la plus récente.
     var rows = getIndicesLatest();
+    if (!rows.length && Array.isArray(window.allIndicesHistory)) rows = window.allIndicesHistory.slice();
+    var best = null;
     for (var i = 0; i < rows.length; i += 1) {
       var key = String(rows[i].indice || rows[i].nom || rows[i].code || '').toUpperCase();
-      for (var j = 0; j < names.length; j += 1) {
-        if (key.indexOf(names[j]) !== -1) return rows[i];
-      }
+      var hit = false;
+      for (var j = 0; j < names.length; j += 1) { if (key.indexOf(names[j]) !== -1) { hit = true; break; } }
+      if (!hit) continue;
+      if (!best || String(rows[i].date_seance || '') > String(best.date_seance || '')) best = rows[i];
     }
-    return null;
+    return best;
   }
 
   function indexCard(label, row) {
@@ -140,7 +154,7 @@
         '<td class="right">' + money(row.plus_bas || row.plus_low || row.low) + '</td>' +
         '<td class="right">' + money(row.volume) + '</td>' +
         '<td class="right">' + money(row.capitalisation) + '</td>' +
-        '<td>' + esc(row.secteur || row.sector || '—') + '</td>' +
+        '<td>' + esc(courseSector(row)) + '</td>' +
       '</tr>';
     }).join('');
   }

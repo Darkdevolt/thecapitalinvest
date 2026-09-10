@@ -71,8 +71,12 @@
   }
 
   function loadScript(src){
+    // Dédup par chemin (sans ?v=) via le helper global : plusieurs loaders
+    // demandaient le même fichier avec des versions différentes.
+    if(typeof window.tcLoadOnce === 'function') return window.tcLoadOnce(src);
     return new Promise(function(resolve){
-      if(document.querySelector('script[data-tc-secondary="' + src.replace(/"/g,'') + '"]')){ resolve(); return; }
+      var path = String(src).split('?')[0];
+      if(document.querySelector('script[src="'+path+'"],script[src^="'+path+'?"]')){ resolve(); return; }
       const script = document.createElement('script');
       script.src = src;
       script.async = false;
@@ -91,7 +95,7 @@
       '/app/js/views/technique/data-bridge.js?v=20260826',
       '/app/js/views/user-data-patch.js?v=7',
       '/app/js/views/fundamental-ratios.js?v=1',
-      '/app/js/views/dashboard-presentation-v2.js?v=20260908.1'
+      '/app/js/views/dashboard-presentation-v2.js?v=20260910.1'
     ];
     for(const src of modules){ await loadScript(src); }
   }

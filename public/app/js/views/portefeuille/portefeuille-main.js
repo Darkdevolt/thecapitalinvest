@@ -144,7 +144,7 @@ window.renderPortfolio = function() {
         const priceFound = getLatestPrice(p.ticker) !== null, high52 = get52WeekHigh(p.ticker), low52 = get52WeekLow(p.ticker);
         const purchaseHistory = p.cmpPositions.map(pos => `<div style="font-size:12px;color:var(--dim);padding:7px 0;border-bottom:1px solid var(--border2)"><span style="color:var(--cream)">${typeof fmtDate === 'function' ? fmtDate(pos.date) : pos.date}</span> · ${typeof fmt === 'function' ? fmt(pos.qty) : pos.qty} actions · <strong style="color:var(--gold)">${typeof fmt === 'function' ? fmt(pos.price, 2) : pos.price} FCFA</strong></div>`).join('');
         return `<tr>
-          <td style="padding:14px 12px;text-align:center;width:44px"><input type="checkbox" class="position-checkbox" data-id="${p.id}" onchange="updateDeleteButton()" style="width:18px;height:18px;cursor:pointer"></td>
+          <td style="padding:14px 12px;text-align:center;width:44px"><input type="checkbox" class="position-checkbox" data-id="${p.id}" data-ids="${(p.cmpPositions||[p]).map(x=>x.serverId||x.id).filter(Boolean).join(',')}" onchange="updateDeleteButton()" style="width:18px;height:18px;cursor:pointer"></td>
           <td style="padding:14px 12px;min-width:190px">
             <div style="font-family:var(--mono);color:var(--gold);font-weight:700;font-size:15px;letter-spacing:.02em">${p.ticker}</div>
             <div style="font-size:12px;color:var(--dim);margin-top:3px">${p.pays} · ${p.sector}</div>
