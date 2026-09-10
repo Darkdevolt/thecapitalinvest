@@ -17,9 +17,23 @@
 
     function mode() { return localStorage.getItem(MODE_KEY) === 'auto' ? 'auto' : 'manual'; }
     function setMode(value) {
-        localStorage.setItem(MODE_KEY, value === 'auto' ? 'auto' : 'manual');
+        const v = value === 'auto' ? 'auto' : 'manual';
+        localStorage.setItem(MODE_KEY, v);
         paintMode();
         if (pending) paintPreview();
+        // Propage au serveur : c'est ce réglage que lit le cron d'import
+        // automatique (toutes les 30 min en séance). Sans « auto » ici, le
+        // cron ne fait rien même s'il est planifié.
+        TC.api('/api/process-brvm', {
+            method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: v }), timeout: 15000
+        }).then(function () {
+            TC.say('scraper-msg', v === 'auto'
+                ? 'Mode automatique activé côté serveur : import toutes les 30 min de 10 h à la clôture.'
+                : 'Mode manuel : le cron d\'import automatique est en pause.', 'ok');
+        }).catch(function (e) {
+            TC.say('scraper-msg', 'Réglage local pris en compte, mais le serveur n\'a pas confirmé : ' + e.message, 'warn');
+        });
     }
 
     function view() {
@@ -45,7 +59,7 @@
             '<label style="font-size:12px;color:var(--muted);">Date de séance obligations ' +
             '<input type="date" id="obl-date" style="margin-left:6px;"></label></div>' +
             '<div class="msg" id="scraper-msg" style="margin-top:10px;"></div>' +
-            '<div class="note" style="margin-top:12px;">La tâche planifiée Vercel exécute <span style="font-family:var(--mono);">/api/process-brvm</span> du lundi au vendredi. Le lancement manuel ci-dessus reste indépendant et ne modifie pas la planification.</div>' +
+            '<div class="note" style="margin-top:12px;">En mode <strong>Automatique</strong>, un cron Supabase appelle <span style="font-family:var(--mono);">/api/process-brvm</span> toutes les 30 min en séance (10 h → clôture, lun-ven) : actions + obligations. Le mode se règle ci-dessus et n\'a d\'effet que s\'il est sur « Automatique ». Le lancement manuel reste toujours disponible.</div>' +
             '<div class="note" style="margin-top:8px;">« Récupérer les obligations » lit <span style="font-family:var(--mono);">brvm.org/fr/cours-obligations/0</span> et écrit directement dans <span style="font-family:var(--mono);">obligations</span> et <span style="font-family:var(--mono);">obligations_marche</span> (upsert par code / par date de séance).</div>' +
             '</div></div>' +
 
@@ -94,8 +108,8 @@
         TC.el('mode-manual').className = 'btn btn-sm ' + (m === 'manual' ? 'btn-primary' : 'btn-outline');
         TC.el('mode-auto').className = 'btn btn-sm ' + (m === 'auto' ? 'btn-green' : 'btn-outline');
         TC.el('mode-note').innerHTML = m === 'auto'
-            ? '<strong>Automatique</strong> — dès la récupération, la séance est contrôlée puis écrite dans la base sans intervention. À réserver aux périodes où vous ne pouvez pas surveiller la source.'
-            : '<strong>Manuel</strong> — la séance reste dans cette page jusqu\'à validation. C\'est le mode recommandé : il laisse le temps de corriger la date et de vérifier les cotations aberrantes.';
+            ? '<strong>Automatique</strong> — un cron s\'exécute toutes les 30 min du lundi au vendredi, de 10 h à la clôture (≈ 15 h 30). Il importe les actions <em>et</em> les obligations sans intervention ; le dernier import de la séance fait foi comme cours de référence du jour. À réserver aux jours où vous ne pouvez pas surveiller.'
+            : '<strong>Manuel</strong> — la séance reste dans cette page jusqu\'à validation, et le cron d\'import automatique est en pause. Mode recommandé : il laisse le temps de corriger la date et de vérifier les cotations aberrantes.';
     }
 
     /* ── Récupération ────────────────────────────────────── */
@@ -440,6 +454,11 @@
         view,
         mount() {
             paintMode();
+            // Aligne l'affichage sur le réglage réel du serveur (celui que lit le cron).
+            TC.api('/api/process-brvm', { method: 'GET', timeout: 12000 }).then(function (r) {
+                const srv = r && r.settings && r.settings.mode === 'auto' ? 'auto' : 'manual';
+                if (srv !== mode()) { localStorage.setItem(MODE_KEY, srv); paintMode(); }
+            }).catch(function () {});
             TC.on('mode-manual', 'click', () => setMode('manual'));
             TC.on('mode-auto', 'click', () => setMode('auto'));
             TC.on('run-scraper', 'click', run);

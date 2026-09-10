@@ -311,6 +311,25 @@ export default async function handler(req, res) {
           date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche
         });
       }
+
+      // Déclencheur d'import automatique (pg_cron Supabase, toutes les 30 min
+      // en séance). Ne fait rien si le mode n'est pas « auto » — l'interrupteur
+      // reste maître. Importe les obligations (non bloquant) puis les actions.
+      if (machine && body && body.scope === 'auto') {
+        const cfg = await getSetting();
+        if (cfg.mode !== 'auto') {
+          return json(res, 200, { success: true, skipped: true, reason: 'automatic_processing_disabled' });
+        }
+        try {
+          const s = await scrapeBrvmObligations();
+          const now = new Date().toISOString();
+          await supabaseAdmin.from('obligations').upsert(s.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
+          await supabaseAdmin.from('obligations_marche').upsert({ ...s.marche, updated_at: now }, { onConflict: 'date_seance' });
+        } catch (e) {
+          console.warn('[PROCESS-BRVM] auto obligations non bloquant :', e && e.message);
+        }
+        return await runPipeline(res, cfg.mode);
+      }
     }
 
     const current = await getSetting();
