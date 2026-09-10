@@ -9,7 +9,7 @@ let _fundLoading = null;
 function ensureFundamentalStyles() {
   if (_fundCssLoaded || document.getElementById('fundamental-view-css')) return;
   const link = document.createElement('link'); link.id = 'fundamental-view-css'; link.rel = 'stylesheet';
-  link.href = '/app/css/analyse-fondamentale.css?v=1'; document.head.appendChild(link); _fundCssLoaded = true;
+  link.href = '/app/css/analyse-fondamentale.css?v=2'; document.head.appendChild(link); _fundCssLoaded = true;
 }
 function setFundMethod(method, btn) { _fundMethod = method; document.querySelectorAll('#view-analyse-fondamentale .filter-btn').forEach(b => b.classList.remove('active')); if (btn) btn.classList.add('active'); loadFundAnalysis(); }
 function formatFundNumber(value) { const n = Number(value); return Number.isFinite(n) ? fmtM(n) : '—'; }

@@ -28,7 +28,9 @@
   }
 
   function addTheme(){
-    if(document.getElementById('tciThemeToggle')) return;
+    // transition.js pose déjà un bouton de thème (#tci-theme-toggle) : ne pas
+    // en ajouter un second (« Clair » affiché en double dans la barre de nav).
+    if(document.getElementById('tciThemeToggle')||document.getElementById('tci-theme-toggle')) return;
     var nav=document.querySelector('.tci-nav');
     if(!nav) return;
     var b=document.createElement('button');

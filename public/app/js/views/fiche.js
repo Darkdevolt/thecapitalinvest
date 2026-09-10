@@ -14,11 +14,13 @@ var ficheAdjusted = true; // cours ajustés des dividendes par défaut (recomman
 
 // ── Formats ────────────────────────────────────────────────────────────────
 function fchNum(v, dec) {
+  if (v == null || v === '') return '—';           // null / undefined / '' ≠ 0
   var n = Number(v);
   if (!isFinite(n)) return '—';
   return n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 2 : dec });
 }
 function fchMoney(v) {
+  if (v == null || v === '') return '—';
   var n = Number(v);
   if (!isFinite(n)) return '—';
   var a = Math.abs(n);
@@ -28,6 +30,7 @@ function fchMoney(v) {
   return fchNum(n);
 }
 function fchPct(v, dec) {
+  if (v == null || v === '') return '—';
   var n = Number(v);
   if (!isFinite(n)) return '—';
   return (n > 0 ? '+' : '') + n.toFixed(dec == null ? 1 : dec) + ' %';
