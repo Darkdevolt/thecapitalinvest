@@ -276,6 +276,7 @@ export default async function handler(req, res) {
     const url = requestUrl(req);
     const type = url.searchParams.get('type') || 'cours';
     const ticker = (url.searchParams.get('ticker') || '').trim().toUpperCase();
+    const categorie = (url.searchParams.get('categorie') || '').trim();
     const limit = Math.min(Math.max(Number(url.searchParams.get('limit')) || 30, 1), PAGE_SIZE);
     const offset = Math.max(Number(url.searchParams.get('offset')) || 0, 0);
     const dateFrom = url.searchParams.get('date_from');
@@ -320,6 +321,14 @@ export default async function handler(req, res) {
       case 'coupons': result = await db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000); break;
       case 'obligations': result = await db.from('obligations').select('*').order('code', { ascending: true }).limit(2000); break;
       case 'obligations_marche': result = await db.from('obligations_marche').select('*').order('date_seance', { ascending: false }).limit(limit || 90); break;
+      case 'documents_emetteurs': {
+        let q = db.from('documents_emetteurs').select('*')
+          .order('date_publication', { ascending: false }).order('created_at', { ascending: false }).limit(500);
+        if (ticker) q = q.eq('ticker', ticker);
+        if (categorie) q = q.eq('categorie', categorie);
+        result = await q;
+        break;
+      }
       case 'apercu': {
         const snapshot = await getPublicMarketSnapshot();
         res.setHeader('Vercel-CDN-Cache-Control', PUBLIC_CDN_CACHE);

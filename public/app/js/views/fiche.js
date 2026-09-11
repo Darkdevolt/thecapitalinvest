@@ -297,6 +297,32 @@ function fchConclBox(k, title, items) {
       : '<div class="empty">Rien de significatif.</div>') + '</div>';
 }
 
+// ── Annonces BRVM (convocations AG, résultats, dividendes, avis...) ────────
+var ANN_CATEGORY_LABELS = {
+  convocation_ag: 'Convocation AG', projet_resolution: 'Projet de résolution',
+  notation_financiere: 'Notation financière', communique: 'Communiqué',
+  changement_dirigeants: 'Changement de dirigeants', franchissement_seuil: 'Franchissement de seuil'
+};
+async function loadFicheAnnouncements(ticker, token) {
+  var box = document.getElementById('fch-ann-list');
+  if (!box) return;
+  try {
+    var r = await window.apiGet('/marche?type=documents_emetteurs&ticker=' + encodeURIComponent(ticker) + '&limit=12', { cache: 'no-store' });
+    if (token !== window.__ficheToken) return; // un rendu plus récent a repris la main
+    var rows = (r && (r.data || r)) || [];
+    box = document.getElementById('fch-ann-list');
+    if (!box) return;
+    box.innerHTML = rows.length ? rows.map(function (d) {
+      return '<a href="' + fchEsc(d.fichier_url) + '" target="_blank" rel="noopener noreferrer">'
+        + '<span>' + fchEsc(ANN_CATEGORY_LABELS[d.categorie] || d.categorie) + ' · ' + fchEsc(d.titre || '') + (d.date_publication ? ' · ' + fchEsc(d.date_publication) : '') + '</span><span>Ouvrir ↗</span></a>';
+    }).join('') : '<div class="fch-muted">Aucune annonce BRVM référencée pour cette valeur.</div>';
+  } catch (e) {
+    if (token !== window.__ficheToken) return;
+    box = document.getElementById('fch-ann-list');
+    if (box) box.innerHTML = '<div class="fch-muted">Annonces BRVM indisponibles.</div>';
+  }
+}
+
 // ── Rendu principal ──────────────────────────────────────────────────────
 async function openFiche(ticker, from, noHash) {
   var T = String(ticker || '').trim().toUpperCase();
@@ -483,12 +509,13 @@ async function openFiche(ticker, from, noHash) {
 
   // 7 · Documents
   var docs = fins.filter(function (f) { return f.source_url && /^https?:\/\//i.test(f.source_url); });
-  H.push(fchSec('Documents', docs.length
+  H.push(fchSec('Documents', (docs.length
     ? '<div class="fch-card fch-docs">' + docs.slice(0, 8).map(function (f) {
       return '<a href="' + fchEsc(f.source_url) + '" target="_blank" rel="noopener noreferrer">'
         + '<span>' + fchEsc(f.source || ('États financiers ' + f.annee)) + ' · ' + f.annee + '</span><span>Ouvrir ↗</span></a>';
     }).join('') + '</div>'
-    : '<div class="fch-card fch-muted">Aucun document source référencé.</div>'));
+    : '<div class="fch-card fch-muted">Aucun document source référencé.</div>')
+    + '<div class="fch-card fch-docs" id="fch-ann-list" style="margin-top:10px"><div class="fch-muted">Chargement des annonces BRVM…</div></div>'));
 
   // 8 · Conclusion
   H.push(fchSec('Conclusion', '<div class="fch-concl">'
@@ -504,6 +531,7 @@ async function openFiche(ticker, from, noHash) {
   window._ficheFins = fins;
   ficheChartPeriod = 252;
   renderFicheChart();
+  loadFicheAnnouncements(T, _ficheToken);
   return true;
   } catch (err) {
     console.error('[FICHE] rendu:', err);

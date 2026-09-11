@@ -25,9 +25,11 @@
 import { supabaseAdmin } from '../lib/supabase.js';
 import { scrapeBrvm } from '../lib/brvm-scraper.js';
 import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
+import { scrapeAnnouncements, CATEGORIES as ANNOUNCEMENT_CATEGORIES } from '../lib/brvm-announcements-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
 import { json, fail, readBody } from '../lib/http.js';
+import config from '../lib/config.js';
 
 /** Variation maximale autorisée sur une séance, en pourcentage. */
 const VARIATION_LIMIT = 7.5;
@@ -227,6 +229,97 @@ async function writeSession(payload, rows) {
   return { courses: rows.length, historique: histRows.length, indices: indicesCount };
 }
 
+/* ── Annonces émetteurs (convocations AG, résultats, dividendes, avis...) ──
+   Récupération volontairement bornée par appel (`limit`) : un backfill de
+   plusieurs années sur six catégories peut représenter des centaines de PDF,
+   au-delà du temps d'exécution d'une fonction Vercel. L'admin relance
+   l'action autant que nécessaire ; chaque annonce déjà en base (par
+   source_url, contrainte unique) est sautée, donc relancer ne duplique rien
+   et reprend là où ça s'est arrêté. */
+const ANNOUNCEMENTS_BUCKET = 'annonces-emetteurs';
+const annSafeName = value => String(value || 'document.pdf')
+  .normalize('NFKD').replace(/[^\w.\-]+/g, '_').replace(/^\.+/, '').slice(0, 160) || 'document.pdf';
+
+function announcementsPublicUrl(path) {
+  if (!config.supabaseUrl) throw new Error('SUPABASE_URL non configurée');
+  return `${config.supabaseUrl}/storage/v1/object/public/${ANNOUNCEMENTS_BUCKET}/${path}`;
+}
+
+function basenameOf(url) {
+  try { return decodeURIComponent(new URL(url).pathname.split('/').pop() || 'document.pdf'); }
+  catch { return 'document.pdf'; }
+}
+
+async function existingSourceUrls(urls) {
+  if (!urls.length) return new Set();
+  const { data, error } = await supabaseAdmin.from('documents_emetteurs').select('source_url').in('source_url', urls);
+  if (error) throw error;
+  return new Set((data || []).map(r => r.source_url));
+}
+
+async function downloadAndStoreAnnouncement(row) {
+  const response = await fetch(row.source_url, { headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' } });
+  if (!response.ok) throw new Error(`PDF HTTP ${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const filename = annSafeName(basenameOf(row.source_url));
+  const path = `${row.categorie}/${row.date_publication || 'sans-date'}/${Date.now()}_${filename}`;
+  const { error: uploadError } = await supabaseAdmin.storage.from(ANNOUNCEMENTS_BUCKET).upload(path, buffer, {
+    contentType: 'application/pdf', upsert: true
+  });
+  if (uploadError) throw uploadError;
+  return { fichier_nom: filename, fichier_url: announcementsPublicUrl(path), taille_octets: buffer.length };
+}
+
+async function runAnnouncementsScrape({ categories, sinceYears, limit }) {
+  const catList = categories?.length ? ANNOUNCEMENT_CATEGORIES.filter(c => categories.includes(c.slug)) : ANNOUNCEMENT_CATEGORIES;
+  const { rows, errors: scrapeErrors } = await scrapeAnnouncements({ categories: catList, sinceYears });
+
+  const known = await existingSourceUrls(rows.map(r => r.source_url));
+  const fresh = rows.filter(r => !known.has(r.source_url));
+  const batch = fresh.slice(0, limit);
+
+  const reference = await loadEnterpriseReference();
+  let imported = 0;
+  const writeErrors = [];
+  for (const row of batch) {
+    try {
+      const match = matchInstrument({ nom: row.societe_nom }, reference);
+      const ticker = match.status === 'matched' ? match.record.ticker : null;
+      const stored = await downloadAndStoreAnnouncement(row);
+      const { error } = await supabaseAdmin.from('documents_emetteurs').upsert({
+        ticker, societe_nom: row.societe_nom, categorie: row.categorie, titre: row.titre,
+        date_publication: row.date_publication, source_url: row.source_url, ...stored
+      }, { onConflict: 'source_url' });
+      if (error) throw error;
+      imported++;
+    } catch (error) {
+      writeErrors.push({ source_url: row.source_url, error: String(error?.message || error) });
+    }
+  }
+
+  return {
+    found: rows.length, already_stored: rows.length - fresh.length, imported,
+    remaining: Math.max(0, fresh.length - batch.length), has_more: fresh.length > batch.length,
+    scrape_errors: scrapeErrors, write_errors: writeErrors
+  };
+}
+
+async function deleteAnnouncement(id) {
+  const { data: doc, error: lookupError } = await supabaseAdmin.from('documents_emetteurs').select('fichier_url').eq('id', id).maybeSingle();
+  if (lookupError) throw lookupError;
+  if (!doc) return null;
+  const marker = `/${ANNOUNCEMENTS_BUCKET}/`;
+  const position = String(doc.fichier_url || '').indexOf(marker);
+  if (position !== -1) {
+    const path = doc.fichier_url.slice(position + marker.length);
+    const { error: storageError } = await supabaseAdmin.storage.from(ANNOUNCEMENTS_BUCKET).remove([path]);
+    if (storageError) console.warn('[PROCESS-BRVM] suppression stockage annonce :', storageError.message);
+  }
+  const { error } = await supabaseAdmin.from('documents_emetteurs').delete().eq('id', id);
+  if (error) throw error;
+  return id;
+}
+
 async function runPipeline(res, mode) {
   const startedAt = new Date().toISOString();
   const payload = await scrapeBrvm();
@@ -310,6 +403,27 @@ export default async function handler(req, res) {
           success: true, scope: 'obligations',
           date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche
         });
+      }
+
+      // Annonces émetteurs (convocations AG, résultats, dividendes, avis...) :
+      // POST { scope:'announcements', categories?, sinceYears?, limit? } déclenche
+      // une récupération bornée ; POST { scope:'announcements', action:'delete', id }
+      // retire un document (admin uniquement — pas de secret machine ici, ce
+      // flux n'a pas vocation à tourner sur cron pour l'instant).
+      if (body && body.scope === 'announcements') {
+        if (body.action === 'delete') {
+          const id = String(body.id || '');
+          if (!id) return fail(res, 400, 'Identifiant requis.', 'INVALID_ID');
+          const removed = await deleteAnnouncement(id);
+          if (!removed) return fail(res, 404, 'Document introuvable.', 'NOT_FOUND');
+          return json(res, 200, { success: true, scope: 'announcements', action: 'delete', id: removed });
+        }
+        const result = await runAnnouncementsScrape({
+          categories: Array.isArray(body.categories) ? body.categories : null,
+          sinceYears: Number.isFinite(Number(body.sinceYears)) ? Number(body.sinceYears) : 5,
+          limit: Math.min(100, Number(body.limit) || 40)
+        });
+        return json(res, 200, { success: true, scope: 'announcements', ...result });
       }
 
       // Déclencheur d'import automatique (pg_cron Supabase, toutes les 30 min
