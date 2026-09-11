@@ -203,10 +203,17 @@ async function writeSession(payload, rows) {
     variation: r.variation, variation_pct: r.variation_pct, valeur_totale: r.valeur_totale
   }));
 
-  const cours = await supabaseAdmin.from('cours')
-    .upsert(rows, { onConflict: 'ticker,date_seance' });
-  if (cours.error) throw cours.error;
-
+  /* CORRECTIF : le pipeline échouait à chaque exécution, avant même
+     d'écrire quoi que ce soit — silencieusement pour le cron (401 côté
+     auth), mais aussi pour tout déclenchement manuel réussi. La cause :
+     un upsert vers la table `cours`, avec les colonnes de `rows`
+     (cours_cloture, cours_ouverture, valeur_totale, nom...) qui ne
+     correspondent pas au schéma réel de `cours` (cours, ouverture,
+     valeur_transigee — sans nom) ; PostgREST rejette l'upsert entier
+     dès qu'une colonne est inconnue. Cette table n'est lue nulle part
+     dans le code (grep confirmé) : latestCours(), la seule source des
+     cours affichés dans l'app, lit exclusivement `historique`. L'écrire
+     n'apportait rien et bloquait la seule écriture qui compte. */
   const historique = await supabaseAdmin.from('historique')
     .upsert(histRows, { onConflict: 'ticker,date_seance' });
   if (historique.error) throw historique.error;
