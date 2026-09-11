@@ -99,7 +99,11 @@
       if (!e || !e.ticker) return;
       var t = String(e.ticker).toUpperCase();
       var nom = e.nom || e.nom_court || e.raison_sociale || '';
-      var hay = strip(t + ' ' + nom + ' ' + (e.secteur || ''));
+      // Ticker et nom seulement — le secteur était inclus dans le texte
+      // recherché, si bien qu'une requête courte comme « ns » remontait
+      // toute société « Consommation discrétionnaire » (contient « ns »)
+      // sans rapport avec la recherche de l'utilisateur.
+      var hay = strip(t + ' ' + nom);
       if (hay.indexOf(qn) === -1) return;
       var rank = strip(t) === qn ? 0 : strip(t).indexOf(qn) === 0 ? 1 : 2;
       seen[t] = 1;
