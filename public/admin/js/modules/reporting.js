@@ -539,7 +539,7 @@
 
         /* — Indices — valeur, variation de période, variation depuis le 1er janvier — */
         if (options.blocs.indices && data.indices.length) {
-            y = section(parts, 'Indices de marché', pad, y, W, text, rule, g);
+            y = section(parts, 'Indices de marché', pad, y, W, text, rule, g, 'bars');
             const colVal = W - pad - 300, colPer = W - pad - 150, colYtd = W - pad;
             parts.push(text('VALEUR', colVal, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
             parts.push(text(data.window.periode === 'seance' ? 'SÉANCE' : 'PÉRIODE', colPer, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
@@ -557,9 +557,9 @@
                     size: 16, anchor: 'end', family: "'DM Mono',monospace",
                     fill: idx.ytd == null ? C.muted : TC.toNumber(idx.ytd) >= 0 ? C.green : C.red
                 }));
-                y += g(32);
+                y += g(27);
             });
-            y += g(18);
+            y += g(14);
         }
 
         /* — Marché en chiffres (récapitulatif détaillé) — */
@@ -577,11 +577,11 @@
                 ['Rentabilité médiane (ROE)', c.roeMedian != null ? c.roeMedian.toFixed(1) + ' %' : null]
             ].filter(it => it[1] != null);
             if (items.length) {
-                y = section(parts, 'Le marché en chiffres', pad, y, W, text, rule, g);
+                y = section(parts, 'Le marché en chiffres', pad, y, W, text, rule, g, 'coins');
                 items.forEach(function (it) {
                     parts.push(text(it[0], pad, y, { size: 15, fill: C.muted }));
                     parts.push(text(it[1], W - pad, y, { size: 15, anchor: 'end', family: "'DM Mono',monospace" }));
-                    y += g(28);
+                    y += g(24);
                 });
                 y += g(16);
             }
@@ -590,7 +590,7 @@
         /* — Palmarès — */
         const podium = function (title, list, positive) {
             if (!list.length) return;
-            y = section(parts, title, pad, y, W, text, rule, g);
+            y = section(parts, title, pad, y, W, text, rule, g, positive ? 'up' : 'down');
             list.forEach(function (e, i) {
                 parts.push(text(String(i + 1).padStart(2, '0'), pad, y, {
                     size: 13, fill: C.gold, family: "'DM Mono',monospace"
@@ -608,19 +608,19 @@
                 if (TC.toNumber(e.valeur)) detail.push(money(e.valeur) + ' F échangés');
                 if (detail.length) {
                     parts.push(text(detail.join(' · '), pad + 34, y + g(16), { size: 11, fill: C.muted }));
-                    y += g(44);
+                    y += g(37);
                 } else {
-                    y += g(32);
+                    y += g(27);
                 }
             });
-            y += g(18);
+            y += g(14);
         };
         if (options.blocs.hausses) podium('Plus fortes hausses', data.hausses, true);
         if (options.blocs.baisses) podium('Plus fortes baisses', data.baisses, false);
 
         /* — Volumes — */
         if (options.blocs.volumes && data.volumes.length) {
-            y = section(parts, 'Titres les plus échangés', pad, y, W, text, rule, g);
+            y = section(parts, 'Titres les plus échangés', pad, y, W, text, rule, g, 'volume');
             const max = Math.max.apply(null, data.volumes.map(e => e.valeur)) || 1;
             data.volumes.forEach(function (e) {
                 parts.push(text(e.ticker, pad, y, { size: 17, fill: C.gold, family: "'Playfair Display',serif", weight: 500 }));
@@ -629,15 +629,15 @@
                 const barW = Math.max(6, (inner) * (e.valeur / max));
                 parts.push('<rect x="' + pad + '" y="' + barY + '" width="' + inner + '" height="4" fill="' + C.line + '" rx="2"/>');
                 parts.push('<rect x="' + pad + '" y="' + barY + '" width="' + barW + '" height="4" fill="' + C.gold + '" rx="2"/>');
-                y += g(40);
+                y += g(33);
             });
-            y += g(8);
+            y += g(6);
         }
 
         /* — Marché obligataire — */
         if (options.blocs.obligataire && data.obligataire && (data.obligataire.lignes || data.obligataire.snapshot)) {
             const o = data.obligataire;
-            y = section(parts, 'Marché obligataire', pad, y, W, text, rule, g);
+            y = section(parts, 'Marché obligataire', pad, y, W, text, rule, g, 'bond');
             const lines = [];
             if (o.lignes) lines.push(['Lignes cotées', String(o.lignes)]);
             if (o.snapshot && TC.toNumber(o.snapshot.capitalisation_obligations) != null)
@@ -646,7 +646,7 @@
             lines.forEach(function (it) {
                 parts.push(text(it[0], pad, y, { size: 15, fill: C.muted }));
                 parts.push(text(it[1], W - pad, y, { size: 15, anchor: 'end', family: "'DM Mono',monospace" }));
-                y += g(28);
+                y += g(24);
             });
             if (o.top && o.top.length) {
                 y += g(6);
@@ -665,7 +665,7 @@
 
         /* — Dividendes à venir — */
         if (options.blocs.dividendes && data.dividendesAVenir && data.dividendesAVenir.length) {
-            y = section(parts, 'Dividendes à venir', pad, y, W, text, rule, g);
+            y = section(parts, 'Dividendes à venir', pad, y, W, text, rule, g, 'calendar');
             data.dividendesAVenir.forEach(function (d) {
                 parts.push(text(d.ticker, pad, y, { size: 15, fill: C.gold, family: "'Playfair Display',serif", weight: 500 }));
                 const nm = (d.nom || '').slice(0, 24);
@@ -673,14 +673,14 @@
                 parts.push(text(typeof TC.fmtDate === 'function' ? TC.fmtDate(d.detach) : String(d.detach || ''), W - pad - 210, y, { size: 13, anchor: 'end', fill: C.muted, family: "'DM Mono',monospace" }));
                 parts.push(text(d.montant != null ? money(d.montant) + ' F' : '—', W - pad - 90, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace" }));
                 parts.push(text(d.rdt != null ? (d.rdt <= 1.5 ? (d.rdt * 100) : d.rdt).toFixed(2) + ' %' : '—', W - pad, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace", fill: C.green }));
-                y += g(30);
+                y += g(25);
             });
             y += g(16);
         }
 
         /* — Commentaire — */
         if (options.blocs.note && options.note) {
-            y = section(parts, 'Actualité / lecture du marché', pad, y, W, text, rule, g);
+            y = section(parts, 'Actualité / lecture du marché', pad, y, W, text, rule, g, 'quote');
             wrap(options.note, Math.floor(inner / 9.6)).slice(0, 7).forEach(function (line) {
                 parts.push(text(line, pad, y, { size: 16, fill: C.cream }));
                 y += g(27);
@@ -708,10 +708,57 @@
         };
     }
 
-    function section(parts, title, pad, y, W, text, rule, g) {
-        parts.push(text(title.toUpperCase(), pad, y, { size: 12, fill: C.gold, spacing: 2.4, weight: 500 }));
+    /* Petites icônes de repère par section — traits géométriques simples,
+       cohérents avec le reste du dessin (rects/cercles/lignes), sans police
+       d'icônes externe pour que l'export PNG/JPEG reste autonome. */
+    function glyph(key, x, y) {
+        const s = C.gold, cy = y - 4; // aligné sur la ligne de base du titre (12px)
+        switch (key) {
+            case 'up':
+                return '<path d="M' + x + ' ' + (cy + 5) + ' L' + (x + 5) + ' ' + (cy - 2) + ' L' + (x + 9) + ' ' + (cy + 2) + ' L' + (x + 15) + ' ' + (cy - 6) +
+                    '" fill="none" stroke="' + C.green + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+                    '<path d="M' + (x + 11) + ' ' + (cy - 6) + ' L' + (x + 15) + ' ' + (cy - 6) + ' L' + (x + 15) + ' ' + (cy - 2) + '" fill="none" stroke="' + C.green + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+            case 'down':
+                return '<path d="M' + x + ' ' + (cy - 5) + ' L' + (x + 5) + ' ' + (cy + 2) + ' L' + (x + 9) + ' ' + (cy - 2) + ' L' + (x + 15) + ' ' + (cy + 6) +
+                    '" fill="none" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+                    '<path d="M' + (x + 11) + ' ' + (cy + 6) + ' L' + (x + 15) + ' ' + (cy + 6) + ' L' + (x + 15) + ' ' + (cy + 2) + '" fill="none" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
+            case 'bars':
+                return '<rect x="' + x + '" y="' + (cy + 1) + '" width="3" height="7" fill="' + s + '" rx="1"/>' +
+                    '<rect x="' + (x + 5) + '" y="' + (cy - 4) + '" width="3" height="12" fill="' + s + '" rx="1"/>' +
+                    '<rect x="' + (x + 10) + '" y="' + (cy - 7) + '" width="3" height="15" fill="' + s + '" rx="1"/>';
+            case 'coins':
+                return '<circle cx="' + (x + 4) + '" cy="' + (cy + 3) + '" r="4.5" fill="none" stroke="' + s + '" stroke-width="1.6"/>' +
+                    '<circle cx="' + (x + 10.5) + '" cy="' + (cy - 2) + '" r="4.5" fill="' + C.bg + '" stroke="' + s + '" stroke-width="1.6"/>';
+            case 'calendar':
+                return '<rect x="' + x + '" y="' + (cy - 6) + '" width="15" height="13" rx="2" fill="none" stroke="' + s + '" stroke-width="1.6"/>' +
+                    '<line x1="' + x + '" y1="' + (cy - 2) + '" x2="' + (x + 15) + '" y2="' + (cy - 2) + '" stroke="' + s + '" stroke-width="1.6"/>' +
+                    '<line x1="' + (x + 4) + '" y1="' + (cy - 8) + '" x2="' + (x + 4) + '" y2="' + (cy - 4) + '" stroke="' + s + '" stroke-width="1.6" stroke-linecap="round"/>' +
+                    '<line x1="' + (x + 11) + '" y1="' + (cy - 8) + '" x2="' + (x + 11) + '" y2="' + (cy - 4) + '" stroke="' + s + '" stroke-width="1.6" stroke-linecap="round"/>';
+            case 'quote':
+                return '<path d="M' + x + ' ' + (cy + 4) + ' Q' + x + ' ' + (cy - 6) + ' ' + (x + 7) + ' ' + (cy - 6) +
+                    ' Q' + (x + 4) + ' ' + (cy - 6) + ' ' + (x + 4) + ' ' + (cy - 1) + ' L' + (x + 4) + ' ' + (cy + 4) + ' Z" fill="' + s + '" fill-opacity="0.85"/>' +
+                    '<path d="M' + (x + 8) + ' ' + (cy + 4) + ' Q' + (x + 8) + ' ' + (cy - 6) + ' ' + (x + 15) + ' ' + (cy - 6) +
+                    ' Q' + (x + 12) + ' ' + (cy - 6) + ' ' + (x + 12) + ' ' + (cy - 1) + ' L' + (x + 12) + ' ' + (cy + 4) + ' Z" fill="' + s + '" fill-opacity="0.85"/>';
+            case 'bond':
+                return '<rect x="' + x + '" y="' + (cy - 6) + '" width="15" height="11" rx="2" fill="none" stroke="' + s + '" stroke-width="1.6"/>' +
+                    '<line x1="' + (x + 3) + '" y1="' + (cy - 2) + '" x2="' + (x + 12) + '" y2="' + (cy - 2) + '" stroke="' + s + '" stroke-width="1.2"/>' +
+                    '<circle cx="' + (x + 11) + '" cy="' + (cy + 1) + '" r="2.6" fill="' + C.bg + '" stroke="' + s + '" stroke-width="1.2"/>';
+            case 'volume':
+                return '<rect x="' + x + '" y="' + (cy - 6) + '" width="2.4" height="13" fill="' + s + '" rx="1"/>' +
+                    '<rect x="' + (x + 4.5) + '" y="' + (cy - 2) + '" width="2.4" height="9" fill="' + s + '" rx="1"/>' +
+                    '<rect x="' + (x + 9) + '" y="' + (cy - 9) + '" width="2.4" height="16" fill="' + s + '" rx="1"/>' +
+                    '<rect x="' + (x + 13.5) + '" y="' + cy + '" width="2.4" height="7" fill="' + s + '" rx="1"/>';
+            default:
+                return '';
+        }
+    }
+
+    function section(parts, title, pad, y, W, text, rule, g, icon) {
+        const dx = icon ? 22 : 0;
+        if (icon) parts.push(glyph(icon, pad, y));
+        parts.push(text(title.toUpperCase(), pad + dx, y, { size: 12, fill: C.gold, spacing: 2.4, weight: 500 }));
         parts.push(rule(y + 14, 0.2));
-        return y + (g ? g(48) : 48);
+        return y + (g ? g(40) : 40);
     }
 
     function wrap(source, width) {
