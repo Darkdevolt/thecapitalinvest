@@ -127,65 +127,15 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
 <div class="view" id="view-analyses"><div class="page-header"><h1>Recommandations <span style="color:var(--gold)">Marché</span></h1><p>Analyses et recommandations sur les valeurs BRVM</p></div><div id="analysesList" data-legacy-id="analysesGrid"></div></div>
 <div class="view" id="view-analyse-detail"><div id="analyseDetailContent"></div></div>
 
-<!-- ═══ FICHE TITRE ═══ -->
+<!-- ═══ FICHE TITRE ═══
+     Squelette volontairement minimal : fiche.js (rendu v2, chargé
+     dynamiquement par loader.js) remplace tout le contenu de #view-fiche
+     dès qu'il s'exécute — les IDs d'un ancien squelette v1 (ficheCompany,
+     r-per, etc.) n'étaient plus lus par aucun script et ne s'affichaient,
+     pleins de « — », que pendant la fenêtre où fiche.js n'avait pas encore
+     fini de charger, donnant l'impression d'une page cassée. -->
 <div class="view" id="view-fiche">
-  <button class="back-btn" id="ficheBackBtn" onclick="nav('titres')">← Retour</button>
-  <div class="fiche-hero">
-    <div class="fiche-ticker-label" id="ficheTickerLabel"></div>
-    <div class="fiche-company" id="ficheCompany">—</div>
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
-      <span class="sector-tag" id="ficheSector"></span>
-      <span style="font-size:11px;color:var(--dim)" id="fichePays"></span>
-    </div>
-    <div class="fiche-price-row">
-      <div class="fiche-price" id="fichePrice">—</div>
-      <div style="font-size:14px;color:var(--muted)">FCFA</div>
-      <div id="ficheChange" style="font-family:var(--mono);font-size:18px;font-weight:500"></div>
-    </div>
-    <div class="fiche-meta" id="ficheMeta"></div>
-    <div class="ratios-grid" id="ficheRatios">
-      <div class="ratio-item"><div class="ratio-label">P/E Ratio</div><div class="ratio-value" id="r-per">—</div></div>
-      <div class="ratio-item"><div class="ratio-label">Div. Yield</div><div class="ratio-value" id="r-rdt">—</div></div>
-      <div class="ratio-item"><div class="ratio-label">P / Actif Net</div><div class="ratio-value" id="r-pan">—</div></div>
-      <div class="ratio-item"><div class="ratio-label">Capitalisation</div><div class="ratio-value" id="r-cap">—</div></div>
-    </div>
-  </div>
-  <div class="grid-7030">
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title">Historique des cours</div>
-        <div style="display:flex;gap:6px">
-          <button class="year-tab active" onclick="setChartPeriod(30,this)">1M</button>
-          <button class="year-tab" onclick="setChartPeriod(90,this)">3M</button>
-          <button class="year-tab" onclick="setChartPeriod(180,this)">6M</button>
-          <button class="year-tab" onclick="setChartPeriod(252,this)">1A</button>
-          <button class="year-tab" onclick="setChartPeriod(99999,this)">Tout</button>
-        </div>
-      </div>
-      <div class="card-body"><div class="chart-container tall"><canvas id="chartFiche"></canvas></div></div>
-    </div>
-    <div>
-      <div class="card mb20" style="margin-bottom:16px">
-        <div class="card-header"><div class="card-title">Description</div></div>
-        <div class="card-body" style="font-size:13px;color:var(--muted);line-height:1.7" id="ficheDesc">—</div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">Informations</div></div>
-        <div id="ficheInfo" style="padding:0 20px"></div>
-      </div>
-    </div>
-  </div>
-  <div class="card mb20" style="margin-bottom:16px">
-    <div class="card-header"><div class="card-title">Dernières Analyses</div></div>
-    <div id="ficheAnalyseList" class="card-body"></div>
-  </div>
-  <div class="card">
-    <div class="card-header">
-      <div class="card-title">Données Financières</div>
-      <div style="display:flex;gap:6px" id="fichYearTabs"></div>
-    </div>
-    <div class="card-body" id="ficheFinBody"></div>
-  </div>
+  <div class="fch-muted" style="padding:40px 0;text-align:center;color:var(--muted)">Chargement de la fiche…</div>
 </div>
 
 <!-- ═══ MARCHÉ BRVM (le contenu est injecté par marche.js) ═══ -->

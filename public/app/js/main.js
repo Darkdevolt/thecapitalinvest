@@ -50,7 +50,7 @@
     return map[hash]||'overview';
   }
 
-  function renderCurrentView(){
+  function renderCurrentView(retriesLeft){
     const active=document.querySelector('.view.active');
     if(!active)return;
     const id=active.id||'';
@@ -58,7 +58,20 @@
     const viewName=id.substring(5);
     if(viewName==='analyse-technique')ensureTechnicalReady();
     const functionName='render'+viewName.charAt(0).toUpperCase()+viewName.slice(1);
-    if(typeof window[functionName]!=='function')return;
+    if(typeof window[functionName]!=='function'){
+      /* Les modules de vue (fiche.js, titres.js, …) sont injectés
+         dynamiquement par loader.js, en parallèle du boot — sur un lien
+         direct (#fiche=TICKER au chargement à froid), le premier rendu
+         planifié par nav() peut tomber avant que le script correspondant
+         ait fini de s'exécuter. Sans retentative, la vue reste bloquée sur
+         le squelette HTML statique de app.html (des « — » partout, aucun
+         contenu réel) au lieu du rendu effectif — constaté sur Fiche titre.
+         On retente pendant ~6 s ; le filet de secours de loader.js (après
+         chargement de tous les modules) reste le dernier recours. */
+      const left=retriesLeft==null?60:retriesLeft;
+      if(left>0)setTimeout(()=>renderCurrentView(left-1),100);
+      return;
+    }
     try{window[functionName]();}catch(error){console.error('[MAIN] Rendu '+functionName+':',error);}
   }
 
