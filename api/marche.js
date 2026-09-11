@@ -335,6 +335,19 @@ export default async function handler(req, res) {
         res.setHeader('CDN-Cache-Control', PUBLIC_CDN_CACHE);
         return json(res, 200, snapshot, { cache: PUBLIC_CACHE });
       }
+      // Dernier reporting publié par l'admin (page publique /reporting.html).
+      // Cas à part comme 'apercu' : une ligne unique (ou absente), pas une
+      // liste — le traitement générique post-switch attend un tableau.
+      case 'reporting_latest': {
+        const periodeFilter = (url.searchParams.get('periode') || '').trim();
+        let q = db.from('published_reportings').select('*').order('published_at', { ascending: false }).limit(1);
+        if (periodeFilter) q = q.eq('periode', periodeFilter);
+        const { data: rows, error } = await q;
+        if (error) throw error;
+        res.setHeader('Vercel-CDN-Cache-Control', PUBLIC_CDN_CACHE);
+        res.setHeader('CDN-Cache-Control', PUBLIC_CDN_CACHE);
+        return json(res, 200, { success: true, data: rows?.[0] || null }, { cache: PUBLIC_CACHE });
+      }
       default: return fail(res, 400, `Type de données inconnu : ${type}`, 'UNKNOWN_TYPE');
     }
 

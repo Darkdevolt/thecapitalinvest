@@ -119,6 +119,7 @@
             '<button class="btn btn-outline btn-sm" id="rep-jpg" disabled>⬇ JPEG</button>' +
             '<button class="btn btn-outline btn-sm" id="rep-svg" disabled>⬇ SVG</button>' +
             '<button class="btn btn-outline btn-sm" id="rep-csv" disabled>⬇ Données (CSV)</button>' +
+            '<button class="btn btn-outline btn-sm" id="rep-publish" disabled>↑ Publier sur le site</button>' +
             '</div><div class="msg" id="rep-msg" style="margin-top:12px;"></div></div></div>' +
             '</div>' +
 
@@ -1071,7 +1072,7 @@
                 'Du ' + TC.fmtDate(w.from) + ' au ' + TC.fmtDate(w.to) + ', la base ne contient aucune séance. ' +
                 'Vérifiez le calendrier dans Cours &amp; historique.</div>';
             TC.say('rep-msg', 'Période vide : rien à publier.', 'warn');
-            ['rep-png', 'rep-jpg', 'rep-svg', 'rep-csv'].forEach(id => { TC.el(id).disabled = true; });
+            ['rep-png', 'rep-jpg', 'rep-svg', 'rep-csv', 'rep-publish'].forEach(id => { TC.el(id).disabled = true; });
             return;
         }
 
@@ -1104,11 +1105,11 @@
             }
         }
 
-        report = { data, output, window: w };
+        report = { data, output, window: w, options };
 
         TC.el('rep-stage').innerHTML = output.svg;
         TC.el('rep-dims').textContent = output.width + ' × ' + output.height + ' px';
-        ['rep-png', 'rep-jpg', 'rep-svg', 'rep-csv'].forEach(id => { TC.el(id).disabled = false; });
+        ['rep-png', 'rep-jpg', 'rep-svg', 'rep-csv', 'rep-publish'].forEach(id => { TC.el(id).disabled = false; });
 
         TC.say('rep-msg', output.grew
             ? 'Reporting généré : le contenu dépassait le format choisi, la hauteur a été ajustée (' + output.width + ' × ' + output.height + ' px) pour ne rien couper.'
@@ -1172,6 +1173,51 @@
         }
     }
 
+    /* ── Publication publique (/reporting.html) ─────────────────────────
+       Envoie un résumé du reporting — pas le tableau brut par valeur
+       (`data.values`), inutile côté public et qui alourdirait la charge —
+       à l'API serveur, qui écrit avec la clé service role après vérification
+       admin. Une ligne par (période, fin de fenêtre) : republier remplace. */
+    async function publish() {
+        if (!report) return;
+        TC.say('rep-msg', 'Publication en cours…', 'info');
+        try {
+            const d = report.data;
+            const meta = PERIODES.find(p => p.v === d.window.periode);
+            const payload = {
+                window: d.window,
+                titre: meta ? meta.titre : '',
+                totals: d.totals,
+                indices: d.indices,
+                secteurs: d.secteurs,
+                chiffres: d.chiffres,
+                obligataire: d.obligataire,
+                hausses: d.hausses,
+                baisses: d.baisses,
+                volumes: d.volumes,
+                dividendesAVenir: d.dividendesAVenir,
+                habillage: {
+                    surtitre: report.options.surtitre || '',
+                    bulletin: report.options.bulletin || '',
+                    heure: report.options.heure || ''
+                },
+                note: (report.options.note && report.options.note.trim()) || autoNote(d)
+            };
+            const r = await TC.api('/api/process-brvm', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    scope: 'reporting', action: 'publish',
+                    periode: d.window.periode, window_from: d.window.from, window_to: d.window.to,
+                    payload
+                }), timeout: 20000
+            });
+            TC.say('rep-msg', 'Publié sur thecapitalinvest.com/reporting.html' +
+                (r && r.data && r.data.published_at ? ' (' + TC.fmtDateLong(r.data.published_at.slice(0, 10)) + ')' : '') + '.', 'ok');
+        } catch (e) {
+            TC.say('rep-msg', 'Publication impossible : ' + e.message, 'err');
+        }
+    }
+
     TC.register({
         id: 'reporting',
         label: 'Reporting',
@@ -1212,6 +1258,7 @@
                     TC.toCSV(list, ['ticker', 'societe', 'depart', 'arrivee', 'performance_pct', 'seances', 'volume', 'valeur_echangee']),
                     'text/csv;charset=utf-8');
             });
+            TC.on('rep-publish', 'click', publish);
         }
     });
 
