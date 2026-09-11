@@ -721,18 +721,20 @@
   color: var(--atx-text-faint);
 }
 .atx-x {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   display: grid;
   place-items: center;
-  background: none;
-  border: none;
-  color: var(--atx-text-faint);
+  flex: 0 0 auto;
+  background: rgba(240, 100, 94, .1);
+  border: 1px solid rgba(240, 100, 94, .35);
+  color: var(--atx-down);
   font-size: 12px;
+  font-weight: 700;
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 4px;
 }
-.atx-x:hover { color: var(--atx-down); background: rgba(240, 100, 94, .1); }
+.atx-x:hover { background: rgba(240, 100, 94, .22); border-color: var(--atx-down); }
 
 .atx-ind-params {
   display: flex;
