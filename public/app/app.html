@@ -188,8 +188,26 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
 <!-- ═══ MARCHÉ BRVM (le contenu est injecté par marche.js) ═══ -->
 <div class="view" id="view-marche"></div>
 
-<!-- ═══ ANALYSE TECHNIQUE ═══ -->
-<div class="view" id="view-analyse-technique"><div class="tc-view-loading">Analyse technique — chargement…</div></div>
+<!-- ═══ ANALYSE TECHNIQUE (squelette statique — contenu injecté par technique/pro/at-app.js) ═══ -->
+<div class="view" id="view-analyse-technique">
+  <div class="atx-shell">
+    <div class="atx-toolbar" id="atxToolbar"></div>
+    <div class="atx-main">
+      <div class="atx-tools" id="atxTools"></div>
+      <div class="atx-stage">
+        <div class="atx-quote" id="atxQuote"></div>
+        <div class="atx-canvas-host" id="atxCanvasHost">
+          <div class="atx-tool-hint" id="atxToolHint"></div>
+        </div>
+        <div class="atx-status" id="atxStatus"></div>
+      </div>
+      <div class="atx-side">
+        <div class="atx-tabs" id="atxTabs"></div>
+        <div class="atx-panel" id="atxPanel"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- ═══ ANALYSE FONDAMENTALE ═══ -->
 <div class="view" id="view-analyse-fondamentale">

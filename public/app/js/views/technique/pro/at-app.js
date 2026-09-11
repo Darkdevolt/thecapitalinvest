@@ -688,6 +688,7 @@
 
   var TABS = [
     { id: 'signaux', label: 'Signaux' },
+    { id: 'lecture', label: 'Lecture' },
     { id: 'plan', label: 'Plan' },
     { id: 'stats', label: 'Statistiques' },
     { id: 'structure', label: 'Structure' },
@@ -707,10 +708,136 @@
       }).join('');
     }
     var fn = {
-      signaux: paneSignals, plan: panePlan, stats: paneStats, structure: paneStructure,
+      signaux: paneSignals, lecture: paneLecture, plan: panePlan, stats: paneStats, structure: paneStructure,
       indicateurs: paneIndicators, backtest: paneBacktest, balayage: paneScreen, suivi: paneWatch
     }[S.tab] || paneSignals;
     host.innerHTML = fn();
+  }
+
+  /* ── Lecture : interprétation en langage clair + opinion pondérée ─
+     Repris de l'ancienne vue autonome (analyse-technique.js), rebranché
+     ici sur les mêmes séries (S.analysis.cols) que les autres onglets
+     au lieu de recharger et recalculer ses propres données. */
+
+  function lectureTendance(s20, s50, s200, last) {
+    var above = [s20, s50, s200].filter(function (x) { return M.fin(x) && last > x; }).length;
+    var have = [s20, s50, s200].filter(function (x) { return M.fin(x); }).length;
+    var aligned = (M.fin(s20) && M.fin(s50) && M.fin(s200)) && ((s20 > s50 && s50 > s200) || (s20 < s50 && s50 < s200));
+    var upAlign = aligned && s20 > s50;
+    var conf = (have === 3 && aligned) ? 'élevée' : have >= 2 ? 'moyenne' : 'faible';
+    var verdict, txt, score;
+    if (have === 0) { verdict = 'indéterminée'; txt = 'Pas assez de séances pour les moyennes mobiles.'; score = 0; conf = 'faible'; }
+    else if (above === have && upAlign) { verdict = 'haussière'; txt = 'Cours au-dessus des MM20/50/200, moyennes alignées en ordre haussier.'; score = 1; }
+    else if (above === have) { verdict = 'haussière'; txt = 'Cours au-dessus de toutes les moyennes mobiles disponibles.'; score = 1; }
+    else if (above === 0 && aligned && !upAlign) { verdict = 'baissière'; txt = 'Cours sous les MM20/50/200, moyennes alignées en ordre baissier.'; score = -1; }
+    else if (above === 0) { verdict = 'baissière'; txt = 'Cours sous toutes les moyennes mobiles disponibles.'; score = -1; }
+    else { verdict = 'neutre / transition'; txt = 'Cours entre ses moyennes mobiles — pas de tendance nette.'; score = 0; }
+    return { key: 'tendance', label: 'Tendance (MM 20/50/200)', verdict: verdict, conf: conf, txt: txt, score: score, weight: 3 };
+  }
+  function lectureRsi(r) {
+    if (!M.fin(r)) return { key: 'rsi', label: 'Momentum (RSI 14)', verdict: '—', conf: 'faible', txt: 'Moins de 15 séances.', score: 0, weight: 1.5 };
+    var verdict, txt, score = 0;
+    if (r >= 70) { verdict = 'suracheté'; txt = 'RSI ' + r.toFixed(0) + ' ≥ 70 : risque de correction / consolidation.'; score = -0.5; }
+    else if (r <= 30) { verdict = 'survendu'; txt = 'RSI ' + r.toFixed(0) + ' ≤ 30 : rebond technique possible.'; score = 0.5; }
+    else if (r >= 55) { verdict = 'momentum positif'; txt = 'RSI ' + r.toFixed(0) + ' dans la zone 55-70 : dynamique acheteuse.'; score = 0.5; }
+    else if (r <= 45) { verdict = 'momentum négatif'; txt = 'RSI ' + r.toFixed(0) + ' dans la zone 30-45 : dynamique vendeuse.'; score = -0.5; }
+    else { verdict = 'neutre'; txt = 'RSI ' + r.toFixed(0) + ' autour de 50 : pas de biais.'; }
+    return { key: 'rsi', label: 'Momentum (RSI 14)', verdict: verdict, conf: 'moyenne', txt: txt, score: score, weight: 1.5 };
+  }
+  function lectureMacd(m) {
+    if (!m) return { key: 'macd', label: 'MACD (12,26,9)', verdict: '—', conf: 'faible', txt: 'Moins de 35 séances.', score: 0, weight: 2 };
+    var pos = m.line > m.signal, above0 = m.line > 0;
+    var verdict = pos ? 'signal haussier' : 'signal baissier';
+    var txt = 'Ligne MACD ' + (pos ? 'au-dessus' : 'en dessous') + ' de sa ligne de signal, ' + (above0 ? 'au-dessus' : 'sous') +
+      ' du zéro (histogramme ' + (m.hist >= 0 ? '+' : '') + m.hist.toFixed(1) + ').';
+    return { key: 'macd', label: 'MACD (12,26,9)', verdict: verdict, conf: 'moyenne', txt: txt, score: (pos ? 0.5 : -0.5) + (above0 ? 0.25 : -0.25), weight: 2 };
+  }
+  function lectureBoll(last, mid, up, lo) {
+    if (!M.fin(mid)) return { key: 'boll', label: 'Bollinger (20, 2σ)', verdict: '—', conf: 'faible', txt: 'Moins de 20 séances.', score: 0, weight: 1 };
+    var width = (up - lo) / mid * 100;
+    var posp = (last - lo) / (up - lo) * 100;
+    var verdict, txt, score = 0;
+    if (last >= up) { verdict = 'contact bande haute'; txt = 'Cours sur la bande supérieure (position ' + posp.toFixed(0) + ' %) — extension haussière, prudence.'; score = -0.25; }
+    else if (last <= lo) { verdict = 'contact bande basse'; txt = 'Cours sur la bande inférieure (position ' + posp.toFixed(0) + ' %) — extension baissière.'; score = 0.25; }
+    else { verdict = 'dans les bandes'; txt = 'Cours à ' + posp.toFixed(0) + ' % de la largeur des bandes ; largeur ' + width.toFixed(1) + ' % du cours.'; }
+    return { key: 'boll', label: 'Bollinger (20, 2σ)', verdict: verdict, conf: 'moyenne', txt: txt, score: score, weight: 1 };
+  }
+  function lectureVol(lastV, avgV, volAnn) {
+    var parts = [], score = 0, verdict = 'normal';
+    if (M.fin(lastV) && M.fin(avgV) && avgV > 0) {
+      var ratio = lastV / avgV;
+      if (ratio >= 2) { verdict = 'volume élevé'; parts.push('Volume du jour ×' + ratio.toFixed(1) + ' la moyenne 20 séances — mouvement à confirmer.'); score = 0.25; }
+      else if (ratio <= 0.4) { verdict = 'volume faible'; parts.push('Volume du jour à ' + (ratio * 100).toFixed(0) + ' % de la moyenne — faible conviction.'); }
+      else parts.push('Volume proche de sa moyenne 20 séances.');
+    } else parts.push('Volumes indisponibles.');
+    if (M.fin(volAnn)) parts.push('Volatilité annualisée ' + volAnn.toFixed(0) + ' %.');
+    return { key: 'vol', label: 'Volume & volatilité', verdict: verdict, conf: 'moyenne', txt: parts.join(' '), score: score, weight: 0.5 };
+  }
+
+  function paneLecture() {
+    if (!S.analysis || !S.analysis.cols) return needTicker();
+    var cols = S.analysis.cols, closes = cols.c;
+    if (closes.length < 20) {
+      return '<div class="atx-empty"><div class="atx-empty-t">Historique trop court</div>' +
+        '<p>La lecture automatique demande au moins 20 séances ; ' + closes.length + ' disponible' + (closes.length > 1 ? 's' : '') + '.</p></div>';
+    }
+    var i = closes.length - 1, last = closes[i];
+    var s20 = M.last(M.sma(closes, 20)), s50 = M.last(M.sma(closes, 50)), s200 = M.last(M.sma(closes, 200));
+    var rsi14 = M.last(M.rsi(closes, 14));
+    var macRaw = M.macd(closes, 12, 26, 9);
+    var mac = (M.fin(M.last(macRaw.macd)) && M.fin(M.last(macRaw.signal)))
+      ? { line: M.last(macRaw.macd), signal: M.last(macRaw.signal), hist: M.last(macRaw.hist) } : null;
+    var boll = M.bollinger(closes, 20, 2);
+    var bMid = M.last(boll.mid), bUp = M.last(boll.upper), bLo = M.last(boll.lower);
+    var lastV = cols.v[i];
+    var window20 = cols.v.slice(Math.max(0, i - 19), i + 1).filter(M.fin);
+    var avgV = window20.length ? window20.reduce(function (a, b) { return a + b; }, 0) / window20.length : null;
+    var rets = [];
+    for (var k = 1; k < closes.length; k++) if (M.fin(closes[k]) && M.fin(closes[k - 1]) && closes[k - 1] > 0) rets.push(closes[k] / closes[k - 1] - 1);
+    var volAnn = rets.length > 1 ? M.stdev(rets, true) * Math.sqrt(252) * 100 : null;
+
+    var reads = [
+      lectureTendance(s20, s50, s200, last),
+      lectureRsi(rsi14),
+      lectureMacd(mac),
+      lectureBoll(last, bMid, bUp, bLo),
+      lectureVol(lastV, avgV, volAnn)
+    ];
+
+    var total = 0, wsum = 0;
+    reads.forEach(function (r) { total += (r.score || 0) * r.weight; wsum += r.weight; });
+    var norm = wsum ? total / wsum : 0;      /* -1..+1 */
+    var s100 = Math.round(norm * 100);
+    var verdict =
+      s100 >= 45 ? { label: 'Configuration acheteuse', tone: 'strong-bull' } :
+        s100 >= 15 ? { label: 'Légèrement positive', tone: 'bull' } :
+          s100 <= -45 ? { label: 'Configuration vendeuse', tone: 'strong-bear' } :
+            s100 <= -15 ? { label: 'Légèrement négative', tone: 'bear' } :
+              { label: 'Neutre', tone: 'neutral' };
+
+    var html = '<div class="atx-verdict atx-tone-' + verdict.tone + '">' +
+      '<div class="atx-verdict-score">' + (s100 > 0 ? '+' : '') + s100 + '</div>' +
+      '<div class="atx-verdict-body">' +
+      '<div class="atx-verdict-label">' + esc(verdict.label) + '</div>' +
+      '<div class="atx-verdict-sub">Moyenne pondérée des 5 lectures ci-dessous — horizon court terme (quelques semaines).</div>' +
+      '</div></div>' +
+      '<div class="atx-gauge"><div class="atx-gauge-fill" style="left:50%;width:' + Math.abs(s100 / 2) + '%;' +
+      (s100 < 0 ? 'transform:translateX(-100%);' : '') + 'background:' + (s100 >= 0 ? 'var(--atx-up)' : 'var(--atx-down)') + '"></div>' +
+      '<div class="atx-gauge-mid"></div></div>';
+
+    html += '<div class="atx-group">Indicateur par indicateur</div>';
+    reads.forEach(function (r) {
+      var cls = r.score > 0.15 ? 'atx-bull' : r.score < -0.15 ? 'atx-bear' : '';
+      html += '<div class="atx-sig ' + cls + '">' +
+        '<div class="atx-sig-top"><span class="atx-sig-name">' + esc(r.label) + '</span>' +
+        '<span class="atx-sig-val">' + esc(r.verdict) + '</span></div>' +
+        '<div class="atx-sig-why">' + esc(r.txt) + ' <span class="atx-nd">(confiance ' + r.conf + ')</span></div>' +
+        '</div>';
+    });
+
+    html += '<p class="atx-disclaimer">Méthode : moyenne pondérée des signaux ci-dessus — tendance ×3, MACD ×2, RSI ×1,5, Bollinger ×1, volume ×0,5. ' +
+      'Cette synthèse mécanique ne tient compte ni des fondamentaux ni de l\'actualité de la société et ne constitue pas un conseil en investissement.</p>';
+    return html;
   }
 
   function needTicker() {
