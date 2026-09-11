@@ -116,9 +116,12 @@ for (const file of files) {
 }
 
 // admin.html remains outside the application corrections.
-// Bump 2026-09-10 : cache-bust ?v= de reporting.js + scraper.js (bulletin + obligations).
+// Bump 2026-09-11 : ajout du module « Annonces émetteurs » (public/admin/js/modules/annonces.js)
+// — récupération des convocations AG / résultats / dividendes / avis BRVM. Changement
+// délibéré et revu ; le garde-fou est mis à jour en conséquence (voir requireInvariant
+// ci-dessous, c'est la « validation explicite » qu'il réclame).
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = 'b0a7a15f1c3ff478db1ece86a0d6170e9f1c86af';
+const expectedAdminBlobSha = '719aa37372c67e002551fefa812da513c64a25e3';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
