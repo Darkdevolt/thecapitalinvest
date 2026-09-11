@@ -3,6 +3,7 @@ import { supabase, supabaseAdmin } from '../lib/supabase.js';
 import { json, fail, applyCors, requestUrl } from '../lib/http.js';
 import { rateLimited } from '../lib/middleware.js';
 import { getPublicMarketSnapshot } from '../lib/market-snapshot.js';
+import { resolveEntitlements, entitlementsPayload, meets, MARCHE_TIER, TIERS_MODE } from '../lib/entitlements.js';
 
 const db = supabaseAdmin || supabase;
 const PAGE_SIZE = 1000;
@@ -280,6 +281,31 @@ export default async function handler(req, res) {
     const dateFrom = url.searchParams.get('date_from');
     const dateTo = url.searchParams.get('date_to');
     const search = url.searchParams.get('search');
+    const wantFull = url.searchParams.get('full') === '1';
+
+    if (type === 'entitlements') {
+      const ent = await resolveEntitlements(req);
+      return json(res, 200, entitlementsPayload(ent), { cache: 'private, no-store' });
+    }
+
+    // ── Application des formules ────────────────────────────────────────────
+    // Le type demandé (ou l'historique financier complet) exige-t-il un
+    // palier ? On ne résout le plan que si nécessaire (une requête réseau).
+    const needTier = (type === 'financials' && wantFull) ? 'pro' : MARCHE_TIER[type];
+    let ent = null;
+    if (TIERS_MODE !== 'off' && (needTier || type === 'financials')) {
+      ent = await resolveEntitlements(req);
+    }
+    if (needTier && ent) {
+      if (!meets(ent.effective, needTier)) {
+        if (TIERS_MODE === 'on') {
+          return json(res, 402, {
+            error: 'plan_required', required: needTier, plan: ent.plan, preview: true, data: []
+          }, { cache: 'private, no-store' });
+        }
+        res.setHeader('x-tc-tier-would-block', `${type}:${needTier}`);
+      }
+    }
 
     let result;
     switch (type) {
@@ -304,9 +330,35 @@ export default async function handler(req, res) {
     }
 
     if (result?.error) throw result.error;
-    const data = result?.data || result || [];
+    let data = result?.data || result || [];
     if (type === 'historique' && Array.isArray(data)) data.reverse();
 
+    // États financiers : un compte Free (hors essai) ne reçoit que les deux
+    // derniers exercices par société — la profondeur historique est Investor+.
+    // Mode « observe » : on ne tronque pas, on signale seulement.
+    if (type === 'financials' && !wantFull && ent && !meets(ent.effective, 'investor') && Array.isArray(data)) {
+      if (TIERS_MODE === 'on') {
+        const seen = {};
+        data = data
+          .slice()
+          .sort((a, b) => Number(b.annee || 0) - Number(a.annee || 0))
+          .filter((r) => {
+            const t = String(r && r.ticker || '').toUpperCase();
+            seen[t] = (seen[t] || 0) + 1;
+            return seen[t] <= 2;
+          });
+        res.setHeader('x-tc-tier-preview', 'financials:2y');
+      } else if (TIERS_MODE === 'observe') {
+        res.setHeader('x-tc-tier-would-block', 'financials:2y');
+      }
+    }
+
+    // Une réponse résolue par plan (ent non nul) dépend de l'appelant : elle
+    // ne doit jamais transiter par le cache CDN partagé, sous peine de servir
+    // la version tronquée d'un Free à un abonné, ou l'inverse.
+    if (ent) {
+      return json(res, 200, data, { cache: 'private, no-store' });
+    }
     res.setHeader('Vercel-CDN-Cache-Control', PUBLIC_CDN_CACHE);
     res.setHeader('CDN-Cache-Control', PUBLIC_CDN_CACHE);
     return json(res, 200, data, { cache: PUBLIC_CACHE });
