@@ -173,11 +173,11 @@
   background: none;
   border: 1px solid transparent;
   border-radius: 4px;
-  color: var(--atx-text-faint);
+  color: var(--atx-text-dim);
   font-size: 14px;
   line-height: 1;
   cursor: pointer;
-  transition: color .14s, background .14s;
+  transition: color .14s, background .14s, border-color .14s;
 }
 .atx-tool:hover { color: var(--atx-text); background: var(--atx-line-soft); }
 .atx-tool.on {
@@ -185,7 +185,20 @@
   background: rgba(200, 162, 78, .14);
   border-color: var(--atx-gold-dim);
 }
-.atx-tool-danger:hover { color: var(--atx-down); }
+/* Annuler / Effacer les tracés : toujours visibles (pas seulement au
+   survol), pour qu'on les repère sans avoir à les chercher. */
+#atxUndo {
+  color: var(--atx-text);
+  background: var(--atx-line-soft);
+  border-color: var(--atx-line);
+}
+#atxUndo:hover { border-color: var(--atx-gold-dim); }
+.atx-tool-danger {
+  color: var(--atx-down);
+  background: rgba(240, 100, 94, .1);
+  border-color: rgba(240, 100, 94, .3);
+}
+.atx-tool-danger:hover { background: rgba(240, 100, 94, .2); border-color: var(--atx-down); }
 .atx-tool-sep {
   height: 1px;
   background: var(--atx-line);
@@ -282,6 +295,9 @@
   left: 12px;
   top: 12px;
   z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 10px;
   padding: 6px 11px;
   background: rgba(200, 162, 78, .14);
   border: 1px solid var(--atx-gold-dim);
@@ -292,6 +308,27 @@
   opacity: 0;
   transition: opacity .18s;
 }
+/* Variante avec un bouton d'action à l'intérieur (ex. tracé sélectionné) :
+   le bandeau lui-même reste transparent aux clics (pour ne pas gêner le
+   graphique), mais son bouton doit rester cliquable. */
+.atx-tool-hint-int {
+  background: rgba(240, 100, 94, .14);
+  border-color: rgba(240, 100, 94, .45);
+  color: var(--atx-text);
+}
+.atx-tool-hint-int .atx-hint-del { pointer-events: auto; }
+.atx-hint-del {
+  padding: 4px 9px;
+  background: rgba(240, 100, 94, .18);
+  border: 1px solid var(--atx-down);
+  border-radius: 4px;
+  color: var(--atx-down);
+  font-size: 10.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.atx-hint-del:hover { background: rgba(240, 100, 94, .32); }
+.atx-hint-sub { color: var(--atx-text-faint); font-size: 10px; }
 .atx-tool-hint.show { opacity: 1; }
 
 /* ── Panneau latéral ────────────────────────────────────────────── */

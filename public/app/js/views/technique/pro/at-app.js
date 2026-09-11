@@ -354,18 +354,39 @@
   function setTool(id) {
     S.tool = id;
     S.pending = null;
+    if (id !== 'cursor') S.activeShapeId = null;
     var r = root();
     if (r) r.querySelectorAll('[data-tool]').forEach(function (b) {
       b.classList.toggle('on', b.getAttribute('data-tool') === id);
     });
-    var hint = $('atxToolHint');
-    if (hint) {
-      var t = toolDef(id);
-      hint.textContent = id === 'cursor' ? '' : t.label + ' — ' + t.hint;
-      hint.classList.toggle('show', id !== 'cursor');
+    if (id === 'cursor') updateSelectionHint();
+    else {
+      var hint = $('atxToolHint');
+      if (hint) {
+        var t = toolDef(id);
+        hint.textContent = t.label + ' — ' + t.hint;
+        hint.classList.add('show');
+        hint.classList.remove('atx-tool-hint-int');
+      }
     }
     if (chart) chart.over.style.cursor = id === 'cursor' ? 'crosshair' : 'copy';
     draw();
+  }
+
+  /* Bandeau d'aide : instructions de l'outil actif, ou — en mode
+     curseur avec un tracé sélectionné — bouton de suppression rapide
+     (en plus de la touche Suppr et du bouton ↶/🗑 de la barre d'outils). */
+  function updateSelectionHint() {
+    var hint = $('atxToolHint');
+    if (!hint || S.tool !== 'cursor') return;
+    if (S.activeShapeId) {
+      hint.innerHTML = 'Tracé sélectionné — <button type="button" id="atxDelShape" class="atx-hint-del">✕ Supprimer</button>' +
+        '<span class="atx-hint-sub">Suppr · Échap pour désélectionner</span>';
+      hint.classList.add('show', 'atx-tool-hint-int');
+    } else {
+      hint.textContent = '';
+      hint.classList.remove('show', 'atx-tool-hint-int');
+    }
   }
 
   function clearShapes() {
@@ -373,14 +394,74 @@
     S.shapes = [];
     S.activeShapeId = null;
     saveShapes();
+    updateSelectionHint();
     draw();
     notify('Tracés effacés.', 'success');
   }
   function undoShape() {
     if (!S.shapes.length) return;
+    if (S.activeShapeId === S.shapes[S.shapes.length - 1].id) S.activeShapeId = null;
     S.shapes.pop();
     saveShapes();
+    updateSelectionHint();
     draw();
+  }
+  function deleteSelectedShape() {
+    if (!S.activeShapeId) return;
+    S.shapes = S.shapes.filter(function (x) { return x.id !== S.activeShapeId; });
+    S.activeShapeId = null;
+    saveShapes();
+    updateSelectionHint();
+    draw();
+    notify('Tracé supprimé.', 'success');
+  }
+
+  /* Distance point -> segment [x1,y1]-[x2,y2], en pixels écran. */
+  function segDist(px, py, x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1;
+    var len2 = dx * dx + dy * dy;
+    var t = len2 ? ((px - x1) * dx + (py - y1) * dy) / len2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+
+  function shapeScreenPoints(s) {
+    if (!chart || !chart._xs || !chart._ys) return [];
+    var off = chart._offset || 0;
+    return (s.points || []).map(function (pt) { return { x: chart._xs.at(pt.x - off), y: chart._ys.at(pt.y) }; });
+  }
+
+  /* Cherche le tracé le plus proche du point écran (px,py), dans une
+     tolérance de quelques pixels — pour la sélection au clic. Parcourt
+     du dernier au premier pour privilégier le tracé dessiné au-dessus. */
+  function findShapeAt(px, py) {
+    var TOL = 8;
+    for (var i = S.shapes.length - 1; i >= 0; i--) {
+      var s = S.shapes[i], p = shapeScreenPoints(s), d = Infinity;
+      if (s.type === 'hline' && p[0]) d = Math.abs(py - p[0].y);
+      else if (s.type === 'vline' && p[0]) d = Math.abs(px - p[0].x);
+      else if (s.type === 'text' && p[0]) d = Math.hypot(px - p[0].x, py - p[0].y);
+      else if ((s.type === 'trend' || s.type === 'arrow' || s.type === 'fib') && p[1]) {
+        d = segDist(px, py, p[0].x, p[0].y, p[1].x, p[1].y);
+      } else if (s.type === 'channel' && p[2]) {
+        var cdx = p[1].x - p[0].x, cdy = p[1].y - p[0].y;
+        d = Math.min(
+          segDist(px, py, p[0].x, p[0].y, p[1].x, p[1].y),
+          segDist(px, py, p[2].x, p[2].y, p[2].x + cdx, p[2].y + cdy)
+        );
+      } else if (s.type === 'pitch' && p[2]) {
+        d = Math.min(Math.hypot(px - p[0].x, py - p[0].y), Math.hypot(px - p[1].x, py - p[1].y), Math.hypot(px - p[2].x, py - p[2].y));
+      } else if ((s.type === 'rect' || s.type === 'measure') && p[1]) {
+        var x0 = Math.min(p[0].x, p[1].x), x1 = Math.max(p[0].x, p[1].x);
+        var y0 = Math.min(p[0].y, p[1].y), y1 = Math.max(p[0].y, p[1].y);
+        if (px >= x0 - TOL && px <= x1 + TOL && py >= y0 - TOL && py <= y1 + TOL) {
+          var inside = px >= x0 && px <= x1 && py >= y0 && py <= y1;
+          d = inside ? 0 : Math.min(Math.abs(px - x0), Math.abs(px - x1), Math.abs(py - y0), Math.abs(py - y1));
+        }
+      }
+      if (d <= TOL) return s;
+    }
+    return null;
   }
 
   /* ── Rendu du graphique ───────────────────────────────────────── */
@@ -487,7 +568,10 @@
       panes: panes,
       shapes: S.shapes,
       activeShapeId: S.activeShapeId,
-      preview: S.pending ? Object.assign({}, S.pending, { points: S.pending.points.concat(S.pending.cursor ? [S.pending.cursor] : []) }) : null,
+      preview: S.pending ? Object.assign({}, S.pending, {
+        points: S.pending.points.concat(S.pending.cursor ? [S.pending.cursor] : []),
+        dash: [5, 4]
+      }) : null,
       autoLevels: autoLevels,
       markers: markers,
       compare: compareVals ? { values: compareVals, color: '#5b9dfb' } : null,
@@ -1438,7 +1522,20 @@
       chart.setCursor(p);
       if (S.pending) {
         var d = chart.toData(p.x, p.y);
-        if (d) { S.pending.cursor = { x: d.x, y: d.y }; chart.renderOverlay(); }
+        if (d) {
+          S.pending.cursor = { x: d.x, y: d.y };
+          /* renderOverlay() redessine à partir de chart.view (pas coûteux :
+             ni recalcul des indicateurs, ni redessin des bougies) — on met
+             donc à jour l'aperçu directement dessus plutôt que d'appeler
+             draw(), pour que le tracé suive vraiment la souris en continu. */
+          if (chart.view) {
+            chart.view.preview = Object.assign({}, S.pending, {
+              points: S.pending.points.concat([S.pending.cursor]),
+              dash: [5, 4]
+            });
+          }
+          chart.renderOverlay();
+        }
       }
     });
 
@@ -1453,6 +1550,14 @@
       var p = localPoint(e);
       if (S.tool === 'cursor') {
         if (!chart.inPricePane(p.y)) return;
+        var hit = findShapeAt(p.x, p.y);
+        if (hit) {
+          S.activeShapeId = hit.id;
+          updateSelectionHint();
+          draw();
+          return;
+        }
+        if (S.activeShapeId) { S.activeShapeId = null; updateSelectionHint(); draw(); }
         drag = { x: p.x, zoom: { start: S.zoom.start, end: S.zoom.end } };
         try { cv.setPointerCapture(e.pointerId); } catch (err) { }
         cv.style.cursor = 'grabbing';
@@ -1678,6 +1783,7 @@
       if ((v = t.getAttribute('data-preset'))) { applyPreset(v); return; }
       if ((v = t.getAttribute('data-add'))) { addIndicator(v); renderAll(); return; }
       if ((v = t.getAttribute('data-remove'))) { removeIndicator(v); renderAll(); return; }
+      if (t.id === 'atxDelShape') { deleteSelectedShape(); return; }
       if ((v = t.getAttribute('data-strat'))) { S.backtestId = v; renderSide(); return; }
       if ((v = t.getAttribute('data-unwatch'))) {
         e.stopPropagation();
@@ -1732,8 +1838,12 @@
       if (/^(INPUT|SELECT|TEXTAREA)$/.test((e.target.tagName || '').toUpperCase())) return;
       if (e.key === 'Escape') {
         if (S.pending) { S.pending = null; draw(); }
+        else if (S.activeShapeId) { S.activeShapeId = null; updateSelectionHint(); draw(); }
         else if (r2.classList.contains('atx-full')) toggleFullscreen();
         else setTool('cursor');
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && S.activeShapeId) {
+        deleteSelectedShape();
+        e.preventDefault();
       } else if (e.key === 'ArrowLeft') { panBy(-0.08); e.preventDefault(); }
       else if (e.key === 'ArrowRight') { panBy(0.08); e.preventDefault(); }
       else if (e.key === '+' || e.key === '=') { zoomBy(0.85); }
