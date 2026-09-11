@@ -59,6 +59,16 @@
         { id: 'dividendes', l: 'Dividendes à venir' }
     ];
 
+    /* Aperçu « Réseaux sociaux » : un sous-ensemble volontairement court
+       (titre, analyse, activité, indices, hausses, baisses) pour tenir dans
+       un format Instagram/LinkedIn/TikTok sans faire grandir le canevas —
+       les sections secondaires (chiffres, secteurs, obligataire,
+       dividendes) restent réservées au bulletin complet, pensé pour la
+       page publique ou l'impression. Le format Impression (1200×1700) n'a
+       pas sa place dans ce mode. */
+    const LEAN_BLOCS = ['note', 'activite', 'indices', 'hausses', 'baisses'];
+    const SOCIAL_FORMATS = FORMATS.filter(f => f.v !== '1200x1700');
+
     /* Parité fixe UEMOA / zone euro — un fait réglementaire, pas une
        estimation. Inchangée depuis 1999 (accord de coopération monétaire). */
     const XOF_PER_EUR = 655.957;
@@ -98,7 +108,13 @@
             '</div></div>' +
 
             '<div class="card"><div class="card-head"><span class="card-title">Contenu</span></div>' +
-            '<div class="card-body"><div class="toggle-list" id="rep-blocs">' +
+            '<div class="card-body">' +
+            '<div class="subtabs" id="rep-mode">' +
+            '<button class="subtab active" data-mode="complet">Bulletin complet</button>' +
+            '<button class="subtab" data-mode="social">Réseaux sociaux</button>' +
+            '</div>' +
+            '<div class="note" id="rep-mode-note" style="margin:10px 0 14px;">Toutes les sections — pensé pour la page publique et l\'impression.</div>' +
+            '<div class="toggle-list" id="rep-blocs">' +
             BLOCS.map(b => '<label class="toggle on"><input type="checkbox" data-bloc="' + b.id + '" checked>' +
                 TC.esc(b.l) + '</label>').join('') + '</div></div></div>' +
 
@@ -178,6 +194,27 @@
                 ? ' — une seule séance. La variation lue est celle publiée pour cette date.'
                 : ' — du ' + TC.fmtDate(w.from) + ' au ' + TC.fmtDate(w.to) +
                 '. La performance est composée entre la première et la dernière clôture de la période.');
+    }
+
+    /* Bascule Bulletin complet / Réseaux sociaux : coche le bon sous-ensemble
+       de sections et restreint le choix de format en conséquence, pour que
+       l'export social tienne dans son cadre sans dépendre du filet de
+       sécurité (qui, lui, reste correct mais fait grandir le canevas). */
+    function applyMode(mode) {
+        const lean = mode === 'social';
+        TC.qsa('#rep-blocs input[data-bloc]').forEach(function (cb) {
+            const on = !lean || LEAN_BLOCS.indexOf(cb.dataset.bloc) !== -1;
+            cb.checked = on;
+            cb.closest('.toggle').classList.toggle('on', on);
+        });
+        const sel = TC.el('rep-format');
+        const list = lean ? SOCIAL_FORMATS : FORMATS;
+        const current = sel.value;
+        sel.innerHTML = list.map(o => '<option value="' + o.v + '">' + TC.esc(o.l) + '</option>').join('');
+        sel.value = list.some(o => o.v === current) ? current : list[0].v;
+        TC.el('rep-mode-note').textContent = lean
+            ? 'Titre, analyse, activité, indices, hausses et baisses — pensé pour tenir dans un seul écran Instagram/LinkedIn/TikTok. Le format Impression est masqué.'
+            : 'Toutes les sections — pensé pour la page publique et l\'impression.';
     }
 
     /* ── Agrégation ──────────────────────────────────────── */
@@ -1111,9 +1148,12 @@
         TC.el('rep-dims').textContent = output.width + ' × ' + output.height + ' px';
         ['rep-png', 'rep-jpg', 'rep-svg', 'rep-csv', 'rep-publish'].forEach(id => { TC.el(id).disabled = false; });
 
+        const socialMode = TC.qs('#rep-mode .subtab.active').dataset.mode === 'social';
         TC.say('rep-msg', output.grew
-            ? 'Reporting généré : le contenu dépassait le format choisi, la hauteur a été ajustée (' + output.width + ' × ' + output.height + ' px) pour ne rien couper.'
-            : 'Reporting généré : ' + data.totals.titres + ' valeur(s) sur ' + data.totals.seances + ' séance(s).',
+            ? 'Reporting généré : le contenu dépassait le format choisi, la hauteur a été ajustée (' + output.width + ' × ' + output.height + ' px) pour ne rien couper.' +
+                (socialMode ? ' Ce format n\'est plus idéal pour un post — désactivez une section de plus.' : '')
+            : 'Reporting généré : ' + data.totals.titres + ' valeur(s) sur ' + data.totals.seances + ' séance(s).' +
+                (socialMode ? ' Format prêt pour Instagram/LinkedIn/TikTok.' : ''),
             output.grew ? 'warn' : 'ok');
 
         paintTable(data);
@@ -1236,6 +1276,10 @@
             TC.on('rep-date', 'change', paintWindow);
             TC.delegate('rep-blocs', 'input', 'change', function (cb) {
                 cb.closest('.toggle').classList.toggle('on', cb.checked);
+            });
+            TC.delegate('rep-mode', '.subtab', 'click', function (btn) {
+                TC.qsa('#rep-mode .subtab').forEach(b => b.classList.toggle('active', b === btn));
+                applyMode(btn.dataset.mode);
             });
 
             TC.on('rep-build', 'click', generate);
