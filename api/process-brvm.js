@@ -433,6 +433,37 @@ export default async function handler(req, res) {
         return json(res, 200, { success: true, scope: 'announcements', ...result });
       }
 
+      // Publication d'un reporting sur le site public (/reporting.html) :
+      // POST { scope:'reporting', action:'publish', periode, window_from,
+      // window_to, payload }. Toujours réservé à un administrateur — jamais
+      // au secret machine, ce chemin n'a pas vocation à tourner sur cron.
+      // Une ligne par (periode, window_to) : republier remplace la
+      // publication précédente au lieu d'empiler des doublons.
+      if (body && body.scope === 'reporting') {
+        if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
+        if (body.action !== 'publish') return fail(res, 400, 'Action de reporting inconnue.', 'UNKNOWN_ACTION');
+        const periode = String(body.periode || '');
+        if (!['seance', 'hebdo', 'mensuel', 'trimestre', 'annuel'].includes(periode)) {
+          return fail(res, 400, 'Période invalide.', 'INVALID_PERIODE');
+        }
+        const windowFrom = String(body.window_from || '');
+        const windowTo = String(body.window_to || '');
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(windowFrom) || !/^\d{4}-\d{2}-\d{2}$/.test(windowTo)) {
+          return fail(res, 400, 'Fenêtre de dates invalide.', 'INVALID_WINDOW');
+        }
+        if (!body.payload || typeof body.payload !== 'object') {
+          return fail(res, 400, 'Contenu du reporting manquant.', 'INVALID_PAYLOAD');
+        }
+        const { data, error } = await supabaseAdmin.from('published_reportings')
+          .upsert({
+            periode, window_from: windowFrom, window_to: windowTo,
+            payload: body.payload, published_by: admin.id, published_at: new Date().toISOString()
+          }, { onConflict: 'periode,window_to' })
+          .select().single();
+        if (error) throw error;
+        return json(res, 200, { success: true, scope: 'reporting', action: 'publish', data });
+      }
+
       // Déclencheur d'import automatique (pg_cron Supabase, toutes les 30 min
       // en séance). Ne fait rien si le mode n'est pas « auto » — l'interrupteur
       // reste maître. Importe les obligations (non bloquant) puis les actions.
