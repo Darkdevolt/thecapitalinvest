@@ -7,15 +7,10 @@
   if (w.__TC_DASHBOARD_PRESENTATION_V2__) return;
   w.__TC_DASHBOARD_PRESENTATION_V2__ = true;
 
-  function loadStylesheet() {
-    var href = '/app/css/dashboard-presentation-v3.css?v=20260910';
-    if (d.querySelector('link[data-tc-dashboard-presentation="v3"]')) return;
-    var link = d.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = href;
-    link.dataset.tcDashboardPresentation = 'v3';
-    d.head.appendChild(link);
-  }
+  // dashboard-presentation-v3.css retiré : absorbé dans /app/css/dashboard.css
+  // (chargé globalement dans app.html), qui reprend désormais tous ses
+  // réglages. Le charger ici EN PLUS aurait recréé le conflit entre couches
+  // qu'on vient de résoudre.
 
   function loadCalendarRuntime() {
     var src = '/app/js/views/dashboard-calendar-runtime.js?v=20260910';
@@ -53,7 +48,6 @@
   }
 
   function apply() {
-    loadStylesheet();
     loadCalendarRuntime();
     observePortfolio();
   }

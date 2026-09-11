@@ -22,11 +22,12 @@
   async function loadEnrichment(){const map=[['allFinancials',secondary.financials],['allDividendes',secondary.dividendes],['allBoc',secondary.boc],['allCoupons',secondary.coupons],['allIndicesHistory',secondary.indicesHistory]];await loadMap(map,'enrichment');publish('enrichment');}
   window.loadAll=async function(){if(window.__tcLoadPromise)return window.__tcLoadPromise;window.__tcLoadPromise=(async()=>{console.log('[LOADER] Chargement optimisé…');await loadCritical();await loadEnrichment();console.log('[LOADER] Données prêtes | cours:',window.allCours.length,'| analyses:',window.allAnalyses.length);})();return window.__tcLoadPromise;};
   window.__tcOptimizedLoadAll=window.loadAll;
-  const styles=[
-    // dashboard-final-polish.css retiré : sa présentation est reprise, en une
-    // seule couche lisible, par /app/css/dashboard.css chargé dans app.html.
-    ['/app/css/dashboard-final-runtime.css?v=1','tc-dashboard-final-runtime']
-  ];
+  // dashboard-final-polish.css et dashboard-final-runtime.css retirés : leur
+  // présentation est reprise, en une seule couche lisible, par
+  // /app/css/dashboard.css chargé dans app.html (ces deux fichiers se
+  // chargeaient en plus de dashboard.css et se disputaient les mêmes
+  // sélecteurs — cause des chevauchements sur le tableau de bord).
+  const styles=[];
   styles.forEach(([href,id])=>{if(document.getElementById(id))return;const style=document.createElement('link');style.id=id;style.rel='stylesheet';style.href=href;document.head.appendChild(style);});
   const viewModules=['/app/js/views/overview.js?v=1','/app/js/views/titres.js?v=1','/app/js/views/boc.js?v=2','/app/js/views/marche.js?v=2','/app/js/views/analyses.js?v=1','/app/js/views/fiche.js?v=3','/app/js/views/technique/pro/at-math.js?v=1','/app/js/views/technique/pro/at-indicators.js?v=1','/app/js/views/technique/pro/at-chart.js?v=1','/app/js/views/technique/pro/at-analysis.js?v=1','/app/js/views/technique/pro/at-app.js?v=1','/app/js/views/analyse-fondamentale.js?v=3','/app/js/views/screener.js?v=2','/app/js/views/backtest.js?v=2','/app/js/views/outils.js?v=1','/app/js/views/opportunites.js?v=1','/app/js/views/palmares.js?v=1','/app/js/views/obligations.js?v=2','/app/js/views/portefeuille.js?v=2','/app/js/views/alertes.js?v=1','/app/js/views/financials.js?v=1','/app/js/views/publications.js?v=1','/app/js/views/comparison.js?v=2','/app/js/views/dividend-screener.js?v=1'];
   function loadScript(src){

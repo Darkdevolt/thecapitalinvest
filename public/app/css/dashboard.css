@@ -1,85 +1,111 @@
 /* ============================================================================
    THE CAPITAL — Tableau de bord : couche de présentation unique
    ----------------------------------------------------------------------------
-   Remplace dashboard-final-polish.css (retiré de loader.js). Suppose tokens.css
-   chargé : n'utilise que des variables définies (--card, --cream, --muted…).
-   Portée stricte : #view-overview. Objectif : lisibilité + hiérarchie, sans
-   guerre de !important. À terme, absorber dashboard-unified.css / -presentation
-   / -polish / -runtime ici, un par un, avec contrôle visuel.
+   Ce fichier fusionne ce qui était encore réparti sur quatre couches chargées
+   en même temps (dashboard-unified.css, dashboard.css, dashboard-final-
+   runtime.css, dashboard-presentation-v3.css) : elles stylaient les mêmes
+   sélecteurs (#overviewStats, .chart-container, .stat-card, .page-header…)
+   avec des valeurs différentes — parfois en !important, parfois pas — si bien
+   que le rendu final dépendait, propriété par propriété, de la couche qui
+   « gagnait » la cascade. Deux media queries à des seuils voisins (960px /
+   900px) donnaient même une hauteur de graphique NON monotone (plus haute à
+   900px qu'à 960px), capable de faire déborder le graphique sur les cartes
+   suivantes selon la largeur d'écran — c'est la cause la plus probable des
+   chevauchements observés. Portée stricte : #view-overview, à l'exception de
+   la barre de commande (.tc-commandbar / .tc-brand / .tc-rail…) qui n'a
+   jamais été scopée au tableau de bord et reste donc globale ici aussi.
+   Les trois fichiers absorbés restent sur disque mais ne sont plus chargés
+   nulle part (voir app.html, loader.js, dashboard-presentation-v2.js).
    ========================================================================== */
 
 #view-overview.view{
   padding:28px clamp(16px,3vw,34px) 56px;
   max-width:1480px;margin-inline:auto;
+  min-width:0;box-sizing:border-box;overflow-x:hidden;
 }
+#view-overview *{box-sizing:border-box}
 
 /* ---- En-tête de page ---- */
 #view-overview .page-header{
-  margin:0 0 24px;padding:0 0 18px;
+  margin:0 0 16px;padding:0 0 13px;
   border-bottom:1px solid var(--border2);
 }
 #view-overview .page-header h1{
   margin:0;font-family:var(--serif);font-weight:600;
-  font-size:clamp(24px,2.4vw,34px);line-height:1.15;letter-spacing:-.02em;
+  font-size:clamp(30px,2.8vw,38px);line-height:1.04;letter-spacing:-.02em;
   color:var(--cream);
 }
 #view-overview .page-header h1 span{color:var(--gold)}
 #view-overview .page-header p{
-  margin:8px 0 0;font-size:13px;line-height:1.55;color:var(--muted);max-width:70ch;
+  margin:6px 0 0;font-size:11px;line-height:1.35;color:var(--muted);max-width:70ch;
 }
 
 /* ---- Cartes génériques ---- */
 #view-overview .card,
-#view-overview .dashboard-news{
+#view-overview .dashboard-news,
+#view-overview .tci-card{
   background:var(--card);
   border:1px solid var(--border);
   border-radius:14px;
   box-shadow:0 6px 22px rgba(0,0,0,.22);
+  box-sizing:border-box;
+  min-width:0;max-width:100%;
   overflow:hidden;
 }
 #view-overview .card-header,
-#view-overview .dashboard-news-head{
+#view-overview .dashboard-news-head,
+#view-overview .tci-head{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
+  min-height:50px;
   padding:15px 20px;
   background:rgba(184,150,78,.04);
   border-bottom:1px solid var(--border2);
 }
-#view-overview .card-title{
+#view-overview .card-title,
+#view-overview .tci-title{
   margin:0;font:600 10px/1.2 var(--sans);letter-spacing:.13em;text-transform:uppercase;
   color:var(--muted);
 }
 #view-overview .card-meta{font:500 11px/1 var(--mono);color:var(--dim)}
-#view-overview .card-body{padding:20px}
+#view-overview .card-body{padding:20px;min-width:0}
+#view-overview .dashboard-news-head .eyebrow{margin:0 0 3px;font-size:8px}
+#view-overview .dashboard-news-head .card-title{font-size:11px}
+#view-overview .news-refresh{height:28px;padding:0 10px;font-size:9px}
 
 /* ---- Cartes d'indices (KPI) ---- */
 #view-overview #overviewStats{
-  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 24px;
+  display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 14px;
 }
 #view-overview #overviewStats .stat-card{
-  position:relative;min-height:120px;padding:20px 22px;
+  position:relative;min-height:116px;height:116px;padding:15px 17px;
   display:flex;flex-direction:column;justify-content:center;gap:8px;
   background:var(--card);
   border:1px solid var(--border);
   border-radius:14px;
   box-shadow:0 6px 22px rgba(0,0,0,.22);
-  overflow:hidden;
+  min-width:0;overflow:visible;
 }
 #view-overview #overviewStats .stat-card::before{
   content:"";position:absolute;inset:0 auto auto 0;width:100%;height:2px;
   background:linear-gradient(90deg,var(--gold),transparent 65%);
 }
 #view-overview #overviewStats .stat-label{
-  margin:0;font:600 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;
+  margin:0;font:600 8px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;
   color:var(--muted);
 }
 #view-overview #overviewStats .stat-value{
-  margin:0;font:500 clamp(26px,2.2vw,32px)/1.1 var(--mono);letter-spacing:-.01em;
-  color:var(--cream);font-variant-numeric:tabular-nums;white-space:nowrap;
+  margin:9px 0 3px;padding:0;height:auto;min-height:36px;
+  font:500 clamp(25px,2.15vw,31px)/1.08 var(--mono);letter-spacing:-.01em;
+  color:var(--cream);font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1;
+  white-space:nowrap;overflow:visible;text-overflow:clip;min-width:0;
 }
+#view-overview #overviewStats .stat-value:empty::after{content:'—';color:var(--dim)}
 #view-overview #overviewStats .stat-change{
-  margin:0;font:600 12px/1.3 var(--mono);display:flex;align-items:center;gap:5px;
-  color:var(--muted);
+  margin:0;height:auto;min-height:15px;
+  font:600 10px/1.25 var(--mono);display:flex;align-items:center;gap:5px;
+  color:var(--muted);overflow:visible;text-overflow:clip;
 }
+#view-overview #overviewStats .stat-change:empty::after{content:'—';color:var(--dim)}
 #view-overview #overviewStats .stat-change.up{color:var(--green)}
 #view-overview #overviewStats .stat-change.down{color:var(--red)}
 #view-overview #overviewStats .stat-change.neutral{color:var(--dim)}
@@ -88,24 +114,43 @@
 #view-overview .grid-7030{
   display:grid;grid-template-columns:minmax(0,2fr) minmax(300px,1fr);
   gap:18px;align-items:stretch;margin:0 0 20px;
+  width:100%;min-width:0;max-width:100%;
 }
 #view-overview .grid-7030>.card{min-width:0}
+/* position:relative + hauteur fixe, SANS display:flex : Chart.js gère lui-même
+   le redimensionnement du canvas via ResizeObserver et attend un conteneur de
+   bloc classique — le flex hérité d'une des anciennes couches pouvait fausser
+   la taille mesurée du canvas et le faire déborder de sa carte. */
 #view-overview .chart-container{
   position:relative;width:100%;height:360px;min-height:360px;
+  min-width:0;overflow:hidden;
 }
-#view-overview .chart-container canvas{max-width:100%!important}
+#view-overview .chart-container canvas{display:block;max-width:100%}
+#view-overview .chart-tabs{padding:10px 16px}
 
 /* ---- Blocs d'enrichissement (portefeuille / largeur / activité / suivi) ---- */
-#view-overview .tci-card{
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:14px;
-  box-shadow:0 6px 22px rgba(0,0,0,.22);
-  padding:18px 20px;
-}
-#view-overview .tci-title{color:var(--cream)}
+#view-overview .tci-card{padding:18px 20px}
+#view-overview #tciBreadth .tci-card{padding:15px}
 #view-overview .tci-label,
 #view-overview .tci-contrib-label{color:var(--muted)}
+#view-overview .tci-row{margin-bottom:20px;min-width:0;max-width:100%}
+#view-overview .tci-row-2{
+  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(300px,1fr);
+  gap:12px;margin-top:12px;
+}
+#view-overview #tciBreadth .tci-head{min-height:25px;margin-bottom:9px;padding-bottom:8px}
+#view-overview #tciBreadth .tci-bar{height:8px;margin:10px 0 8px}
+#view-overview #tciBreadth .tci-legend{gap:8px 14px;font-size:8px}
+#view-overview #tciBreadth .tci-reading{margin-top:8px;font-size:9px}
+
+/* Portefeuille vide : état compact et centré, pas un grand cadre vide. */
+#view-overview #tciPortfolio .tci-empty{
+  min-height:0;height:auto;padding:20px 20px 18px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+}
+#view-overview #tciPortfolio .tci-empty-title{font-size:13px;line-height:1.25;margin:0}
+#view-overview #tciPortfolio .tci-empty-text{max-width:540px;margin:7px 0 12px;font-size:10px;line-height:1.45}
+#view-overview #tciPortfolio .tci-btn{min-height:30px;height:30px;padding:0 14px;font-size:10px;border-radius:6px}
 
 /* ---- États vides : calmes, jamais un cadre noir vide ---- */
 #view-overview .tc-calendar-empty,
@@ -114,7 +159,7 @@
 #view-overview .movers-empty{
   color:var(--muted);font-size:12.5px;text-align:center;
 }
-#view-overview .tc-calendar-empty{padding:22px 16px}
+#view-overview .tc-calendar-empty{min-height:42px;height:42px;padding:0 12px;display:grid;place-items:center;font-size:10px}
 /* Calendrier vide = on masque tout le bloc (il occupait le haut de page pour rien). */
 #view-overview .dashboard-news:has(.tc-calendar-empty){display:none}
 /* Blocs d'enrichissement vides (pas de portefeuille / pas de suivi) : pas de cadre fantôme. */
@@ -123,28 +168,115 @@
 #view-overview #tciActivity:empty,
 #view-overview #tciWatch:empty,
 #view-overview .tci-row:empty{display:none}
-#view-overview .tci-row{margin-bottom:20px}
 
-/* ---- Tables (activité récente, cours) ---- */
-#view-overview table{width:100%;border-collapse:separate;border-spacing:0;font-size:12px;color:var(--cream)}
+/* ---- Calendrier marché ---- */
+#view-overview .dashboard-news{margin:0 0 14px;min-height:0;border-radius:12px}
+#view-overview .tc-calendar-body{min-height:0;padding:0}
+#view-overview .tc-calendar-item{
+  display:grid;grid-template-columns:56px minmax(0,1fr) auto;
+  min-height:51px;padding:6px 15px;gap:10px;
+  border-bottom:1px solid var(--border2);
+}
+#view-overview .tc-calendar-item:last-child{border-bottom:0}
+#view-overview .tc-calendar-date{font-size:9px}
+#view-overview .tc-calendar-date strong{font-size:18px;display:block}
+#view-overview .tc-calendar-ticker{font-size:10px}
+#view-overview .tc-calendar-desc{font-size:9px;margin-top:2px}
+#view-overview .tc-calendar-badge{font-size:8px;padding:4px 7px}
+#view-overview .tc-calendar-when{
+  display:inline-block;margin-left:6px;padding:1px 6px;border-radius:999px;
+  font:600 8px/1.5 'DM Sans',sans-serif;letter-spacing:.04em;text-transform:uppercase;vertical-align:middle;
+}
+#view-overview .tc-calendar-item.is-future .tc-calendar-when{background:rgba(74,163,110,.14);color:#7fc79c}
+#view-overview .tc-calendar-item.is-past .tc-calendar-when{background:rgba(255,255,255,.06);color:var(--muted)}
+#view-overview .tc-calendar-item.is-past{opacity:.72}
+
+/* ---- Tables et listes (activité récente, top mouvements) ---- */
+#view-overview table{width:100%;max-width:100%;border-collapse:separate;border-spacing:0;font-size:12px;color:var(--cream);table-layout:auto}
 #view-overview thead th{
   padding:11px 14px;text-align:left;
   font:600 9px/1 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
   background:rgba(184,150,78,.05);border-bottom:1px solid var(--border);
 }
-#view-overview tbody td{padding:12px 14px;border-bottom:1px solid var(--border2)}
+#view-overview tbody td{padding:12px 14px;border-bottom:1px solid var(--border2);background:transparent}
 #view-overview tbody tr:hover td{background:rgba(184,150,78,.04)}
+#view-overview .mover-row{background:transparent}
+#view-overview #topMovers,#view-overview #recentActivity,#view-overview #newsFeed,#view-overview #pubFeed{min-width:0;overflow-x:auto}
 #view-overview .mt20{margin-top:20px}
+#view-overview .loading,#view-overview .skeleton,#view-overview [class*="loading"]{color:var(--muted)}
 
+/* ---- Repli sans données ---- */
+#view-overview .tc-dashboard-fallback-row{
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  padding:12px 16px;border-bottom:1px solid var(--border2);font-size:12px;color:var(--muted);
+}
+#view-overview .tc-dashboard-fallback-row:last-child{border-bottom:0}
+#view-overview .tc-dashboard-fallback-row strong{font-family:var(--mono);color:var(--cream);font-weight:500;white-space:nowrap}
+
+/* ---- Barre de commande (globale — pas scopée à #view-overview) ---- */
+.tc-commandbar{height:62px;grid-template-columns:auto minmax(260px,1fr) auto;padding:0 18px;gap:18px}
+.tc-brand{height:44px;gap:10px;min-width:168px}
+.tc-brand img{width:38px;height:38px}
+.tc-brand-copy{display:block}
+.tc-brand-name{font-size:15px;letter-spacing:.12em}
+.tc-brand-sub{font-size:7px;margin-top:4px}
+.tc-command-center{min-width:0;display:grid;grid-template-columns:minmax(180px,1fr) auto;align-items:center;gap:12px}
+.tc-search{max-width:none;min-width:0}
+.tc-search input{height:34px;font-size:11px}
+.tc-market-pill{height:34px;order:2;padding:0 10px;gap:7px}
+.tc-market-label{font-size:9px}
+.tc-market-time{font-size:9px}
+.tc-command-actions{gap:7px;min-width:0}
+.tc-clock{display:none}
+.tc-user{max-width:150px;padding:4px 6px}
+.tc-user-name{max-width:105px;font-size:10px}
+.tc-logout{width:32px;height:32px}
+.tc-navstrip{height:39px;padding:0 18px 0 18px;gap:2px}
+.tc-navitem{height:29px;padding:0 10px;font-size:9px}
+.tc-rail{top:101px}
+body.tc-command-layout .main{min-height:calc(100vh - 101px)}
+.tc-commandbar [data-market-clock-legacy],
+.tc-commandbar .legacy-market-clock,
+.tc-commandbar .market-clock-duplicate{display:none}
+
+@media(max-width:1100px){
+  .tc-commandbar{grid-template-columns:auto minmax(200px,1fr) auto}
+  .tc-brand-copy{display:none}
+  .tc-brand{min-width:48px}
+  .tc-navstrip{padding-left:10px}
+}
+/* Paliers de largeur d'écran monotones (la hauteur du graphique ne diminue
+   jamais quand l'écran s'élargit) — c'était l'inverse avant fusion : 900px
+   donnait une hauteur supérieure à 960px, capable de faire déborder le
+   graphique sur les cartes du dessous. */
 @media(max-width:960px){
   #view-overview .grid-7030{grid-template-columns:1fr}
   #view-overview #overviewStats{grid-template-columns:1fr}
-  #view-overview .chart-container{height:280px;min-height:280px}
+  #view-overview #overviewStats .stat-card{height:auto;min-height:112px}
+  #view-overview .tci-row-2{grid-template-columns:1fr}
+  #view-overview .chart-container{height:300px;min-height:300px}
+  #view-overview.view{padding-left:16px;padding-right:16px}
+}
+@media(max-width:700px){
+  .tc-commandbar{height:58px;grid-template-columns:auto minmax(0,1fr) auto;padding:0 10px;gap:8px}
+  .tc-brand{min-width:40px}
+  .tc-brand img{width:34px;height:34px}
+  .tc-command-center{display:block}
+  .tc-market-pill{display:none}
+  .tc-navstrip{height:38px;padding:0 6px;overflow-x:auto}
+  .tc-navitem{padding:0 8px;font-size:8px}
+  .tc-rail{top:96px}
+  #view-overview .chart-container{height:260px;min-height:260px}
+  #view-overview .tc-calendar-item{grid-template-columns:48px minmax(0,1fr)}
+  #view-overview .tc-calendar-badge{display:none}
 }
 @media(max-width:600px){
   #view-overview.view{padding:22px 12px 40px}
   #view-overview #overviewStats .stat-value{font-size:26px}
+  #view-overview .page-header h1{font-size:28px}
+  #view-overview.view{padding-left:12px;padding-right:12px}
+  #view-overview .tc-dashboard-fallback-row{padding-inline:12px}
 }
 @media(prefers-reduced-motion:reduce){
-  #view-overview *{transition:none!important}
+  #view-overview *{transition:none;scroll-behavior:auto;animation:none}
 }
