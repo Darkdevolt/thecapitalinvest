@@ -39,6 +39,13 @@
     } catch (e) { return iso; }
   }
 
+  function fmtDateShort(iso) {
+    if (!iso) return '';
+    try {
+      return new Date(String(iso).slice(0, 10) + 'T12:00:00').toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch (e) { return iso; }
+  }
+
   function fmtDateTime(iso) {
     if (!iso) return '';
     try {
@@ -222,7 +229,7 @@
         p.dividendesAVenir.map(function (d) {
           return '<tr><td><span style="font-family:var(--serif);font-weight:600;color:var(--gold)">' + esc(d.ticker) + '</span>' +
             (d.nom ? ' <span style="color:var(--muted);font-size:12px">' + esc(d.nom) + '</span>' : '') + '</td>' +
-            '<td class="r">' + esc(d.detach || '—') + '</td>' +
+            '<td class="r">' + esc(d.detach ? fmtDateShort(d.detach) : '—') + '</td>' +
             '<td class="r">' + esc(d.montant != null ? money(d.montant) + ' F' : '—') + '</td>' +
             '<td class="r" style="color:var(--green)">' + esc(d.rdt != null ? (d.rdt <= 1.5 ? (d.rdt * 100) : d.rdt).toFixed(2) + ' %' : '—') + '</td></tr>';
         }).join('') + '</tbody></table></div>';
