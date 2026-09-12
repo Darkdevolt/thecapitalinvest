@@ -39,6 +39,12 @@
             '<div class="log" id="dcbr-log" style="margin-top:10px;">Aucune exécution dans cette session.</div>' +
             '</div></div>' +
 
+            '<div class="card"><div class="card-head"><span class="card-title">Journal des passages</span>' +
+            '<span class="card-tools"><button class="btn btn-outline btn-sm" id="dcbr-runs-reload">↺</button></span></div>' +
+            '<div class="card-body tight"><div class="tw capped"><table><thead><tr>' +
+            '<th>Démarré</th><th>Statut</th><th class="r">Trouvées</th><th class="r">Nouvelles</th><th class="r">Modifiées</th><th>Détail</th>' +
+            '</tr></thead><tbody id="dcbr-runs-body">' + TC.rowsLoading(6) + '</tbody></table></div></div></div>' +
+
             '<div class="card"><div class="card-head"><span class="card-title">Fiches enregistrées</span>' +
             '<span class="card-tools">' +
             '<select id="dcbr-filter-cat" style="margin-right:6px;"><option value="">Toutes catégories</option>' +
@@ -89,10 +95,11 @@
             TC.el('dcbr-continue').hidden = !r.has_more;
             TC.say('dcbr-msg', r.created + ' nouveauté(s), ' + r.updated + ' modification(s)' +
                 (r.has_more ? ' · ' + r.remaining + ' fiche(s) restent à lire, cliquez « Continuer ».' : '.'), r.has_more ? 'warn' : 'ok');
-            await load();
+            await Promise.all([load(), loadRuns()]);
         } catch (e) {
             log('Échec : ' + e.message, 'err');
             TC.say('dcbr-msg', e.message, 'err');
+            loadRuns();
         } finally {
             TC.el('dcbr-run').disabled = false;
         }
@@ -154,6 +161,33 @@
         filter();
     }
 
+    async function loadRuns() {
+        const body = TC.el('dcbr-runs-body');
+        if (!body) return;
+        try {
+            const r = await TC.api('/api/process-brvm?scope=dcbr&action=runs', { method: 'GET', timeout: 15000 });
+            const runs = r.runs || [];
+            body.innerHTML = runs.length ? runs.map(run => {
+                const res = run.result || {};
+                const tone = run.status === 'success' ? 'badge-green' : run.status === 'partial' ? 'badge-orange' : 'badge-orange';
+                const detailBits = [];
+                if (run.error) detailBits.push(run.error);
+                if ((res.scrape_errors || []).length) detailBits.push(res.scrape_errors.length + ' erreur(s) source');
+                if ((res.row_errors || []).length) detailBits.push(res.row_errors.length + ' ligne(s) ignorée(s)');
+                return '<tr>' +
+                    '<td class="td-mono">' + TC.esc(new Date(run.started_at).toLocaleString('fr-FR')) + '</td>' +
+                    '<td><span class="badge ' + tone + '">' + TC.esc(run.status) + '</span></td>' +
+                    '<td class="r td-mono">' + TC.esc(res.found ?? '—') + '</td>' +
+                    '<td class="r td-mono">' + TC.esc(res.created ?? '—') + '</td>' +
+                    '<td class="r td-mono">' + TC.esc(res.updated ?? '—') + '</td>' +
+                    '<td class="td-muted">' + TC.esc(detailBits.length ? detailBits.join(' · ') : '—') + '</td>' +
+                    '</tr>';
+            }).join('') : '<tr><td colspan="6" class="td-muted" style="text-align:center;padding:16px;">Aucun passage encore enregistré.</td></tr>';
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="6" class="td-muted">Chargement impossible : ' + TC.esc(e.message) + '</td></tr>';
+        }
+    }
+
     TC.register({
         id: 'dcbr',
         label: 'DC/BR — Fiches obligataires',
@@ -166,9 +200,11 @@
             TC.on('dcbr-run', 'click', runScrape);
             TC.on('dcbr-continue', 'click', runScrape);
             TC.on('dcbr-reload', 'click', load);
+            TC.on('dcbr-runs-reload', 'click', loadRuns);
             TC.on('dcbr-filter-cat', 'change', filter);
             TC.on('dcbr-filter-search', 'input', filter);
             load();
+            loadRuns();
         }
     });
 

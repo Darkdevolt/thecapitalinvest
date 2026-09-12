@@ -389,6 +389,15 @@ async function safeEsvRunLog(payload) {
   }
 }
 
+async function safeDcbrRunLog(payload) {
+  try {
+    const { error } = await supabaseAdmin.from('dcbr_scrape_runs').insert(payload);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[PROCESS-BRVM] journal dcbr_scrape_runs indisponible :', e?.message || e);
+  }
+}
+
 /* Champs comparés pour décider si une ligne déjà connue a changé.
    'raw' et les colonnes de suivi (natural_key, first/last_seen_at...) sont
    volontairement exclues : elles ne reflètent pas un changement de contenu. */
@@ -663,12 +672,17 @@ async function runDcbrSync({ categories, maxPages, limit }) {
     }
   }
 
-  return {
+  const result = {
     found: totalFound, already_stored: alreadyStored, fetched: batch.length,
     created, updated, unchanged, remaining, has_more: remaining > 0 || Object.values(hasMoreListing).some(Boolean),
     scrape_errors: scrapeErrors, row_errors: rowErrors,
     started_at: startedAt, finished_at: new Date().toISOString()
   };
+  await safeDcbrRunLog({
+    started_at: startedAt, finished_at: result.finished_at,
+    status: rowErrors.length || scrapeErrors.length ? 'partial' : 'success', result
+  });
+  return result;
 }
 
 async function runPipeline(res, mode) {
@@ -818,6 +832,10 @@ export default async function handler(req, res) {
           return json(res, 200, { success: true, scope: 'dcbr', ...result });
         } catch (error) {
           console.error('[PROCESS-BRVM] dcbr', error);
+          await safeDcbrRunLog({
+            started_at: new Date().toISOString(), finished_at: new Date().toISOString(),
+            status: 'error', error: String(error?.message || error)
+          });
           return json(res, 502, { success: false, error: 'Synchronisation DC/BR impossible.', code: 'DCBR_SYNC_ERROR' });
         }
       }
@@ -901,6 +919,17 @@ export default async function handler(req, res) {
         });
         return json(res, 502, { success: false, error: 'Synchronisation ESV impossible.', code: 'ESV_SYNC_ERROR' });
       }
+    }
+
+    // DC/BR : GET ?scope=dcbr&action=runs lit le journal des passages
+    // (backfills manuels successifs) — admin uniquement, pas de déclenchement
+    // de récupération ici (celle-ci reste réservée au POST ci-dessus).
+    if (req.method === 'GET' && url.searchParams.get('scope') === 'dcbr' && url.searchParams.get('action') === 'runs') {
+      if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
+      const { data, error } = await supabaseAdmin.from('dcbr_scrape_runs')
+        .select('*').order('started_at', { ascending: false }).limit(20);
+      if (error) return fail(res, 500, 'Lecture du journal impossible.', 'RUNS_READ_ERROR', error);
+      return json(res, 200, { success: true, runs: data || [] });
     }
 
     const current = await getSetting();
