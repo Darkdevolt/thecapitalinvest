@@ -324,9 +324,28 @@ async function loadFicheAnnouncements(ticker, token) {
 }
 
 // ── Rendu principal ──────────────────────────────────────────────────────
+// Plusieurs écouteurs indépendants (main.js, init.js, router.js,
+// runtime-recovery.js, ui.js, loader.js) appellent tous renderCurrentView()
+// à chaque phase de tc:dataready (critical, enrichment...). Sur la vue
+// fiche, ça relançait un openFiche() complet — et son fetch paginé de
+// l'historique — à chaque phase et par écouteur, en rafale : constaté en
+// production, plus de 150 requêtes /marche?type=historique redondantes
+// pour un seul ticker, et la fiche ne dépassait jamais « Chargement… »
+// (chaque nouvel appel remet le placeholder avant que le précédent ait pu
+// peindre). Un chargement déjà en cours pour le même ticker est réutilisé
+// au lieu d'en relancer un.
+var __ficheInFlight = null; // { ticker, promise }
 async function openFiche(ticker, from, noHash) {
   var T = String(ticker || '').trim().toUpperCase();
   if (!T) { console.warn('[FICHE] ticker vide'); return false; }
+  if (__ficheInFlight && __ficheInFlight.ticker === T) return __ficheInFlight.promise;
+  var _selfPromise = _openFicheInner(from, noHash, T).finally(function () {
+    if (__ficheInFlight && __ficheInFlight.ticker === T) __ficheInFlight = null;
+  });
+  __ficheInFlight = { ticker: T, promise: _selfPromise };
+  return _selfPromise;
+}
+async function _openFicheInner(from, noHash, T) {
   prevView = from || 'titres';
   window._lastFicheTicker = T;
   var _ficheToken = (window.__ficheToken = (window.__ficheToken || 0) + 1);
