@@ -3,7 +3,10 @@
    Table dividendes_calendrier. L'année est celle de l'exercice
    bénéficiaire, pas celle du paiement : c'est la confusion la plus
    fréquente et elle fausse le rendement affiché dans l'application.
-   Le rendement est recalculé depuis le dernier cours connu.
+   Le rendement est recalculé sur le cours de clôture à la date de
+   détachement (ou la dernière séance connue avant cette date) : un
+   rendement historique doit s'exprimer au cours du jour où l'action
+   a effectivement perdu son coupon, pas au cours d'aujourd'hui.
    ============================================================ */
 'use strict';
 
@@ -23,7 +26,7 @@
         return '' +
             '<div class="page-head">' +
             '<div><div class="page-title">Calendrier des <em>dividendes</em></div>' +
-            '<div class="page-sub">Un dividende se rattache à l\'exercice qui l\'a produit, jamais à l\'année où il est versé. Le montant saisi est le dividende brut ; le net est calculé automatiquement après retenue de l\'IRVM. Le rendement affiché est recalculé sur le dernier cours de clôture connu : saisi à la main, il vieillit dès la séance suivante.</div></div>' +
+            '<div class="page-sub">Un dividende se rattache à l\'exercice qui l\'a produit, jamais à l\'année où il est versé. Le montant saisi est le dividende brut ; le net est calculé automatiquement après retenue de l\'IRVM. Le rendement affiché est recalculé sur le cours de clôture à la date de détachement (ou la séance précédente la plus proche) : sans date de détachement, il est estimé sur le dernier cours connu.</div></div>' +
             '<div class="page-actions">' +
             '<button class="btn btn-outline btn-sm" id="div-refresh-yield">↻ Recalculer les rendements</button>' +
             '<button class="btn btn-outline btn-sm" id="div-refresh-net">↻ Recalculer les nets (IRVM)</button>' +
@@ -41,10 +44,10 @@
                 { id: 'd-detach', label: 'Date de détachement', type: 'date', col: 'date_detachement' },
                 { id: 'd-paiement', label: 'Date de paiement', type: 'date' },
                 { id: 'd-statut', label: 'Statut', type: 'select', options: STATUTS },
-                { id: 'd-rendement', label: 'Rendement %', type: 'number', col: 'taux_rendement', hint: 'Vide : calculé sur le dernier cours connu.' },
+                { id: 'd-rendement', label: 'Rendement %', type: 'number', col: 'taux_rendement', hint: 'Vide : calculé sur le cours de clôture à la date de détachement.' },
                 { id: 'd-notes', label: 'Observation', placeholder: 'Acompte, solde, dividende exceptionnel…', wide: true }
             ]) + '</div>' +
-            '<div class="card-body tight"><div class="note" id="div-live">Saisissez le ticker et le montant : le rendement se calcule sur le dernier cours enregistré.</div></div>' +
+            '<div class="card-body tight"><div class="note" id="div-live">Saisissez le ticker, le montant et la date de détachement : le rendement se calcule sur le cours de clôture de ce jour-là.</div></div>' +
             '<div class="actions"><button class="btn btn-primary" id="div-save">Enregistrer</button>' +
             '<button class="btn btn-outline btn-sm" id="div-clear">Effacer</button>' +
             '<span class="msg" id="div-msg"></span></div></div>' +
@@ -67,22 +70,76 @@
             '</tr></thead><tbody id="div-tbody">' + TC.rowsLoading(13) + '</tbody></table></div></div>';
     }
 
-    /* ── Derniers cours, pour le rendement ───────────────── */
+    /* ── Cours de clôture au jour de détachement, pour le rendement ──
+       Le rendement d'un dividende doit s'exprimer au cours du jour où
+       l'action a perdu son coupon, pas au cours d'aujourd'hui : sinon
+       un dividende ancien affiche un rendement qui varie à chaque
+       séance sans que rien n'ait changé sur ce dividende. ──────── */
 
-    let lastPrices = null;
+    /* La table historique dépasse 150 000 lignes depuis 1998 : la charger
+       en entier pour en tirer 188 points de rendement serait très lent.
+       On ne va donc chercher, ticker par ticker, que les séances aux
+       dates de détachement effectivement utilisées par le calendrier. */
+    let priceCache = null; /* 'TICKER|ISO_DATE' → {date, price} | null */
 
-    async function prices() {
-        if (lastPrices) return lastPrices;
-        const latest = await TC.get('historique', 'select=date_seance&order=date_seance.desc&limit=1');
-        const date = latest && latest[0] && latest[0].date_seance;
-        lastPrices = { date, map: {} };
-        if (!date) return lastPrices;
-        const data = await TC.getAll('historique', 'select=ticker,cours_cloture,cloture&date_seance=eq.' + date);
-        (data || []).forEach(r => {
-            lastPrices.map[String(r.ticker).toUpperCase()] =
-                TC.toNumber(r.cours_cloture !== null && r.cours_cloture !== undefined ? r.cours_cloture : r.cloture);
+    function extractPrice(r) {
+        const price = TC.toNumber(r.cours_cloture !== null && r.cours_cloture !== undefined ? r.cours_cloture : r.cloture);
+        return price !== null && price > 0 ? { date: r.date_seance, price } : null;
+    }
+
+    /** Résout, pour chaque ligne, le cours de clôture à sa date de détachement (avec repli). */
+    async function loadPriceHistory(rowsData) {
+        priceCache = {};
+        const byTicker = {};
+        (rowsData || []).forEach(r => {
+            const ticker = String(r.ticker || '').toUpperCase();
+            if (!ticker) return;
+            const detach = TC.toISODate(r.date_detachement || r.ex_date) || '';
+            (byTicker[ticker] = byTicker[ticker] || new Set()).add(detach);
         });
-        return lastPrices;
+
+        await Promise.all(Object.keys(byTicker).map(async ticker => {
+            const dates = Array.from(byTicker[ticker]);
+            const withDate = dates.filter(Boolean);
+            let exact = {};
+            if (withDate.length) {
+                const data = await TC.get('historique',
+                    'select=date_seance,cours_cloture,cloture&ticker=eq.' + encodeURIComponent(ticker) +
+                    '&date_seance=in.(' + withDate.join(',') + ')');
+                (data || []).forEach(row => {
+                    const p = extractPrice(row);
+                    if (p) exact[row.date_seance] = p;
+                });
+            }
+            await Promise.all(dates.map(async d => {
+                const key = ticker + '|' + d;
+                priceCache[key] = (d && exact[d]) || await priceForTickerAtDate(ticker, d || null);
+            }));
+        }));
+    }
+
+    function cachedPrice(ticker, isoDate) {
+        const key = String(ticker || '').toUpperCase() + '|' + (isoDate || '');
+        return (priceCache && priceCache[key]) || null;
+    }
+
+    /** Lookup ponctuel pour le formulaire, ou repli quand le cache n'a pas de correspondance exacte. */
+    async function priceForTickerAtDate(ticker, isoDate) {
+        if (!ticker) return null;
+        let query = 'select=date_seance,cours_cloture,cloture&ticker=eq.' + encodeURIComponent(ticker);
+        query += isoDate ? '&date_seance=lte.' + isoDate : '';
+        query += '&order=date_seance.desc&limit=1';
+        const data = await TC.get('historique', query);
+        if (data && data.length) {
+            const p = extractPrice(data[0]);
+            if (p) return p;
+        }
+        if (!isoDate) return null;
+        /* Détachement antérieur à toute séance connue : on retombe sur la première disponible. */
+        const future = await TC.get('historique',
+            'select=date_seance,cours_cloture,cloture&ticker=eq.' + encodeURIComponent(ticker) +
+            '&date_seance=gte.' + isoDate + '&order=date_seance.asc&limit=1');
+        return (future && future.length) ? extractPrice(future[0]) : null;
     }
 
     /* Dividende net = brut - IRVM retenu à la source (12 % par défaut, modifiable par ligne). */
@@ -123,26 +180,26 @@
 
     async function load() {
         TC.el('div-tbody').innerHTML = TC.rowsLoading(13);
-        lastPrices = null;
-        const [data, quotes] = await Promise.all([
-            TC.getAll('dividendes_calendrier', 'select=*&order=annee.desc,ticker.asc'),
-            prices()
-        ]);
+        const data = await TC.getAll('dividendes_calendrier', 'select=*&order=annee.desc,ticker.asc');
+        await loadPriceHistory(data);
         rows = (data || []).map(function (r) {
-            const price = quotes.map[String(r.ticker).toUpperCase()];
+            const ticker = String(r.ticker).toUpperCase();
+            const detach = TC.toISODate(r.date_detachement || r.ex_date);
+            const priceInfo = cachedPrice(ticker, detach);
             const montant = TC.toNumber(r.montant !== null && r.montant !== undefined ? r.montant : r.montant_net);
-            r.__price = price || null;
-            r.__computed = (price && price > 0 && montant !== null) ? Math.round((montant / price) * 10000) / 100 : null;
+            r.__price = priceInfo ? priceInfo.price : null;
+            r.__priceDate = priceInfo ? priceInfo.date : null;
+            r.__computed = (r.__price && montant !== null) ? Math.round((montant / r.__price) * 10000) / 100 : null;
             r.__irvm = r.taux_irvm !== null && r.taux_irvm !== undefined ? TC.toNumber(r.taux_irvm) : 12;
             r.__net = netOf(r.montant, r.__irvm);
             r.__issues = audit(r);
             return r;
         });
-        paintKpis(quotes.date);
+        paintKpis();
         paint(rows);
     }
 
-    function paintKpis(priceDate) {
+    function paintKpis() {
         const year = new Date().getFullYear();
         const thisYear = rows.filter(r => Number(r.annee) === year - 1).length;
         const upcoming = rows.filter(r => {
@@ -152,6 +209,7 @@
         const yields = rows.map(r => r.__computed).filter(v => v !== null && v > 0);
         const median = yields.length ? yields.slice().sort((a, b) => a - b)[Math.floor(yields.length / 2)] : null;
         const flagged = rows.filter(r => r.__issues.length).length;
+        const missingPrice = rows.filter(r => r.__price === null).length;
 
         TC.el('div-kpis').innerHTML =
             box('Dividendes', rows.length) +
@@ -159,9 +217,7 @@
             box('Détachements à venir', upcoming) +
             box('Rendement médian', median !== null ? median.toFixed(2) + ' %' : '—') +
             box('À vérifier', flagged, flagged ? 'orange' : 'green') +
-            '<div class="kpi"><div class="kpi-label">Cours de référence</div>' +
-            '<div class="kpi-value sm">' + (priceDate ? TC.fmtDate(priceDate) : '—') + '</div>' +
-            '<div class="kpi-sub">base du rendement recalculé</div></div>';
+            box('Cours introuvable', missingPrice, missingPrice ? 'orange' : 'green');
     }
 
     function box(label, value, tone) {
@@ -213,6 +269,7 @@
     async function paintLive() {
         const ticker = TC.val('d-ticker').toUpperCase();
         const montant = TC.num('d-montant');
+        const detach = TC.val('d-detach') || null;
         const node = TC.el('div-live');
         const irvmRaw = TC.num('d-irvm');
         const irvm = irvmRaw !== null ? irvmRaw : 12;
@@ -227,18 +284,22 @@
         const netLine = '<div>Brut ' + TC.fmt(montant) + ' F − IRVM ' + irvm.toFixed(1) + ' % (' +
             TC.fmt(Math.round((montant - net) * 100) / 100) + ' F) = <strong>net ' + TC.fmt(net) + ' F</strong> par action.</div>';
 
-        const quotes = await prices();
-        const price = quotes.map[ticker];
-        if (!price) {
+        const priceInfo = await priceForTickerAtDate(ticker, detach);
+        if (!priceInfo) {
             node.className = 'note warn';
-            node.innerHTML = netLine + '<strong>Aucun cours connu pour ' + TC.esc(ticker) + '</strong> à la séance du ' +
-                (quotes.date ? TC.fmtDate(quotes.date) : 'jour') + '. Le rendement ne peut pas être calculé.';
+            node.innerHTML = netLine + '<strong>Aucun cours connu pour ' + TC.esc(ticker) + '</strong>' +
+                (detach ? ' à la date de détachement (' + TC.fmtDate(detach) + ') ni avant.' : ', aucune séance enregistrée.') +
+                ' Le rendement ne peut pas être calculé.';
             return;
         }
-        const yieldValue = (montant / price) * 100;
+        const yieldValue = (montant / priceInfo.price) * 100;
+        const sameDay = detach && priceInfo.date === detach;
         node.className = 'note' + (yieldValue > 25 ? ' warn' : '');
         node.innerHTML = netLine + '<strong>Rendement calculé : ' + yieldValue.toFixed(2) + ' %</strong> — ' +
-            TC.fmt(montant) + ' F (brut) sur un cours de ' + TC.fmt(price) + ' F au ' + TC.fmtDate(quotes.date) +
+            TC.fmt(montant) + ' F (brut) sur un cours de ' + TC.fmt(priceInfo.price) + ' F ' +
+            (detach ? (sameDay ? 'au détachement du ' : 'à la dernière séance connue avant le détachement, le ') : 'au dernier cours connu du ') +
+            TC.fmtDate(priceInfo.date) +
+            (!detach ? '<br>Sans date de détachement saisie, ce rendement n\'est qu\'une estimation.' : '') +
             (yieldValue > 25 ? '<br>Un rendement supérieur à 25 % traduit presque toujours une erreur de montant ou un cours périmé.' : '');
     }
 
@@ -257,9 +318,9 @@
 
         let rendement = TC.num('d-rendement');
         if (rendement === null) {
-            const quotes = await prices();
-            const price = quotes.map[ticker];
-            if (price && price > 0) rendement = Math.round((montant / price) * 10000) / 100;
+            const detach = TC.val('d-detach') || null;
+            const priceInfo = await priceForTickerAtDate(ticker, detach);
+            if (priceInfo) rendement = Math.round((montant / priceInfo.price) * 10000) / 100;
         }
 
         const irvmInput = TC.num('d-irvm');
@@ -356,8 +417,7 @@
             return r.__computed !== null && (published === null || Math.abs(published - r.__computed) > 0.05);
         });
         if (!drift.length) { TC.toast('Tous les rendements sont à jour', 'ok'); return; }
-        if (!confirm('Recalculer ' + drift.length + ' rendement(s) sur le dernier cours de clôture connu ?\n\n' +
-            'Le rendement d\'un dividende ancien sera exprimé au cours d\'aujourd\'hui, pas à celui du détachement.')) return;
+        if (!confirm('Recalculer ' + drift.length + ' rendement(s) sur le cours de clôture à la date de détachement de chaque ligne ?')) return;
         let done = 0;
         for (const r of drift) {
             try {
@@ -393,6 +453,7 @@
             TC.on('d-ticker', 'input', paintLive);
             TC.on('d-montant', 'input', paintLive);
             TC.on('d-irvm', 'input', paintLive);
+            TC.on('d-detach', 'input', paintLive);
             TC.on('div-export', 'click', function () {
                 if (!rows.length) return;
                 TC.download('dividendes-' + TC.today() + '.csv',

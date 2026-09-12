@@ -39,5 +39,11 @@
       "source": "/api/sync-brvm",
       "destination": "/api/scrape-brvm"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/sync-esv",
+      "schedule": "0 18 * * *"
+    }
   ]
 }
