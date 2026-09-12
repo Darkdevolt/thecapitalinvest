@@ -353,6 +353,62 @@ async function loadFicheAnnouncements(ticker, token) {
   }
 }
 
+// ── Évènements sur valeurs BRVM (dividendes, coupons, fractionnements,
+//    augmentations/réductions de capital, fusions, radiations) ────────────
+var ESV_CATEGORY_LABELS = {
+  dividende: 'Dividende', coupon: 'Coupon / remb. capital', fractionnement: 'Fractionnement',
+  augmentation_capital: 'Augmentation de capital', reduction_capital: 'Réduction de capital',
+  fusion_absorption: 'Fusion / absorption', consolidation: 'Consolidation', radiation: 'Radiation'
+};
+function esvDetail(e) {
+  switch (e.categorie) {
+    case 'dividende':
+      return (e.exercice ? 'Exercice ' + e.exercice + ' · ' : '') + (e.montant_net != null ? fchNum(e.montant_net) + ' FCFA net' : '');
+    case 'fractionnement':
+      return [e.parite, e.valeur_theorique != null ? 'Valeur théorique ' + fchNum(e.valeur_theorique) + ' FCFA' : null].filter(Boolean).join(' · ');
+    case 'augmentation_capital': case 'reduction_capital':
+      return [e.parite, e.nature_droit].filter(Boolean).join(' · ');
+    case 'fusion_absorption':
+      return e.emetteur_absorbe ? 'Absorbé : ' + e.emetteur_absorbe : '';
+    default:
+      return e.obligation || '';
+  }
+}
+function esvDate(e) {
+  return e.date_paiement ? fchDate(e.date_paiement) : e.date_evenement ? fchDate(e.date_evenement) : '';
+}
+var __ficheEsvCache = {}; // ticker -> Promise<rows> (même logique que __ficheAnnCache)
+async function loadFicheEsv(ticker, token) {
+  var box = document.getElementById('fch-esv-list');
+  if (!box) return;
+  var key = String(ticker || '').trim().toUpperCase();
+  try {
+    if (!__ficheEsvCache[key]) {
+      __ficheEsvCache[key] = window.apiGet('/marche?type=evenements_valeurs&ticker=' + encodeURIComponent(ticker) + '&limit=20', { cache: 'no-store' });
+      __ficheEsvCache[key].catch(function () { delete __ficheEsvCache[key]; });
+    }
+    var r = await __ficheEsvCache[key];
+    if (token !== window.__ficheToken) return;
+    var rows = (r && (r.data || r)) || [];
+    box = document.getElementById('fch-esv-list');
+    if (!box) return;
+    box.innerHTML = rows.length ? rows.map(function (e) {
+      var link = e.avis_stored_url || e.avis_url;
+      var label = ESV_CATEGORY_LABELS[e.categorie] || e.categorie;
+      var detail = esvDetail(e);
+      var date = esvDate(e);
+      var text = label + (detail ? ' · ' + detail : '') + (date ? ' · ' + date : '');
+      return link
+        ? '<a href="' + fchEsc(link) + '" target="_blank" rel="noopener noreferrer"><span>' + fchEsc(text) + '</span><span>Avis ↗</span></a>'
+        : '<div class="fch-docs-row"><span>' + fchEsc(text) + '</span></div>';
+    }).join('') : '<div class="fch-muted">Aucun évènement sur valeur référencé pour cette valeur.</div>';
+  } catch (e) {
+    if (token !== window.__ficheToken) return;
+    box = document.getElementById('fch-esv-list');
+    if (box) box.innerHTML = '<div class="fch-muted">Évènements sur valeurs indisponibles.</div>';
+  }
+}
+
 // ── Rendu principal ──────────────────────────────────────────────────────
 // Plusieurs écouteurs indépendants (main.js, init.js, router.js,
 // runtime-recovery.js, ui.js, loader.js) appellent tous renderCurrentView()
@@ -590,7 +646,9 @@ async function _openFicheInner(from, noHash, T) {
         + '<span>' + fchEsc(f.source || ('États financiers ' + f.annee)) + ' · ' + f.annee + '</span><span>Ouvrir ↗</span></a>';
     }).join('') + '</div>'
     : '<div class="fch-card fch-muted">Aucun document source référencé.</div>')
-    + '<div class="fch-card fch-docs" id="fch-ann-list" style="margin-top:10px"><div class="fch-muted">Chargement des annonces BRVM…</div></div>'));
+    + '<div class="fch-card fch-docs" id="fch-ann-list" style="margin-top:10px"><div class="fch-muted">Chargement des annonces BRVM…</div></div>'
+    + '<div class="fch-sec-t" style="margin:14px 0 6px">Évènements sur valeurs</div>'
+    + '<div class="fch-card fch-docs" id="fch-esv-list"><div class="fch-muted">Chargement…</div></div>'));
 
   // 8 · Conclusion
   H.push(fchSec('Conclusion', '<div class="fch-concl">'
@@ -607,6 +665,7 @@ async function _openFicheInner(from, noHash, T) {
   ficheChartPeriod = 252;
   renderFicheChart();
   loadFicheAnnouncements(T, _ficheToken);
+  loadFicheEsv(T, _ficheToken);
   return true;
   } catch (err) {
     console.error('[FICHE] rendu:', err);

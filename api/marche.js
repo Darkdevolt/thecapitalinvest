@@ -329,6 +329,19 @@ export default async function handler(req, res) {
         result = await q;
         break;
       }
+      // Évènements sur valeurs BRVM (dividendes, coupons, fractionnements,
+      // augmentations/réductions de capital, fusions, radiations) —
+      // table evenements_valeurs, alimentée par api/process-brvm.js?scope=esv.
+      case 'evenements_valeurs': {
+        let q = db.from('evenements_valeurs').select('*')
+          .order('date_paiement', { ascending: false, nullsLast: true })
+          .order('date_evenement', { ascending: false, nullsLast: true })
+          .limit(Math.min(limit || 100, 500));
+        if (ticker) q = q.eq('ticker', ticker);
+        if (categorie) q = q.eq('categorie', categorie);
+        result = await q;
+        break;
+      }
       case 'apercu': {
         const snapshot = await getPublicMarketSnapshot();
         res.setHeader('Vercel-CDN-Cache-Control', PUBLIC_CDN_CACHE);
