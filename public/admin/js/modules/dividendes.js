@@ -23,9 +23,10 @@
         return '' +
             '<div class="page-head">' +
             '<div><div class="page-title">Calendrier des <em>dividendes</em></div>' +
-            '<div class="page-sub">Un dividende se rattache à l\'exercice qui l\'a produit, jamais à l\'année où il est versé. Le rendement affiché est recalculé sur le dernier cours de clôture connu : saisi à la main, il vieillit dès la séance suivante.</div></div>' +
+            '<div class="page-sub">Un dividende se rattache à l\'exercice qui l\'a produit, jamais à l\'année où il est versé. Le montant saisi est le dividende brut ; le net est calculé automatiquement après retenue de l\'IRVM. Le rendement affiché est recalculé sur le dernier cours de clôture connu : saisi à la main, il vieillit dès la séance suivante.</div></div>' +
             '<div class="page-actions">' +
             '<button class="btn btn-outline btn-sm" id="div-refresh-yield">↻ Recalculer les rendements</button>' +
+            '<button class="btn btn-outline btn-sm" id="div-refresh-net">↻ Recalculer les nets (IRVM)</button>' +
             '<button class="btn btn-outline btn-sm" id="div-export">⬇ CSV</button></div></div>' +
 
             '<div class="kpis" id="div-kpis"></div>' +
@@ -35,7 +36,8 @@
             '<div class="form-grid">' + TC.fields([
                 { id: 'd-ticker', label: 'Ticker', upper: true, placeholder: 'SNTS' },
                 { id: 'd-annee', label: 'Exercice bénéficiaire', type: 'number', step: '1', col: 'annee', placeholder: String(new Date().getFullYear() - 1), hint: 'Année des comptes, pas celle du versement.' },
-                { id: 'd-montant', label: 'Dividende par action', type: 'number', placeholder: '1 250' },
+                { id: 'd-montant', label: 'Dividende brut par action', type: 'number', col: 'montant', placeholder: '229', hint: 'Montant voté, avant retenue de l\'IRVM.' },
+                { id: 'd-irvm', label: 'IRVM (%)', type: 'number', step: '0.1', col: 'taux_irvm', placeholder: '12', hint: 'Impôt sur le Revenu des Valeurs Mobilières, retenu à la source. 12 % par défaut, modifiable par ligne.' },
                 { id: 'd-detach', label: 'Date de détachement', type: 'date', col: 'date_detachement' },
                 { id: 'd-paiement', label: 'Date de paiement', type: 'date' },
                 { id: 'd-statut', label: 'Statut', type: 'select', options: STATUTS },
@@ -59,10 +61,10 @@
             '<button class="btn btn-outline btn-sm" id="div-bulk-reset">Désélectionner</button></div>' +
             '<div class="tw capped" id="bulk-div-scope"><table><thead><tr>' +
             '<th><input type="checkbox" class="rowcheck" id="div-all"></th>' +
-            '<th>Ticker</th><th>Exercice</th><th class="r">Montant</th><th class="r">Rendement</th>' +
+            '<th>Ticker</th><th>Exercice</th><th class="r">Brut</th><th class="r">IRVM</th><th class="r">Net</th><th class="r">Rendement</th>' +
             '<th class="r">Rendement recalculé</th><th>Détachement</th><th>Paiement</th><th>Statut</th>' +
             '<th>Contrôle</th><th></th>' +
-            '</tr></thead><tbody id="div-tbody">' + TC.rowsLoading(11) + '</tbody></table></div></div>';
+            '</tr></thead><tbody id="div-tbody">' + TC.rowsLoading(13) + '</tbody></table></div></div>';
     }
 
     /* ── Derniers cours, pour le rendement ───────────────── */
@@ -81,6 +83,14 @@
                 TC.toNumber(r.cours_cloture !== null && r.cours_cloture !== undefined ? r.cours_cloture : r.cloture);
         });
         return lastPrices;
+    }
+
+    /* Dividende net = brut - IRVM retenu à la source (12 % par défaut, modifiable par ligne). */
+    function netOf(brut, irvm) {
+        const montant = TC.toNumber(brut);
+        const taux = irvm !== null && irvm !== undefined && irvm !== '' ? TC.toNumber(irvm) : 12;
+        if (montant === null || taux === null) return null;
+        return Math.round(montant * (1 - taux / 100) * 100) / 100;
     }
 
     function audit(r) {
@@ -112,7 +122,7 @@
     }
 
     async function load() {
-        TC.el('div-tbody').innerHTML = TC.rowsLoading(11);
+        TC.el('div-tbody').innerHTML = TC.rowsLoading(13);
         lastPrices = null;
         const [data, quotes] = await Promise.all([
             TC.getAll('dividendes_calendrier', 'select=*&order=annee.desc,ticker.asc'),
@@ -123,6 +133,8 @@
             const montant = TC.toNumber(r.montant !== null && r.montant !== undefined ? r.montant : r.montant_net);
             r.__price = price || null;
             r.__computed = (price && price > 0 && montant !== null) ? Math.round((montant / price) * 10000) / 100 : null;
+            r.__irvm = r.taux_irvm !== null && r.taux_irvm !== undefined ? TC.toNumber(r.taux_irvm) : 12;
+            r.__net = netOf(r.montant, r.__irvm);
             r.__issues = audit(r);
             return r;
         });
@@ -161,7 +173,7 @@
         const tbody = TC.el('div-tbody');
         TC.el('div-count').textContent = list.length + ' ligne(s)';
         if (!list.length) {
-            tbody.innerHTML = TC.rowsEmpty(11, 'Aucun dividende enregistré',
+            tbody.innerHTML = TC.rowsEmpty(13, 'Aucun dividende enregistré',
                 'Le calendrier alimente le screener dividendes de l\'application.');
             return;
         }
@@ -174,6 +186,8 @@
                 '<td class="td-key">' + TC.esc(r.ticker) + '</td>' +
                 '<td class="td-mono">' + TC.esc(r.annee || r.exercice || '—') + '</td>' +
                 '<td class="r td-mono">' + TC.fmt(r.montant !== null && r.montant !== undefined ? r.montant : r.montant_net) + '</td>' +
+                '<td class="r td-mono td-muted">' + (r.__irvm !== null && r.__irvm !== undefined ? r.__irvm.toFixed(1) + ' %' : '—') + '</td>' +
+                '<td class="r td-mono">' + TC.fmt(r.__net) + '</td>' +
                 '<td class="r td-mono">' + TC.fmtPct(r.taux_rendement) + '</td>' +
                 '<td class="r td-mono td-muted">' + (r.__computed !== null ? r.__computed.toFixed(2) + ' %' : '—') + '</td>' +
                 '<td class="td-muted">' + TC.fmtDate(r.date_detachement || r.ex_date) + '</td>' +
@@ -200,23 +214,31 @@
         const ticker = TC.val('d-ticker').toUpperCase();
         const montant = TC.num('d-montant');
         const node = TC.el('div-live');
+        const irvmRaw = TC.num('d-irvm');
+        const irvm = irvmRaw !== null ? irvmRaw : 12;
+        const net = netOf(montant, irvm);
+
         if (!ticker || montant === null) {
             node.className = 'note';
-            node.innerHTML = 'Saisissez le ticker et le montant : le rendement se calcule sur le dernier cours enregistré.';
+            node.innerHTML = 'Saisissez le ticker et le montant brut : le net et le rendement se calculent automatiquement.';
             return;
         }
+
+        const netLine = '<div>Brut ' + TC.fmt(montant) + ' F − IRVM ' + irvm.toFixed(1) + ' % (' +
+            TC.fmt(Math.round((montant - net) * 100) / 100) + ' F) = <strong>net ' + TC.fmt(net) + ' F</strong> par action.</div>';
+
         const quotes = await prices();
         const price = quotes.map[ticker];
         if (!price) {
             node.className = 'note warn';
-            node.innerHTML = '<strong>Aucun cours connu pour ' + TC.esc(ticker) + '</strong> à la séance du ' +
+            node.innerHTML = netLine + '<strong>Aucun cours connu pour ' + TC.esc(ticker) + '</strong> à la séance du ' +
                 (quotes.date ? TC.fmtDate(quotes.date) : 'jour') + '. Le rendement ne peut pas être calculé.';
             return;
         }
         const yieldValue = (montant / price) * 100;
         node.className = 'note' + (yieldValue > 25 ? ' warn' : '');
-        node.innerHTML = '<strong>Rendement calculé : ' + yieldValue.toFixed(2) + ' %</strong> — ' +
-            TC.fmt(montant) + ' F sur un cours de ' + TC.fmt(price) + ' F au ' + TC.fmtDate(quotes.date) +
+        node.innerHTML = netLine + '<strong>Rendement calculé : ' + yieldValue.toFixed(2) + ' %</strong> — ' +
+            TC.fmt(montant) + ' F (brut) sur un cours de ' + TC.fmt(price) + ' F au ' + TC.fmtDate(quotes.date) +
             (yieldValue > 25 ? '<br>Un rendement supérieur à 25 % traduit presque toujours une erreur de montant ou un cours périmé.' : '');
     }
 
@@ -240,9 +262,13 @@
             if (price && price > 0) rendement = Math.round((montant / price) * 10000) / 100;
         }
 
+        const irvmInput = TC.num('d-irvm');
+        const irvm = irvmInput !== null ? irvmInput : 12;
+        const net = netOf(montant, irvm);
+
         const body = {
             ticker, annee, exercice: annee,
-            montant, montant_net: montant,
+            montant, montant_net: net, taux_irvm: irvm,
             taux_rendement: rendement, rendement,
             date_detachement: TC.val('d-detach') || null,
             ex_date: TC.val('d-detach') || null,
@@ -264,6 +290,7 @@
                 await TC.post('dividendes_calendrier', body);
                 TC.say('div-msg', ticker + ' — exercice ' + annee + ' enregistré.', 'ok');
                 TC.clear(['d-montant', 'd-rendement', 'd-detach', 'd-paiement', 'd-notes']);
+                TC.setVal('d-irvm', 12);
             }
             load();
         } catch (e) { TC.say('div-msg', e.message, 'err'); }
@@ -276,6 +303,7 @@
         TC.setVal('d-ticker', row.ticker);
         TC.setVal('d-annee', row.annee || row.exercice);
         TC.setVal('d-montant', row.montant !== null && row.montant !== undefined ? row.montant : row.montant_net);
+        TC.setVal('d-irvm', row.taux_irvm !== null && row.taux_irvm !== undefined ? row.taux_irvm : 12);
         TC.setVal('d-rendement', row.taux_rendement);
         TC.setVal('d-detach', TC.toISODate(row.date_detachement || row.ex_date) || '');
         TC.setVal('d-paiement', TC.toISODate(row.date_paiement) || '');
@@ -294,11 +322,32 @@
         editing = null;
         TC.clear(['d-ticker', 'd-annee', 'd-montant', 'd-rendement', 'd-detach', 'd-paiement', 'd-notes']);
         TC.setVal('d-statut', 'confirmé');
+        TC.setVal('d-irvm', 12);
         TC.el('div-form-title').textContent = 'Enregistrer un dividende';
         TC.el('div-save').textContent = 'Enregistrer';
         TC.el('div-cancel-edit').hidden = true;
         TC.say('div-msg', '');
         paintLive();
+    }
+
+    async function refreshNet() {
+        const drift = rows.filter(r => {
+            const expected = netOf(r.montant, r.__irvm);
+            return expected !== null && TC.toNumber(r.montant_net) !== expected;
+        });
+        if (!drift.length) { TC.toast('Tous les nets sont à jour', 'ok'); return; }
+        if (!confirm('Recalculer ' + drift.length + ' dividende(s) net(s) ?\n\n' +
+            'Net = brut − IRVM (12 % par défaut, ou le taux déjà saisi sur la ligne).')) return;
+        let done = 0;
+        for (const r of drift) {
+            try {
+                await TC.patch('dividendes_calendrier', 'id=eq.' + r.id,
+                    { montant_net: r.__net, taux_irvm: r.__irvm });
+                done++;
+            } catch (e) { /* bilan */ }
+        }
+        TC.toast(done + ' net(s) recalculés', 'ok');
+        load();
     }
 
     async function refreshYields() {
@@ -332,6 +381,7 @@
         mount() {
             const tickerInput = TC.el('d-ticker');
             if (tickerInput) tickerInput.setAttribute('list', 'tickers-list');
+            if (!TC.val('d-irvm')) TC.setVal('d-irvm', 12);
             TC.on('div-save', 'click', save);
             TC.on('div-clear', 'click', resetForm);
             TC.on('div-cancel-edit', 'click', resetForm);
@@ -339,12 +389,14 @@
             TC.on('div-search', 'input', filter);
             TC.on('div-statut-filter', 'change', filter);
             TC.on('div-refresh-yield', 'click', refreshYields);
+            TC.on('div-refresh-net', 'click', refreshNet);
             TC.on('d-ticker', 'input', paintLive);
             TC.on('d-montant', 'input', paintLive);
+            TC.on('d-irvm', 'input', paintLive);
             TC.on('div-export', 'click', function () {
                 if (!rows.length) return;
                 TC.download('dividendes-' + TC.today() + '.csv',
-                    TC.toCSV(rows, ['ticker', 'annee', 'montant', 'taux_rendement', 'date_detachement', 'date_paiement', 'statut', 'notes']),
+                    TC.toCSV(rows, ['ticker', 'annee', 'montant', 'taux_irvm', 'montant_net', 'taux_rendement', 'date_detachement', 'date_paiement', 'statut', 'notes']),
                     'text/csv;charset=utf-8');
             });
             TC.on('div-all', 'change', e => sel.all(rows.map(r => r.id), e.target.checked));
