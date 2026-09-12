@@ -27,13 +27,19 @@
   function fromRow(d, source) {
     var brut = num(d.montant);
     var irvm = d.taux_irvm != null ? num(d.taux_irvm) : 12;
+    var net = d.montant_net != null ? num(d.montant_net) : netOf(brut, irvm);
+    // Incohérence de saisie préexistante sur certaines lignes : un net ne
+    // peut jamais dépasser le brut. Plutôt qu'afficher une donnée fausse, on
+    // masque le brut/IRVM pour cette ligne et on garde le net, qui reste la
+    // valeur de référence historiquement affichée ailleurs dans l'app.
+    if (brut !== null && net !== null && net > brut) { brut = null; irvm = null; }
     return {
       source: source,
       statut: d.statut || (source === 'estimation' ? 'payé' : 'confirmé'),
       exercice: d.exercice || d.annee || null,
       brut: brut,
       irvm: irvm,
-      net: d.montant_net != null ? num(d.montant_net) : netOf(brut, irvm),
+      net: net,
       date_detachement: source === 'annonce' ? (d.date_detachement || d.ex_date || null) : null,
       date_paiement: source === 'annonce' ? (d.date_paiement_cal || d.date_paiement || null) : null
     };
