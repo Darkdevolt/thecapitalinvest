@@ -32,7 +32,7 @@ import { listDcbrFiches, fetchDcbrFicheDetails } from '../lib/dcbr-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
 import { json, fail, readBody, requestUrl } from '../lib/http.js';
-import config from '../lib/config.js';
+import appConfig from '../lib/config.js';
 
 /* Plafond Hobby Vercel (défaut sans config : 10 s, largement insuffisant dès
    qu'un scope lit plusieurs dizaines de pages une par une — constaté sur
@@ -257,8 +257,8 @@ const annSafeName = value => String(value || 'document.pdf')
   .normalize('NFKD').replace(/[^\w.\-]+/g, '_').replace(/^\.+/, '').slice(0, 160) || 'document.pdf';
 
 function announcementsPublicUrl(path) {
-  if (!config.supabaseUrl) throw new Error('SUPABASE_URL non configurée');
-  return `${config.supabaseUrl}/storage/v1/object/public/${ANNOUNCEMENTS_BUCKET}/${path}`;
+  if (!appConfig.supabaseUrl) throw new Error('SUPABASE_URL non configurée');
+  return `${appConfig.supabaseUrl}/storage/v1/object/public/${ANNOUNCEMENTS_BUCKET}/${path}`;
 }
 
 function basenameOf(url) {
@@ -350,8 +350,8 @@ const esvSafeName = value => String(value || 'document.pdf')
   .normalize('NFKD').replace(/[^\w.\-]+/g, '_').replace(/^\.+/, '').slice(0, 160) || 'document.pdf';
 
 function esvPublicUrl(path) {
-  if (!config.supabaseUrl) throw new Error('SUPABASE_URL non configurée');
-  return `${config.supabaseUrl}/storage/v1/object/public/${ESV_BUCKET}/${path}`;
+  if (!appConfig.supabaseUrl) throw new Error('SUPABASE_URL non configurée');
+  return `${appConfig.supabaseUrl}/storage/v1/object/public/${ESV_BUCKET}/${path}`;
 }
 
 /* Le numéro d'avis BRVM DG (ex. "avis_ndeg213") est une séquence unique tous
