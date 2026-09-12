@@ -120,8 +120,12 @@ for (const file of files) {
 // — récupération des convocations AG / résultats / dividendes / avis BRVM. Changement
 // délibéré et revu ; le garde-fou est mis à jour en conséquence (voir requireInvariant
 // ci-dessous, c'est la « validation explicite » qu'il réclame).
+// Bump 2026-09-12 : ajout du module « Évènements sur valeurs »
+// (public/admin/js/modules/evenements-valeurs.js) — suivi des ESV BRVM
+// (dividendes, coupons, fractionnements, augmentations/réductions de
+// capital, fusions, radiations). Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '719aa37372c67e002551fefa812da513c64a25e3';
+const expectedAdminBlobSha = '48530426c6a4a21b99a153d7f940351254583a0f';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
