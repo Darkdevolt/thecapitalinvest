@@ -529,6 +529,32 @@ async function _openFicheInner(from, noHash, T) {
       + '</div>'));
   }
 
+  // 4c · Prochain dividende (annoncé, ou estimé au vu du dernier versement)
+  var nd = (typeof window.tcNextDividend === 'function') ? window.tcNextDividend(T) : null;
+  H.push(fchSec('Prochain dividende', !nd
+    ? '<div class="fch-card fch-muted">Aucun dividende enregistré pour cette société : rien à prévisionner pour le moment.</div>'
+    : '<div class="fch-card">'
+      + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:12px">'
+      + '<div class="fch-sec-t" style="margin:0">Par action, exercice ' + fchEsc(nd.exercice || '—') + '</div>'
+      + (nd.source === 'annonce'
+        ? '<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(74,222,128,.15);color:var(--green,#4ADE80)">' + fchEsc(nd.statut || 'annoncé') + '</span>'
+        : '<span style="font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(245,240,232,.1);color:var(--muted)">estimation</span>')
+      + '</div>'
+      + fchGrid([
+          fchCell('Brut', fchNum(nd.brut, 0) + (nd.brut != null ? ' F' : '')),
+          fchCell('IRVM', nd.irvm != null ? fchNum(nd.irvm, 1) + ' %' : '—'),
+          fchCell('Net', fchNum(nd.net, 0) + (nd.net != null ? ' F' : ''))
+        ])
+      + (nd.source === 'annonce'
+        ? '<div class="fch-muted" style="margin-top:8px;font-size:12px">Détachement ' + fchDate(nd.date_detachement) + (nd.date_paiement ? ' · paiement ' + fchDate(nd.date_paiement) : '') + '</div>'
+        : '<div class="fch-muted" style="margin-top:8px;font-size:12px">Aucun versement annoncé pour l\'exercice en cours : projection sur le dividende du dernier exercice versé, à titre indicatif — pas un engagement de l\'émetteur.</div>')
+      + '<div style="margin-top:14px;padding-top:14px;border-top:1px solid rgba(245,240,232,.08);display:flex;align-items:center;gap:10px;flex-wrap:wrap">'
+      + '<label for="fch-div-qty" style="font-size:12px;color:var(--muted)">Simuler pour</label>'
+      + '<input id="fch-div-qty" type="number" min="1" step="1" value="1" style="width:90px;background:var(--surface);border:1px solid rgba(245,240,232,.16);color:var(--cream);border-radius:7px;padding:6px 9px;font:inherit" oninput="ficheSimulateDividend(\'' + T + '\')">'
+      + '<span style="font-size:12px;color:var(--muted)">action(s) →</span>'
+      + '<strong id="fch-div-sim" style="color:var(--gold)">' + (nd.net != null ? fchNum(nd.net, 0) + ' F net' : '—') + '</strong>'
+      + '</div></div>'));
+
   // 5 · Dividendes
   H.push(fchSec('Dividendes', divs.length
     ? '<div class="fch-card" style="overflow-x:auto"><table class="fch-fin"><thead><tr><th>Exercice</th><th>Montant net</th><th>Rendement</th><th>Détachement</th><th>Paiement</th><th>Statut</th></tr></thead><tbody>'
@@ -644,6 +670,16 @@ function setFicheAdjusted(on) {
   renderFicheChart();
 }
 window.setFicheAdjusted = setFicheAdjusted;
+
+function ficheSimulateDividend(ticker) {
+  var input = document.getElementById('fch-div-qty');
+  var out = document.getElementById('fch-div-sim');
+  if (!input || !out || typeof window.tcDividendForecast !== 'function') return;
+  var qty = Math.max(1, Math.floor(Number(input.value) || 0));
+  var sim = window.tcDividendForecast(ticker, qty);
+  out.textContent = sim && sim.montantNet != null ? fchNum(sim.montantNet, 0) + ' F net' : '—';
+}
+window.ficheSimulateDividend = ficheSimulateDividend;
 
 window.openFiche = openFiche;
 window.renderFiche = renderFiche;

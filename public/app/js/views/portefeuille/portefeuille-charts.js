@@ -91,8 +91,40 @@
       <div><div style="font-size:11px;color:var(--dim)">Dividendes perçus</div><strong style="font-size:18px;color:var(--green)">+${money(total)} FCFA</strong></div>
       <div><div style="font-size:11px;color:var(--dim)">Rendement sur capital</div><strong style="font-size:18px">${number(yieldPct,2)}%</strong></div>
       <div><div style="font-size:11px;color:var(--dim)">Versements de dividendes</div><strong style="font-size:18px">${divs.length}</strong></div>
-    </div>`;
+    </div>` + renderDividendForecastBlock(rows);
   };
+
+  /* Prochain versement attendu par position détenue : annoncé (statut
+     confirmé/prévisionnel) en priorité, sinon estimé sur le dernier
+     dividende réellement versé — jamais un engagement de l'émetteur. */
+  function renderDividendForecastBlock(rows) {
+    if (typeof window.tcPortfolioDividendForecast !== 'function') return '';
+    const positions = (rows || []).map(r => ({ ticker: r.ticker, qty: r.qty }));
+    const fc = window.tcPortfolioDividendForecast(positions);
+    if (!fc.rows.length) {
+      return '<div style="padding:0 16px 16px;font-size:12px;color:var(--dim)">Aucun historique de dividende pour les positions actuelles : rien à prévisionner.</div>';
+    }
+    const lines = fc.rows.map(r => {
+      const tag = r.source === 'annonce'
+        ? `<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(74,222,128,.15);color:var(--green)">${esc(r.statut || 'annoncé')}</span>`
+        : '<span style="font-size:10px;padding:2px 7px;border-radius:999px;background:rgba(245,240,232,.1);color:var(--dim)">estimation</span>';
+      const when = r.source === 'annonce' && r.date_detachement
+        ? `détachement ${typeof fmtDate === 'function' ? fmtDate(r.date_detachement) : r.date_detachement}`
+        : `d'après l'exercice ${esc(r.exercice || '—')}`;
+      return `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;padding:7px 0;border-bottom:1px solid var(--border2)">
+        <span><b style="color:var(--gold)">${esc(r.ticker)}</b> · ${r.quantite} action(s) · ${when} ${tag}</span>
+        <span style="color:var(--green);font-weight:700">${r.montantNet != null ? '+' + money(r.montantNet) + ' FCFA' : '—'}</span>
+      </div>`;
+    }).join('');
+    return `<div style="padding:0 16px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:4px 0 10px;padding-top:12px;border-top:1px solid var(--border2)">
+        <span style="font-size:11px;color:var(--dim)">Revenu de dividendes prévisionnel (positions actuelles)</span>
+        <strong style="font-size:16px;color:var(--gold)">${money(fc.total)} FCFA</strong>
+      </div>
+      ${lines}
+      <div style="font-size:11px;color:var(--dim);margin-top:8px">Net d'IRVM. « Estimation » = pas de versement annoncé pour l'exercice en cours, projection sur le dernier dividende réellement versé — pas un engagement de l'émetteur.</div>
+    </div>`;
+  }
 
   window.renderBenchmark = function () {
     const el = document.getElementById('benchmarkStats');
