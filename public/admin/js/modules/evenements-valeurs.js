@@ -4,7 +4,8 @@
    et réductions de capital, fusions/absorptions, consolidations,
    radiations — récupérés depuis brvm.org/fr/esv/*, PDF re-hébergés
    dans Supabase Storage. Table evenements_valeurs, alimentée par
-   api/sync-esv.js (cron quotidien 18h Abidjan + backfill manuel ici).
+   api/process-brvm.js (scope 'esv' — cron quotidien 18h Abidjan +
+   backfill manuel ici).
    ============================================================ */
 'use strict';
 
