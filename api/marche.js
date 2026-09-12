@@ -342,6 +342,18 @@ export default async function handler(req, res) {
         result = await q;
         break;
       }
+      // Fiches techniques obligataires DC/BR (ISIN, caractéristiques
+      // d'émission) — table obligations_caracteristiques, alimentée par
+      // api/process-brvm.js?scope=dcbr. Distincte de `obligations` (cours
+      // BRVM quotidiens, cotées uniquement, sans ISIN).
+      case 'obligations_caracteristiques': {
+        let q = db.from('obligations_caracteristiques').select('*')
+          .order('date_jouissance', { ascending: false, nullsLast: true })
+          .limit(Math.min(limit || 500, 1000));
+        if (categorie) q = q.eq('categorie', categorie);
+        result = await q;
+        break;
+      }
       case 'apercu': {
         const snapshot = await getPublicMarketSnapshot();
         res.setHeader('Vercel-CDN-Cache-Control', PUBLIC_CDN_CACHE);

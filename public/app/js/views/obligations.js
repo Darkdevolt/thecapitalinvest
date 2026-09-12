@@ -16,6 +16,7 @@
 
   var LIST = null;
   var MARCHE = null;
+  var CARAC = null; // code_obligation -> fiche technique DC/BR (ISIN, etc.)
   var loading = false;
   var VN = 10000;
   var METHODE = 'in_fine';   // in_fine | amort_constant | annuites_constantes
@@ -95,15 +96,25 @@
   // ---- données ----
   function load() {
     if (LIST) return Promise.resolve();
-    if (typeof window.apiGet !== 'function') { LIST = []; return Promise.resolve(); }
+    if (typeof window.apiGet !== 'function') { LIST = []; CARAC = {}; return Promise.resolve(); }
     return Promise.all([
       window.apiGet('/marche?type=obligations').catch(function () { return []; }),
-      window.apiGet('/marche?type=obligations_marche&limit=5').catch(function () { return []; })
+      window.apiGet('/marche?type=obligations_marche&limit=5').catch(function () { return []; }),
+      window.apiGet('/marche?type=obligations_caracteristiques&limit=500').catch(function () { return []; })
     ]).then(function (r) {
       var rows = Array.isArray(r[0]) ? r[0] : (r[0] && r[0].data) || [];
       var mar = Array.isArray(r[1]) ? r[1] : (r[1] && r[1].data) || [];
+      var fiches = Array.isArray(r[2]) ? r[2] : (r[2] && r[2].data) || [];
       LIST = rows.filter(function (o) { return o && o.code; });
       MARCHE = mar[0] || null;
+      // Une même obligation (rapprochement par nom, admin DC/BR) peut avoir
+      // plusieurs fiches (ex. tranches) : garder la plus récemment publiée.
+      CARAC = {};
+      fiches.forEach(function (f) {
+        if (!f || !f.code_obligation) return;
+        var prev = CARAC[f.code_obligation];
+        if (!prev || String(f.date_jouissance || '') > String(prev.date_jouissance || '')) CARAC[f.code_obligation] = f;
+      });
     });
   }
 
@@ -201,8 +212,11 @@
     });
   }
 
+  function ficheOf(o) { return (CARAC && CARAC[o.code]) || null; }
+
   var COLS = [
     { k: 'code', l: 'Code', v: function (r) { return '<span class="ob-code">' + esc(r.o.code) + '</span><div class="ob-nom">' + esc((r.o.nom || '').slice(0, 30)) + '</div>'; } },
+    { k: 'isin', l: 'ISIN', v: function (r) { var f = ficheOf(r.o); return f && f.isin ? '<span class="ob-code" style="color:var(--cream)">' + esc(f.isin) + '</span>' : '—'; } },
     { k: 'taux', l: 'Taux facial', cls: 'r', v: function (r) { return r.m.taux != null ? nf(r.m.taux, 2) + ' %' : '—'; } },
     { k: 'maturite', l: 'Maturité', cls: 'r', v: function (r) { return dLabel(r.o.date_maturite); } },
     { k: 'n', l: 'Années rest.', cls: 'r', v: function (r) { return r.m.n != null ? nf(r.m.n, 1) : '—'; } },
@@ -217,6 +231,7 @@
     return rows.slice().sort(function (a, b) {
       var va, vb;
       if (k === 'code') { va = a.o.code || ''; vb = b.o.code || ''; return va.localeCompare(vb) * d; }
+      if (k === 'isin') { va = (ficheOf(a.o) || {}).isin || ''; vb = (ficheOf(b.o) || {}).isin || ''; return va.localeCompare(vb) * d; }
       if (k === 'maturite') { va = a.o.date_maturite || ''; vb = b.o.date_maturite || ''; return String(va).localeCompare(String(vb)) * d; }
       if (k === 'coupon_couru') { va = num(a.o.coupon_couru); vb = num(b.o.coupon_couru); }
       else { va = a.m[k]; vb = b.m[k]; }
@@ -276,10 +291,22 @@
     if (!o) { SEL = null; return renderList(); }
     var m = metrics(o);
     var sch = schedule(o);
+    var fiche = ficheOf(o);
 
     var carac = [
       ['Code', o.code],
-      ['Émetteur', o.nom || '—'],
+      ['Émetteur', o.nom || '—']
+    ];
+    if (fiche) {
+      carac.push(['ISIN', fiche.isin || '—']);
+      if (fiche.raison_sociale_emetteur) carac.push(['Raison sociale', fiche.raison_sociale_emetteur]);
+      if (fiche.registraire) carac.push(['Registraire', fiche.registraire]);
+      if (fiche.valeur_nominale != null) carac.push(['Valeur nominale (DC/BR)', nf(fiche.valeur_nominale) + ' FCFA']);
+      if (fiche.nombre_titres != null) carac.push(['Nombre de titres', nf(fiche.nombre_titres)]);
+      if (fiche.mode_remboursement) carac.push(['Mode de remboursement', fiche.mode_remboursement]);
+      if (fiche.modalite_paiement) carac.push(['Modalité de paiement', fiche.modalite_paiement]);
+    }
+    carac = carac.concat([
       ['Taux facial', m.taux != null ? nf(m.taux, 2) + ' %' : '—'],
       ['Émission', dLabel(o.date_emission)],
       ['Maturité', dLabel(o.date_maturite)],
@@ -290,7 +317,7 @@
       ['Coupon annuel (VN ' + nf(VN) + ')', m.couponAnnuel != null ? nf(m.couponAnnuel) + ' FCFA' : '—'],
       ['Rendement courant', m.courant != null ? nf(m.courant, 2) + ' %' : '—'],
       ['Rendement à l\'échéance', m.ytm != null ? nf(m.ytm, 2) + ' %' : '—']
-    ];
+    ]);
 
     var methLabel = METHODE === 'in_fine' ? 'In fine' : METHODE === 'amort_constant' ? 'Amortissement constant' : 'Annuités constantes';
 
