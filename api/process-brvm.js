@@ -28,6 +28,7 @@ import { scrapeBrvm } from '../lib/brvm-scraper.js';
 import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
 import { scrapeAnnouncements, CATEGORIES as ANNOUNCEMENT_CATEGORIES } from '../lib/brvm-announcements-scraper.js';
 import { scrapeEsv, CATEGORIES as ESV_CATEGORIES } from '../lib/brvm-esv-scraper.js';
+import { scrapeDcbrFiches } from '../lib/dcbr-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
 import { json, fail, readBody, requestUrl } from '../lib/http.js';
@@ -499,6 +500,133 @@ async function runEsvSync({ sinceYears, maxPages, categories, downloadDocs }) {
   return result;
 }
 
+/* ── DC/BR : fiches techniques d'emprunts obligataires (ISIN, caractéristiques
+   d'émission), cotées et non cotées. Déclenché par scope:'dcbr' — POST admin
+   uniquement, pas de cron : ces fiches changent rarement (une par émission,
+   pas par séance), contrairement au marché ou aux ESV. Même fichier que le
+   reste pour ne pas dépasser la limite Hobby de fonctions serverless. */
+const DCBR_TRACKED_FIELDS = [
+  'designation', 'symbole', 'isin', 'code_obligation', 'raison_sociale_emetteur',
+  'capital_social', 'registre_commerce', 'siege_social', 'telephone_emetteur',
+  'registraire', 'registraire_coordonnees', 'personne_ressource', 'nature_titres',
+  'marche_secondaire', 'montant_indicatif', 'montant_effectif', 'valeur_nominale',
+  'nombre_titres', 'prix_emission', 'date_jouissance', 'taux_brut', 'taux_net',
+  'montant_coupon_brut', 'montant_coupon_net', 'modalite_paiement', 'duree',
+  'mode_remboursement', 'prix_remboursement'
+];
+
+function normalizeBondText(v) {
+  return String(v || '').normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toUpperCase().replace(/[^A-Z0-9]+/g, ' ').trim();
+}
+
+/** Rapprochement au code `obligations` (cours BRVM) par le nom, en best-effort :
+    les deux sources n'utilisent pas la même nomenclature de code, seul le nom
+    de l'émission est comparable. Laisse null plutôt que de deviner en cas
+    d'ambiguïté (plusieurs candidats, ou aucun). */
+function matchBondCode(designation, obligationsRef) {
+  const norm = normalizeBondText(designation);
+  if (!norm) return null;
+  const candidates = obligationsRef.filter(o => {
+    const on = normalizeBondText(o.nom);
+    return on && (norm.includes(on) || on.includes(norm));
+  });
+  return candidates.length === 1 ? candidates[0].code : null;
+}
+
+async function runDcbrSync({ categories, maxPages }) {
+  const startedAt = new Date().toISOString();
+  const cats = categories?.length ? categories : ['cotee', 'non_cotee'];
+
+  const { data: obligationsRef, error: refError } = await supabaseAdmin.from('obligations').select('code,nom');
+  if (refError) throw refError;
+
+  let allRows = [];
+  const scrapeErrors = [];
+  const hasMore = {};
+  for (const categorie of cats) {
+    const result = await scrapeDcbrFiches({ categorie, maxPages });
+    allRows.push(...result.rows);
+    scrapeErrors.push(...result.errors.map(e => ({ ...e, categorie })));
+    hasMore[categorie] = result.hasMore;
+  }
+
+  const { data: existingRows, error: existingError } = await supabaseAdmin
+    .from('obligations_caracteristiques').select('*').in('source_url', allRows.map(r => r.source_url));
+  if (existingError) throw existingError;
+  const existingByUrl = new Map((existingRows || []).map(r => [r.source_url, r]));
+
+  let created = 0, updated = 0, unchanged = 0;
+  const rowErrors = [];
+  const now = new Date().toISOString();
+
+  for (const row of allRows) {
+    try {
+      const existing = existingByUrl.get(row.source_url);
+      const codeObligation = matchBondCode(row.designation, obligationsRef || []);
+
+      const fields = {
+        source_url: row.source_url,
+        designation: row.designation || null,
+        categorie: row.categorie || null,
+        symbole: row.symbole || null,
+        isin: row.isin || null,
+        code_obligation: codeObligation,
+        raison_sociale_emetteur: row.raison_sociale_emetteur || null,
+        capital_social: row.capital_social || null,
+        registre_commerce: row.registre_commerce || null,
+        siege_social: row.siege_social || null,
+        telephone_emetteur: row.telephone_emetteur || null,
+        registraire: row.registraire || null,
+        registraire_coordonnees: row.registraire_coordonnees || null,
+        personne_ressource: row.personne_ressource || null,
+        nature_titres: row.nature_titres || null,
+        marche_secondaire: row.marche_secondaire || null,
+        montant_indicatif: row.montant_indicatif ?? null,
+        montant_effectif: row.montant_effectif ?? null,
+        valeur_nominale: row.valeur_nominale ?? null,
+        nombre_titres: row.nombre_titres ?? null,
+        prix_emission: row.prix_emission ?? null,
+        date_jouissance: row.date_jouissance || null,
+        taux_brut: row.taux_brut ?? null,
+        taux_net: row.taux_net ?? null,
+        montant_coupon_brut: row.montant_coupon_brut ?? null,
+        montant_coupon_net: row.montant_coupon_net ?? null,
+        modalite_paiement: row.modalite_paiement || null,
+        duree: row.duree || null,
+        mode_remboursement: row.mode_remboursement || null,
+        prix_remboursement: row.prix_remboursement ?? null,
+        raw: row
+      };
+
+      const changed = existing
+        ? DCBR_TRACKED_FIELDS.some(k => String(fields[k] ?? '') !== String(existing[k] ?? ''))
+        : true;
+
+      const { error } = await supabaseAdmin.from('obligations_caracteristiques').upsert({
+        ...fields,
+        first_seen_at: existing?.first_seen_at || now,
+        last_seen_at: now,
+        last_changed_at: changed ? now : (existing?.last_changed_at || now),
+        updated_at: now
+      }, { onConflict: 'source_url' });
+      if (error) throw error;
+
+      if (!existing) created++;
+      else if (changed) updated++;
+      else unchanged++;
+    } catch (error) {
+      rowErrors.push({ source_url: row.source_url, designation: row.designation, error: String(error?.message || error) });
+    }
+  }
+
+  return {
+    total: allRows.length, created, updated, unchanged,
+    scrape_errors: scrapeErrors, row_errors: rowErrors, has_more: hasMore,
+    started_at: startedAt, finished_at: new Date().toISOString()
+  };
+}
+
 async function runPipeline(res, mode) {
   const startedAt = new Date().toISOString();
   const payload = await scrapeBrvm();
@@ -625,6 +753,24 @@ export default async function handler(req, res) {
             status: 'error', error: String(error?.message || error)
           });
           return json(res, 502, { success: false, error: 'Synchronisation ESV impossible.', code: 'ESV_SYNC_ERROR' });
+        }
+      }
+
+      // DC/BR : POST { scope:'dcbr', categories?, maxPages? } déclenche une
+      // récupération des fiches techniques d'emprunts obligataires (ISIN,
+      // caractéristiques d'émission). Admin uniquement, pas de secret machine :
+      // ces fiches ne changent pas d'une séance à l'autre, aucun besoin de cron.
+      if (body && body.scope === 'dcbr') {
+        if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
+        try {
+          const result = await runDcbrSync({
+            categories: Array.isArray(body.categories) ? body.categories : null,
+            maxPages: Math.min(60, Number(body.maxPages) || 15)
+          });
+          return json(res, 200, { success: true, scope: 'dcbr', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] dcbr', error);
+          return json(res, 502, { success: false, error: 'Synchronisation DC/BR impossible.', code: 'DCBR_SYNC_ERROR' });
         }
       }
 

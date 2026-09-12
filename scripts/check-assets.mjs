@@ -124,8 +124,12 @@ for (const file of files) {
 // (public/admin/js/modules/evenements-valeurs.js) — suivi des ESV BRVM
 // (dividendes, coupons, fractionnements, augmentations/réductions de
 // capital, fusions, radiations). Changement délibéré et revu.
+// Bump 2026-09-12 (2) : ajout du module « DC/BR — Fiches obligataires »
+// (public/admin/js/modules/dcbr.js) — caractéristiques d'émission
+// (ISIN, symbole, taux...) des emprunts obligataires UEMOA. Changement
+// délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '48530426c6a4a21b99a153d7f940351254583a0f';
+const expectedAdminBlobSha = 'faf649c83066c0ffec8aeb69acfe8b1aa57b2c28';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
