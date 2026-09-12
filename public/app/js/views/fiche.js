@@ -73,32 +73,56 @@ function ficheSortHistory(arr) {
 // Historique par titre : on privilégie le helper canonique (fetch.js) livré
 // par la refonte data-layer, avec repli local. Toujours borné dans le temps :
 // une API lente ne doit jamais figer la fiche sur « Chargement… ».
+// Mémorisé par ticker pour la session : de multiples écouteurs (main.js,
+// init.js, router.js, runtime-recovery.js, ui.js, loader.js) rappellent tous
+// renderCurrentView() à chaque phase de tc:dataready, et chacun rouvre la
+// fiche active. Sans cache, chaque rouverture relançait un fetch paginé
+// complet (jusqu'à 12 pages) — constaté en production : plus de 150
+// requêtes redondantes en rafale pour un seul ticker, jusqu'au 429 (rate
+// limit). Pire : à haute fréquence, aucun appel ne gagnait jamais la course
+// contre le suivant (voir le jeton anti-rendu-périmé plus bas) et la fiche
+// restait bloquée sur « Chargement… » indéfiniment. Un historique déjà
+// chargé (ou en cours de chargement) pour ce ticker est réutilisé tel quel.
+var __ficheHistCache = {}; // ticker -> Promise<rows>
 async function loadCompleteFicheHistorique(ticker) {
-  var run = (async function () {
-    if (typeof window.apiGetHistoriqueComplet === 'function') {
-      var rows = await window.apiGetHistoriqueComplet(ticker, { pageSize: 1000, maxPages: 12 });
-      return ficheSortHistory(Array.isArray(rows) ? rows : []);
-    }
-    var all = [], pageSize = 1000;
-    for (var page = 0; page < 12; page++) {
-      var response = await window.apiGet('/marche?type=historique&ticker=' + encodeURIComponent(ticker) + '&limit=' + pageSize + '&offset=' + (page * pageSize) + '&_=' + Date.now(), { cache: 'no-store' });
-      var payload = response && typeof response === 'object' && 'data' in response ? response.data : response;
-      var batch = Array.isArray(payload) ? payload : [];
-      if (!batch.length) break;
-      all.push.apply(all, batch);
-      if (batch.length < pageSize) break;
-    }
-    var byKey = new Map();
-    all.forEach(function (row) {
-      if (!row) return;
-      var key = String(row.ticker || ticker).trim().toUpperCase() + '|' + String(row.date_seance || '');
-      if (!byKey.has(key)) byKey.set(key, row);
-    });
-    return ficheSortHistory(Array.from(byKey.values()));
+  var key = String(ticker || '').trim().toUpperCase();
+  if (__ficheHistCache[key]) return __ficheHistCache[key];
+  var promise = (async function () {
+    var run = (async function () {
+      if (typeof window.apiGetHistoriqueComplet === 'function') {
+        var rows = await window.apiGetHistoriqueComplet(ticker, { pageSize: 1000, maxPages: 12 });
+        return ficheSortHistory(Array.isArray(rows) ? rows : []);
+      }
+      var all = [], pageSize = 1000;
+      for (var page = 0; page < 12; page++) {
+        var response = await window.apiGet('/marche?type=historique&ticker=' + encodeURIComponent(ticker) + '&limit=' + pageSize + '&offset=' + (page * pageSize) + '&_=' + Date.now(), { cache: 'no-store' });
+        var payload = response && typeof response === 'object' && 'data' in response ? response.data : response;
+        var batch = Array.isArray(payload) ? payload : [];
+        if (!batch.length) break;
+        all.push.apply(all, batch);
+        if (batch.length < pageSize) break;
+      }
+      var byKey = new Map();
+      all.forEach(function (row) {
+        if (!row) return;
+        var k = String(row.ticker || ticker).trim().toUpperCase() + '|' + String(row.date_seance || '');
+        if (!byKey.has(k)) byKey.set(k, row);
+      });
+      return ficheSortHistory(Array.from(byKey.values()));
+    })();
+    var guard = new Promise(function (resolve) { setTimeout(function () { resolve('__timeout__'); }, 9000); });
+    var res = await Promise.race([run, guard]);
+    return res === '__timeout__' ? [] : res;
   })();
-  var guard = new Promise(function (resolve) { setTimeout(function () { resolve('__timeout__'); }, 9000); });
-  var res = await Promise.race([run, guard]);
-  return res === '__timeout__' ? [] : res;
+  __ficheHistCache[key] = promise;
+  // Rien d'exploitable (timeout, erreur réseau, 429...) : ne pas figer
+  // l'échec dans le cache, pour qu'une prochaine ouverture puisse réessayer.
+  promise.then(function (rows) {
+    if (!rows || !rows.length) delete __ficheHistCache[key];
+  }, function () {
+    delete __ficheHistCache[key];
+  });
+  return promise;
 }
 function histClose(r) {
   if (ficheAdjusted && r && r.cours_ajuste != null && isFinite(Number(r.cours_ajuste))) return Number(r.cours_ajuste);
@@ -303,11 +327,17 @@ var ANN_CATEGORY_LABELS = {
   notation_financiere: 'Notation financière', communique: 'Communiqué',
   changement_dirigeants: 'Changement de dirigeants', franchissement_seuil: 'Franchissement de seuil'
 };
+var __ficheAnnCache = {}; // ticker -> Promise<rows> (même logique que __ficheHistCache)
 async function loadFicheAnnouncements(ticker, token) {
   var box = document.getElementById('fch-ann-list');
   if (!box) return;
+  var key = String(ticker || '').trim().toUpperCase();
   try {
-    var r = await window.apiGet('/marche?type=documents_emetteurs&ticker=' + encodeURIComponent(ticker) + '&limit=12', { cache: 'no-store' });
+    if (!__ficheAnnCache[key]) {
+      __ficheAnnCache[key] = window.apiGet('/marche?type=documents_emetteurs&ticker=' + encodeURIComponent(ticker) + '&limit=12', { cache: 'no-store' });
+      __ficheAnnCache[key].catch(function () { delete __ficheAnnCache[key]; });
+    }
+    var r = await __ficheAnnCache[key];
     if (token !== window.__ficheToken) return; // un rendu plus récent a repris la main
     var rows = (r && (r.data || r)) || [];
     box = document.getElementById('fch-ann-list');
