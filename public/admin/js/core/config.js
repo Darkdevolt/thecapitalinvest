@@ -103,7 +103,7 @@ TC.CONFLICT = {
     historique: 'ticker,date_seance',
     cours: 'ticker,date_seance',
     financials: 'ticker,annee,periode',
-    dividendes_calendrier: 'ticker,annee',
+    dividendes_calendrier: 'ticker,exercice',
     indices: 'indice,date_seance',
     actionnaires: null,
     analyses: null
