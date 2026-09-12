@@ -407,72 +407,95 @@ async function runEsvSync({ sinceYears, maxPages, categories, downloadDocs }) {
 
   let created = 0, updated = 0, unchanged = 0;
   const docErrors = [];
+  const rowErrors = [];
   const now = new Date().toISOString();
 
+  /* Chaque ligne est isolée dans son propre try/catch et écrite par upsert
+     (on_conflict natural_key) plutôt que par un SELECT préalable suivi d'un
+     INSERT/UPDATE séparé : deux déclenchements concurrents (double clic sur
+     « Récupérer », ou le cron qui chevauche un lancement manuel) ne peuvent
+     plus se marcher dessus avec une erreur de clé dupliquée — Postgres gère
+     le conflit de façon atomique. Et une ligne à part (ex. une incohérence
+     de dates qui viole la contrainte de cohérence) est simplement écartée
+     et signalée dans row_errors, au lieu de faire échouer tout le lot :
+     avant ce correctif, une seule ligne à problème annulait la totalité de
+     la récupération et donnait l'impression qu'il fallait tout revalider. */
   for (const row of uniqueRows) {
-    const match = matchInstrument({ nom: row.emetteur || row.emetteur_absorbe }, reference);
-    const ticker = match.status === 'matched' ? match.record.ticker : null;
-    const existing = existingByKey.get(row.natural_key);
+    try {
+      const match = matchInstrument({ nom: row.emetteur || row.emetteur_absorbe }, reference);
+      const ticker = match.status === 'matched' ? match.record.ticker : null;
+      const existing = existingByKey.get(row.natural_key);
 
-    let avisStoredUrl = existing?.avis_stored_url || null;
-    let communiqueStoredUrl = existing?.communique_stored_url || null;
-    if (downloadDocs) {
-      if (row.avis_url && !avisStoredUrl) {
-        try { avisStoredUrl = await downloadAndStoreEsv(row.avis_url, `${row.categorie}/avis`); }
-        catch (e) { docErrors.push({ natural_key: row.natural_key, doc: 'avis', error: String(e?.message || e) }); }
+      let avisStoredUrl = existing?.avis_stored_url || null;
+      let communiqueStoredUrl = existing?.communique_stored_url || null;
+      if (downloadDocs) {
+        if (row.avis_url && !avisStoredUrl) {
+          try { avisStoredUrl = await downloadAndStoreEsv(row.avis_url, `${row.categorie}/avis`); }
+          catch (e) { docErrors.push({ natural_key: row.natural_key, doc: 'avis', error: String(e?.message || e) }); }
+        }
+        if (row.communique_url && !communiqueStoredUrl) {
+          try { communiqueStoredUrl = await downloadAndStoreEsv(row.communique_url, `${row.categorie}/communique`); }
+          catch (e) { docErrors.push({ natural_key: row.natural_key, doc: 'communique', error: String(e?.message || e) }); }
+        }
       }
-      if (row.communique_url && !communiqueStoredUrl) {
-        try { communiqueStoredUrl = await downloadAndStoreEsv(row.communique_url, `${row.categorie}/communique`); }
-        catch (e) { docErrors.push({ natural_key: row.natural_key, doc: 'communique', error: String(e?.message || e) }); }
-      }
-    }
 
-    const fields = {
-      categorie: row.categorie,
-      emetteur_brvm: row.emetteur || null,
-      emetteur_absorbe: row.emetteur_absorbe || null,
-      ticker,
-      obligation: row.obligation || null,
-      exercice: row.exercice ? parseInt(row.exercice, 10) : null,
-      date_paiement: row.date_paiement || null,
-      date_ex: row.date_ex || null,
-      date_evenement: row.date_evenement || null,
-      montant_net: row.montant_net ?? null,
-      parite: row.parite || null,
-      valeur_theorique: row.valeur_theorique ?? null,
-      nature_droit: row.nature_droit || null,
-      periode_negociation: row.periode_negociation || null,
-      avis_url: row.avis_url || null,
-      avis_numero: row.avis_numero || null,
-      avis_stored_url: avisStoredUrl,
-      communique_url: row.communique_url || null,
-      communique_stored_url: communiqueStoredUrl,
-      raw: row
-    };
+      const fields = {
+        categorie: row.categorie,
+        emetteur_brvm: row.emetteur || null,
+        emetteur_absorbe: row.emetteur_absorbe || null,
+        ticker,
+        obligation: row.obligation || null,
+        exercice: row.exercice ? parseInt(row.exercice, 10) : null,
+        date_paiement: row.date_paiement || null,
+        date_ex: row.date_ex || null,
+        date_evenement: row.date_evenement || null,
+        montant_net: row.montant_net ?? null,
+        parite: row.parite || null,
+        valeur_theorique: row.valeur_theorique ?? null,
+        nature_droit: row.nature_droit || null,
+        periode_negociation: row.periode_negociation || null,
+        avis_url: row.avis_url || null,
+        avis_numero: row.avis_numero || null,
+        avis_stored_url: avisStoredUrl,
+        communique_url: row.communique_url || null,
+        communique_stored_url: communiqueStoredUrl,
+        raw: row
+      };
 
-    if (!existing) {
-      const { error } = await supabaseAdmin.from('evenements_valeurs').insert({
-        ...fields, natural_key: row.natural_key,
-        first_seen_at: now, last_seen_at: now, last_changed_at: now, updated_at: now
-      });
+      const changed = existing
+        ? ESV_TRACKED_FIELDS.some(k => String(fields[k] ?? '') !== String(existing[k] ?? ''))
+        : true;
+
+      const { error } = await supabaseAdmin.from('evenements_valeurs').upsert({
+        ...fields,
+        natural_key: row.natural_key,
+        first_seen_at: existing?.first_seen_at || now,
+        last_seen_at: now,
+        last_changed_at: changed ? now : (existing?.last_changed_at || now),
+        updated_at: now
+      }, { onConflict: 'natural_key' });
       if (error) throw error;
-      created++;
-      continue;
-    }
 
-    const changed = ESV_TRACKED_FIELDS.some(k => String(fields[k] ?? '') !== String(existing[k] ?? ''));
-    const { error } = await supabaseAdmin.from('evenements_valeurs')
-      .update({ ...fields, last_seen_at: now, updated_at: now, ...(changed ? { last_changed_at: now } : {}) })
-      .eq('id', existing.id);
-    if (error) throw error;
-    if (changed) updated++; else unchanged++;
+      if (!existing) created++;
+      else if (changed) updated++;
+      else unchanged++;
+    } catch (error) {
+      rowErrors.push({
+        natural_key: row.natural_key, categorie: row.categorie,
+        emetteur: row.emetteur || row.emetteur_absorbe || null,
+        error: String(error?.message || error)
+      });
+    }
   }
 
   const result = {
     total: uniqueRows.length, created, updated, unchanged,
-    scrape_errors: scrapeErrors, doc_errors: docErrors, has_more: hasMore
+    scrape_errors: scrapeErrors, doc_errors: docErrors, row_errors: rowErrors, has_more: hasMore
   };
-  await safeEsvRunLog({ started_at: startedAt, finished_at: new Date().toISOString(), status: 'success', result });
+  await safeEsvRunLog({
+    started_at: startedAt, finished_at: new Date().toISOString(),
+    status: rowErrors.length ? 'partial' : 'success', result
+  });
   return result;
 }
 

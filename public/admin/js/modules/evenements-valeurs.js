@@ -101,10 +101,15 @@
             if (r.doc_errors && r.doc_errors.length) {
                 r.doc_errors.forEach(e => log('Document (' + e.doc + ') non récupéré pour ' + e.natural_key + ' : ' + e.error, 'warn'));
             }
+            if (r.row_errors && r.row_errors.length) {
+                r.row_errors.forEach(e => log('Ligne ignorée (' + labelOf(e.categorie) + ' — ' + (e.emetteur || '?') + ') : ' + e.error, 'err'));
+            }
             const more = r.has_more && Object.values(r.has_more).some(Boolean);
+            const rowIssues = (r.row_errors || []).length;
             TC.el('esv-continue').hidden = !more;
             TC.say('esv-msg', r.created + ' nouveauté(s), ' + r.updated + ' modification(s)' +
-                (more ? ' · certaines catégories ont encore des pages plus anciennes, augmentez « Ancienneté » ou « Pages max » puis relancez.' : '.'), more ? 'warn' : 'ok');
+                (rowIssues ? ' · ' + rowIssues + ' ligne(s) ignorée(s) (voir le journal ci-dessus)' : '') +
+                (more ? ' · certaines catégories ont encore des pages plus anciennes, augmentez « Ancienneté » ou « Pages max » puis relancez.' : '.'), (more || rowIssues) ? 'warn' : 'ok');
             await Promise.all([load(), loadRuns()]);
         } catch (e) {
             log('Échec : ' + e.message, 'err');
@@ -234,14 +239,19 @@
             const runs = r.runs || [];
             body.innerHTML = runs.length ? runs.map(run => {
                 const res = run.result || {};
-                const tone = run.status === 'success' ? 'badge-green' : 'badge-orange';
+                const tone = run.status === 'success' ? 'badge-green' : run.status === 'partial' ? 'badge-orange' : 'badge-orange';
+                const detailBits = [];
+                if (run.error) detailBits.push(run.error);
+                if ((res.scrape_errors || []).length) detailBits.push(res.scrape_errors.length + ' erreur(s) source');
+                if ((res.row_errors || []).length) detailBits.push(res.row_errors.length + ' ligne(s) ignorée(s)');
+                if ((res.doc_errors || []).length) detailBits.push(res.doc_errors.length + ' document(s) non récupéré(s)');
                 return '<tr>' +
                     '<td class="td-mono">' + TC.esc(new Date(run.started_at).toLocaleString('fr-FR')) + '</td>' +
                     '<td><span class="badge ' + tone + '">' + TC.esc(run.status) + '</span></td>' +
                     '<td class="r td-mono">' + TC.esc(res.total ?? '—') + '</td>' +
                     '<td class="r td-mono">' + TC.esc(res.created ?? '—') + '</td>' +
                     '<td class="r td-mono">' + TC.esc(res.updated ?? '—') + '</td>' +
-                    '<td class="td-muted">' + TC.esc(run.error || ((res.scrape_errors || []).length ? res.scrape_errors.length + ' erreur(s) source' : '—')) + '</td>' +
+                    '<td class="td-muted">' + TC.esc(detailBits.length ? detailBits.join(' · ') : '—') + '</td>' +
                     '</tr>';
             }).join('') : '<tr><td colspan="6" class="td-muted" style="text-align:center;padding:16px;">Aucun passage encore enregistré.</td></tr>';
         } catch (e) {
