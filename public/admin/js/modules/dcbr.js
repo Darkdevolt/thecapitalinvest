@@ -30,7 +30,8 @@
             '<label style="display:flex;align-items:center;gap:5px;font-size:12px;"><input type="checkbox" class="dcbr-cat" value="non_cotee" checked> Obligations non cotées</label>' +
             '</div></div>' +
             '<div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;">' +
-            '<div class="field" style="max-width:140px;"><label>Pages max / catégorie</label><input type="number" id="dcbr-pages" value="15" min="1" max="60"></div>' +
+            '<div class="field" style="max-width:140px;"><label>Pages de liste max</label><input type="number" id="dcbr-pages" value="15" min="1" max="60"></div>' +
+            '<div class="field" style="max-width:140px;"><label>Fiches par lot</label><input type="number" id="dcbr-limit" value="40" min="5" max="150"></div>' +
             '<button class="btn btn-primary btn-sm" id="dcbr-run">▶ Récupérer</button>' +
             '<button class="btn btn-outline btn-sm" id="dcbr-continue" hidden>Continuer (reste à traiter)</button>' +
             '</div>' +
@@ -68,25 +69,26 @@
         const categories = selectedCategories();
         if (!categories.length) { TC.say('dcbr-msg', 'Choisissez au moins une catégorie.', 'err'); return; }
         const maxPages = Math.max(1, Number(TC.val('dcbr-pages')) || 15);
+        const limit = Math.max(5, Number(TC.val('dcbr-limit')) || 40);
         TC.say('dcbr-msg', 'Interrogation de dcbruemoa.org…', 'info');
         TC.el('dcbr-run').disabled = true;
         try {
             const r = await TC.api('/api/process-brvm', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ scope: 'dcbr', categories, maxPages }),
-                timeout: 55000
+                body: JSON.stringify({ scope: 'dcbr', categories, maxPages, limit }),
+                timeout: 65000
             });
-            log(r.total + ' fiche(s) trouvée(s) · ' + r.created + ' nouvelle(s) · ' + r.updated + ' modifiée(s) · ' + r.unchanged + ' inchangée(s).', 'ok');
+            log(r.found + ' fiche(s) au total · ' + r.already_stored + ' déjà connue(s) · ' + r.fetched + ' lue(s) dans ce lot · ' +
+                r.created + ' nouvelle(s) · ' + r.updated + ' modifiée(s) · ' + r.unchanged + ' inchangée(s).', 'ok');
             if (r.scrape_errors && r.scrape_errors.length) {
-                r.scrape_errors.forEach(e => log('Fiche non lisible (' + e.categorie + ') ' + e.url + ' : ' + e.error, 'warn'));
+                r.scrape_errors.forEach(e => log('Fiche non lisible (' + e.categorie + ') ' + (e.url || '') + ' : ' + e.error, 'warn'));
             }
             if (r.row_errors && r.row_errors.length) {
                 r.row_errors.forEach(e => log('Ligne ignorée (' + (e.designation || e.source_url) + ') : ' + e.error, 'err'));
             }
-            const more = r.has_more && Object.values(r.has_more).some(Boolean);
-            TC.el('dcbr-continue').hidden = !more;
+            TC.el('dcbr-continue').hidden = !r.has_more;
             TC.say('dcbr-msg', r.created + ' nouveauté(s), ' + r.updated + ' modification(s)' +
-                (more ? ' · augmentez « Pages max » pour remonter plus loin dans l\'historique.' : '.'), more ? 'warn' : 'ok');
+                (r.has_more ? ' · ' + r.remaining + ' fiche(s) restent à lire, cliquez « Continuer ».' : '.'), r.has_more ? 'warn' : 'ok');
             await load();
         } catch (e) {
             log('Échec : ' + e.message, 'err');

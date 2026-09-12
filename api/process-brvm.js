@@ -28,11 +28,17 @@ import { scrapeBrvm } from '../lib/brvm-scraper.js';
 import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
 import { scrapeAnnouncements, CATEGORIES as ANNOUNCEMENT_CATEGORIES } from '../lib/brvm-announcements-scraper.js';
 import { scrapeEsv, CATEGORIES as ESV_CATEGORIES } from '../lib/brvm-esv-scraper.js';
-import { scrapeDcbrFiches } from '../lib/dcbr-scraper.js';
+import { listDcbrFiches, fetchDcbrFicheDetails } from '../lib/dcbr-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
 import { json, fail, readBody, requestUrl } from '../lib/http.js';
 import config from '../lib/config.js';
+
+/* Plafond Hobby Vercel (défaut sans config : 10 s, largement insuffisant dès
+   qu'un scope lit plusieurs dizaines de pages une par une — constaté sur
+   scope 'dcbr' : "signal is aborted without reason" après un lot de fiches
+   trop grand). S'applique à tous les scopes de ce fichier. */
+export const config = { maxDuration: 60 };
 
 /** Variation maximale autorisée sur une séance, en pourcentage. */
 const VARIATION_LIMIT = 7.5;
@@ -534,21 +540,58 @@ function matchBondCode(designation, obligationsRef) {
   return candidates.length === 1 ? candidates[0].code : null;
 }
 
-async function runDcbrSync({ categories, maxPages }) {
+async function runDcbrSync({ categories, maxPages, limit }) {
   const startedAt = new Date().toISOString();
   const cats = categories?.length ? categories : ['cotee', 'non_cotee'];
 
   const { data: obligationsRef, error: refError } = await supabaseAdmin.from('obligations').select('code,nom');
   if (refError) throw refError;
 
-  let allRows = [];
+  /* Ces fiches ne changent quasiment jamais une fois publiées (une par
+     émission, pas par séance) : on ne relit donc que celles jamais vues.
+     Lire les ~130+ fiches une par une, séquentiellement, dépassait très
+     largement le temps d'exécution d'une fonction serverless — constaté en
+     production ("signal is aborted without reason"). La liste (légère) est
+     toujours entièrement parcourue pour repérer les nouveautés ; seul le
+     détail (un aller-retour par fiche) est borné par `limit` et lu en
+     parallèle, avec reprise (« Continuer ») pour le reste. */
   const scrapeErrors = [];
-  const hasMore = {};
+  const hasMoreListing = {};
+  const freshByCategorie = {};
+  let totalFound = 0;
+  let alreadyStored = 0;
+
   for (const categorie of cats) {
-    const result = await scrapeDcbrFiches({ categorie, maxPages });
+    let listing;
+    try {
+      listing = await listDcbrFiches({ categorie, maxPages });
+    } catch (error) {
+      scrapeErrors.push({ categorie, error: String(error?.message || error) });
+      continue;
+    }
+    hasMoreListing[categorie] = listing.hasMore;
+    totalFound += listing.links.length;
+
+    const { data: known, error: knownError } = await supabaseAdmin
+      .from('obligations_caracteristiques').select('source_url').in('source_url', listing.links.map(l => l.url));
+    if (knownError) throw knownError;
+    const knownUrls = new Set((known || []).map(r => r.source_url));
+    const fresh = listing.links.filter(l => !knownUrls.has(l.url));
+    alreadyStored += listing.links.length - fresh.length;
+    freshByCategorie[categorie] = fresh;
+  }
+
+  const allFresh = Object.entries(freshByCategorie).flatMap(([categorie, links]) => links.map(l => ({ ...l, categorie })));
+  const batch = allFresh.slice(0, limit);
+  const remaining = Math.max(0, allFresh.length - batch.length);
+
+  let allRows = [];
+  for (const categorie of cats) {
+    const links = batch.filter(l => l.categorie === categorie);
+    if (!links.length) continue;
+    const result = await fetchDcbrFicheDetails(links, categorie, 6);
     allRows.push(...result.rows);
     scrapeErrors.push(...result.errors.map(e => ({ ...e, categorie })));
-    hasMore[categorie] = result.hasMore;
   }
 
   const { data: existingRows, error: existingError } = await supabaseAdmin
@@ -621,8 +664,9 @@ async function runDcbrSync({ categories, maxPages }) {
   }
 
   return {
-    total: allRows.length, created, updated, unchanged,
-    scrape_errors: scrapeErrors, row_errors: rowErrors, has_more: hasMore,
+    found: totalFound, already_stored: alreadyStored, fetched: batch.length,
+    created, updated, unchanged, remaining, has_more: remaining > 0 || Object.values(hasMoreListing).some(Boolean),
+    scrape_errors: scrapeErrors, row_errors: rowErrors,
     started_at: startedAt, finished_at: new Date().toISOString()
   };
 }
@@ -756,16 +800,20 @@ export default async function handler(req, res) {
         }
       }
 
-      // DC/BR : POST { scope:'dcbr', categories?, maxPages? } déclenche une
-      // récupération des fiches techniques d'emprunts obligataires (ISIN,
+      // DC/BR : POST { scope:'dcbr', categories?, maxPages?, limit? } déclenche
+      // une récupération des fiches techniques d'emprunts obligataires (ISIN,
       // caractéristiques d'émission). Admin uniquement, pas de secret machine :
       // ces fiches ne changent pas d'une séance à l'autre, aucun besoin de cron.
+      // Bornée par `limit` (fiches jamais vues lues par lot, en parallèle) :
+      // relancer reprend là où ça s'est arrêté, rien n'est jamais dupliqué
+      // (upsert par source_url).
       if (body && body.scope === 'dcbr') {
         if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
         try {
           const result = await runDcbrSync({
             categories: Array.isArray(body.categories) ? body.categories : null,
-            maxPages: Math.min(60, Number(body.maxPages) || 15)
+            maxPages: Math.min(60, Number(body.maxPages) || 15),
+            limit: Math.min(150, Number(body.limit) || 40)
           });
           return json(res, 200, { success: true, scope: 'dcbr', ...result });
         } catch (error) {
