@@ -48,10 +48,15 @@
     if (!divs.length) return null;
     var today = new Date().toISOString().slice(0, 10);
 
+    // « confirmé » ne veut dire « à venir » que si sa date ne s'est pas déjà
+    // écoulée : dans les données réelles, un dividende versé il y a six ans
+    // reste marqué confirmé — seule la date permet de savoir s'il est passé.
+    // Un « prévisionnel » compte en revanche par nature, même sans date fixée.
     var upcoming = divs.filter(function (d) {
       var statut = String(d.statut || '').toLowerCase();
       var detach = d.date_detachement || d.ex_date;
-      return statut === 'prévisionnel' || statut === 'confirmé' || (detach && detach >= today);
+      var future = !!detach && detach >= today;
+      return statut === 'prévisionnel' || (statut === 'confirmé' && future);
     }).sort(function (a, b) {
       var da = a.date_detachement || a.ex_date || '9999-99-99';
       var db = b.date_detachement || b.ex_date || '9999-99-99';
