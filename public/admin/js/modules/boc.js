@@ -159,10 +159,11 @@
         try {
             TC.say('boc-msg', 'Préparation du dépôt…', 'info');
             fill.style.width = '15%';
-            const prep = await TC.api('/api/boc-upload', {
+            const prepRes = await TC.api('/api/boc-upload', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ action: 'prepare', filename: file.name, date_seance: date })
             });
+            const prep = prepRes && prepRes.data || {};
 
             TC.say('boc-msg', 'Téléversement du document…', 'info');
             fill.style.width = '45%';
