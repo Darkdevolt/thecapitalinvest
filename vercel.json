@@ -42,7 +42,7 @@
   ],
   "crons": [
     {
-      "path": "/api/sync-esv",
+      "path": "/api/process-brvm?scope=esv",
       "schedule": "0 18 * * *"
     }
   ]

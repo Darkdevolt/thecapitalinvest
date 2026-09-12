@@ -89,9 +89,9 @@
         TC.say('esv-msg', 'Interrogation de brvm.org…', 'info');
         TC.el('esv-run').disabled = true;
         try {
-            const r = await TC.api('/api/sync-esv', {
+            const r = await TC.api('/api/process-brvm', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ categories, sinceYears, maxPages, downloadDocs: true }),
+                body: JSON.stringify({ scope: 'esv', categories, sinceYears, maxPages, downloadDocs: true }),
                 timeout: 55000
             });
             log(r.total + ' évènement(s) trouvé(s) · ' + r.created + ' nouveau(x) · ' + r.updated + ' modifié(s) · ' + r.unchanged + ' inchangé(s).', 'ok');
@@ -230,7 +230,7 @@
         const body = TC.el('esv-runs-body');
         if (!body) return;
         try {
-            const r = await TC.api('/api/sync-esv?action=runs', { method: 'GET', timeout: 15000 });
+            const r = await TC.api('/api/process-brvm?scope=esv&action=runs', { method: 'GET', timeout: 15000 });
             const runs = r.runs || [];
             body.innerHTML = runs.length ? runs.map(run => {
                 const res = run.result || {};

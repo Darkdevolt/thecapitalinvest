@@ -22,13 +22,15 @@
  *     PostgREST bruts) avec deux vérifications d'administrateur distinctes.
  *     Le client Supabase est désormais le seul chemin.
  */
+import { createHash } from 'crypto';
 import { supabaseAdmin } from '../lib/supabase.js';
 import { scrapeBrvm } from '../lib/brvm-scraper.js';
 import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
 import { scrapeAnnouncements, CATEGORIES as ANNOUNCEMENT_CATEGORIES } from '../lib/brvm-announcements-scraper.js';
+import { scrapeEsv, CATEGORIES as ESV_CATEGORIES } from '../lib/brvm-esv-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
-import { json, fail, readBody } from '../lib/http.js';
+import { json, fail, readBody, requestUrl } from '../lib/http.js';
 import config from '../lib/config.js';
 
 /** Variation maximale autorisée sur une séance, en pourcentage. */
@@ -327,6 +329,153 @@ async function deleteAnnouncement(id) {
   return id;
 }
 
+/* ── Évènements Sur Valeurs (ESV) : dividendes, coupons, fractionnements,
+   augmentations/réductions de capital, fusions, consolidations, radiations.
+   Même fichier que le reste (pas de nouvelle fonction serverless : le plan
+   Hobby de ce projet plafonne à 12 fonctions par déploiement, déjà atteint),
+   déclenché par scope:'esv' — POST (admin, backfill explicite) ou GET avec
+   ?scope=esv (cron quotidien 18h Abidjan, secret machine ; le cron marché
+   existant utilise la même route sans ce paramètre). */
+const ESV_BUCKET = 'evenements-valeurs';
+const ESV_DAILY_MAX_PAGES = 3;
+
+const esvSafeName = value => String(value || 'document.pdf')
+  .normalize('NFKD').replace(/[^\w.\-]+/g, '_').replace(/^\.+/, '').slice(0, 160) || 'document.pdf';
+
+function esvPublicUrl(path) {
+  if (!config.supabaseUrl) throw new Error('SUPABASE_URL non configurée');
+  return `${config.supabaseUrl}/storage/v1/object/public/${ESV_BUCKET}/${path}`;
+}
+
+/* Le numéro d'avis BRVM DG (ex. "avis_ndeg213") est une séquence unique tous
+   types de notice confondus : quand il est présent, c'est un identifiant
+   naturel bien plus fiable qu'un hachage de champs qui peuvent légitimement
+   changer (une date de paiement reportée par exemple). */
+function esvNaturalKey(row) {
+  if (row.avis_numero) return `${row.categorie}:avis-${row.avis_numero}`;
+  const basis = [
+    row.categorie, row.emetteur, row.emetteur_absorbe, row.obligation,
+    row.date_paiement, row.date_ex, row.date_evenement, row.montant_net, row.parite
+  ].map(v => (v == null ? '' : String(v))).join('|');
+  return `${row.categorie}:hash-${createHash('sha1').update(basis).digest('hex').slice(0, 16)}`;
+}
+
+async function downloadAndStoreEsv(url, prefix) {
+  const response = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' } });
+  if (!response.ok) throw new Error(`PDF HTTP ${response.status}`);
+  const buffer = Buffer.from(await response.arrayBuffer());
+  const filename = esvSafeName(basenameOf(url));
+  const path = `${prefix}/${Date.now()}_${filename}`;
+  const { error } = await supabaseAdmin.storage.from(ESV_BUCKET).upload(path, buffer, {
+    contentType: 'application/pdf', upsert: true
+  });
+  if (error) throw error;
+  return esvPublicUrl(path);
+}
+
+async function safeEsvRunLog(payload) {
+  try {
+    const { error } = await supabaseAdmin.from('esv_scrape_runs').insert(payload);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[PROCESS-BRVM] journal esv_scrape_runs indisponible :', e?.message || e);
+  }
+}
+
+/* Champs comparés pour décider si une ligne déjà connue a changé.
+   'raw' et les colonnes de suivi (natural_key, first/last_seen_at...) sont
+   volontairement exclues : elles ne reflètent pas un changement de contenu. */
+const ESV_TRACKED_FIELDS = [
+  'categorie', 'emetteur_brvm', 'emetteur_absorbe', 'ticker', 'obligation', 'exercice',
+  'date_paiement', 'date_ex', 'date_evenement', 'montant_net', 'parite', 'valeur_theorique',
+  'nature_droit', 'periode_negociation', 'avis_url', 'avis_numero', 'communique_url'
+];
+
+async function runEsvSync({ sinceYears, maxPages, categories, downloadDocs }) {
+  const startedAt = new Date().toISOString();
+  const catList = categories?.length ? ESV_CATEGORIES.filter(c => categories.includes(c.categorie)) : ESV_CATEGORIES;
+  const { rows, errors: scrapeErrors, hasMore } = await scrapeEsv({ categories: catList, sinceYears, maxPages });
+
+  const reference = await loadEnterpriseReference();
+  const keyed = rows.map(row => ({ ...row, natural_key: esvNaturalKey(row) }));
+  const uniqueRows = [...new Map(keyed.map(row => [row.natural_key, row])).values()];
+
+  const { data: existingRows, error: existingError } = await supabaseAdmin
+    .from('evenements_valeurs').select('*').in('natural_key', uniqueRows.map(r => r.natural_key));
+  if (existingError) throw existingError;
+  const existingByKey = new Map((existingRows || []).map(r => [r.natural_key, r]));
+
+  let created = 0, updated = 0, unchanged = 0;
+  const docErrors = [];
+  const now = new Date().toISOString();
+
+  for (const row of uniqueRows) {
+    const match = matchInstrument({ nom: row.emetteur || row.emetteur_absorbe }, reference);
+    const ticker = match.status === 'matched' ? match.record.ticker : null;
+    const existing = existingByKey.get(row.natural_key);
+
+    let avisStoredUrl = existing?.avis_stored_url || null;
+    let communiqueStoredUrl = existing?.communique_stored_url || null;
+    if (downloadDocs) {
+      if (row.avis_url && !avisStoredUrl) {
+        try { avisStoredUrl = await downloadAndStoreEsv(row.avis_url, `${row.categorie}/avis`); }
+        catch (e) { docErrors.push({ natural_key: row.natural_key, doc: 'avis', error: String(e?.message || e) }); }
+      }
+      if (row.communique_url && !communiqueStoredUrl) {
+        try { communiqueStoredUrl = await downloadAndStoreEsv(row.communique_url, `${row.categorie}/communique`); }
+        catch (e) { docErrors.push({ natural_key: row.natural_key, doc: 'communique', error: String(e?.message || e) }); }
+      }
+    }
+
+    const fields = {
+      categorie: row.categorie,
+      emetteur_brvm: row.emetteur || null,
+      emetteur_absorbe: row.emetteur_absorbe || null,
+      ticker,
+      obligation: row.obligation || null,
+      exercice: row.exercice ? parseInt(row.exercice, 10) : null,
+      date_paiement: row.date_paiement || null,
+      date_ex: row.date_ex || null,
+      date_evenement: row.date_evenement || null,
+      montant_net: row.montant_net ?? null,
+      parite: row.parite || null,
+      valeur_theorique: row.valeur_theorique ?? null,
+      nature_droit: row.nature_droit || null,
+      periode_negociation: row.periode_negociation || null,
+      avis_url: row.avis_url || null,
+      avis_numero: row.avis_numero || null,
+      avis_stored_url: avisStoredUrl,
+      communique_url: row.communique_url || null,
+      communique_stored_url: communiqueStoredUrl,
+      raw: row
+    };
+
+    if (!existing) {
+      const { error } = await supabaseAdmin.from('evenements_valeurs').insert({
+        ...fields, natural_key: row.natural_key,
+        first_seen_at: now, last_seen_at: now, last_changed_at: now, updated_at: now
+      });
+      if (error) throw error;
+      created++;
+      continue;
+    }
+
+    const changed = ESV_TRACKED_FIELDS.some(k => String(fields[k] ?? '') !== String(existing[k] ?? ''));
+    const { error } = await supabaseAdmin.from('evenements_valeurs')
+      .update({ ...fields, last_seen_at: now, updated_at: now, ...(changed ? { last_changed_at: now } : {}) })
+      .eq('id', existing.id);
+    if (error) throw error;
+    if (changed) updated++; else unchanged++;
+  }
+
+  const result = {
+    total: uniqueRows.length, created, updated, unchanged,
+    scrape_errors: scrapeErrors, doc_errors: docErrors, has_more: hasMore
+  };
+  await safeEsvRunLog({ started_at: startedAt, finished_at: new Date().toISOString(), status: 'success', result });
+  return result;
+}
+
 async function runPipeline(res, mode) {
   const startedAt = new Date().toISOString();
   const payload = await scrapeBrvm();
@@ -433,6 +582,29 @@ export default async function handler(req, res) {
         return json(res, 200, { success: true, scope: 'announcements', ...result });
       }
 
+      // Évènements sur valeurs (ESV) : POST { scope:'esv', categories?,
+      // sinceYears?, maxPages?, downloadDocs? } déclenche un backfill explicite
+      // depuis l'admin. Le passage automatique quotidien passe par le GET
+      // ?scope=esv plus bas (secret machine), avec des pages bornées bas.
+      if (body && body.scope === 'esv') {
+        try {
+          const result = await runEsvSync({
+            sinceYears: Number(body.sinceYears) || 5,
+            maxPages: Math.min(60, Number(body.maxPages) || 15),
+            categories: Array.isArray(body.categories) ? body.categories : null,
+            downloadDocs: body.downloadDocs !== false
+          });
+          return json(res, 200, { success: true, scope: 'esv', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] esv', error);
+          await safeEsvRunLog({
+            started_at: new Date().toISOString(), finished_at: new Date().toISOString(),
+            status: 'error', error: String(error?.message || error)
+          });
+          return json(res, 502, { success: false, error: 'Synchronisation ESV impossible.', code: 'ESV_SYNC_ERROR' });
+        }
+      }
+
       // Publication d'un reporting sur le site public (/reporting.html) :
       // POST { scope:'reporting', action:'publish', periode, window_from,
       // window_to, payload }. Toujours réservé à un administrateur — jamais
@@ -481,6 +653,36 @@ export default async function handler(req, res) {
           console.warn('[PROCESS-BRVM] auto obligations non bloquant :', e && e.message);
         }
         return await runPipeline(res, cfg.mode);
+      }
+    }
+
+    // Évènements sur valeurs (ESV) : GET ?scope=esv, distinct du cron marché
+    // ci-dessous qui utilise la même route sans ce paramètre. Le cron Vercel
+    // quotidien (18h Abidjan) pointe vers /api/process-brvm?scope=esv avec le
+    // secret machine ; ?scope=esv&action=runs (admin) lit le journal des
+    // passages sans en déclencher un nouveau.
+    const url = requestUrl(req);
+    if (req.method === 'GET' && url.searchParams.get('scope') === 'esv') {
+      if (url.searchParams.get('action') === 'runs') {
+        if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
+        const { data, error } = await supabaseAdmin.from('esv_scrape_runs')
+          .select('*').order('started_at', { ascending: false }).limit(20);
+        if (error) return fail(res, 500, 'Lecture du journal impossible.', 'RUNS_READ_ERROR', error);
+        return json(res, 200, { success: true, runs: data || [] });
+      }
+      try {
+        const result = await runEsvSync({
+          sinceYears: 5, maxPages: machine ? ESV_DAILY_MAX_PAGES : 15,
+          categories: null, downloadDocs: true
+        });
+        return json(res, 200, { success: true, scope: 'esv', ...result });
+      } catch (error) {
+        console.error('[PROCESS-BRVM] esv', error);
+        await safeEsvRunLog({
+          started_at: new Date().toISOString(), finished_at: new Date().toISOString(),
+          status: 'error', error: String(error?.message || error)
+        });
+        return json(res, 502, { success: false, error: 'Synchronisation ESV impossible.', code: 'ESV_SYNC_ERROR' });
       }
     }
 
