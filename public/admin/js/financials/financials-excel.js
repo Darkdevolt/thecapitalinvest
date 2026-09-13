@@ -213,3 +213,107 @@
     TC.FIN_XLS = { downloadTemplate, buildTemplate, readWorkbook, exportRows };
 
 })(window.TC);
+
+/* ============================================================
+   THE CAPITAL — NORMALISATION DES UNITÉS DES ÉTATS FINANCIERS
+   La saisie peut être exprimée en unités, milliers, millions ou milliards.
+   Les postes comptables monétaires sont convertis en FCFA avant calcul et
+   avant écriture. Les données par action gardent leur unité propre.
+   ============================================================ */
+(function (TC) {
+    if (window.__TC_FIN_UNITS__) return;
+    window.__TC_FIN_UNITS__ = true;
+
+    const UNITS = {
+        unite: { label: 'Unités (FCFA)', factor: 1 },
+        milliers: { label: 'Milliers de FCFA', factor: 1e3 },
+        millions: { label: 'Millions de FCFA', factor: 1e6 },
+        milliards: { label: 'Milliards de FCFA', factor: 1e9 }
+    };
+
+    /* Postes auxquels s'applique l'unité globale de l'état financier. */
+    const MONETARY = new Set([
+        'chiffre_affaires', 'rbe', 'resultat_exploitation', 'ebitda', 'ebit', 'resultat_net',
+        'total_actif', 'fonds_propres', 'dettes_financieres', 'dette_nette',
+        'cash_flow_operationnel', 'capex'
+    ]);
+
+    function unitField(id, compact) {
+        const options = Object.keys(UNITS).map(function (key) {
+            return '<option value="' + key + '">' + TC.esc(UNITS[key].label) + '</option>';
+        }).join('');
+        return '<div class="fin-unit-control' + (compact ? ' fin-unit-control-compact' : '') + '">' +
+            '<label for="' + id + '">Unité des montants saisis</label>' +
+            '<select id="' + id + '" class="fin-unit-select">' + options + '</select>' +
+            '<span class="fin-unit-help">Les montants comptables sont enregistrés en FCFA. Nombre d’actions, BPA et DPA ne changent pas.</span>' +
+            '</div>';
+    }
+
+    function injectMain() {
+        const form = document.querySelector('#fsub-saisie .form-grid');
+        if (!form || document.getElementById('f-unite')) return;
+        form.insertAdjacentHTML('afterbegin', unitField('f-unite', false));
+        const select = document.getElementById('f-unite');
+        select.value = 'unite';
+        select.addEventListener('change', function () {
+            const node = document.getElementById('fin-live');
+            if (node) node.innerHTML = '<strong>Unité sélectionnée</strong> — ' + TC.esc(UNITS[this.value].label) + '. Les montants seront normalisés en FCFA lors de l’enregistrement.';
+        });
+    }
+
+    function injectEdit() {
+        const form = document.querySelector('#modal-body .form-grid');
+        if (!form || document.getElementById('mf-unite')) return;
+        form.insertAdjacentHTML('afterbegin', unitField('mf-unite', true));
+        document.getElementById('mf-unite').value = 'unite';
+    }
+
+    const observer = new MutationObserver(function () {
+        injectMain();
+        injectEdit();
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+    injectMain();
+
+    function normalizeInputs(prefix, unitKey) {
+        const f = (UNITS[unitKey] || UNITS.unite).factor;
+        const original = [];
+        if (f === 1) return original;
+        MONETARY.forEach(function (key) {
+            const el = document.getElementById(prefix + key);
+            if (!el || el.value === '') return;
+            const raw = el.value;
+            const value = Number(String(raw).replace(',', '.'));
+            if (Number.isFinite(value)) {
+                original.push([el, raw]);
+                el.value = String(value * f);
+            }
+        });
+        return original;
+    }
+
+    function restoreInputs(original) {
+        (original || []).forEach(function (pair) { pair[0].value = pair[1]; });
+    }
+
+    function normalizeBeforeSave(event) {
+        const target = event.target && event.target.closest ? event.target.closest('button') : null;
+        if (!target) return;
+        if (target.id === 'fin-save') {
+            const select = document.getElementById('f-unite');
+            const original = normalizeInputs('f-', select ? select.value : 'unite');
+            setTimeout(function () { restoreInputs(original); }, 0);
+            return;
+        }
+        if (target.id === 'modal-save' && document.getElementById('mf-unite')) {
+            const select = document.getElementById('mf-unite');
+            const original = normalizeInputs('mf-', select ? select.value : 'unite');
+            setTimeout(function () { restoreInputs(original); }, 0);
+        }
+    }
+
+    /* Capture s’exécute avant le listener d’enregistrement du module financials. */
+    document.addEventListener('click', normalizeBeforeSave, true);
+
+    TC.FIN_UNITS = { UNITS, MONETARY };
+})(window.TC);
