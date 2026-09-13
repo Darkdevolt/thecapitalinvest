@@ -238,7 +238,11 @@
         return { gaps };
     }
 
-    TC.modules = TC.modules || {};
-    TC.modules.diagnostic = { view, mount() { TC.el('diag-run').addEventListener('click', run); } };
-    TC.registerModule && TC.registerModule(TC.modules.diagnostic);
+    TC.register({
+        id: 'diagnostic',
+        label: 'Diagnostic de la base',
+        keywords: 'diagnostic controle coherence sante anomalie continuite seances',
+        view,
+        mount() { TC.el('diag-run').addEventListener('click', run); }
+    });
 })(window.TC);
