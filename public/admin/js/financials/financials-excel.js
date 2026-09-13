@@ -20,8 +20,6 @@
         return XLSX;
     }
 
-    /* ── Modèle de saisie ────────────────────────────────── */
-
     function buildTemplate(tickers) {
         const X = xlsx();
         const headers = TC.FIN.excelHeaders();
@@ -34,16 +32,11 @@
             if (h === 'source_page') return 'Page';
             return TC.FIN.label(h);
         });
-
-        /* Deux lignes d'en-tête : le libellé pour l'œil, la colonne pour la machine. */
         const sheet = X.utils.aoa_to_sheet([labels, headers]);
         sheet['!cols'] = headers.map(h => ({ wch: Math.max(14, Math.min(34, h.length + 8)) }));
         sheet['!freeze'] = { xSplit: 0, ySplit: 2 };
-
         const book = X.utils.book_new();
         X.utils.book_append_sheet(book, sheet, SHEET);
-
-        /* Mode d'emploi */
         const guide = [
             ['THE CAPITAL — MODÈLE DE SAISIE DES ÉTATS FINANCIERS'],
             [''],
@@ -62,12 +55,9 @@
                 : p.signe === 'entier' ? 'entier strictement positif'
                     : 'valeur négative acceptée'
         ]));
-
         const guideSheet = X.utils.aoa_to_sheet(guide);
         guideSheet['!cols'] = [{ wch: 40 }, { wch: 28 }, { wch: 22 }, { wch: 40 }];
         X.utils.book_append_sheet(book, guideSheet, 'Mode d_emploi');
-
-        /* Référentiel, pour éviter les tickers inventés */
         if (tickers && tickers.length) {
             const ref = X.utils.aoa_to_sheet(
                 [['ticker', 'société', 'secteur', 'nombre d\'actions']].concat(
@@ -75,7 +65,6 @@
             ref['!cols'] = [{ wch: 12 }, { wch: 36 }, { wch: 24 }, { wch: 18 }];
             X.utils.book_append_sheet(book, ref, 'Societes_cotees');
         }
-
         return book;
     }
 
@@ -90,13 +79,6 @@
         }
     }
 
-    /* ── Lecture d'un classeur rempli ────────────────────── */
-
-    /**
-     * Le modèle porte deux lignes d'en-tête. Un fichier construit ailleurs n'en
-     * porte qu'une. On détecte laquelle contient des noms de colonnes connus
-     * plutôt que de supposer une structure.
-     */
     function detectHeaderRow(matrix) {
         const known = new Set(TC.FIN.excelHeaders());
         for (let i = 0; i < Math.min(4, matrix.length); i++) {
@@ -136,25 +118,17 @@
         return -1;
     }
 
-    /**
-     * Retourne { rows, headers, ignored } où rows est une liste d'objets prêts
-     * pour la validation métier — pas encore pour l'écriture.
-     */
     async function readWorkbook(file) {
         const X = xlsx();
         const buffer = await file.arrayBuffer();
         const book = X.read(buffer, { type: 'array', cellNF: true, cellDates: true });
         if (!book.SheetNames.length) throw new Error('Le classeur ne contient aucune feuille.');
-
-        /* La feuille de saisie prime sur le mode d'emploi. */
         const name = book.SheetNames.find(n => normalizeHeader(n).indexOf('etats') === 0)
             || book.SheetNames.find(n => normalizeHeader(n).indexOf('financ') >= 0)
             || book.SheetNames[0];
         const sheet = book.Sheets[name];
-
         const matrix = X.utils.sheet_to_json(sheet, { header: 1, defval: null, blankrows: false, raw: true });
         if (!matrix.length) throw new Error('La feuille « ' + name + ' » est vide.');
-
         const headerRow = detectHeaderRow(matrix);
         const headers = (matrix[headerRow] || []).map(normalizeHeader);
         const fields = TC.FIN.excelHeaders();
@@ -164,11 +138,9 @@
             const idx = columnIndex(headers, f);
             if (idx >= 0) map[f] = idx; else ignored.push(f);
         });
-
         if (map.ticker === undefined || map.annee === undefined) {
             throw new Error('Colonnes « ticker » et « annee » introuvables dans la feuille « ' + name + ' ».');
         }
-
         const rows = [];
         for (let i = headerRow + 1; i < matrix.length; i++) {
             const line = matrix[i] || [];
@@ -185,16 +157,12 @@
                     row[field] = n === null ? null : Math.trunc(n);
                 } else row[field] = TC.toNumber(raw);
             });
-            /* Une ligne d'en-tête recopiée par mégarde ne doit pas être importée. */
             if (!row.ticker || row.ticker === 'TICKER') continue;
             if (!row.periode) row.periode = 'annuel';
             rows.push(row);
         }
-
         return { rows, sheetName: name, ignored, headerRow: headerRow + 1 };
     }
-
-    /* ── Export des données en base ──────────────────────── */
 
     function exportRows(rows, filename) {
         const X = xlsx();
@@ -231,12 +199,19 @@
         milliards: { label: 'Milliards de FCFA', factor: 1e9 }
     };
 
-    /* Postes auxquels s'applique l'unité globale de l'état financier. */
     const MONETARY = new Set([
         'chiffre_affaires', 'rbe', 'resultat_exploitation', 'ebitda', 'ebit', 'resultat_net',
         'total_actif', 'fonds_propres', 'dettes_financieres', 'dette_nette',
         'cash_flow_operationnel', 'capex'
     ]);
+
+    function injectStyles() {
+        if (document.getElementById('fin-units-style')) return;
+        const style = document.createElement('style');
+        style.id = 'fin-units-style';
+        style.textContent = '.fin-unit-control{grid-column:1/-1;padding:12px 14px;border:1px solid var(--border);background:var(--surface);border-radius:8px;display:grid;grid-template-columns:minmax(170px,auto) minmax(220px,320px);gap:6px 14px;align-items:center}.fin-unit-control label{font-weight:600}.fin-unit-select{width:100%;padding:8px 10px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:6px}.fin-unit-help{grid-column:1/-1;font-size:11px;color:var(--muted)}.fin-unit-control-compact{grid-template-columns:minmax(170px,auto) minmax(180px,280px);margin-bottom:14px}@media(max-width:700px){.fin-unit-control{grid-template-columns:1fr}.fin-unit-help{grid-column:1}}';
+        document.head.appendChild(style);
+    }
 
     function unitField(id, compact) {
         const options = Object.keys(UNITS).map(function (key) {
@@ -269,10 +244,12 @@
     }
 
     const observer = new MutationObserver(function () {
+        injectStyles();
         injectMain();
         injectEdit();
     });
     observer.observe(document.body, { childList: true, subtree: true });
+    injectStyles();
     injectMain();
 
     function normalizeInputs(prefix, unitKey) {
@@ -312,8 +289,6 @@
         }
     }
 
-    /* Capture s’exécute avant le listener d’enregistrement du module financials. */
     document.addEventListener('click', normalizeBeforeSave, true);
-
     TC.FIN_UNITS = { UNITS, MONETARY };
 })(window.TC);
