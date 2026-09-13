@@ -105,7 +105,7 @@
             if (categorie) params.set('categorie', categorie);
             if (ticker) params.set('ticker', ticker);
             const r = await TC.api('/api/marche?' + params.toString(), { method: 'GET', timeout: 20000 });
-            const rows = r.data || [];
+            const rows = (r && (r.data || r)) || [];
             body.innerHTML = rows.length ? rows.map(d => '<tr>' +
                 '<td class="td-mono">' + TC.esc(TC.fmtDate ? TC.fmtDate(d.date_publication) : (d.date_publication || '—')) + '</td>' +
                 '<td>' + TC.esc(d.ticker || d.societe_nom || '—') + '</td>' +

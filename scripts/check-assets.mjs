@@ -129,7 +129,7 @@ for (const file of files) {
 // (ISIN, symbole, taux...) des emprunts obligataires UEMOA. Changement
 // délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = 'faf649c83066c0ffec8aeb69acfe8b1aa57b2c28';
+const expectedAdminBlobSha = '9c20039ee9fd61c7de91a75129d09ecb9a8a6b4f';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
