@@ -75,7 +75,7 @@
         },
         {
             id: 'idx-negatif', label: 'Indices à valeur nulle ou négative', gravite: 'critique',
-            table: 'indices', filtre: 'valeur.lte.0', effet: 'Un indice ne peut pas être nul ou négatif.', go: 'indices'
+            table: 'indices', filtre: 'valeur=lte.0', effet: 'Un indice ne peut pas être nul ou négatif.', go: 'indices'
         }
     ];
 
