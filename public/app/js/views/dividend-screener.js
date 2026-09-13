@@ -5,7 +5,7 @@
 
   let rows = [];
   const esc = value => { const d = document.createElement('div'); d.textContent = value == null ? '' : String(value); return d.innerHTML; };
-  const n = value => Number.isFinite(Number(value)) ? Number(value) : null;
+  const n = value => { if (value === '' || value == null) return null; const num = Number(value); return Number.isFinite(num) ? num : null; };
   const pct = value => value == null ? 'Donnée non disponible' : `${Number(value).toFixed(2)} %`;
 
   async function loadRows() {
