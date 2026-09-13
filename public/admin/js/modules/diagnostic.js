@@ -14,8 +14,7 @@
             effet: 'Un prix négatif casse les graphiques et fausse toute performance calculée.', go: 'cours'
         },
         {
-            id: 'cours-ohlc', label: 'Plus haut inférieur au plus bas', gravite: 'critique',
-            table: 'historique', filtre: 'and=(plus_haut.not.is.null,plus_bas.not.is.null,plus_haut.lt.plus_bas)',
+            id: 'cours-ohlc', label: 'Plus haut inférieur au plus bas', gravite: 'critique', calcul: 'ohlc',
             effet: 'Les bornes de séance sont inversées.', go: 'cours'
         },
         {
@@ -132,6 +131,15 @@
         };
     }
 
+    async function calcOhlc() {
+        const rows = await TC.getAll('historique', 'select=ticker,date_seance,plus_haut,plus_bas');
+        const bad = (rows || []).filter(r => {
+            const h = TC.toNumber(r.plus_haut), b = TC.toNumber(r.plus_bas);
+            return h !== null && b !== null && h < b;
+        });
+        return { count: bad.length, detail: bad.slice(0, 10).map(r => r.ticker + ' ' + r.date_seance).join(', ') };
+    }
+
     async function calcBilan() {
         const rows = await TC.getAll('financials', 'select=ticker,annee,fonds_propres,total_actif');
         const bad = (rows || []).filter(r => {
@@ -150,7 +158,7 @@
         return { count: bad.length, detail: bad.slice(0, 10).map(r => r.ticker + ' ' + (r.annee || '')).join(', ') };
     }
 
-    const CALCULS = { weekend: calcWeekend, titreGaps: calcTitreGaps, bilan: calcBilan, dividendes: calcDividendes };
+    const CALCULS = { weekend: calcWeekend, titreGaps: calcTitreGaps, ohlc: calcOhlc, bilan: calcBilan, dividendes: calcDividendes };
 
     async function run() {
         const button = TC.el('diag-run');
