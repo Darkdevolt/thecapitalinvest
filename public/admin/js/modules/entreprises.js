@@ -5,6 +5,9 @@
    rejeté par la clé étrangère, sans message compréhensible.
    La colonne « Complétude » signale ce qui manque à chaque fiche
    pour que l'application publique l'affiche correctement.
+
+   IMPORTANT : l'ISIN n'est pas un champ requis pour une action.
+   Les identifiants ISIN sont gérés dans le référentiel obligataire.
    ============================================================ */
 'use strict';
 
@@ -19,7 +22,6 @@
         { id: 'e-secteur', label: 'Secteur', placeholder: 'Télécommunications' },
         { id: 'e-pays', label: 'Pays', type: 'select', options: [{ v: '', l: '— Choisir —' }].concat(TC.PAYS_UEMOA.map(p => ({ v: p, l: p }))) },
         { id: 'e-compart', label: 'Compartiment', type: 'select', options: [{ v: 'PRINCIPAL', l: 'Principal' }, { v: 'PRESTIGE', l: 'Prestige' }] },
-        { id: 'e-isin', label: 'Code ISIN', placeholder: 'SN0000000001', upper: true },
         { id: 'e-actions', label: 'Nombre d\'actions', type: 'number', step: '1', col: 'nombre_actions', hint: 'Indispensable au calcul de la capitalisation et du bénéfice par action.' },
         { id: 'e-nominal', label: 'Valeur nominale', type: 'number' },
         { id: 'e-site', label: 'Site internet', placeholder: 'https://…' },
@@ -53,7 +55,7 @@
             '<div class="tw capped" id="bulk-ent-scope"><table><thead><tr>' +
             '<th><input type="checkbox" class="rowcheck" id="ent-all"></th>' +
             '<th>Ticker</th><th>Dénomination</th><th>Secteur</th><th>Pays</th><th>Compartiment</th>' +
-            '<th>ISIN</th><th class="r">Nb actions</th><th>Complétude</th><th></th>' +
+            '<th class="r">Nb actions</th><th>Complétude</th><th></th>' +
             '</tr></thead><tbody id="ent-tbody">' + TC.rowsLoading(10) + '</tbody></table></div></div>';
     }
 
@@ -62,7 +64,6 @@
         if (!r.nom) gaps.push('dénomination');
         if (!r.secteur) gaps.push('secteur');
         if (!r.pays) gaps.push('pays');
-        if (!(r.isin || r.code_isin)) gaps.push('ISIN');
         if (!TC.toNumber(r.nombre_actions || r.nb_actions)) gaps.push('nombre d\'actions');
         if (!r.compartiment) gaps.push('compartiment');
         return gaps;
@@ -100,7 +101,7 @@
         const tbody = TC.el('ent-tbody');
         TC.el('ent-count').textContent = list.length + ' fiche(s)';
         if (!list.length) {
-            tbody.innerHTML = TC.rowsEmpty(10, 'Aucune société',
+            tbody.innerHTML = TC.rowsEmpty(9, 'Aucune société',
                 'Créez les sociétés cotées avant tout import de cours ou d\'états financiers.');
             return;
         }
@@ -116,7 +117,6 @@
                 '<td class="td-muted">' + TC.esc(r.pays || '—') + '</td>' +
                 '<td><span class="badge ' + (String(r.compartiment).toUpperCase() === 'PRESTIGE' ? 'badge-gold' : 'badge-blue') + '">' +
                 TC.esc(r.compartiment || '—') + '</span></td>' +
-                '<td class="td-mono td-muted">' + TC.esc(r.isin || r.code_isin || '—') + '</td>' +
                 '<td class="r td-mono' + (actions ? '' : ' down') + '">' + (actions ? TC.fmtInt(actions) : 'absent') + '</td>' +
                 '<td>' + (gaps.length
                     ? '<span class="badge badge-orange" title="' + TC.esc(gaps.join(' · ')) + '">' + gaps.length + ' manque(s)</span>'
@@ -156,7 +156,6 @@
                 TC.setVal('e-secteur', existing.secteur);
                 TC.setVal('e-pays', existing.pays);
                 TC.setVal('e-compart', String(existing.compartiment || 'PRINCIPAL').toUpperCase());
-                TC.setVal('e-isin', existing.isin || existing.code_isin);
                 TC.setVal('e-actions', existing.nombre_actions || existing.nb_actions);
                 TC.setVal('e-nominal', existing.valeur_nominale);
                 TC.setVal('e-site', existing.site_web);
@@ -171,10 +170,6 @@
                 if (!/^[A-Z0-9.\-]{2,20}$/.test(ticker)) {
                     TC.modal.msg('Ticker invalide : 2 à 20 caractères, lettres, chiffres, point ou tiret.', 'err'); return;
                 }
-                const isin = TC.val('e-isin');
-                if (isin && !/^[A-Z]{2}[A-Z0-9]{9}\d$/.test(isin)) {
-                    if (!confirm('Le code ISIN « ' + isin + ' » ne respecte pas le format à 12 caractères.\n\nEnregistrer quand même ?')) return;
-                }
                 const actions = TC.int('e-actions');
                 if (actions !== null && actions <= 0) { TC.modal.msg('Le nombre d\'actions doit être strictement positif.', 'err'); return; }
 
@@ -183,7 +178,6 @@
                     secteur: TC.val('e-secteur') || null,
                     pays: TC.val('e-pays') || null,
                     compartiment: TC.val('e-compart'),
-                    isin: isin || null, code_isin: isin || null,
                     nombre_actions: actions, nb_actions: actions,
                     valeur_nominale: TC.num('e-nominal'),
                     site_web: TC.val('e-site') || null,
@@ -204,11 +198,6 @@
         });
     }
 
-    /**
-     * Suppression : la société porte des cotations, des états financiers et des
-     * dividendes. Les compter avant permet d'annoncer ce qui sera perdu — ou
-     * refusé par la clé étrangère — plutôt que d'afficher une erreur PostgREST.
-     */
     async function remove(ticker) {
         const [hist, fin, div] = await Promise.all([
             TC.count('historique', 'ticker=eq.' + encodeURIComponent(ticker)),
@@ -233,7 +222,7 @@
         label: 'Sociétés cotées',
         group: 'societes',
         icon: '⌂',
-        keywords: 'entreprise societe referentiel ticker isin secteur',
+        keywords: 'entreprise societe referentiel ticker secteur',
         view,
         refresh: load,
         mount() {
@@ -260,7 +249,7 @@
             TC.on('ent-export', 'click', function () {
                 if (!rows.length) return;
                 TC.download('referentiel-societes-' + TC.today() + '.csv',
-                    TC.toCSV(rows, ['ticker', 'nom', 'secteur', 'pays', 'compartiment', 'isin', 'nombre_actions', 'site_web', 'siege_social']),
+                    TC.toCSV(rows, ['ticker', 'nom', 'secteur', 'pays', 'compartiment', 'nombre_actions', 'site_web', 'siege_social']),
                     'text/csv;charset=utf-8');
             });
             TC.delegate('ent-tbody', '.rowcheck', 'change', n => sel.toggle(n.dataset.id, n.checked));
