@@ -596,7 +596,9 @@
       html += note('Projection mécanique, sans jugement sur la stratégie de la société ni sur son marché. ' +
         'Elle sert à cadrer un ordre de grandeur, pas à prédire un résultat. ' + esc(proj.methodeTxt));
     } else {
-      html += note('La projection demande au moins trois exercices renseignés pour la grandeur retenue.');
+      html += note(S.hypotheses.methodeProj === 'manuel'
+        ? 'Saisissez un taux pour que la projection au taux manuel s\'affiche : elle ne se substitue jamais silencieusement au taux de croissance historique.'
+        : 'La projection demande au moins trois exercices renseignés pour la grandeur retenue.');
     }
     return html;
   }
@@ -621,7 +623,11 @@
         for (var i2 = 0; i2 < n; i2++) vals.push(reg ? reg.at(annees[i2]) : NaN);
         if (reg) ok = true;
       } else {
-        var g = methode === 'manuel' && fin(H.tauxProjManuel) ? H.tauxProjManuel
+        /* Le mode manuel ne doit jamais se replier en silence sur le TCAM
+           historique quand le taux n'est pas encore saisi : ce serait
+           appliquer une méthode que l'utilisateur n'a pas choisie sans le
+           dire, exactement ce que le reste du module s'interdit ailleurs. */
+        var g = methode === 'manuel' ? (fin(H.tauxProjManuel) ? H.tauxProjManuel : NaN)
           : (a.croissances[k] && fin(a.croissances[k].value) ? a.croissances[k].value : NaN);
         var v = last;
         for (var i3 = 0; i3 < n; i3++) {
@@ -701,9 +707,10 @@
     if (R.inverse && R.inverse.ok) {
       html += groupe('Ce que le cours suppose déjà', 'dcf-inverse');
       html += '<div class="af-stats">' +
-        st('Croissance implicite', pcs(R.inverse.croissanceImplicite), 'que le cours actuel intègre') +
+        st(R.inverse.enButee ? 'Croissance implicite (plancher)' : 'Croissance implicite', pcs(R.inverse.croissanceImplicite), 'que le cours actuel intègre') +
         st('Croissance réalisée', or(pcs(R.inverse.croissanceHistorique)), 'sur l\'historique disponible') +
         '</div>' + note(esc(R.inverse.lecture));
+      if (R.inverse.enButee) html += '<div class="af-warn">La recherche n\'a pas convergé dans l\'intervalle exploré (−30 % à +60 % par an) : ce chiffre est une borne, pas une valeur précise.</div>';
     }
 
     html += groupe('Actualisation des dividendes', 'gordon');

@@ -193,23 +193,35 @@
   function dcfInverse(base, cours) {
     if (!pos(cours) || !pos(base.actions)) return { ok: false, raison: 'cours ou nombre d\'actions indisponible' };
     var cible = cours * base.actions + (fin(base.detteNette) ? base.detteNette : 0);
-    var bas = -0.30, haut = 0.60, mid = 0, valeur = NaN;
+    var BAS0 = -0.30, HAUT0 = 0.60;
+    var bas = BAS0, haut = HAUT0, mid = 0, valeur = NaN, convergeance = false;
     for (var i = 0; i < 80; i++) {
       mid = (bas + haut) / 2;
       var r = dcf(Object.assign({}, base, { croissance: mid }));
       if (!r.ok) { haut = mid; continue; }
       valeur = r.valeurEntreprise;
       if (valeur > cible) haut = mid; else bas = mid;
-      if (Math.abs(valeur - cible) / cible < 0.0005) break;
+      if (Math.abs(valeur - cible) / cible < 0.0005) { convergeance = true; break; }
     }
     if (!fin(valeur)) return { ok: false, raison: 'la recherche n\'a pas convergé avec ces hypothèses' };
+    /* Une recherche qui s'arrête sur le bord de l'intervalle exploré
+       (−30 % / +60 %) sans avoir atteint la tolérance ne mesure pas une
+       croissance implicite : elle dit seulement que le cours actuel
+       exige plus que ce que l'intervalle permet de représenter. Afficher
+       ce nombre sans le distinguer d'un résultat convergé donnerait une
+       fausse précision. */
+    var enButee = !convergeance && (mid <= BAS0 + 0.005 || mid >= HAUT0 - 0.005);
     var histo = fin(base.croissanceHistorique) ? base.croissanceHistorique : NaN;
     return {
       ok: true,
       croissanceImplicite: mid,
+      convergeance: convergeance,
+      enButee: enButee,
       croissanceHistorique: histo,
       ecart: fin(histo) ? mid - histo : NaN,
-      lecture: !fin(histo)
+      lecture: enButee
+        ? (mid >= 0 ? 'Le cours actuel exige une croissance supérieure à ' + (HAUT0 * 100).toFixed(0) + ' % par an sur tout l\'horizon pour être justifié par les flux : la recherche a buté sur cette borne sans converger, le chiffre affiché n\'est qu\'un plancher.' : 'Même une contraction de ' + (BAS0 * 100).toFixed(0) + ' % par an ne suffit pas à ramener la valeur au niveau du cours : la recherche a buté sur cette borne sans converger.')
+        : !fin(histo)
         ? 'Aucune croissance historique comparable n\'est disponible.'
         : mid > histo + 0.04
           ? 'Le cours suppose une croissance nettement supérieure à celle réalisée jusqu\'ici. Le marché anticipe une accélération qu\'il reste à justifier.'
@@ -324,15 +336,20 @@
       return { ok: false, raison: 'actif net par action, bénéfice par action et rendement exigé sont tous requis' };
     if (g >= r) return { ok: false, raison: 'la croissance dépasse le rendement exigé' };
 
+    /* e démarre au bénéfice constaté (année 0) et est mis à croître avant
+       chaque usage, comme fcf0 dans le DCF : sans cela, l'année 1 du
+       modèle utilisait le bénéfice déjà publié sans lui appliquer la
+       croissance retenue, une année de croissance disparaissait par
+       rapport au DCF construit sur les mêmes hypothèses. */
     var vc = anpa, somme = 0, detail = [];
     var e = bpa;
     for (var i = 1; i <= n; i++) {
+      e = e * (1 + g);
       var rr = e - r * vc;
       var va = rr / Math.pow(1 + r, i);
       somme += va;
       detail.push({ annee: i, valeurComptable: vc, benefice: e, revenuResiduel: rr, actualise: va });
       vc = vc + e - (fin(p.dpa) ? p.dpa : 0);
-      e = e * (1 + g);
     }
     var dernierRr = detail[detail.length - 1].revenuResiduel;
     var terminal = dernierRr * (1 + g) / (r - g) / Math.pow(1 + r, n);
