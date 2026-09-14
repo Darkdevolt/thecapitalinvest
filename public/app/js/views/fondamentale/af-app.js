@@ -20,12 +20,19 @@
   var V = global.AFValuation;
   var fin = C.fin, pos = C.pos;
 
-  var LS = { hyp: 'tc-af-hyp:', ov: 'tc-af-data:', tab: 'tc-af-tab', poids: 'tc-af-poids' };
+  var LS = { hyp: 'tc-af-hyp:', ov: 'tc-af-data:', tab: 'tc-af-tab', poids: 'tc-af-poids', portee: 'tc-af-portee' };
+
+  var PORTEES = [
+    { id: 'sousSecteur', l: 'Sous-secteur' },
+    { id: 'secteur', l: 'Secteur' },
+    { id: 'marche', l: 'Marché entier' }
+  ];
 
   var S = {
     ticker: '', analyse: null, hypotheses: null, wacc: null,
     tab: 'synthese', overrides: {}, poids: null,
-    resultats: null, comparables: null, unite: 'auto'
+    resultats: null, comparables: null, unite: 'auto',
+    portee: 'sousSecteur'
   };
   global.AF = S;
 
@@ -121,8 +128,9 @@
     }
     var saved = read(LS.hyp + S.ticker, null);
     S.hypotheses = Object.assign(V.hypothesesInitiales(a), saved || {});
-    S.poids = read(LS.poids, null) || Object.assign({}, V.POIDS_DEFAUT);
-    try { S.comparables = C.comparables(S.ticker, { memeSecteur: false }); }
+    S.poids = read(LS.poids, null) || V.poidsDefaut(a.data);
+    S.portee = read(LS.portee, null) || 'sousSecteur';
+    try { S.comparables = C.comparables(S.ticker, { portee: S.portee }); }
     catch (e) { S.comparables = null; }
     recompute();
     render();
@@ -226,6 +234,30 @@
   }
   function groupe(l, cle) { return '<div class="af-group">' + esc(l) + (cle ? memo(cle) : '') + '</div>'; }
   function note(txt) { return '<p class="af-note">' + txt + '</p>'; }
+
+  var PORTEE_LABEL = { sousSecteur: 'sous-secteur', secteur: 'secteur', marche: 'marché entier' };
+
+  /* Sélecteur de portée des comparables : trois boutons, la portée
+     retenue mémorisée par appareil (pas par titre, le choix relève de
+     la méthode, pas de la société consultée). */
+  function porteeToggle() {
+    return '<div class="af-portee">' + PORTEES.map(function (p) {
+      return '<button type="button" class="af-portee-btn' + (S.portee === p.id ? ' on' : '') + '" data-afportee="' + p.id + '">' + p.l + '</button>';
+    }).join('') + '</div>';
+  }
+
+  /* Avertit quand la portée demandée n'a pas assez de pairs et qu'un
+     repli automatique a eu lieu : la médiane affichée ne correspond
+     alors pas à ce que le bouton actif laisse penser. */
+  function porteeNote(cmp) {
+    if (!cmp) return '';
+    var txt = 'Comparables : ' + cmp.pairs.length + ' société(s) — portée « ' + PORTEE_LABEL[cmp.portee] + ' »' +
+      (cmp.sousSecteur ? ' (' + esc(cmp.sousSecteur) + ')' : (cmp.secteur ? ' (' + esc(cmp.secteur) + ')' : '')) + '.';
+    if (cmp.repli) {
+      txt += ' Repli automatique depuis « ' + PORTEE_LABEL[cmp.repli] + ' », faute d\'au moins deux pairs à ce niveau.';
+    }
+    return note(txt);
+  }
 
   function renderHeader() {
     var h = $('afHeader');
@@ -437,7 +469,7 @@
     var blocs = [
       {
         t: 'Rentabilité', l: [
-          ['margeBrute', 'Marge brute', 'pc', 'marge-exploitation'],
+          ['margeBrute', 'Marge d\'exploitation (RBE)', 'pc', 'marge-exploitation'],
           ['margeNette', 'Marge nette', 'pc', 'marge-nette'],
           ['roe', 'Rentabilité des capitaux propres', 'pc', 'roe'],
           ['roa', 'Rentabilité des actifs', 'pc', 'roa'],
@@ -691,9 +723,11 @@
     }
 
     html += groupe('Multiples de comparables', 'per');
+    html += porteeToggle();
     var med = S.comparables ? S.comparables.medianes : {};
-    html += note('Les multiples de référence sont par défaut les médianes des autres sociétés cotées disposant ' +
-      'd\'états financiers. Vous pouvez leur substituer vos propres multiples.');
+    html += S.comparables ? porteeNote(S.comparables) : note('Aucun comparable disponible pour calculer une médiane.');
+    html += note('Les multiples de référence sont par défaut les médianes du groupe de pairs ci-dessus ' +
+      '(détail dans l\'onglet Comparables). Vous pouvez leur substituer vos propres multiples.');
     html += '<div class="af-form">' +
       champ('Cours sur bénéfice', 'num', 'perRef', fin(H.perRef) ? H.perRef : med.per, null, 'médiane : ' + or(n2(med.per), '—')) +
       champ('Cours sur actif net', 'num', 'pbrRef', fin(H.pbrRef) ? H.pbrRef : med.pbr, null, 'médiane : ' + or(n2(med.pbr), '—')) +
@@ -717,13 +751,18 @@
       (R.graham.ok ? n0(R.graham.valeur) + ' FCFA' : '<span class="af-nd">' + esc(R.graham.raison) + '</span>') + '</strong></div>';
 
     html += groupe('Synthèse pondérée');
-    html += note('Les méthodes ne se valent pas selon les sociétés. Sur une banque, relevez le revenu résiduel. ' +
-      'Sur une valeur de rendement, l\'actualisation des dividendes. Un poids nul écarte la méthode.');
+    var infoSecteur = S.analyse.data;
+    html += note((V.estFinancier(infoSecteur.secteur || infoSecteur.sousSecteur)
+      ? 'Établissement financier : les poids de départ favorisent le revenu résiduel et les dividendes plutôt que le ' +
+        'DCF, dont le flux de trésorerie disponible n\'a pas de sens économique pour une banque ou un assureur.'
+      : 'Les méthodes ne se valent pas selon les sociétés. Sur une valeur de rendement, privilégiez l\'actualisation ' +
+        'des dividendes ; sur une société de croissance, le DCF.') +
+      ' Un poids nul écarte la méthode — tout reste modifiable ci-dessous.');
     html += '<div class="af-poids">' + Object.keys(V.POIDS_DEFAUT).map(function (k) {
       var lbl = { dcf: 'Flux actualisés', ddm: 'Dividendes', multiples: 'Multiples', residuel: 'Revenu résiduel', graham: 'Graham' }[k];
       return '<label>' + lbl + '<input type="number" min="0" max="100" step="5" data-poids="' + k + '" value="' +
         Math.round((S.poids[k] || 0) * 100) + '"><span>%</span></label>';
-    }).join('') + '</div>';
+    }).join('') + '<button type="button" class="af-lien" id="afResetPoids">Rétablir les poids par défaut du secteur</button></div>';
 
     var syn = R.synthese;
     html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Méthode</th><th class="r">Valeur</th>' +
@@ -796,7 +835,11 @@
 
   function paneComparables() {
     var cmp = S.comparables;
-    if (!cmp || !cmp.pairs.length) return vide('Aucun comparable', 'Aucune autre société ne dispose d\'états financiers exploitables.');
+    var html = groupe('Comparaison') + porteeToggle();
+    if (!cmp || !cmp.pairs.length) {
+      html += note('Aucune autre société de cette portée ne dispose d\'états financiers exploitables. Essayez une portée plus large.');
+      return html;
+    }
     var base = S.analyse;
     var lignes = [base].concat(cmp.pairs);
 
@@ -807,7 +850,7 @@
       ['rendement', 'Rendement', 'pc2', 'rendement']
     ];
 
-    var html = groupe('Comparaison sectorielle');
+    html += porteeNote(cmp);
     html += note('Comparaison au dernier exercice publié de chaque société. Les sociétés n\'ayant pas publié la même ' +
       'année, les écarts de calendrier peuvent expliquer une partie des différences.');
     html += '<div class="af-scroll"><table class="af-table af-comp"><thead><tr><th>Titre</th>' +
@@ -831,6 +874,27 @@
         return '<td class="r">' + txt + '</td>';
       }).join('') + '</tr>' +
       '</tbody></table></div>';
+
+    html += groupe('Valeur cible par les multiples du groupe de pairs');
+    html += note('Équation à l\'inconnue : le multiple médian des pairs (le fait observé) est appliqué à la grandeur ' +
+      'par action de la société (le fait publié) pour déduire le cours qu\'impliquerait un alignement sur ses pairs.');
+    var exd = base.dernierExercice, drn = base.dernier;
+    var cibles = [
+      { l: 'PER × BPA', m: cmp.medianes.per, base: exd.bpa, unite: '×', cle: 'per' },
+      { l: 'PBR × actif net par action', m: cmp.medianes.pbr, base: drn.anpa, unite: '×', cle: 'pbr' }
+    ];
+    html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Méthode</th>' +
+      '<th class="r">Multiple médian</th><th class="r">Grandeur par action</th><th class="r">Valeur cible</th><th class="r">Potentiel</th></tr></thead><tbody>' +
+      cibles.map(function (c) {
+        var val = fin(c.m) && fin(c.base) && c.base > 0 ? c.m * c.base : NaN;
+        var pot = fin(val) && pos(base.data.price) ? val / base.data.price - 1 : NaN;
+        return '<tr><td>' + esc(c.l) + '</td><td class="r">' + or(n2(c.m), '—') + '</td>' +
+          '<td class="r">' + or(n0(c.base), '—') + '</td>' +
+          '<td class="r">' + (fin(val) ? n0(val) + ' FCFA' : '<span class="af-nd">non calculable</span>') + '</td>' +
+          '<td class="r ' + (fin(pot) ? (pot >= 0 ? 'af-up' : 'af-down') : '') + '">' + or(pcs(pot), '—') + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    html += note('Valeurs reportées automatiquement comme multiples de référence par défaut dans l\'onglet Valorisation ' +
+      '(section « Multiples de comparables »), où elles peuvent être remplacées par vos propres hypothèses.');
 
     html += groupe('Position relative');
     var r = base.dernier;
@@ -1042,7 +1106,7 @@
 
     sep('Ratios du dernier exercice');
     var r = a.dernier;
-    [['Marge brute', P(r.margeBrute)], ['Marge nette', P(r.margeNette)], ['ROE', P(r.roe)], ['ROA', P(r.roa)],
+    [['Marge d\'exploitation (RBE)', P(r.margeBrute)], ['Marge nette', P(r.margeNette)], ['ROE', P(r.roe)], ['ROA', P(r.roa)],
     ['Levier financier', fin(r.gearing) ? r.gearing.toFixed(2) : 'non calculable'],
     ['Autonomie financière', P(r.autonomie)], ['Conversion en trésorerie', fin(r.conversionCash) ? r.conversionCash.toFixed(2) : 'non calculable'],
     ['PER', fin(r.per) ? r.per.toFixed(2) : 'non calculable'], ['PBR', fin(r.pbr) ? r.pbr.toFixed(2) : 'non calculable'],
@@ -1181,12 +1245,27 @@
         load(v);
         return;
       }
+      if ((v = t.getAttribute('data-afportee'))) {
+        S.portee = v;
+        store(LS.portee, v);
+        try { S.comparables = C.comparables(S.ticker, { portee: S.portee }); }
+        catch (err) { S.comparables = null; }
+        recompute();
+        render();
+        return;
+      }
       switch (t.id) {
         case 'afReset':
           S.hypotheses = V.hypothesesInitiales(S.analyse);
           try { localStorage.removeItem(LS.hyp + S.ticker); } catch (err) { }
           recompute(); render();
           notify('Hypothèses rétablies.', 'success');
+          break;
+        case 'afResetPoids':
+          S.poids = V.poidsDefaut(S.analyse.data);
+          store(LS.poids, S.poids);
+          recompute(); render();
+          notify('Poids rétablis.', 'success');
           break;
         case 'afClearOv':
           S.overrides = {};

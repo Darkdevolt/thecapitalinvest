@@ -296,6 +296,15 @@
 }
 .af-poids input:focus { outline: none; border-color: var(--af-gold); }
 
+.af-portee { display: inline-flex; gap: 4px; padding: 3px; margin-bottom: 10px; background: var(--af-panel-2); border-radius: 6px; }
+.af-portee-btn {
+  padding: 6px 12px; background: none; border: none; border-radius: 4px;
+  color: var(--af-dim); font-family: inherit; font-size: 11px; cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.af-portee-btn:hover { color: var(--af-text); }
+.af-portee-btn.on { background: var(--af-panel); color: var(--af-gold); }
+
 .af-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 18px; }
 
 /* ── Tableaux ───────────────────────────────────────────────────── */

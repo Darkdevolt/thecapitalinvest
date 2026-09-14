@@ -156,6 +156,7 @@
       ticker: (mk && (mk.ticker || '')) || String(ticker).toUpperCase(),
       nom: (co && (co.nom || co.raison_sociale)) || (mk && (mk.nom || mk.libelle)) || '',
       secteur: (co && (co.secteur || co.sector || co.activite)) || '',
+      sousSecteur: (co && (co.sous_secteur || co.sousSecteur)) || '',
       pays: (co && (co.pays || co.country)) || '',
       rows: rows,
       price: pos(price) ? price : NaN,
@@ -351,7 +352,7 @@
         ? Math.round(c.actions).toLocaleString('fr-FR') + ' actions contre ' + Math.round(p.actions).toLocaleString('fr-FR')
         : 'nombre d\'actions non publié par exercice', 'Structure');
 
-    t('marge', 'Marge brute en progrès',
+    t('marge', 'Marge d\'exploitation (RBE) en progrès',
       fin(rc.margeBrute) && fin(rp.margeBrute) ? rc.margeBrute > rp.margeBrute : null,
       fin(rc.margeBrute) && fin(rp.margeBrute) ? (rc.margeBrute * 100).toFixed(1) + ' % contre ' + (rp.margeBrute * 100).toFixed(1) + ' %' : ND, 'Efficacité');
     t('rotation', 'Rotation des actifs en progrès',
@@ -548,22 +549,55 @@
     return out;
   }
 
+  /* Comparer une banque à l'ensemble du marché (industriels, télécoms,
+     biens de consommation compris) produit un PER ou un PBR médian sans
+     signification : les niveaux de multiples n'ont rien à voir d'un
+     secteur à l'autre. La portée par défaut est donc le sous-secteur
+     (« Banque », « Assurance »…), avec repli progressif si le groupe de
+     pairs est trop restreint pour qu'une médiane soit robuste, jusqu'au
+     marché entier en dernier recours — et dans ce cas, la portée
+     réellement utilisée est renvoyée pour être affichée telle quelle. */
   function comparables(ticker, opts) {
     opts = opts || {};
     var base = analyse(ticker);
     if (!base.enough) return null;
     var secteur = base.data.secteur;
+    var sousSecteur = base.data.sousSecteur;
     var tous = univers();
-    var pairs = tous.filter(function (a) {
-      if (norm(a.data.ticker) === norm(ticker)) return false;
-      if (opts.memeSecteur && secteur) return norm(a.data.secteur) === norm(secteur);
-      return true;
-    });
+    var autres = tous.filter(function (a) { return norm(a.data.ticker) !== norm(ticker); });
+
+    function memes(cle, valeur) {
+      if (!valeur) return [];
+      return autres.filter(function (a) { return norm(a.data[cle]) === norm(valeur); });
+    }
+
+    var portee = opts.portee || 'sousSecteur';
+    var pairs, porteeEffective, repli = null;
+    var MIN_PAIRS = 2;
+
+    if (portee === 'marche') {
+      pairs = autres; porteeEffective = 'marche';
+    } else if (portee === 'secteur') {
+      pairs = memes('secteur', secteur); porteeEffective = 'secteur';
+      if (pairs.length < MIN_PAIRS) { pairs = autres; porteeEffective = 'marche'; repli = 'secteur'; }
+    } else {
+      pairs = memes('sousSecteur', sousSecteur); porteeEffective = 'sousSecteur';
+      if (pairs.length < MIN_PAIRS) {
+        var parSecteur = memes('secteur', secteur);
+        if (parSecteur.length >= MIN_PAIRS) { pairs = parSecteur; porteeEffective = 'secteur'; repli = 'sousSecteur'; }
+        else { pairs = autres; porteeEffective = 'marche'; repli = 'sousSecteur'; }
+      }
+    }
+
     function col(k) { return pairs.map(function (a) { return a.dernier[k]; }).filter(function (v) { return fin(v) && v > 0 && v < 500; }); }
     return {
       base: base,
       pairs: pairs,
       secteur: secteur,
+      sousSecteur: sousSecteur,
+      portee: porteeEffective,
+      porteeDemandee: portee,
+      repli: repli,
       medianes: {
         per: median(col('per')), pbr: median(col('pbr')), psr: median(col('psr')),
         evEbitda: median(col('evEbitda')), rendement: median(pairs.map(function (a) { return a.dernier.rendement; })),

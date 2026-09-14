@@ -47,8 +47,15 @@
     var cp = fin(p.capitauxPropres) ? p.capitauxPropres : NaN;
     var dette = fin(p.dette) ? p.dette : NaN;
     var total = fin(cp) && fin(dette) ? cp + dette : NaN;
-    var poidsCp = pos(total) ? cp / total : 1;
-    var poidsDette = pos(total) ? dette / total : 0;
+    /* Des capitaux propres négatifs ou nuls rendent la pondération sans
+       objet : la part de dette dépasserait 100 % et celle des fonds
+       propres deviendrait négative, ce qui abaisserait mécaniquement le
+       coût du capital d'une société précisément la plus fragile — le
+       contraire de ce que la prime de risque est censée traduire. On se
+       replie alors sur un coût des fonds propres pur, la mesure la plus
+       prudente disponible. */
+    var poidsCp = pos(cp) && pos(total) ? cp / total : 1;
+    var poidsDette = pos(cp) && pos(total) ? dette / total : 0;
 
     return {
       valeur: coutFondsPropres * poidsCp + coutDetteNet * poidsDette,
@@ -364,6 +371,28 @@
      dividendes. */
   var POIDS_DEFAUT = { dcf: 0.35, ddm: 0.20, multiples: 0.30, residuel: 0.10, graham: 0.05 };
 
+  /* Pour une banque ou une assurance, le DCF classique n'a pas de sens :
+     le flux de trésorerie disponible (CFO − capex) ne représente rien
+     d'économique pour un établissement dont le métier est de transformer
+     des dépôts en crédits, et dont le « capex » publié est anecdotique au
+     regard de ce qui consomme réellement ses fonds propres (le risque de
+     crédit, la réglementation prudentielle). La pratique de place — et le
+     commentaire ci-dessus, déjà présent dans ce fichier — pointe vers le
+     revenu résiduel (fondé sur les capitaux propres et leur rentabilité)
+     et l'actualisation des dividendes comme méthodes de référence pour
+     les établissements financiers. Ce n'est qu'un point de départ :
+     l'utilisateur reste libre de tout repondérer. */
+  var POIDS_DEFAUT_FINANCIER = { dcf: 0.10, ddm: 0.25, multiples: 0.25, residuel: 0.35, graham: 0.05 };
+
+  function estFinancier(secteur) {
+    return typeof secteur === 'string' && /financ|banque|assuran/i.test(secteur);
+  }
+
+  function poidsDefaut(data) {
+    var secteur = (data && (data.secteur || data.sousSecteur)) || '';
+    return Object.assign({}, estFinancier(secteur) ? POIDS_DEFAUT_FINANCIER : POIDS_DEFAUT);
+  }
+
   function synthese(valeurs, poids, cours) {
     var p = Object.assign({}, POIDS_DEFAUT, poids || {});
     var lignes = [];
@@ -489,6 +518,9 @@
     synthese: synthese,
     scenarios: scenarios,
     hypothesesInitiales: hypothesesInitiales,
-    POIDS_DEFAUT: POIDS_DEFAUT
+    POIDS_DEFAUT: POIDS_DEFAUT,
+    POIDS_DEFAUT_FINANCIER: POIDS_DEFAUT_FINANCIER,
+    estFinancier: estFinancier,
+    poidsDefaut: poidsDefaut
   };
 })(typeof window !== 'undefined' ? window : globalThis);
