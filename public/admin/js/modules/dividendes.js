@@ -34,6 +34,16 @@
 
             '<div class="kpis" id="div-kpis"></div>' +
 
+            '<div class="card" id="div-esv-card"><div class="card-head"><span class="card-title">Détachements détectés (Évènements Sur Valeurs)</span>' +
+            '<span class="card-tools"><span class="card-count" id="div-esv-count"></span>' +
+            '<button class="btn btn-outline btn-sm" id="div-esv-run">▶ Interroger BRVM maintenant</button>' +
+            '<button class="btn btn-outline btn-sm" id="div-esv-reload">↺</button></span></div>' +
+            '<div class="card-body tight"><div class="note">Rapproché automatiquement de la table des Évènements Sur Valeurs, alimentée chaque jour vers 18h (heure d\'Abidjan) par le suiveur BRVM. Un dividende détecté ici n\'est pas enregistré tant que vous ne l\'avez pas repris et confirmé ci-dessous : la BRVM ne publie que le montant net et la date de détachement, jamais l\'exercice bénéficiaire ni le montant brut — ce sont les deux points à vérifier avant d\'enregistrer.</div>' +
+            '<div class="msg" id="div-esv-msg"></div>' +
+            '<div class="tw capped" id="div-esv-scope"><table><thead><tr>' +
+            '<th>Ticker</th><th>Émetteur</th><th>Date ex-dividende</th><th class="r">Montant net (BRVM)</th><th>Avis</th><th>Suivi</th><th></th>' +
+            '</tr></thead><tbody id="div-esv-body">' + TC.rowsLoading(4) + '</tbody></table></div></div></div>' +
+
             '<div class="card accent"><div class="card-head"><span class="card-title" id="div-form-title">Enregistrer un dividende</span>' +
             '<span class="card-tools"><button class="btn btn-outline btn-sm" id="div-cancel-edit" hidden>Annuler la modification</button></span></div>' +
             '<div class="form-grid">' + TC.fields([
@@ -391,6 +401,91 @@
         paintLive();
     }
 
+    /* ── Rapprochement avec les Évènements Sur Valeurs ────────────────
+       La BRVM ne publie, pour un paiement de dividende, que la date de
+       détachement et le montant net — jamais l'exercice bénéficiaire ni
+       le montant brut. Cette section ne fait donc jamais qu'un rapport de
+       ce qui a été repéré par le suiveur ESV (alimenté automatiquement
+       chaque jour) ; « Reprendre » bascule vers la saisie avec un montant
+       brut estimé, à vérifier et à compléter, jamais enregistré seul. ─ */
+    let esvRows = [];
+
+    function esvKey(ticker, date) { return String(ticker || '').toUpperCase() + '|' + (date || ''); }
+
+    async function loadEsvDividends() {
+        TC.el('div-esv-body').innerHTML = TC.rowsLoading(4);
+        try {
+            esvRows = await TC.getAll('evenements_valeurs',
+                'select=ticker,emetteur_brvm,date_ex,montant_net,avis_url&categorie=eq.dividende&date_ex=not.is.null&order=date_ex.desc&limit=60') || [];
+        } catch (e) {
+            esvRows = [];
+            TC.el('div-esv-body').innerHTML = '<tr><td colspan="7" class="td-muted">Lecture des Évènements Sur Valeurs impossible : ' + TC.esc(e.message) + '</td></tr>';
+            return;
+        }
+        paintEsvDividends();
+    }
+
+    function paintEsvDividends() {
+        const known = new Set(rows.map(r => esvKey(r.ticker, TC.toISODate(r.date_detachement || r.ex_date))));
+        const list = esvRows.map(r => Object.assign({}, r, { __known: known.has(esvKey(r.ticker, TC.toISODate(r.date_ex))) }));
+        const aTraiter = list.filter(r => !r.__known).length;
+        TC.el('div-esv-count').textContent = list.length + ' détachement(s) · ' + aTraiter + ' à traiter';
+        const tbody = TC.el('div-esv-body');
+        if (!list.length) {
+            tbody.innerHTML = TC.rowsEmpty(7, 'Aucun détachement détecté',
+                'Le suiveur ESV n\'a pas encore trouvé de paiement de dividende, ou la table est vide.');
+            return;
+        }
+        tbody.innerHTML = list.map(function (r, i) {
+            return '<tr>' +
+                '<td class="td-key">' + TC.esc(r.ticker || '—') + '</td>' +
+                '<td class="td-muted">' + TC.esc(r.emetteur_brvm || '') + '</td>' +
+                '<td>' + TC.fmtDate(r.date_ex) + '</td>' +
+                '<td class="r td-mono">' + TC.fmt(r.montant_net) + '</td>' +
+                '<td>' + (r.avis_url ? '<a href="' + TC.esc(r.avis_url) + '" target="_blank" rel="noopener">avis</a>' : '—') + '</td>' +
+                '<td>' + (r.__known
+                    ? '<span class="badge badge-green">déjà enregistré</span>'
+                    : '<span class="badge badge-orange">à traiter</span>') + '</td>' +
+                '<td>' + (r.__known ? '' : '<button class="btn btn-outline btn-sm" data-esv-reprendre="' + i + '">Reprendre</button>') + '</td></tr>';
+        }).join('');
+    }
+
+    function reprendreEsv(index) {
+        const r = esvRows[index];
+        if (!r || !r.ticker) return;
+        resetForm();
+        TC.setVal('d-ticker', String(r.ticker).toUpperCase());
+        TC.setVal('d-detach', TC.toISODate(r.date_ex) || '');
+        TC.setVal('d-irvm', 12);
+        const net = TC.toNumber(r.montant_net);
+        if (net !== null) TC.setVal('d-montant', Math.round((net / 0.88) * 100) / 100);
+        TC.setVal('d-statut', 'confirmé');
+        TC.setVal('d-notes', 'Montant brut estimé à partir du net BRVM (IRVM 12 %) — à vérifier contre l\'avis. Exercice bénéficiaire à confirmer.');
+        paintLive();
+        TC.say('div-msg', 'Repris depuis les Évènements Sur Valeurs : le montant brut est une estimation (net ÷ 0,88), vérifiez-le contre l\'avis, et renseignez l\'exercice bénéficiaire avant d\'enregistrer.', 'info');
+        TC.el('panel-dividendes').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        TC.el('d-annee').focus();
+    }
+
+    async function runEsvNow() {
+        const btn = TC.el('div-esv-run');
+        btn.disabled = true;
+        TC.say('div-esv-msg', 'Interrogation de brvm.org…', 'info');
+        try {
+            const r = await TC.api('/api/process-brvm', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scope: 'esv', categories: ['dividende'], sinceYears: 2, maxPages: 10, downloadDocs: false }),
+                timeout: 55000
+            });
+            TC.say('div-esv-msg', r.created + ' nouveau(x) · ' + r.updated + ' modifié(s) · ' + r.unchanged + ' inchangé(s).', 'ok');
+            await loadEsvDividends();
+        } catch (e) {
+            TC.say('div-esv-msg', 'Récupération impossible : ' + e.message, 'err');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
     async function refreshNet() {
         const drift = rows.filter(r => {
             const expected = netOf(r.montant, r.__irvm);
@@ -437,7 +532,7 @@
         icon: '◆',
         keywords: 'dividende rendement detachement paiement exercice',
         view,
-        refresh: load,
+        refresh() { return load().then(loadEsvDividends); },
         mount() {
             const tickerInput = TC.el('d-ticker');
             if (tickerInput) tickerInput.setAttribute('list', 'tickers-list');
@@ -481,7 +576,10 @@
                 try { await TC.del('dividendes_calendrier', 'id=eq.' + row.id); TC.toast('Supprimé', 'ok'); load(); }
                 catch (e) { TC.toast(e.message, 'err'); }
             });
-            load();
+            TC.on('div-esv-reload', 'click', loadEsvDividends);
+            TC.on('div-esv-run', 'click', runEsvNow);
+            TC.delegate('div-esv-body', '[data-esv-reprendre]', 'click', n => reprendreEsv(Number(n.dataset.esvReprendre)));
+            load().then(loadEsvDividends);
         }
     });
 
