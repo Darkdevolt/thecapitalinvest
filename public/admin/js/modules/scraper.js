@@ -82,6 +82,13 @@
             '<button class="btn btn-outline btn-sm" id="preview-reject">Rejeter la séance</button>' +
             '<span class="msg" id="preview-msg"></span></div></div>' +
 
+            '<div class="card"><div class="card-head"><span class="card-title">Journal des passages automatiques</span>' +
+            '<span class="card-tools"><button class="btn btn-outline btn-sm" id="runs-reload">↺</button></span></div>' +
+            '<div class="note" style="margin:0 16px 10px;">Passages du cron d\'import automatique (toutes les 30 min en séance) et des contrôles qui les bloquent. Une séance validée manuellement ci-dessus n\'apparaît pas ici : elle écrit directement dans la base sans passer par ce pipeline.</div>' +
+            '<div class="card-body tight"><div class="tw capped"><table><thead><tr>' +
+            '<th>Démarré</th><th>Statut</th><th>Séance</th><th class="r">Cotations</th><th class="r">Indices</th><th>Détail</th>' +
+            '</tr></thead><tbody id="runs-body">' + TC.rowsLoading(6) + '</tbody></table></div></div></div>' +
+
             '<div class="card"><div class="card-head"><span class="card-title">Entretien des données</span></div>' +
             '<div class="card-body"><div class="note" style="margin-bottom:14px;">Ces opérations agissent sur l\'ensemble de la table <span style="font-family:var(--mono);">historique</span>. Elles sont lentes et demandent confirmation.</div>' +
             '<div style="display:flex;gap:10px;flex-wrap:wrap;">' +
@@ -101,6 +108,32 @@
         const time = new Date().toLocaleTimeString('fr-FR');
         box.innerHTML += '<div><span class="' + (level || 'info') + '">' + TC.esc(time) + ' — ' + TC.esc(text) + '</span></div>';
         box.scrollTop = box.scrollHeight;
+    }
+
+    async function loadRuns() {
+        const body = TC.el('runs-body');
+        if (!body) return;
+        try {
+            const r = await TC.api('/api/process-brvm?scope=cours&action=runs', { method: 'GET', timeout: 15000 });
+            const runs = r.runs || [];
+            body.innerHTML = runs.length ? runs.map(function (run) {
+                const res = run.result || {};
+                const tone = run.status === 'success' ? 'badge-green' : 'badge-orange';
+                const detailBits = [];
+                if (run.error) detailBits.push(run.error);
+                if (Array.isArray(res.violations) && res.violations.length) detailBits.push(res.violations.length + ' variation(s) hors limite');
+                return '<tr>' +
+                    '<td class="td-mono">' + TC.esc(new Date(run.started_at).toLocaleString('fr-FR')) + '</td>' +
+                    '<td><span class="badge ' + tone + '">' + TC.esc(run.status) + '</span></td>' +
+                    '<td class="td-mono">' + TC.esc(res.date_seance || '—') + '</td>' +
+                    '<td class="r td-mono">' + TC.esc(res.historique ?? res.courses ?? res.count ?? '—') + '</td>' +
+                    '<td class="r td-mono">' + TC.esc(res.indices ?? '—') + '</td>' +
+                    '<td class="td-muted">' + TC.esc(detailBits.length ? detailBits.join(' · ') : '—') + '</td>' +
+                    '</tr>';
+            }).join('') : '<tr><td colspan="6" class="td-muted" style="text-align:center;padding:16px;">Aucun passage automatique encore enregistré.</td></tr>';
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="6" class="td-muted">Chargement impossible : ' + TC.esc(e.message) + '</td></tr>';
+        }
     }
 
     function paintMode() {
@@ -512,6 +545,8 @@
             });
             TC.on('fix-variations', 'click', fixVariations);
             TC.on('fix-close', 'click', fixClose);
+            TC.on('runs-reload', 'click', loadRuns);
+            loadRuns();
             restore();
         }
     });

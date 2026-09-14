@@ -976,6 +976,21 @@ export default async function handler(req, res) {
       return json(res, 200, { success: true, runs: data || [] });
     }
 
+    // Cours & séance : GET ?scope=cours&action=runs lit le journal des
+    // passages du pipeline actions (safeRunLog, table brvm_scrape_runs) —
+    // alimenté par le cron d'import automatique (scope=auto, toutes les
+    // 30 min en séance) et par le contrôle de variation qui le bloque le
+    // cas échéant. Le scraper manuel (commit() dans scraper.js) écrit
+    // directement dans `historique` sans passer par ce pipeline, donc
+    // sans y apparaître : ce journal ne couvre que les passages automatiques.
+    if (req.method === 'GET' && url.searchParams.get('scope') === 'cours' && url.searchParams.get('action') === 'runs') {
+      if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
+      const { data, error } = await supabaseAdmin.from('brvm_scrape_runs')
+        .select('*').order('started_at', { ascending: false }).limit(20);
+      if (error) return fail(res, 500, 'Lecture du journal impossible.', 'RUNS_READ_ERROR', error);
+      return json(res, 200, { success: true, runs: data || [] });
+    }
+
     const current = await getSetting();
 
     // Cron Vercel : requête GET portant le secret machine.
