@@ -165,20 +165,19 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
 <div class="view" id="view-analyse-fondamentale">
   <div class="page-header">
     <h1>Analyse <span style="color:var(--gold)">Fondamentale</span></h1>
-    <p>Forecast, DCF, TCAM &amp; régression, paramétrez vos hypothèses</p>
+    <p>États financiers, ratios, valorisation (DCF, multiples, DDM, revenu résiduel, Graham) et score de qualité.</p>
   </div>
-  <div class="search-bar">
-    <select class="search-input" id="fundTickerSelect" onchange="loadFundAnalysis()" style="flex:0 0 220px">
-      <option value="">Choisir un ticker...</option>
-    </select>
-    <button class="filter-btn active" onclick="setFundMethod('tcam',this)">TCAM</button>
-    <button class="filter-btn" onclick="setFundMethod('regression',this)">Régression</button>
-  </div>
-  <div id="fundContent">
-    <div class="empty-state">
-      <div class="empty-icon">⊛</div>
-      <div class="empty-title">Sélectionnez un titre</div>
-      <div class="empty-text">Choisissez un ticker pour lancer l'analyse fondamentale approfondie.</div>
+  <div class="af-shell">
+    <div class="af-toolbar">
+      <select class="af-select" id="afTicker">
+        <option value="">Choisir un titre…</option>
+      </select>
+      <span class="af-hint" id="afTickerCount">En attente des états financiers</span>
+    </div>
+    <div class="af-header" id="afHeader"></div>
+    <div class="af-tabs" id="afTabs"></div>
+    <div class="af-panel" id="afPanel">
+      <div class="af-empty"><div class="af-empty-t">Aucun titre sélectionné</div><p>Choisissez une société dans le sélecteur pour afficher ses états financiers, ses ratios et sa valorisation.</p></div>
     </div>
   </div>
 </div>
