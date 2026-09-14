@@ -162,36 +162,80 @@ async function previousCloses(tickers, sessionDate) {
   return latest;
 }
 
+/**
+ * Détachements de dividende tombant sur la séance traitée : le cours recule
+ * mécaniquement du montant distribué, ce qui n'a rien d'une anomalie de
+ * cotation. `dividendes_calendrier` porte l'un ou l'autre des deux noms de
+ * colonne pour la date de détachement selon la façon dont la ligne a été
+ * saisie (import historique vs saisie admin) ; les deux sont donc lues.
+ */
+async function exDividendAmounts(tickers, sessionDate) {
+  if (!tickers.length) return new Map();
+  const { data, error } = await supabaseAdmin
+    .from('dividendes_calendrier')
+    .select('ticker,montant,montant_net,ex_date,date_detachement')
+    .in('ticker', tickers);
+  if (error) {
+    console.warn('[BRVM] dividendes_calendrier illisible, contrôle de variation sans exception ex-dividende :', error.message);
+    return new Map();
+  }
+  const map = new Map();
+  for (const row of data || []) {
+    const exDate = row.ex_date || row.date_detachement;
+    if (exDate !== sessionDate) continue;
+    const montant = Number(row.montant ?? row.montant_net);
+    if (Number.isFinite(montant) && montant > 0) map.set(row.ticker, montant);
+  }
+  return map;
+}
+
 async function validateVariations(rows) {
   const violations = [];
   const sessionDate = rows[0]?.date_seance;
   if (!sessionDate) return violations;
 
-  const previous = await previousCloses([...new Set(rows.map(r => r.ticker))], sessionDate);
+  const tickers = [...new Set(rows.map(r => r.ticker))];
+  const previous = await previousCloses(tickers, sessionDate);
+  const exDividend = await exDividendAmounts(tickers, sessionDate);
   const previousSessionDate = [...previous.values()]
     .map(p => p.date).filter(Boolean).sort().reverse()[0] || null;
 
   for (const row of rows) {
     const prev = previous.get(row.ticker);
-    const prevClose = prev ? prev.close : NaN;
+    const prevCloseRaw = prev ? prev.close : NaN;
     const close = Number(row.cours_cloture);
     const reported = row.variation == null ? null : Number(row.variation);
+
+    const dividende = exDividend.get(row.ticker);
+    const exDividende = Number.isFinite(dividende) && dividende > 0;
+    /* Référence ex-dividende : le cours de la veille diminué du montant
+       distribué. Sans ce recalage, une action à bon rendement détachant
+       son dividende franchirait systématiquement le seuil de variation, et
+       bloquerait l'écriture de toute la séance pour un mouvement attendu. */
+    const prevClose = exDividende && Number.isFinite(prevCloseRaw) ? prevCloseRaw - dividende : prevCloseRaw;
     const computed = (Number.isFinite(prevClose) && prevClose > 0 && Number.isFinite(close))
       ? ((close - prevClose) / prevClose) * 100
       : null;
-    const effective = Number.isFinite(reported) ? reported : computed;
+    /* La variation publiée par BRVM reste toujours brute (non ajustée du
+       dividende) : sur un jour de détachement, elle ne dit rien d'une
+       anomalie et on lui préfère notre propre calcul, rapporté à la
+       référence ex-dividende. */
+    const effective = exDividende ? computed : (Number.isFinite(reported) ? reported : computed);
 
     if (Number.isFinite(effective) && Math.abs(effective) > VARIATION_LIMIT + 1e-9) {
       violations.push({
         ticker: row.ticker, date: row.date_seance, variation: effective,
         previous_close: Number.isFinite(prevClose) ? prevClose : null, close,
-        type: 'variation_hors_limite'
+        type: 'variation_hors_limite',
+        ...(exDividende ? { ex_dividende: dividende } : {})
       });
     }
 
     // La comparaison publié / recalculé n'a de sens que si le cours de
-    // référence est bien celui de la séance immédiatement précédente.
-    if (prev && prev.date === previousSessionDate
+    // référence est bien celui de la séance immédiatement précédente, et
+    // seulement hors détachement : brut contre ajusté divergeraient sinon
+    // systématiquement d'environ le montant du dividende.
+    if (!exDividende && prev && prev.date === previousSessionDate
       && Number.isFinite(reported) && Number.isFinite(computed)
       && Math.abs(reported - computed) > VARIATION_TOLERANCE) {
       violations.push({
