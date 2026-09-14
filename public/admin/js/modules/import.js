@@ -17,9 +17,9 @@
     const MODELES = {
         entreprises: {
             nom: 'Sociétés cotées', icone: '⌂', table: 'entreprises', conflit: 'ticker',
-            colonnes: ['ticker', 'nom', 'secteur', 'pays', 'compartiment', 'isin', 'nombre_actions', 'valeur_nominale', 'site_web', 'siege_social', 'date_introduction', 'description'],
+            colonnes: ['ticker', 'nom', 'secteur', 'pays', 'compartiment', 'nombre_actions', 'valeur_nominale', 'site_web', 'siege_social', 'date_introduction', 'description'],
             requis: ['ticker', 'nom'],
-            resume: 'Référentiel de la place'
+            resume: 'Référentiel de la place — ISIN non requis pour les actions'
         },
         cours: {
             nom: 'Cotations', icone: '▤', table: 'historique', conflit: 'ticker,date_seance',
@@ -491,7 +491,6 @@
         }
         if (state.modele === 'entreprises') {
             if (row.nombre_actions) row.nb_actions = row.nombre_actions;
-            if (row.isin) row.code_isin = row.isin;
             row.actif = true;
         }
         return row;

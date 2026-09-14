@@ -51,11 +51,6 @@
             effet: 'La capitalisation et le bénéfice par action ne peuvent pas être calculés.', go: 'entreprises'
         },
         {
-            id: 'ent-sans-isin', label: 'Sociétés sans code ISIN', gravite: 'alerte',
-            table: 'entreprises', filtre: 'and=(isin.is.null,code_isin.is.null)',
-            effet: 'Le rapprochement avec les sources externes devient manuel.', go: 'entreprises'
-        },
-        {
             id: 'fin-sans-source', label: 'États financiers sans source', gravite: 'alerte',
             table: 'financials', filtre: 'or=(source.is.null,source.eq.)',
             effet: 'Une donnée sans source n\'est pas vérifiable.', go: 'financials'
