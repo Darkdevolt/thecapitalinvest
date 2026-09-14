@@ -128,8 +128,11 @@ for (const file of files) {
 // (public/admin/js/modules/dcbr.js) — caractéristiques d'émission
 // (ISIN, symbole, taux...) des emprunts obligataires UEMOA. Changement
 // délibéré et revu.
+// Bump 2026-09-14 : cache-buster de public/admin/js/modules/scraper.js
+// (v2026091001 -> v2026091401) pour le nouveau bloc « Journal des passages
+// automatiques » (historique brvm_scrape_runs). Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '494b19bda538cf24b76a8741bf62e79782ff23c8';
+const expectedAdminBlobSha = 'c749a5ff6c34ddfbd68313271be4c40a99ee2be6';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
