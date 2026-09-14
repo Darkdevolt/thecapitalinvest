@@ -2,9 +2,11 @@
 // PALMARÈS BRVM  (P1 roadmap — parité RichBourse « palmarès hausses/baisses/
 // volumes » par période). Trois classements — plus fortes hausses, plus fortes
 // baisses, plus gros échanges — sur jour / semaine / mois / 3 mois / depuis le
-// 1ᵉʳ janvier. Sources : allCours (séance) + historique (fenêtre paginée,
-// partagée avec l'écran d'opportunités). Aucune performance inventée : une
-// valeur sans historique suffisant est absente des classements de période.
+// 1ᵉʳ janvier. Sources : allCours (séance) + historique (fenêtre paginée de
+// 400 jours, propre à cet écran — jamais partagée : les besoins de profondeur
+// diffèrent trop d'un écran à l'autre pour qu'un cache commun soit fiable).
+// Aucune performance inventée : une valeur sans historique suffisant pour la
+// période choisie est absente des classements.
 // ============================================================================
 (function () {
   'use strict';
@@ -44,12 +46,16 @@
     });
     return idx;
   }
+  /* Le palmarès a besoin d'au moins 63 séances par valeur (période « 3
+     mois »). window.allCoursHistorique est une variable partagée que
+     l'écran Opportunités remplit avec une fenêtre de 100 jours seulement
+     (~70 séances) : un simple contrôle « .length > 400 » ne dit rien de
+     la profondeur RÉELLEMENT disponible par valeur, et si Opportunités
+     s'est chargé en premier, le palmarès héritait silencieusement de
+     cette fenêtre trop courte pour « 1 mois » et surtout « 3 mois ». Le
+     palmarès tient donc son propre cache, jamais partagé. */
   function ensureHistory() {
     if (histIndex) return Promise.resolve(histIndex);
-    if (Array.isArray(window.allCoursHistorique) && window.allCoursHistorique.length > 400) {
-      histIndex = buildIndexFrom(window.allCoursHistorique);
-      return Promise.resolve(histIndex);
-    }
     if (typeof window.apiGet !== 'function') { histIndex = {}; return Promise.resolve(histIndex); }
     var since = new Date(Date.now() - 400 * 24 * 3600 * 1000).toISOString().slice(0, 10);
     var all = [];
@@ -58,12 +64,14 @@
         .then(function (rows) {
           var arr = Array.isArray(rows) ? rows : (rows && rows.data) || [];
           all = all.concat(arr);
-          if (arr.length === 1000 && offset < 8000) return page(offset + 1000);
+          // 400 jours représentent environ 13 000 lignes tous titres confondus
+          // (constaté : ~270 séances × 47 valeurs) ; la marge évite de tronquer
+          // silencieusement l'historique le plus ancien dont « 3 mois » a besoin.
+          if (arr.length === 1000 && offset < 15000) return page(offset + 1000);
           return all;
         });
     };
     return page(0).then(function (rows) {
-      window.allCoursHistorique = rows;
       histIndex = buildIndexFrom(rows);
       return histIndex;
     }).catch(function () { histIndex = {}; return histIndex; });
@@ -78,9 +86,15 @@
       return v == null ? null : { perf: v, ref: null };
     }
     var series = (histIndex && histIndex[t]) || [];
+    var p = PERIODS.find(function (x) { return x.id === PERIOD; });
+    /* Sans au moins `sessions` + 1 séances, series[length-1-sessions] n'existe
+       pas vraiment : Math.max(0, …) le remplaçait silencieusement par la toute
+       première séance connue, qui peut être bien plus proche que la période
+       annoncée. Une valeur trop jeune (introduction récente, historique
+       incomplet) est alors exclue plutôt que de fausser le classement. */
+    if (PERIOD !== 'ytd' && series.length < p.sessions + 1) return null;
     if (series.length < 3) return null;
     var refRow = null;
-    var p = PERIODS.find(function (x) { return x.id === PERIOD; });
     if (PERIOD === 'ytd') {
       var jan1 = new Date().getFullYear() + '-01-01';
       for (var i = 0; i < series.length; i++) { if (ymd(series[i].date_seance) >= jan1) { refRow = series[i]; break; } }
