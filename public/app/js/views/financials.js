@@ -39,6 +39,192 @@ function finRatio(a,b, suffix='%') {
   return `${(x/y*100).toFixed(1)}${suffix}`;
 }
 
+// Variation d'un poste par rapport à la période comparable précédente (même
+// périodicité : annuel vs annuel, jamais annuel vs semestriel). Un écart de
+// moins de 0.05 point est affiché neutre plutôt que faussement orienté par
+// un arrondi.
+function finGrowth(curr, prev) {
+  const c = Number(curr), p = Number(prev);
+  if (!Number.isFinite(c) || !Number.isFinite(p) || p === 0) return '';
+  const pct = (c / p - 1) * 100;
+  const cls = pct > 0.05 ? 'positive' : pct < -0.05 ? 'negative' : '';
+  const arrow = pct > 0.05 ? '▲' : pct < -0.05 ? '▼' : '▬';
+  return ` <small class="fin-delta ${cls}">${arrow} ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</small>`;
+}
+
+// Période comparable la plus récente avant f : même périodicité uniquement,
+// pour ne jamais comparer un exercice annuel à un semestre.
+function finPreviousPeriod(fins, f) {
+  const periode = f.periode || 'annuel';
+  const year = Number(f.annee);
+  if (!Number.isFinite(year)) return null;
+  return (Array.isArray(fins) ? fins : [])
+    .filter(x => (x.periode || 'annuel') === periode && Number(x.annee) < year)
+    .sort((a, b) => Number(b.annee) - Number(a.annee))[0] || null;
+}
+
+// Taux de distribution : la colonne payout_ratio est déjà calculée côté
+// admin (public/admin/js/financials/financials-schema.js) ; même repli que
+// dividend-screener.js quand elle est vide (dpa/bpa, sinon dpa×actions/RN).
+function finPayoutRatio(f) {
+  const stored = Number(f?.payout_ratio);
+  if (Number.isFinite(stored)) return stored;
+  const dpa = Number(f?.dpa), bpa = Number(f?.bpa), rn = Number(f?.resultat_net), actions = Number(f?.nombre_actions ?? f?.nb_actions);
+  if (Number.isFinite(dpa) && Number.isFinite(bpa) && bpa > 0) return dpa / bpa * 100;
+  if (Number.isFinite(dpa) && Number.isFinite(rn) && rn > 0 && actions) return (dpa * actions) / rn * 100;
+  return null;
+}
+
+// Politique de dividende sur l'historique annuel complet du titre (pas
+// seulement la période affichée) : régularité, taux de distribution moyen,
+// dernière variation. N'existe que si au moins un exercice a un DPA publié
+// -- une société qui n'a jamais versé de dividende n'a pas de "politique"
+// à décrire.
+function dividendPolicy(annualAsc) {
+  const withDpa = (Array.isArray(annualAsc) ? annualAsc : []).filter(f => Number.isFinite(Number(f.dpa)));
+  if (!withDpa.length) return null;
+
+  let streak = 0, prevYear = null;
+  for (let i = annualAsc.length - 1; i >= 0; i--) {
+    const f = annualAsc[i];
+    const dpa = Number(f.dpa);
+    if (!Number.isFinite(dpa) || dpa <= 0) break;
+    const year = Number(f.annee);
+    if (prevYear != null && prevYear - year !== 1) break;
+    streak++; prevYear = year;
+  }
+
+  const payouts = withDpa.map(finPayoutRatio).filter(Number.isFinite);
+  const avgPayout = payouts.length ? payouts.reduce((a, b) => a + b, 0) / payouts.length : null;
+
+  let lastChange = null;
+  if (withDpa.length >= 2) {
+    const d1 = Number(withDpa[withDpa.length - 1].dpa), d0 = Number(withDpa[withDpa.length - 2].dpa);
+    if (d0 > 0) lastChange = (d1 / d0 - 1) * 100;
+  }
+
+  return { streak, avgPayout, lastChange, years: withDpa.length, series: withDpa.map(f => ({ annee: f.annee, dpa: Number(f.dpa) })) };
+}
+
+function dividendPolicyCard(policy) {
+  if (!policy) return '';
+  const notes = [];
+  notes.push({ tone: policy.streak >= 3 ? 'positive' : policy.streak === 0 ? 'negative' : '', text: policy.streak > 0 ? `Dividende versé ${policy.streak} exercice(s) consécutif(s) sans interruption.` : `Dividende interrompu sur le dernier exercice disponible.` });
+  if (policy.avgPayout != null) {
+    notes.push({ tone: policy.avgPayout > 100 ? 'negative' : policy.avgPayout <= 60 ? 'positive' : '', text: `Taux de distribution moyen de ${policy.avgPayout.toFixed(1)} % sur ${policy.years} exercice(s) — repère usuel : ≤ 60 % soutenable, > 100 % distribue plus que le bénéfice.` });
+  }
+  if (policy.lastChange != null) {
+    notes.push({ tone: policy.lastChange >= 0 ? 'positive' : 'negative', text: `Dividende par action ${policy.lastChange >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(policy.lastChange).toFixed(1)} % sur le dernier exercice publié.` });
+  }
+  const chartHtml = policy.series.length > 1 ? '<div class="chart-container" style="height:180px;margin-bottom:16px"><canvas id="chartDividendPolicy"></canvas></div>' : '';
+  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Politique de dividende</div><div class="fin-section-note">Sur l'historique annuel disponible du titre — pas seulement la période affichée ci-dessous.</div></div></div><div class="card-body">${chartHtml}<div class="fin-lecture" style="border-top:0;padding:0">${notes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div></div></div>`;
+}
+
+function drawDividendPolicyChart(policy) {
+  const canvas = document.getElementById('chartDividendPolicy');
+  if (!canvas || !policy || policy.series.length < 2) return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: { labels: policy.series.map(s => s.annee), datasets: [{ label: 'DPA', data: policy.series.map(s => s.dpa), backgroundColor: 'rgba(63,201,138,0.30)', borderColor: 'rgba(63,201,138,0.65)', borderWidth: 1, borderRadius: 5 }] },
+    options: { ...chartOpts, plugins: { ...chartOpts.plugins, legend: { display: false }, tooltip: { ...chartOpts.plugins.tooltip, callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y) + ' FCFA' } } } }
+  });
+}
+
+// Récapitulatif The Capital : objectif de la dernière note de recherche
+// (comparé au cours du jour, pas au cours de référence historique de la
+// note -- ce qui compte ici est "l'atteint-on aujourd'hui"), notation
+// maison /100 (même moteur que Fiche titre : window.tcScoreMaison, voir
+// public/app/js/score-maison.js -- valorisation/rentabilité/croissance/
+// rendement/solidité, coché ✓/✗ par critère calculable), et un lien vers
+// le rapport de recommandation complet (analyses.js) quand une note existe.
+function recapTheCapitalCard(ticker, cp) {
+  const analyseRows = (Array.isArray(window.allAnalyses) ? window.allAnalyses : []).filter(a => String(a?.ticker || '').toUpperCase() === String(ticker).toUpperCase());
+  const latestAnalyse = analyseRows.length ? analyseRows.slice().sort((a, b) => Date.parse(b.date_analyse || 0) - Date.parse(a.date_analyse || 0))[0] : null;
+
+  const objectifNotes = [];
+  if (latestAnalyse && typeof analyseTarget === 'function') {
+    const target = analyseTarget(latestAnalyse);
+    if (target != null) {
+      const hasPrice = Number.isFinite(cp) && cp > 0;
+      const potential = hasPrice ? (target / cp - 1) * 100 : null;
+      const type = typeof analyseRecType === 'function' ? analyseRecType(latestAnalyse.recommandation) : 'hold';
+      const reached = hasPrice && ((type === 'buy' && cp >= target) || (type === 'sell' && cp <= target));
+      objectifNotes.push({ tone: reached ? 'positive' : '', text: `Objectif de cours de ${fmt(target)} FCFA${hasPrice ? ` vs cours actuel de ${fmt(cp)} FCFA` : ''}${reached ? ' — déjà atteint.' : '.'}` });
+      if (potential != null) {
+        objectifNotes.push({ tone: potential >= 0 ? 'positive' : 'negative', text: `Potentiel restant de ${potential >= 0 ? '+' : ''}${potential.toFixed(1)} % par rapport au cours actuel.` });
+      }
+    }
+  }
+
+  let scoreHtml = '';
+  if (typeof window.tcScoreMaison === 'function') {
+    const sc = window.tcScoreMaison(ticker);
+    if (sc.score != null) {
+      scoreHtml = `
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:${objectifNotes.length ? '16px' : '0'} 0 14px">
+          <span style="font-family:var(--serif);font-size:40px;line-height:1;color:var(--cream)">${sc.score}</span>
+          <span style="color:var(--dim)">/ 100</span>
+          <b style="color:var(--gold);font-size:15px">${finEsc(sc.label)}</b>
+        </div>
+        <div class="table-wrap"><table class="forecast-table"><thead><tr><th>Critère</th><th>Statut</th><th class="right">Points</th><th>Lecture</th></tr></thead><tbody>
+          ${sc.components.map(c => {
+            const ratio = c.pts == null ? null : c.pts / c.max;
+            const tone = ratio == null ? { icon: '—', cls: '' } : ratio >= 0.6 ? { icon: '✓', cls: 'positive' } : ratio < 0.35 ? { icon: '✗', cls: 'negative' } : { icon: '~', cls: '' };
+            return `<tr><td>${finEsc(c.l)}</td><td class="${tone.cls}">${tone.icon}</td><td class="right">${c.pts == null ? '—' : c.pts.toFixed(1) + ' / ' + c.max}</td><td style="color:var(--dim)">${finEsc(c.detail)}</td></tr>`;
+          }).join('')}
+        </tbody></table></div>
+        <p style="font-size:10.5px;color:var(--dim);margin-top:10px">Pondération valorisation 25 · rentabilité 25 · croissance 20 · rendement 15 · solidité 15, ramenée sur 100 en ne comptant que les critères calculables depuis la base. Ceci n'est pas un conseil d'investissement.</p>`;
+    }
+  }
+
+  if (!objectifNotes.length && !scoreHtml) return '';
+
+  // analyses.id est un UUID (Supabase) : jamais Number(id) (voir
+  // recommendations-fixes.js, qui a déjà dû corriger ce même piège dans
+  // analyses.js -- Number(uuid) vaut NaN et rend la fiche inaccessible).
+  const reportHtml = latestAnalyse && typeof window.openAnalyseDetail === 'function'
+    ? `<div style="margin-top:14px"><button type="button" class="fin-detail-btn" onclick="openAnalyseDetail('${finEsc(latestAnalyse.id)}')">Voir le rapport de recommandation complet →</button></div>`
+    : '';
+  const dateLabel = latestAnalyse?.date_analyse ? fmtDate(latestAnalyse.date_analyse) : null;
+  const noteText = dateLabel
+    ? `Dernière note du ${finEsc(dateLabel)} — ${finEsc(latestAnalyse.recommandation || '—')}${latestAnalyse.analyste ? ` par ${finEsc(latestAnalyse.analyste)}` : ''}.`
+    : 'Notation calculée automatiquement à partir des états financiers et de la dernière cotation disponibles.';
+
+  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Récapitulatif The Capital</div><div class="fin-section-note">${noteText}</div></div></div><div class="card-body">${objectifNotes.length ? `<div class="fin-lecture" style="border-top:0;padding:0">${objectifNotes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div>` : ''}${scoreHtml}${reportHtml}</div></div>`;
+}
+
+// Lecture automatique, uniquement à partir de ratios réellement calculables
+// (aucune valeur inventée). Les repères cités sont volontairement explicites
+// dans le texte plutôt qu'un verdict opaque.
+function finLecture(f, prev) {
+  const notes = [];
+  const ca = Number(f.chiffre_affaires), caPrev = Number(prev?.chiffre_affaires);
+  if (Number.isFinite(ca) && Number.isFinite(caPrev) && caPrev !== 0) {
+    const g = (ca / caPrev - 1) * 100;
+    notes.push({ tone: g >= 0 ? 'positive' : 'negative', text: `Chiffre d'affaires ${g >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(g).toFixed(1)} % sur la période précédente.` });
+  }
+  const rn = Number(f.resultat_net), chiffreAffaires = Number(f.chiffre_affaires);
+  if (Number.isFinite(rn) && Number.isFinite(chiffreAffaires) && chiffreAffaires !== 0) {
+    const marge = rn / chiffreAffaires * 100;
+    notes.push({ tone: marge < 0 ? 'negative' : marge >= 10 ? 'positive' : '', text: `Marge nette de ${marge.toFixed(1)} %${marge < 0 ? ' (perte sur la période)' : marge >= 10 ? ' — repère usuel : ≥ 10 % confortable' : ''}.` });
+  }
+  const fondsPropres = Number(f.fonds_propres);
+  if (Number.isFinite(rn) && Number.isFinite(fondsPropres) && fondsPropres > 0) {
+    const roe = rn / fondsPropres * 100;
+    notes.push({ tone: roe < 5 ? 'negative' : roe >= 12 ? 'positive' : '', text: `ROE de ${roe.toFixed(1)} % — repère usuel : ≥ 12 % bon, < 5 % faible.` });
+  }
+  const dettes = Number(f.dettes_financieres);
+  if (Number.isFinite(dettes) && Number.isFinite(fondsPropres) && fondsPropres > 0) {
+    const levier = dettes / fondsPropres;
+    notes.push({ tone: levier > 2 ? 'negative' : levier <= 1 ? 'positive' : '', text: `Dette financière / fonds propres de ${levier.toFixed(2)}x — repère usuel : ≤ 1x prudent, > 2x élevé.` });
+  }
+  const payout = finPayoutRatio(f);
+  if (payout != null) {
+    notes.push({ tone: payout > 100 ? 'negative' : payout <= 60 ? 'positive' : '', text: `Taux de distribution de ${payout.toFixed(1)} % du bénéfice — repère usuel : ≤ 60 % soutenable, > 100 % distribue plus que le résultat net de la période.` });
+  }
+  return notes;
+}
+
 function finMetric(label, value, note='') {
   return `<div class="fin-metric"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
 }
@@ -46,7 +232,7 @@ function finMetric(label, value, note='') {
 function finCard(title, rows) {
   const valid = rows.filter(([,v]) => v !== '—');
   if (!valid.length) return '';
-  return `<section class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</section>`;
+  return `<section class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v,d]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}${d || ''}</span></div>`).join('')}</section>`;
 }
 
 function renderFinancials() {
@@ -134,6 +320,12 @@ function openFinDetail(ticker) {
   const periods = [...new Set(fins.map(f => `${f.annee}${f.periode && f.periode !== 'annuel' ? ' '+f.periode : ''}`))];
   const latest = fins[0] || {};
 
+  const annual = fins.filter(f => f.periode === 'annuel' || !f.periode);
+  const policy = dividendPolicy([...annual].reverse());
+  const policyHtml = dividendPolicyCard(policy);
+  const researchHtml = recapTheCapitalCard(ticker, cp);
+  const interimCount = fins.length - annual.length;
+
   const detail = document.getElementById('finDetailContent');
   if (!detail) return;
   detail.innerHTML = `
@@ -143,15 +335,22 @@ function openFinDetail(ticker) {
       <div class="fin-detail-price"><span>Cours disponible</span><strong>${Number.isFinite(cp) && cp ? fmt(cp)+' FCFA' : '—'}</strong><small>Dernière cotation disponible</small></div>
     </div>
     <div class="fin-detail-trust">${financialValidationBadge(latest)}<span>${finStatus(latest)==='validated' ? 'Les données affichées sont validées.' : 'Certaines données sont encore en validation éditoriale.'}</span></div>
-    <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du résultat net</div><div class="fin-section-note">Historique disponible dans la base The Capital.</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
+    ${researchHtml}
+    <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du chiffre d'affaires et du résultat net</div><div class="fin-section-note">${interimCount > 0 ? `Exercices annuels ci-dessous · ${interimCount} publication(s) infra-annuelle(s) (semestre/trimestre) dans le détail par période.` : 'Historique disponible dans la base The Capital. Aucune publication semestrielle ou trimestrielle enregistrée pour ce titre : le détail par période reste annuel.'}</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
+    ${policyHtml}
     <div id="finDetailPeriods"></div>`;
 
-  const annual = fins.filter(f => f.periode === 'annuel' || !f.periode);
+  drawDividendPolicyChart(policy);
+
   const evolLabels = annual.map(f=>f.annee).reverse();
+  const evolCA = annual.map(f=>f.chiffre_affaires).reverse();
   const evolData = annual.map(f=>f.resultat_net).reverse();
   const canvas = document.getElementById('chartFinEvolution');
   if (canvas && evolLabels.length > 1) {
-    new Chart(canvas,{type:'bar',data:{labels:evolLabels,datasets:[{label:'Résultat net',data:evolData,backgroundColor:'rgba(184,150,78,0.30)',borderColor:'rgba(184,150,78,0.65)',borderWidth:1,borderRadius:5}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}}}});
+    new Chart(canvas,{type:'bar',data:{labels:evolLabels,datasets:[
+      {label:"Chiffre d'affaires",data:evolCA,backgroundColor:'rgba(96,165,250,0.28)',borderColor:'rgba(96,165,250,0.65)',borderWidth:1,borderRadius:5},
+      {label:'Résultat net',data:evolData,backgroundColor:'rgba(184,150,78,0.30)',borderColor:'rgba(184,150,78,0.65)',borderWidth:1,borderRadius:5}
+    ]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>' '+ctx.dataset.label+' : '+fmtM(ctx.parsed.y)}}}}});
   } else if (canvas) {
     canvas.parentElement.innerHTML='<div class="fin-chart-empty">Pas assez d\'historique pour afficher une tendance.</div>';
   }
@@ -160,12 +359,28 @@ function openFinDetail(ticker) {
   if (!container) return;
   container.innerHTML = fins.map(f => {
     const title = !f.periode || f.periode==='annuel' ? `${finEsc(f.annee)} · Annuel` : `${finEsc(f.annee)} · ${finEsc(String(f.periode).charAt(0).toUpperCase()+String(f.periode).slice(1))}`;
+    const prev = finPreviousPeriod(fins, f);
+    const lecture = finLecture(f, prev);
     const sections = [
-      finCard('Compte de résultat', [["Chiffre d'affaires",finValue(f.chiffre_affaires)],['RBE',finValue(f.rbe)],['Résultat net',finValue(f.resultat_net)],['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—'],['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—']]),
-      finCard('Bilan', [['Total actif',finValue(f.total_actif)],['Fonds propres',finValue(f.fonds_propres)],['Dettes financières',finValue(f.dettes_financieres)]]),
+      finCard('Compte de résultat', [
+        ["Chiffre d'affaires",finValue(f.chiffre_affaires),finGrowth(f.chiffre_affaires,prev?.chiffre_affaires)],
+        ['RBE',finValue(f.rbe),finGrowth(f.rbe,prev?.rbe)],
+        ['Résultat net',finValue(f.resultat_net),finGrowth(f.resultat_net,prev?.resultat_net)],
+        ['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],
+        ['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—',finGrowth(f.dpa,prev?.dpa)]
+      ]),
+      finCard('Bilan', [
+        ['Total actif',finValue(f.total_actif),finGrowth(f.total_actif,prev?.total_actif)],
+        ['Fonds propres',finValue(f.fonds_propres),finGrowth(f.fonds_propres,prev?.fonds_propres)],
+        ['Dettes financières',finValue(f.dettes_financieres),finGrowth(f.dettes_financieres,prev?.dettes_financieres)]
+      ]),
       finCard('Flux de trésorerie', [['Cash-flow opérationnel',finValue(f.cash_flow_operationnel)],['CAPEX',finValue(f.capex)]]),
-      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x': '—'],['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—']])
+      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x': '—']]),
+      finCard('Dividende', [['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—'],['Taux de distribution (payout)',finPayoutRatio(f)!=null?finPayoutRatio(f).toFixed(1)+'%': '—',finGrowth(finPayoutRatio(f),finPayoutRatio(prev))]])
     ].join('');
-    return `<article class="fin-period-card"><div class="fin-period-head"><div><span class="fin-period-label">PÉRIODE</span><h3>${title}</h3></div>${financialValidationBadge(f)}</div><div class="fin-period-grid">${sections}</div>${financialSourceLine(f)}</article>`;
+    const lectureHtml = lecture.length
+      ? `<div class="fin-lecture"><h4>Lecture automatique</h4>${lecture.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div>`
+      : '';
+    return `<article class="fin-period-card"><div class="fin-period-head"><div><span class="fin-period-label">PÉRIODE</span><h3>${title}</h3></div>${financialValidationBadge(f)}</div><div class="fin-period-grid">${sections}</div>${lectureHtml}${financialSourceLine(f)}</article>`;
   }).join('');
 }
