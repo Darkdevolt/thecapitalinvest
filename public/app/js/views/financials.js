@@ -63,6 +63,62 @@ function finPreviousPeriod(fins, f) {
     .sort((a, b) => Number(b.annee) - Number(a.annee))[0] || null;
 }
 
+// Taux de distribution : la colonne payout_ratio est déjà calculée côté
+// admin (public/admin/js/financials/financials-schema.js) ; même repli que
+// dividend-screener.js quand elle est vide (dpa/bpa, sinon dpa×actions/RN).
+function finPayoutRatio(f) {
+  const stored = Number(f?.payout_ratio);
+  if (Number.isFinite(stored)) return stored;
+  const dpa = Number(f?.dpa), bpa = Number(f?.bpa), rn = Number(f?.resultat_net), actions = Number(f?.nombre_actions ?? f?.nb_actions);
+  if (Number.isFinite(dpa) && Number.isFinite(bpa) && bpa > 0) return dpa / bpa * 100;
+  if (Number.isFinite(dpa) && Number.isFinite(rn) && rn > 0 && actions) return (dpa * actions) / rn * 100;
+  return null;
+}
+
+// Politique de dividende sur l'historique annuel complet du titre (pas
+// seulement la période affichée) : régularité, taux de distribution moyen,
+// dernière variation. N'existe que si au moins un exercice a un DPA publié
+// -- une société qui n'a jamais versé de dividende n'a pas de "politique"
+// à décrire.
+function dividendPolicy(annualAsc) {
+  const withDpa = (Array.isArray(annualAsc) ? annualAsc : []).filter(f => Number.isFinite(Number(f.dpa)));
+  if (!withDpa.length) return null;
+
+  let streak = 0, prevYear = null;
+  for (let i = annualAsc.length - 1; i >= 0; i--) {
+    const f = annualAsc[i];
+    const dpa = Number(f.dpa);
+    if (!Number.isFinite(dpa) || dpa <= 0) break;
+    const year = Number(f.annee);
+    if (prevYear != null && prevYear - year !== 1) break;
+    streak++; prevYear = year;
+  }
+
+  const payouts = withDpa.map(finPayoutRatio).filter(Number.isFinite);
+  const avgPayout = payouts.length ? payouts.reduce((a, b) => a + b, 0) / payouts.length : null;
+
+  let lastChange = null;
+  if (withDpa.length >= 2) {
+    const d1 = Number(withDpa[withDpa.length - 1].dpa), d0 = Number(withDpa[withDpa.length - 2].dpa);
+    if (d0 > 0) lastChange = (d1 / d0 - 1) * 100;
+  }
+
+  return { streak, avgPayout, lastChange, years: withDpa.length };
+}
+
+function dividendPolicyCard(policy) {
+  if (!policy) return '';
+  const notes = [];
+  notes.push({ tone: policy.streak >= 3 ? 'positive' : policy.streak === 0 ? 'negative' : '', text: policy.streak > 0 ? `Dividende versé ${policy.streak} exercice(s) consécutif(s) sans interruption.` : `Dividende interrompu sur le dernier exercice disponible.` });
+  if (policy.avgPayout != null) {
+    notes.push({ tone: policy.avgPayout > 100 ? 'negative' : policy.avgPayout <= 60 ? 'positive' : '', text: `Taux de distribution moyen de ${policy.avgPayout.toFixed(1)} % sur ${policy.years} exercice(s) — repère usuel : ≤ 60 % soutenable, > 100 % distribue plus que le bénéfice.` });
+  }
+  if (policy.lastChange != null) {
+    notes.push({ tone: policy.lastChange >= 0 ? 'positive' : 'negative', text: `Dividende par action ${policy.lastChange >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(policy.lastChange).toFixed(1)} % sur le dernier exercice publié.` });
+  }
+  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Politique de dividende</div><div class="fin-section-note">Sur l'historique annuel disponible du titre — pas seulement la période affichée ci-dessous.</div></div></div><div class="card-body"><div class="fin-lecture" style="border-top:0;padding:0">${notes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div></div></div>`;
+}
+
 // Lecture automatique, uniquement à partir de ratios réellement calculables
 // (aucune valeur inventée). Les repères cités sont volontairement explicites
 // dans le texte plutôt qu'un verdict opaque.
@@ -87,6 +143,10 @@ function finLecture(f, prev) {
   if (Number.isFinite(dettes) && Number.isFinite(fondsPropres) && fondsPropres > 0) {
     const levier = dettes / fondsPropres;
     notes.push({ tone: levier > 2 ? 'negative' : levier <= 1 ? 'positive' : '', text: `Dette financière / fonds propres de ${levier.toFixed(2)}x — repère usuel : ≤ 1x prudent, > 2x élevé.` });
+  }
+  const payout = finPayoutRatio(f);
+  if (payout != null) {
+    notes.push({ tone: payout > 100 ? 'negative' : payout <= 60 ? 'positive' : '', text: `Taux de distribution de ${payout.toFixed(1)} % du bénéfice — repère usuel : ≤ 60 % soutenable, > 100 % distribue plus que le résultat net de la période.` });
   }
   return notes;
 }
@@ -186,6 +246,9 @@ function openFinDetail(ticker) {
   const periods = [...new Set(fins.map(f => `${f.annee}${f.periode && f.periode !== 'annuel' ? ' '+f.periode : ''}`))];
   const latest = fins[0] || {};
 
+  const annual = fins.filter(f => f.periode === 'annuel' || !f.periode);
+  const policyHtml = dividendPolicyCard(dividendPolicy([...annual].reverse()));
+
   const detail = document.getElementById('finDetailContent');
   if (!detail) return;
   detail.innerHTML = `
@@ -196,9 +259,9 @@ function openFinDetail(ticker) {
     </div>
     <div class="fin-detail-trust">${financialValidationBadge(latest)}<span>${finStatus(latest)==='validated' ? 'Les données affichées sont validées.' : 'Certaines données sont encore en validation éditoriale.'}</span></div>
     <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du résultat net</div><div class="fin-section-note">Historique disponible dans la base The Capital.</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
+    ${policyHtml}
     <div id="finDetailPeriods"></div>`;
 
-  const annual = fins.filter(f => f.periode === 'annuel' || !f.periode);
   const evolLabels = annual.map(f=>f.annee).reverse();
   const evolData = annual.map(f=>f.resultat_net).reverse();
   const canvas = document.getElementById('chartFinEvolution');
@@ -228,7 +291,8 @@ function openFinDetail(ticker) {
         ['Dettes financières',finValue(f.dettes_financieres),finGrowth(f.dettes_financieres,prev?.dettes_financieres)]
       ]),
       finCard('Flux de trésorerie', [['Cash-flow opérationnel',finValue(f.cash_flow_operationnel)],['CAPEX',finValue(f.capex)]]),
-      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x': '—'],['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—']])
+      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x': '—']]),
+      finCard('Dividende', [['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—'],['Taux de distribution (payout)',finPayoutRatio(f)!=null?finPayoutRatio(f).toFixed(1)+'%': '—',finGrowth(finPayoutRatio(f),finPayoutRatio(prev))]])
     ].join('');
     const lectureHtml = lecture.length
       ? `<div class="fin-lecture"><h4>Lecture automatique</h4>${lecture.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div>`
