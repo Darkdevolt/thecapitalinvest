@@ -39,6 +39,58 @@ function finRatio(a,b, suffix='%') {
   return `${(x/y*100).toFixed(1)}${suffix}`;
 }
 
+// Variation d'un poste par rapport à la période comparable précédente (même
+// périodicité : annuel vs annuel, jamais annuel vs semestriel). Un écart de
+// moins de 0.05 point est affiché neutre plutôt que faussement orienté par
+// un arrondi.
+function finGrowth(curr, prev) {
+  const c = Number(curr), p = Number(prev);
+  if (!Number.isFinite(c) || !Number.isFinite(p) || p === 0) return '';
+  const pct = (c / p - 1) * 100;
+  const cls = pct > 0.05 ? 'positive' : pct < -0.05 ? 'negative' : '';
+  const arrow = pct > 0.05 ? '▲' : pct < -0.05 ? '▼' : '▬';
+  return ` <small class="fin-delta ${cls}">${arrow} ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</small>`;
+}
+
+// Période comparable la plus récente avant f : même périodicité uniquement,
+// pour ne jamais comparer un exercice annuel à un semestre.
+function finPreviousPeriod(fins, f) {
+  const periode = f.periode || 'annuel';
+  const year = Number(f.annee);
+  if (!Number.isFinite(year)) return null;
+  return (Array.isArray(fins) ? fins : [])
+    .filter(x => (x.periode || 'annuel') === periode && Number(x.annee) < year)
+    .sort((a, b) => Number(b.annee) - Number(a.annee))[0] || null;
+}
+
+// Lecture automatique, uniquement à partir de ratios réellement calculables
+// (aucune valeur inventée). Les repères cités sont volontairement explicites
+// dans le texte plutôt qu'un verdict opaque.
+function finLecture(f, prev) {
+  const notes = [];
+  const ca = Number(f.chiffre_affaires), caPrev = Number(prev?.chiffre_affaires);
+  if (Number.isFinite(ca) && Number.isFinite(caPrev) && caPrev !== 0) {
+    const g = (ca / caPrev - 1) * 100;
+    notes.push({ tone: g >= 0 ? 'positive' : 'negative', text: `Chiffre d'affaires ${g >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(g).toFixed(1)} % sur la période précédente.` });
+  }
+  const rn = Number(f.resultat_net), chiffreAffaires = Number(f.chiffre_affaires);
+  if (Number.isFinite(rn) && Number.isFinite(chiffreAffaires) && chiffreAffaires !== 0) {
+    const marge = rn / chiffreAffaires * 100;
+    notes.push({ tone: marge < 0 ? 'negative' : marge >= 10 ? 'positive' : '', text: `Marge nette de ${marge.toFixed(1)} %${marge < 0 ? ' (perte sur la période)' : marge >= 10 ? ' — repère usuel : ≥ 10 % confortable' : ''}.` });
+  }
+  const fondsPropres = Number(f.fonds_propres);
+  if (Number.isFinite(rn) && Number.isFinite(fondsPropres) && fondsPropres > 0) {
+    const roe = rn / fondsPropres * 100;
+    notes.push({ tone: roe < 5 ? 'negative' : roe >= 12 ? 'positive' : '', text: `ROE de ${roe.toFixed(1)} % — repère usuel : ≥ 12 % bon, < 5 % faible.` });
+  }
+  const dettes = Number(f.dettes_financieres);
+  if (Number.isFinite(dettes) && Number.isFinite(fondsPropres) && fondsPropres > 0) {
+    const levier = dettes / fondsPropres;
+    notes.push({ tone: levier > 2 ? 'negative' : levier <= 1 ? 'positive' : '', text: `Dette financière / fonds propres de ${levier.toFixed(2)}x — repère usuel : ≤ 1x prudent, > 2x élevé.` });
+  }
+  return notes;
+}
+
 function finMetric(label, value, note='') {
   return `<div class="fin-metric"><span>${label}</span><strong>${value}</strong>${note ? `<small>${note}</small>` : ''}</div>`;
 }
@@ -46,7 +98,7 @@ function finMetric(label, value, note='') {
 function finCard(title, rows) {
   const valid = rows.filter(([,v]) => v !== '—');
   if (!valid.length) return '';
-  return `<section class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}</span></div>`).join('')}</section>`;
+  return `<section class="fin-detail-card"><h4>${title}</h4>${valid.map(([l,v,d]) => `<div class="fin-row"><span class="fin-label">${l}</span><span class="fin-value">${v}${d || ''}</span></div>`).join('')}</section>`;
 }
 
 function renderFinancials() {
@@ -160,12 +212,27 @@ function openFinDetail(ticker) {
   if (!container) return;
   container.innerHTML = fins.map(f => {
     const title = !f.periode || f.periode==='annuel' ? `${finEsc(f.annee)} · Annuel` : `${finEsc(f.annee)} · ${finEsc(String(f.periode).charAt(0).toUpperCase()+String(f.periode).slice(1))}`;
+    const prev = finPreviousPeriod(fins, f);
+    const lecture = finLecture(f, prev);
     const sections = [
-      finCard('Compte de résultat', [["Chiffre d'affaires",finValue(f.chiffre_affaires)],['RBE',finValue(f.rbe)],['Résultat net',finValue(f.resultat_net)],['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—'],['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—']]),
-      finCard('Bilan', [['Total actif',finValue(f.total_actif)],['Fonds propres',finValue(f.fonds_propres)],['Dettes financières',finValue(f.dettes_financieres)]]),
+      finCard('Compte de résultat', [
+        ["Chiffre d'affaires",finValue(f.chiffre_affaires),finGrowth(f.chiffre_affaires,prev?.chiffre_affaires)],
+        ['RBE',finValue(f.rbe),finGrowth(f.rbe,prev?.rbe)],
+        ['Résultat net',finValue(f.resultat_net),finGrowth(f.resultat_net,prev?.resultat_net)],
+        ['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],
+        ['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—',finGrowth(f.dpa,prev?.dpa)]
+      ]),
+      finCard('Bilan', [
+        ['Total actif',finValue(f.total_actif),finGrowth(f.total_actif,prev?.total_actif)],
+        ['Fonds propres',finValue(f.fonds_propres),finGrowth(f.fonds_propres,prev?.fonds_propres)],
+        ['Dettes financières',finValue(f.dettes_financieres),finGrowth(f.dettes_financieres,prev?.dettes_financieres)]
+      ]),
       finCard('Flux de trésorerie', [['Cash-flow opérationnel',finValue(f.cash_flow_operationnel)],['CAPEX',finValue(f.capex)]]),
       finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x': '—'],['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—']])
     ].join('');
-    return `<article class="fin-period-card"><div class="fin-period-head"><div><span class="fin-period-label">PÉRIODE</span><h3>${title}</h3></div>${financialValidationBadge(f)}</div><div class="fin-period-grid">${sections}</div>${financialSourceLine(f)}</article>`;
+    const lectureHtml = lecture.length
+      ? `<div class="fin-lecture"><h4>Lecture automatique</h4>${lecture.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div>`
+      : '';
+    return `<article class="fin-period-card"><div class="fin-period-head"><div><span class="fin-period-label">PÉRIODE</span><h3>${title}</h3></div>${financialValidationBadge(f)}</div><div class="fin-period-grid">${sections}</div>${lectureHtml}${financialSourceLine(f)}</article>`;
   }).join('');
 }

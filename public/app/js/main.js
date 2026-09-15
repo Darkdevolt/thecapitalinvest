@@ -23,7 +23,7 @@
     const styles=[
       {id:'tc-mobile-polish',href:'/app/css/mobile-polish.css?v=3'},
       {id:'tc-mobile-polish-v2',href:'/app/css/mobile-polish-v2.css?v=3'},
-      {id:'tc-financial-polish',href:'/app/css/financials-polish.css?v=1'}
+      {id:'tc-financial-polish',href:'/app/css/financials-polish.css?v=2'}
     ];
     styles.forEach(item=>{
       if(document.getElementById(item.id)) return;
