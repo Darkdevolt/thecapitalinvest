@@ -442,6 +442,24 @@ async function safeDcbrRunLog(payload) {
   }
 }
 
+async function safeObligationsRunLog(payload) {
+  try {
+    const { error } = await supabaseAdmin.from('obligations_scrape_runs').insert(payload);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[PROCESS-BRVM] journal obligations_scrape_runs indisponible :', e?.message || e);
+  }
+}
+
+async function safeAnnouncementsRunLog(payload) {
+  try {
+    const { error } = await supabaseAdmin.from('announcements_scrape_runs').insert(payload);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[PROCESS-BRVM] journal announcements_scrape_runs indisponible :', e?.message || e);
+  }
+}
+
 /* Champs comparés pour décider si une ligne déjà connue a changé.
    'raw' et les colonnes de suivi (natural_key, first/last_seen_at...) sont
    volontairement exclues : elles ne reflètent pas un changement de contenu. */
@@ -794,20 +812,40 @@ export default async function handler(req, res) {
     if (req.method === 'POST') {
       const body = await readBody(req).catch(() => ({}));
       if (body && body.scope === 'obligations') {
+        const startedAt = new Date().toISOString();
         let scraped;
         try {
           scraped = await scrapeBrvmObligations(body.date || body.date_seance);
         } catch (e) {
           console.error('[PROCESS-BRVM] obligations source', e);
+          await safeObligationsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: 'error', error: String(e?.message || e), triggered_by: admin?.id || null
+          });
           return json(res, 502, { success: false, error: 'Source BRVM obligations illisible.', code: 'BRVM_SOURCE_ERROR' });
         }
         const now = new Date().toISOString();
         const rows = scraped.rows.map(r => ({ ...r, updated_at: now }));
-        const { error: e1 } = await supabaseAdmin.from('obligations').upsert(rows, { onConflict: 'code' });
-        if (e1) throw e1;
-        const { error: e2 } = await supabaseAdmin
-          .from('obligations_marche').upsert({ ...scraped.marche, updated_at: now }, { onConflict: 'date_seance' });
-        if (e2) throw e2;
+        try {
+          const { error: e1 } = await supabaseAdmin.from('obligations').upsert(rows, { onConflict: 'code' });
+          if (e1) throw e1;
+          const { error: e2 } = await supabaseAdmin
+            .from('obligations_marche').upsert({ ...scraped.marche, updated_at: now }, { onConflict: 'date_seance' });
+          if (e2) throw e2;
+        } catch (e) {
+          await safeObligationsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: 'error', error: String(e?.message || e),
+            result: { date_seance: scraped.date_seance, lignes: rows.length },
+            triggered_by: admin?.id || null
+          });
+          throw e;
+        }
+        await safeObligationsRunLog({
+          started_at: startedAt, finished_at: new Date().toISOString(), status: 'success',
+          result: { date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche },
+          triggered_by: admin?.id || null
+        });
         return json(res, 200, {
           success: true, scope: 'obligations',
           date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche
@@ -827,12 +865,27 @@ export default async function handler(req, res) {
           if (!removed) return fail(res, 404, 'Document introuvable.', 'NOT_FOUND');
           return json(res, 200, { success: true, scope: 'announcements', action: 'delete', id: removed });
         }
-        const result = await runAnnouncementsScrape({
-          categories: Array.isArray(body.categories) ? body.categories : null,
-          sinceYears: Number.isFinite(Number(body.sinceYears)) ? Number(body.sinceYears) : 5,
-          limit: Math.min(100, Number(body.limit) || 40)
-        });
-        return json(res, 200, { success: true, scope: 'announcements', ...result });
+        const startedAt = new Date().toISOString();
+        try {
+          const result = await runAnnouncementsScrape({
+            categories: Array.isArray(body.categories) ? body.categories : null,
+            sinceYears: Number.isFinite(Number(body.sinceYears)) ? Number(body.sinceYears) : 5,
+            limit: Math.min(100, Number(body.limit) || 40)
+          });
+          await safeAnnouncementsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: (result.write_errors || []).length || (result.scrape_errors || []).length ? 'partial' : 'success',
+            result, triggered_by: admin?.id || null
+          });
+          return json(res, 200, { success: true, scope: 'announcements', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] announcements', error);
+          await safeAnnouncementsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: 'error', error: String(error?.message || error), triggered_by: admin?.id || null
+          });
+          return json(res, 502, { success: false, error: 'Récupération des annonces impossible.', code: 'ANNOUNCEMENTS_SCRAPE_ERROR' });
+        }
       }
 
       // Évènements sur valeurs (ESV) : POST { scope:'esv', categories?,
@@ -923,13 +976,22 @@ export default async function handler(req, res) {
         if (cfg.mode !== 'auto') {
           return json(res, 200, { success: true, skipped: true, reason: 'automatic_processing_disabled' });
         }
+        const oblStartedAt = new Date().toISOString();
         try {
           const s = await scrapeBrvmObligations();
           const now = new Date().toISOString();
           await supabaseAdmin.from('obligations').upsert(s.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
           await supabaseAdmin.from('obligations_marche').upsert({ ...s.marche, updated_at: now }, { onConflict: 'date_seance' });
+          await safeObligationsRunLog({
+            started_at: oblStartedAt, finished_at: new Date().toISOString(), status: 'success',
+            result: { date_seance: s.date_seance, lignes: s.rows.length, marche: s.marche, source: 'auto' }
+          });
         } catch (e) {
           console.warn('[PROCESS-BRVM] auto obligations non bloquant :', e && e.message);
+          await safeObligationsRunLog({
+            started_at: oblStartedAt, finished_at: new Date().toISOString(),
+            status: 'error', error: String(e?.message || e), result: { source: 'auto' }
+          });
         }
         return await runPipeline(res, cfg.mode);
       }
@@ -986,6 +1048,28 @@ export default async function handler(req, res) {
     if (req.method === 'GET' && url.searchParams.get('scope') === 'cours' && url.searchParams.get('action') === 'runs') {
       if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
       const { data, error } = await supabaseAdmin.from('brvm_scrape_runs')
+        .select('*').order('started_at', { ascending: false }).limit(20);
+      if (error) return fail(res, 500, 'Lecture du journal impossible.', 'RUNS_READ_ERROR', error);
+      return json(res, 200, { success: true, runs: data || [] });
+    }
+
+    // Obligations (cours BRVM) : GET ?scope=obligations&action=runs lit le
+    // journal des passages (manuels via l'admin et automatiques via le cron
+    // scope=auto) — table obligations_scrape_runs.
+    if (req.method === 'GET' && url.searchParams.get('scope') === 'obligations' && url.searchParams.get('action') === 'runs') {
+      if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
+      const { data, error } = await supabaseAdmin.from('obligations_scrape_runs')
+        .select('*').order('started_at', { ascending: false }).limit(20);
+      if (error) return fail(res, 500, 'Lecture du journal impossible.', 'RUNS_READ_ERROR', error);
+      return json(res, 200, { success: true, runs: data || [] });
+    }
+
+    // Annonces émetteurs : GET ?scope=announcements&action=runs lit le
+    // journal des passages (déclenchement manuel uniquement, pas de cron) —
+    // table announcements_scrape_runs.
+    if (req.method === 'GET' && url.searchParams.get('scope') === 'announcements' && url.searchParams.get('action') === 'runs') {
+      if (!admin) return fail(res, 403, 'Accès administrateur requis.', 'ADMIN_REQUIRED');
+      const { data, error } = await supabaseAdmin.from('announcements_scrape_runs')
         .select('*').order('started_at', { ascending: false }).limit(20);
       if (error) return fail(res, 500, 'Lecture du journal impossible.', 'RUNS_READ_ERROR', error);
       return json(res, 200, { success: true, runs: data || [] });

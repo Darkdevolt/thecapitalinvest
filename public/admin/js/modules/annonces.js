@@ -41,6 +41,12 @@
             '<div class="log" id="ann-log" style="margin-top:10px;">Aucune exécution dans cette session.</div>' +
             '</div></div>' +
 
+            '<div class="card"><div class="card-head"><span class="card-title">Journal des passages</span>' +
+            '<span class="card-tools"><button class="btn btn-outline btn-sm" id="ann-runs-reload">↺</button></span></div>' +
+            '<div class="card-body tight"><div class="tw capped"><table><thead><tr>' +
+            '<th>Démarré</th><th>Statut</th><th class="r">Trouvées</th><th class="r">Importées</th><th>Détail</th>' +
+            '</tr></thead><tbody id="ann-runs-body">' + TC.rowsLoading(5) + '</tbody></table></div></div></div>' +
+
             '<div class="card"><div class="card-head"><span class="card-title">Documents récupérés</span>' +
             '<span class="card-tools">' +
             '<select id="ann-filter-cat" style="margin-right:6px;"><option value="">Toutes catégories</option>' +
@@ -86,7 +92,7 @@
             }
             TC.el('ann-continue').hidden = !r.has_more;
             TC.say('ann-msg', r.imported + ' document(s) importé(s)' + (r.has_more ? ' · ' + r.remaining + ' restant(s), cliquez « Continuer »' : '.'), r.has_more ? 'warn' : 'ok');
-            await loadList();
+            await Promise.all([loadList(), loadRuns()]);
         } catch (e) {
             log('Échec : ' + e.message, 'err');
             TC.say('ann-msg', e.message, 'err');
@@ -119,6 +125,32 @@
         }
     }
 
+    async function loadRuns() {
+        const body = TC.el('ann-runs-body');
+        if (!body) return;
+        try {
+            const r = await TC.api('/api/process-brvm?scope=announcements&action=runs', { method: 'GET', timeout: 15000 });
+            const runs = r.runs || [];
+            body.innerHTML = runs.length ? runs.map(run => {
+                const res = run.result || {};
+                const tone = run.status === 'success' ? 'badge-green' : run.status === 'partial' ? 'badge-orange' : 'badge-orange';
+                const detailBits = [];
+                if (run.error) detailBits.push(run.error);
+                if ((res.scrape_errors || []).length) detailBits.push(res.scrape_errors.length + ' erreur(s) source');
+                if ((res.write_errors || []).length) detailBits.push(res.write_errors.length + ' document(s) en échec');
+                return '<tr>' +
+                    '<td class="td-mono">' + TC.esc(new Date(run.started_at).toLocaleString('fr-FR')) + '</td>' +
+                    '<td><span class="badge ' + tone + '">' + TC.esc(run.status) + '</span></td>' +
+                    '<td class="r td-mono">' + TC.esc(res.found ?? '—') + '</td>' +
+                    '<td class="r td-mono">' + TC.esc(res.imported ?? '—') + '</td>' +
+                    '<td class="td-muted">' + TC.esc(detailBits.length ? detailBits.join(' · ') : '—') + '</td>' +
+                    '</tr>';
+            }).join('') : '<tr><td colspan="5" class="td-muted" style="text-align:center;padding:16px;">Aucun passage encore enregistré.</td></tr>';
+        } catch (e) {
+            body.innerHTML = '<tr><td colspan="5" class="td-muted">Chargement impossible : ' + TC.esc(e.message) + '</td></tr>';
+        }
+    }
+
     async function deleteDoc(id) {
         if (!confirm('Retirer ce document (base + fichier stocké) ?')) return;
         try {
@@ -146,8 +178,10 @@
             TC.on('ann-continue', 'click', () => runScrape());
             TC.on('ann-filter-cat', 'change', loadList);
             TC.on('ann-filter-ticker', 'input', loadList);
+            TC.on('ann-runs-reload', 'click', loadRuns);
             TC.delegate('ann-body', '.ann-del', 'click', function (btn) { deleteDoc(btn.dataset.id); });
             loadList();
+            loadRuns();
         }
     });
 
