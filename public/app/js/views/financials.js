@@ -103,7 +103,7 @@ function dividendPolicy(annualAsc) {
     if (d0 > 0) lastChange = (d1 / d0 - 1) * 100;
   }
 
-  return { streak, avgPayout, lastChange, years: withDpa.length };
+  return { streak, avgPayout, lastChange, years: withDpa.length, series: withDpa.map(f => ({ annee: f.annee, dpa: Number(f.dpa) })) };
 }
 
 function dividendPolicyCard(policy) {
@@ -116,7 +116,40 @@ function dividendPolicyCard(policy) {
   if (policy.lastChange != null) {
     notes.push({ tone: policy.lastChange >= 0 ? 'positive' : 'negative', text: `Dividende par action ${policy.lastChange >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(policy.lastChange).toFixed(1)} % sur le dernier exercice publié.` });
   }
-  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Politique de dividende</div><div class="fin-section-note">Sur l'historique annuel disponible du titre — pas seulement la période affichée ci-dessous.</div></div></div><div class="card-body"><div class="fin-lecture" style="border-top:0;padding:0">${notes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div></div></div>`;
+  const chartHtml = policy.series.length > 1 ? '<div class="chart-container" style="height:180px;margin-bottom:16px"><canvas id="chartDividendPolicy"></canvas></div>' : '';
+  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Politique de dividende</div><div class="fin-section-note">Sur l'historique annuel disponible du titre — pas seulement la période affichée ci-dessous.</div></div></div><div class="card-body">${chartHtml}<div class="fin-lecture" style="border-top:0;padding:0">${notes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div></div></div>`;
+}
+
+function drawDividendPolicyChart(policy) {
+  const canvas = document.getElementById('chartDividendPolicy');
+  if (!canvas || !policy || policy.series.length < 2) return;
+  new Chart(canvas, {
+    type: 'bar',
+    data: { labels: policy.series.map(s => s.annee), datasets: [{ label: 'DPA', data: policy.series.map(s => s.dpa), backgroundColor: 'rgba(63,201,138,0.30)', borderColor: 'rgba(63,201,138,0.65)', borderWidth: 1, borderRadius: 5 }] },
+    options: { ...chartOpts, plugins: { ...chartOpts.plugins, legend: { display: false }, tooltip: { ...chartOpts.plugins.tooltip, callbacks: { label: ctx => ' ' + fmt(ctx.parsed.y) + ' FCFA' } } } }
+  });
+}
+
+// Recherche The Capital : dernière note publiée pour ce titre, comparée au
+// cours du jour -- pas au cours de reference historique de la note (qui ne
+// dit rien de si l'objectif est atteint aujourd'hui).
+function researchTargetCard(ticker, cp) {
+  const rows = (Array.isArray(window.allAnalyses) ? window.allAnalyses : []).filter(a => String(a?.ticker || '').toUpperCase() === String(ticker).toUpperCase());
+  if (!rows.length || typeof analyseTarget !== 'function') return '';
+  const latest = rows.slice().sort((a, b) => Date.parse(b.date_analyse || 0) - Date.parse(a.date_analyse || 0))[0];
+  const target = analyseTarget(latest);
+  if (target == null) return '';
+  const hasPrice = Number.isFinite(cp) && cp > 0;
+  const potential = hasPrice ? (target / cp - 1) * 100 : null;
+  const type = typeof analyseRecType === 'function' ? analyseRecType(latest.recommandation) : 'hold';
+  const reached = hasPrice && ((type === 'buy' && cp >= target) || (type === 'sell' && cp <= target));
+  const notes = [];
+  notes.push({ tone: reached ? 'positive' : '', text: `Objectif de cours de ${fmt(target)} FCFA${hasPrice ? ` vs cours actuel de ${fmt(cp)} FCFA` : ''}${reached ? ' — déjà atteint.' : '.'}` });
+  if (potential != null) {
+    notes.push({ tone: potential >= 0 ? 'positive' : 'negative', text: `Potentiel restant de ${potential >= 0 ? '+' : ''}${potential.toFixed(1)} % par rapport au cours actuel.` });
+  }
+  const dateLabel = latest.date_analyse ? fmtDate(latest.date_analyse) : '—';
+  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Recherche The Capital</div><div class="fin-section-note">Dernière note du ${finEsc(dateLabel)} — ${finEsc(latest.recommandation || '—')}${latest.analyste ? ` par ${finEsc(latest.analyste)}` : ''}.</div></div></div><div class="card-body"><div class="fin-lecture" style="border-top:0;padding:0">${notes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div></div></div>`;
 }
 
 // Lecture automatique, uniquement à partir de ratios réellement calculables
@@ -247,7 +280,10 @@ function openFinDetail(ticker) {
   const latest = fins[0] || {};
 
   const annual = fins.filter(f => f.periode === 'annuel' || !f.periode);
-  const policyHtml = dividendPolicyCard(dividendPolicy([...annual].reverse()));
+  const policy = dividendPolicy([...annual].reverse());
+  const policyHtml = dividendPolicyCard(policy);
+  const researchHtml = researchTargetCard(ticker, cp);
+  const interimCount = fins.length - annual.length;
 
   const detail = document.getElementById('finDetailContent');
   if (!detail) return;
@@ -258,15 +294,22 @@ function openFinDetail(ticker) {
       <div class="fin-detail-price"><span>Cours disponible</span><strong>${Number.isFinite(cp) && cp ? fmt(cp)+' FCFA' : '—'}</strong><small>Dernière cotation disponible</small></div>
     </div>
     <div class="fin-detail-trust">${financialValidationBadge(latest)}<span>${finStatus(latest)==='validated' ? 'Les données affichées sont validées.' : 'Certaines données sont encore en validation éditoriale.'}</span></div>
-    <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du résultat net</div><div class="fin-section-note">Historique disponible dans la base The Capital.</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
+    ${researchHtml}
+    <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du chiffre d'affaires et du résultat net</div><div class="fin-section-note">${interimCount > 0 ? `Exercices annuels ci-dessous · ${interimCount} publication(s) infra-annuelle(s) (semestre/trimestre) dans le détail par période.` : 'Historique disponible dans la base The Capital. Aucune publication semestrielle ou trimestrielle enregistrée pour ce titre : le détail par période reste annuel.'}</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
     ${policyHtml}
     <div id="finDetailPeriods"></div>`;
 
+  drawDividendPolicyChart(policy);
+
   const evolLabels = annual.map(f=>f.annee).reverse();
+  const evolCA = annual.map(f=>f.chiffre_affaires).reverse();
   const evolData = annual.map(f=>f.resultat_net).reverse();
   const canvas = document.getElementById('chartFinEvolution');
   if (canvas && evolLabels.length > 1) {
-    new Chart(canvas,{type:'bar',data:{labels:evolLabels,datasets:[{label:'Résultat net',data:evolData,backgroundColor:'rgba(184,150,78,0.30)',borderColor:'rgba(184,150,78,0.65)',borderWidth:1,borderRadius:5}]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:false},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>' '+fmtM(ctx.parsed.y)}}}}});
+    new Chart(canvas,{type:'bar',data:{labels:evolLabels,datasets:[
+      {label:"Chiffre d'affaires",data:evolCA,backgroundColor:'rgba(96,165,250,0.28)',borderColor:'rgba(96,165,250,0.65)',borderWidth:1,borderRadius:5},
+      {label:'Résultat net',data:evolData,backgroundColor:'rgba(184,150,78,0.30)',borderColor:'rgba(184,150,78,0.65)',borderWidth:1,borderRadius:5}
+    ]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>' '+ctx.dataset.label+' : '+fmtM(ctx.parsed.y)}}}}});
   } else if (canvas) {
     canvas.parentElement.innerHTML='<div class="fin-chart-empty">Pas assez d\'historique pour afficher une tendance.</div>';
   }
