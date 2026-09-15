@@ -62,6 +62,120 @@
       });
   }
 
+  /* ── PER sectoriel (comparatif) ──────────────────────────────────
+     Même exigence de rigueur que le PER du titre : pour chaque
+     comparable, le PER d'une année est calculé avec SA propre séance
+     (1ère ≥ 02/01 de cette année) et SON propre BPA de cet exercice —
+     jamais une valeur actuelle plaquée sur une année passée. La
+     portée retenue est le sous-secteur (les niveaux de PER n'ont pas
+     le même sens d'un secteur à l'autre — banques vs assurances,
+     par ex.), avec repli sur le secteur s'il y a moins de deux
+     comparables au niveau du sous-secteur. */
+  function sectorPeers(ticker) {
+    const entMap = (window.entMap && typeof window.entMap === 'object') ? window.entMap : {};
+    const self = entMap[String(ticker).toUpperCase()] || {};
+    const sousSecteur = self.sous_secteur || '';
+    const secteur = self.secteur || '';
+    if (!sousSecteur && !secteur) return { peers: [], portee: null, label: '' };
+
+    const all = Array.isArray(window.allEntreprises) ? window.allEntreprises : [];
+    const q = String(ticker).toUpperCase();
+    const memes = (champ, valeur) => valeur
+      ? all.filter(e => e && e.ticker && String(e.ticker).toUpperCase() !== q && (e[champ] || '') === valeur)
+      : [];
+
+    const bySous = memes('sous_secteur', sousSecteur);
+    if (bySous.length >= 2) return { peers: bySous.map(e => String(e.ticker).toUpperCase()), portee: 'sous-secteur', label: sousSecteur };
+
+    const bySecteur = memes('secteur', secteur);
+    if (bySecteur.length >= 2) return { peers: bySecteur.map(e => String(e.ticker).toUpperCase()), portee: 'secteur', label: secteur };
+
+    return { peers: [], portee: null, label: '' };
+  }
+
+  async function peerPerByYear(peerTicker) {
+    const fins = window._finByTicker?.[peerTicker] ||
+      (Array.isArray(window.allFinancials) ? window.allFinancials.filter(f => String(f?.ticker || '').toUpperCase() === peerTicker) : []);
+    const history = await fetchHistoricalRows(peerTicker);
+    const map = {};
+    buildRows(fins, history).forEach(r => { if (Number.isFinite(r.per)) map[r.year] = r.per; });
+    return map;
+  }
+
+  function median(values) {
+    const a = values.filter(Number.isFinite).slice().sort((x, y) => x - y);
+    if (!a.length) return null;
+    const mid = Math.floor(a.length / 2);
+    return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
+  }
+
+  // Une année sans au moins deux comparables calculables est omise plutôt
+  // qu'approximée sur un seul pair — pas de médiane à un chiffre déguisée.
+  async function sectorPerSeries(ticker, years) {
+    const { peers, portee, label } = sectorPeers(ticker);
+    if (peers.length < 2 || !years.length) return null;
+    const perByPeer = await Promise.all(peers.map(p => peerPerByYear(p).catch(() => ({}))));
+    const byYear = {};
+    years.forEach(year => {
+      const vals = perByPeer.map(m => m[year]);
+      if (vals.filter(Number.isFinite).length >= 2) byYear[year] = median(vals);
+    });
+    return { byYear, portee, label, peerCount: peers.length };
+  }
+
+  function renderSectorPER(ticker, rows, sector) {
+    const card = document.createElement('div');
+    card.className = 'card mb20';
+    const years = rows.map(r => r.year);
+    const hasData = sector && years.some(y => Number.isFinite(sector.byYear[y]));
+    if (!hasData) {
+      const reason = !years.length
+        ? "Historique de cours indisponible pour ce titre : comparaison impossible."
+        : (!sector
+          ? "Moins de deux sociétés comparables (même sous-secteur ou secteur) avec un PER calculable."
+          : "Aucune année ne réunit au moins deux comparables avec un PER calculable.");
+      card.innerHTML = `<div class="card-header"><div class="card-title">PER sectoriel</div></div><div class="card-body"><div class="fin-chart-empty">${reason}</div></div>`;
+      return card;
+    }
+
+    const label = sector.portee === 'sous-secteur' ? 'sous-secteur' : 'secteur';
+    card.innerHTML = `
+      <div class="card-header">
+        <div>
+          <div class="card-title">PER sectoriel — comparatif</div>
+          <div style="font-size:11px;color:var(--dim);margin-top:4px">
+            Médiane du PER de ${sector.peerCount} société(s) du même ${label} (${finEsc(sector.label)}), même méthode année par année (1ère séance ≥ 02/01 ÷ BPA de l'exercice). Une année sans au moins deux comparables est omise, jamais approximée.
+          </div>
+        </div>
+      </div>
+      <div class="card-body">
+        <div class="chart-container tall"><canvas id="chartPERSector"></canvas></div>
+      </div>`;
+
+    const tickerSeries = years.map(y => {
+      const r = rows.find(x => x.year === y);
+      return r && Number.isFinite(r.per) ? Number(r.per.toFixed(2)) : null;
+    });
+    const sectorSeries = years.map(y => Number.isFinite(sector.byYear[y]) ? Number(sector.byYear[y].toFixed(2)) : null);
+
+    const canvas = card.querySelector('#chartPERSector');
+    new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: years,
+        datasets: [
+          { label: 'PER ' + ticker, data: tickerSeries, tension: 0.25, fill: false, spanGaps: true },
+          { label: 'PER médian ' + label, data: sectorSeries, tension: 0.25, fill: false, borderDash: [5, 4], spanGaps: true }
+        ]
+      },
+      options: {
+        ...window.chartOpts,
+        plugins: { ...(window.chartOpts?.plugins || {}), legend: { display: true } }
+      }
+    });
+    return card;
+  }
+
   function renderPER(rows) {
     const card = document.createElement('div');
     card.className = 'card mb20';
@@ -129,8 +243,7 @@
     if (!detail) return;
 
     const fins = [...(window._finByTicker?.[ticker] || [])];
-    const existing = detail.querySelector('#historical-per-card');
-    if (existing) existing.remove();
+    ['historical-per-card', 'sector-per-card'].forEach(id => detail.querySelector('#' + id)?.remove());
 
     const placeholder = document.createElement('div');
     placeholder.id = 'historical-per-card';
@@ -140,15 +253,32 @@
     if (periods) detail.insertBefore(placeholder, periods);
     else detail.appendChild(placeholder);
 
+    const sectorPlaceholder = document.createElement('div');
+    sectorPlaceholder.id = 'sector-per-card';
+    sectorPlaceholder.className = 'card mb20';
+    sectorPlaceholder.innerHTML = '<div class="card-body"><div class="fin-chart-empty">Calcul du PER sectoriel…</div></div>';
+    placeholder.after(sectorPlaceholder);
+
+    let rows = [];
     try {
       const history = await fetchHistoricalRows(ticker);
-      const rows = buildRows(fins, history);
+      rows = buildRows(fins, history);
       const card = renderPER(rows);
       card.id = 'historical-per-card';
       placeholder.replaceWith(card);
     } catch (error) {
       console.error('[PER historique]', error);
       placeholder.innerHTML = '<div class="card-body"><div class="fin-chart-empty">Impossible de charger l’historique des cours pour calculer le PER.</div></div>';
+    }
+
+    try {
+      const sector = await sectorPerSeries(ticker, rows.map(r => r.year));
+      const card = renderSectorPER(ticker, rows, sector);
+      card.id = 'sector-per-card';
+      sectorPlaceholder.replaceWith(card);
+    } catch (error) {
+      console.error('[PER sectoriel]', error);
+      sectorPlaceholder.innerHTML = '<div class="card-body"><div class="fin-chart-empty">Impossible de calculer le PER sectoriel.</div></div>';
     }
   };
 })();
