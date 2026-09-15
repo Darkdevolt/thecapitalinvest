@@ -130,26 +130,67 @@ function drawDividendPolicyChart(policy) {
   });
 }
 
-// Recherche The Capital : dernière note publiée pour ce titre, comparée au
-// cours du jour -- pas au cours de reference historique de la note (qui ne
-// dit rien de si l'objectif est atteint aujourd'hui).
-function researchTargetCard(ticker, cp) {
-  const rows = (Array.isArray(window.allAnalyses) ? window.allAnalyses : []).filter(a => String(a?.ticker || '').toUpperCase() === String(ticker).toUpperCase());
-  if (!rows.length || typeof analyseTarget !== 'function') return '';
-  const latest = rows.slice().sort((a, b) => Date.parse(b.date_analyse || 0) - Date.parse(a.date_analyse || 0))[0];
-  const target = analyseTarget(latest);
-  if (target == null) return '';
-  const hasPrice = Number.isFinite(cp) && cp > 0;
-  const potential = hasPrice ? (target / cp - 1) * 100 : null;
-  const type = typeof analyseRecType === 'function' ? analyseRecType(latest.recommandation) : 'hold';
-  const reached = hasPrice && ((type === 'buy' && cp >= target) || (type === 'sell' && cp <= target));
-  const notes = [];
-  notes.push({ tone: reached ? 'positive' : '', text: `Objectif de cours de ${fmt(target)} FCFA${hasPrice ? ` vs cours actuel de ${fmt(cp)} FCFA` : ''}${reached ? ' — déjà atteint.' : '.'}` });
-  if (potential != null) {
-    notes.push({ tone: potential >= 0 ? 'positive' : 'negative', text: `Potentiel restant de ${potential >= 0 ? '+' : ''}${potential.toFixed(1)} % par rapport au cours actuel.` });
+// Récapitulatif The Capital : objectif de la dernière note de recherche
+// (comparé au cours du jour, pas au cours de référence historique de la
+// note -- ce qui compte ici est "l'atteint-on aujourd'hui"), notation
+// maison /100 (même moteur que Fiche titre : window.tcScoreMaison, voir
+// public/app/js/score-maison.js -- valorisation/rentabilité/croissance/
+// rendement/solidité, coché ✓/✗ par critère calculable), et un lien vers
+// le rapport de recommandation complet (analyses.js) quand une note existe.
+function recapTheCapitalCard(ticker, cp) {
+  const analyseRows = (Array.isArray(window.allAnalyses) ? window.allAnalyses : []).filter(a => String(a?.ticker || '').toUpperCase() === String(ticker).toUpperCase());
+  const latestAnalyse = analyseRows.length ? analyseRows.slice().sort((a, b) => Date.parse(b.date_analyse || 0) - Date.parse(a.date_analyse || 0))[0] : null;
+
+  const objectifNotes = [];
+  if (latestAnalyse && typeof analyseTarget === 'function') {
+    const target = analyseTarget(latestAnalyse);
+    if (target != null) {
+      const hasPrice = Number.isFinite(cp) && cp > 0;
+      const potential = hasPrice ? (target / cp - 1) * 100 : null;
+      const type = typeof analyseRecType === 'function' ? analyseRecType(latestAnalyse.recommandation) : 'hold';
+      const reached = hasPrice && ((type === 'buy' && cp >= target) || (type === 'sell' && cp <= target));
+      objectifNotes.push({ tone: reached ? 'positive' : '', text: `Objectif de cours de ${fmt(target)} FCFA${hasPrice ? ` vs cours actuel de ${fmt(cp)} FCFA` : ''}${reached ? ' — déjà atteint.' : '.'}` });
+      if (potential != null) {
+        objectifNotes.push({ tone: potential >= 0 ? 'positive' : 'negative', text: `Potentiel restant de ${potential >= 0 ? '+' : ''}${potential.toFixed(1)} % par rapport au cours actuel.` });
+      }
+    }
   }
-  const dateLabel = latest.date_analyse ? fmtDate(latest.date_analyse) : '—';
-  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Recherche The Capital</div><div class="fin-section-note">Dernière note du ${finEsc(dateLabel)} — ${finEsc(latest.recommandation || '—')}${latest.analyste ? ` par ${finEsc(latest.analyste)}` : ''}.</div></div></div><div class="card-body"><div class="fin-lecture" style="border-top:0;padding:0">${notes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div></div></div>`;
+
+  let scoreHtml = '';
+  if (typeof window.tcScoreMaison === 'function') {
+    const sc = window.tcScoreMaison(ticker);
+    if (sc.score != null) {
+      scoreHtml = `
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:${objectifNotes.length ? '16px' : '0'} 0 14px">
+          <span style="font-family:var(--serif);font-size:40px;line-height:1;color:var(--cream)">${sc.score}</span>
+          <span style="color:var(--dim)">/ 100</span>
+          <b style="color:var(--gold);font-size:15px">${finEsc(sc.label)}</b>
+        </div>
+        <div class="table-wrap"><table class="forecast-table"><thead><tr><th>Critère</th><th>Statut</th><th class="right">Points</th><th>Lecture</th></tr></thead><tbody>
+          ${sc.components.map(c => {
+            const ratio = c.pts == null ? null : c.pts / c.max;
+            const tone = ratio == null ? { icon: '—', cls: '' } : ratio >= 0.6 ? { icon: '✓', cls: 'positive' } : ratio < 0.35 ? { icon: '✗', cls: 'negative' } : { icon: '~', cls: '' };
+            return `<tr><td>${finEsc(c.l)}</td><td class="${tone.cls}">${tone.icon}</td><td class="right">${c.pts == null ? '—' : c.pts.toFixed(1) + ' / ' + c.max}</td><td style="color:var(--dim)">${finEsc(c.detail)}</td></tr>`;
+          }).join('')}
+        </tbody></table></div>
+        <p style="font-size:10.5px;color:var(--dim);margin-top:10px">Pondération valorisation 25 · rentabilité 25 · croissance 20 · rendement 15 · solidité 15, ramenée sur 100 en ne comptant que les critères calculables depuis la base. Ceci n'est pas un conseil d'investissement.</p>`;
+    }
+  }
+
+  if (!objectifNotes.length && !scoreHtml) return '';
+
+  // analyses.id est un UUID (Supabase) : jamais Number(id) (voir
+  // recommendations-fixes.js, qui a déjà dû corriger ce même piège dans
+  // analyses.js -- Number(uuid) vaut NaN et rend la fiche inaccessible).
+  const reportHtml = latestAnalyse && typeof window.openAnalyseDetail === 'function'
+    ? `<div style="margin-top:14px"><button type="button" class="fin-detail-btn" onclick="openAnalyseDetail('${finEsc(latestAnalyse.id)}')">Voir le rapport de recommandation complet →</button></div>`
+    : '';
+  const dateLabel = latestAnalyse?.date_analyse ? fmtDate(latestAnalyse.date_analyse) : null;
+  const noteText = dateLabel
+    ? `Dernière note du ${finEsc(dateLabel)} — ${finEsc(latestAnalyse.recommandation || '—')}${latestAnalyse.analyste ? ` par ${finEsc(latestAnalyse.analyste)}` : ''}.`
+    : 'Notation calculée automatiquement à partir des états financiers et de la dernière cotation disponibles.';
+
+  return `<div class="card mb20"><div class="card-header"><div><div class="card-title">Récapitulatif The Capital</div><div class="fin-section-note">${noteText}</div></div></div><div class="card-body">${objectifNotes.length ? `<div class="fin-lecture" style="border-top:0;padding:0">${objectifNotes.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div>` : ''}${scoreHtml}${reportHtml}</div></div>`;
 }
 
 // Lecture automatique, uniquement à partir de ratios réellement calculables
@@ -282,7 +323,7 @@ function openFinDetail(ticker) {
   const annual = fins.filter(f => f.periode === 'annuel' || !f.periode);
   const policy = dividendPolicy([...annual].reverse());
   const policyHtml = dividendPolicyCard(policy);
-  const researchHtml = researchTargetCard(ticker, cp);
+  const researchHtml = recapTheCapitalCard(ticker, cp);
   const interimCount = fins.length - annual.length;
 
   const detail = document.getElementById('finDetailContent');
