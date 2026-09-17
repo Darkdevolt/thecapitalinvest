@@ -1,32 +1,44 @@
 /* THE CAPITAL — dashboard presentation bootstrap
- * Loads only the presentation layer and the existing real-data calendar runtime.
- * No API, auth, database, portfolio or market calculation is changed here.
+ * Loads presentation runtimes and primes portfolio data for the dashboard.
  */
 (function (w, d) {
   'use strict';
   if (w.__TC_DASHBOARD_PRESENTATION_V2__) return;
   w.__TC_DASHBOARD_PRESENTATION_V2__ = true;
 
-  // dashboard-presentation-v3.css retiré : absorbé dans /app/css/dashboard.css
-  // (chargé globalement dans app.html), qui reprend désormais tous ses
-  // réglages. Le charger ici EN PLUS aurait recréé le conflit entre couches
-  // qu'on vient de résoudre.
+  // dashboard-presentation-v3.css retiré : absorbé dans /app/css/dashboard.css.
+
+  function loadScriptOnce(src) {
+    var clean = String(src).split('?')[0];
+    if (d.querySelector('script[src="' + clean + '"],script[src^="' + clean + '?"]')) return Promise.resolve();
+    if (typeof w.tcLoadOnce === 'function') return Promise.resolve(w.tcLoadOnce(src));
+    return new Promise(function (resolve) {
+      var script = d.createElement('script');
+      script.src = src;
+      script.async = false;
+      script.onload = resolve;
+      script.onerror = function () { console.warn('[DASHBOARD] Script indisponible:', src); resolve(); };
+      d.head.appendChild(script);
+    });
+  }
 
   function loadCalendarRuntime() {
     var src = '/app/js/views/dashboard-calendar-runtime.js?v=20260910';
-    // loader.js charge déjà ce runtime (avec un autre ?v=). Ne pas le
-    // redoubler : sinon le calendrier du tableau de bord s'initialise 2 fois.
     if (d.querySelector('script[data-tc-dashboard-calendar-runtime]')) return;
     if (d.querySelector('script[src*="dashboard-calendar-runtime.js"]')) return;
-    if (typeof window.tcLoadOnce === 'function') { window.tcLoadOnce(src); return; }
-    var script = d.createElement('script');
-    script.src = src;
-    script.async = false;
-    script.dataset.tcDashboardCalendarRuntime = '1';
-    script.onerror = function () {
-      console.warn('[DASHBOARD] Calendrier réel indisponible; aucune donnée artificielle ne sera affichée.');
-    };
-    d.head.appendChild(script);
+    loadScriptOnce(src).then(function () {
+      var scripts = d.querySelectorAll('script[src*="dashboard-calendar-runtime.js"]');
+      if (scripts.length) scripts[scripts.length - 1].dataset.tcDashboardCalendarRuntime = '1';
+    });
+  }
+
+  function primePortfolioStore() {
+    // Le dashboard utilise le portefeuille avant que l'utilisateur n'ouvre
+    // la route Portefeuille. Le store doit donc être hydraté dès l'entrée.
+    loadScriptOnce('/app/js/views/portefeuille/portfolio-store.js?v=20260917').then(function () {
+      if (w.portfolioStore && typeof w.portfolioStore.hydrate === 'function') w.portfolioStore.hydrate();
+      if (typeof w.renderCurrentView === 'function') setTimeout(w.renderCurrentView, 0);
+    });
   }
 
   function normalizePortfolioContributors() {
@@ -48,6 +60,7 @@
   }
 
   function apply() {
+    primePortfolioStore();
     loadCalendarRuntime();
     observePortfolio();
   }
