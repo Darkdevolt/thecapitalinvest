@@ -2,7 +2,7 @@
  *
  * The application keeps its detailed component/view styles in the dedicated
  * stylesheets loaded by app.html. This file is intentionally small: it owns
- * only document-level invariants and the bootstrap visibility state.
+ * only document-level invariants, bootstrap visibility and shell stacking.
  */
 
 html{box-sizing:border-box;-webkit-text-size-adjust:100%;}
@@ -13,21 +13,98 @@ img,svg{max-width:100%;}
 button,input,select,textarea{font:inherit;}
 button{cursor:pointer;}
 
-/* Bootstrap invariant: the application must not remain invisible if a later
-   JavaScript module fails. init.js also removes this class explicitly. */
 body.init-hidden{visibility:visible!important;opacity:1!important;}
-
 [hidden]{display:none!important;}
 
 /* -------------------------------------------------------------------------
    Global header stacking
    The search dropdown is a child of .tc-commandbar, while .tc-navstrip is a
-   following sibling. The command bar therefore needs its own higher stacking
-   level so the open search list can never be painted underneath the nav.
-   !important is intentional because app.html defines shell geometry in an
-   inline style block loaded after the stylesheets.
+   following sibling. Keep the search layer above navigation without changing
+   the shell geometry or route behavior.
    ------------------------------------------------------------------------- */
 .tc-commandbar{position:relative!important;z-index:1003!important;}
 .tc-search{position:relative!important;z-index:1005!important;}
-.tc-search-results{position:absolute;z-index:1100!important;pointer-events:auto!important;}
+.tc-search-results{position:absolute!important;z-index:1100!important;pointer-events:auto!important;}
 .tc-navstrip{position:relative!important;z-index:1002!important;}
+
+/* -------------------------------------------------------------------------
+   Header design refinement — visual only, no layout/behavior changes.
+   The existing shell remains authoritative for dimensions and routing.
+   ------------------------------------------------------------------------- */
+.tc-shell{isolation:isolate;}
+.tc-commandbar{
+  background:linear-gradient(180deg,rgba(18,14,9,.99) 0%,rgba(10,8,4,.98) 100%)!important;
+  border-bottom:1px solid rgba(184,150,78,.16)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.22)!important;
+}
+.tc-commandbar::before{
+  content:"";
+  position:absolute;
+  left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(230,201,121,.48),transparent);
+  pointer-events:none;
+}
+.tc-brand{position:relative;}
+.tc-brand img{
+  filter:drop-shadow(0 0 10px rgba(184,150,78,.22))!important;
+  transition:filter .18s ease,transform .18s ease;
+}
+.tc-brand:hover img{filter:drop-shadow(0 0 14px rgba(230,201,121,.32))!important;transform:scale(1.03);}
+.tc-brand-name{letter-spacing:.16em!important;}
+.tc-brand-sub{opacity:.82;}
+
+.tc-search input{
+  border-color:rgba(184,150,78,.20)!important;
+  background:linear-gradient(180deg,rgba(31,26,20,.96),rgba(24,20,16,.96))!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025),0 4px 16px rgba(0,0,0,.12);
+  transition:border-color .18s ease,box-shadow .18s ease,background .18s ease;
+}
+.tc-search input:hover{border-color:rgba(184,150,78,.34)!important;}
+.tc-search input:focus{
+  border-color:rgba(230,201,121,.62)!important;
+  background:#211b16!important;
+  box-shadow:0 0 0 3px rgba(184,150,78,.07),inset 0 1px 0 rgba(255,255,255,.035)!important;
+}
+.tc-search-results{
+  margin-top:2px;
+  border-color:rgba(184,150,78,.30)!important;
+  background:rgba(22,19,13,.985)!important;
+  box-shadow:0 22px 55px rgba(0,0,0,.58),0 0 0 1px rgba(184,150,78,.035)!important;
+  backdrop-filter:blur(12px);
+}
+
+.tc-command-actions{gap:7px!important;}
+.tc-market-pill,.tc-institute,.tc-iconbtn,.tc-logout{
+  border-color:rgba(184,150,78,.16)!important;
+  background:rgba(255,255,255,.018)!important;
+  transition:color .18s ease,border-color .18s ease,background .18s ease,transform .18s ease;
+}
+.tc-market-pill:hover,.tc-institute:hover,.tc-iconbtn:hover,.tc-logout:hover{
+  background:rgba(184,150,78,.055)!important;
+  border-color:rgba(184,150,78,.38)!important;
+}
+.tc-iconbtn:hover,.tc-logout:hover,.tc-institute:hover{transform:translateY(-1px);}
+.tc-user:hover{background:rgba(184,150,78,.055)!important;}
+.tc-avatar{box-shadow:0 0 0 3px rgba(184,150,78,.045);}
+
+.tc-navstrip{
+  background:linear-gradient(180deg,#1c1814 0%,#17130f 100%)!important;
+  border-bottom-color:rgba(184,150,78,.14)!important;
+  box-shadow:0 5px 18px rgba(0,0,0,.14);
+}
+.tc-navitem{
+  position:relative;
+  transition:color .16s ease,background .16s ease,transform .16s ease;
+}
+.tc-navitem:hover{transform:translateY(-1px);}
+.tc-navitem.active{
+  background:rgba(184,150,78,.105)!important;
+  color:var(--tc-white)!important;
+  box-shadow:inset 0 -2px 0 var(--tc-gold),0 3px 12px rgba(0,0,0,.10)!important;
+}
+.tc-navsep{background:rgba(184,150,78,.16)!important;}
+
+/* Keep the search dropdown above every header sibling even when other
+   components introduce their own stacking contexts. */
+.tc-shell,.tc-commandbar,.tc-search,.tc-search-results,.tc-navstrip{isolation:isolate;}
+.tc-search-results{isolation:auto;}
