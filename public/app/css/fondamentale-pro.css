@@ -401,11 +401,13 @@
 .af-off td { opacity: .5; }
 .af-saisi { background: rgba(240, 167, 42, .1); color: var(--af-warn) !important; }
 
-.af-comp tbody tr { cursor: pointer; transition: background .12s; }
+.af-comp tbody tr { transition: background .12s; }
 .af-comp tbody tr:hover { background: var(--af-line-soft); }
 .af-comp td small { display: block; font-size: 9.5px; color: var(--af-faint); font-weight: 400; }
+.af-comp th:first-child, .af-comp td:first-child { width: 26px; padding-right: 0; }
+.af-comp td[data-afgoto] { cursor: pointer; }
 .af-moi td { background: rgba(200, 162, 78, .08); }
-.af-moi td:first-child strong { color: var(--af-gold); }
+.af-moi td:nth-child(2) strong { color: var(--af-gold); }
 .af-mediane td { border-top: 1px solid var(--af-line); color: var(--af-faint); font-style: italic; }
 
 .af-matrice th:first-child { text-align: left; }

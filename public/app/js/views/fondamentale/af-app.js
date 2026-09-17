@@ -20,7 +20,10 @@
   var V = global.AFValuation;
   var fin = C.fin, pos = C.pos;
 
-  var LS = { hyp: 'tc-af-hyp:', ov: 'tc-af-data:', tab: 'tc-af-tab', poids: 'tc-af-poids', portee: 'tc-af-portee' };
+  var LS = {
+    hyp: 'tc-af-hyp:', ov: 'tc-af-data:', tab: 'tc-af-tab', poids: 'tc-af-poids', portee: 'tc-af-portee',
+    stat: 'tc-af-stat', exclus: 'tc-af-exclus'
+  };
 
   var PORTEES = [
     { id: 'sousSecteur', l: 'Sous-secteur' },
@@ -61,8 +64,14 @@
        le restaurer tel quel à la réactivation plutôt que de retomber
        sur le poids par défaut du secteur. */
     poidsMemoire: {},
-    resultats: null, comparables: null, unite: 'auto',
-    portee: 'sousSecteur'
+    resultats: null, comparables: null, comparablesMarche: null, unite: 'auto',
+    portee: 'sousSecteur',
+    /* Statistique (médiane ou moyenne) et pairs exclus du groupe de
+       comparables : préférences globales de l'utilisateur, pas propres
+       à un titre — exclure une société jugée non représentative (bénéfice
+       proche de zéro faussant son PER, par exemple) vaut pour toutes les
+       analyses où elle apparaîtrait comme pair. */
+    comparablesStat: 'mediane', comparablesExclus: []
   };
   global.AF = S;
 
@@ -160,18 +169,30 @@
     S.hypotheses = Object.assign(V.hypothesesInitiales(a), saved || {});
     S.poids = read(LS.poids, null) || V.poidsDefaut(a.data);
     S.portee = read(LS.portee, null) || 'sousSecteur';
-    try { S.comparables = C.comparables(S.ticker, { portee: S.portee }); }
+    refreshComparables();
+    recompute();
+    render();
+    return true;
+  }
+
+  /* Recalcule le groupe de comparables (portée + statistique + pairs
+     exclus, ces deux derniers étant des préférences globales) et le
+     rendement médian de marché utilisé par la méthode « dividende /
+     rendement de marché ». Centralisé ici pour que la portée, la
+     statistique et les exclusions restent toujours cohérentes entre
+     elles, quel que soit le réglage modifié. */
+  function refreshComparables() {
+    var opts = { portee: S.portee, exclus: S.comparablesExclus, stat: S.comparablesStat };
+    try { S.comparables = C.comparables(S.ticker, opts); }
     catch (e) { S.comparables = null; }
     /* Rendement de référence pour la méthode « dividende / rendement de
        marché » : toujours calculé sur le marché entier, indépendamment de
        la portée choisie ci-dessus pour les multiples — un rendement
        exigé n'a pas à se limiter au sous-secteur pour rester pertinent,
-       à la différence d'un PER ou d'un PBR. */
-    try { S.comparablesMarche = C.comparables(S.ticker, { portee: 'marche' }); }
+       à la différence d'un PER ou d'un PBR. Les pairs exclus et la
+       statistique choisie restent appliqués. */
+    try { S.comparablesMarche = C.comparables(S.ticker, Object.assign({}, opts, { portee: 'marche' })); }
     catch (e) { S.comparablesMarche = null; }
-    recompute();
-    render();
-    return true;
   }
 
   /* ── Recalcul de toutes les valorisations ─────────────────────── */
@@ -333,12 +354,21 @@
     }).join('') + '</div>';
   }
 
+  var STATS = [{ id: 'mediane', l: 'Médiane' }, { id: 'moyenne', l: 'Moyenne' }];
+  function statToggle() {
+    return '<div class="af-portee" title="Statistique retenue pour agréger les pairs">' + STATS.map(function (s) {
+      return '<button type="button" class="af-portee-btn' + (S.comparablesStat === s.id ? ' on' : '') + '" data-afstat="' + s.id + '">' + s.l + '</button>';
+    }).join('') + '</div>';
+  }
+
   /* Avertit quand la portée demandée n'a pas assez de pairs et qu'un
      repli automatique a eu lieu : la médiane affichée ne correspond
      alors pas à ce que le bouton actif laisse penser. */
   function porteeNote(cmp) {
     if (!cmp) return '';
-    var txt = 'Comparables : ' + cmp.pairs.length + ' société(s) — portée « ' + PORTEE_LABEL[cmp.portee] + ' »' +
+    var retenusTxt = cmp.pairsRetenus && cmp.pairsRetenus.length !== cmp.pairs.length
+      ? ' (' + cmp.pairsRetenus.length + ' retenue(s) après exclusions)' : '';
+    var txt = 'Comparables : ' + cmp.pairs.length + ' société(s)' + retenusTxt + ' — portée « ' + PORTEE_LABEL[cmp.portee] + ' »' +
       (cmp.sousSecteur ? ' (' + esc(cmp.sousSecteur) + ')' : (cmp.secteur ? ' (' + esc(cmp.secteur) + ')' : '')) + '.';
     if (cmp.repli) {
       txt += ' Repli automatique depuis « ' + PORTEE_LABEL[cmp.repli] + ' », faute d\'au moins deux pairs à ce niveau.';
@@ -830,14 +860,15 @@
     html += groupe('Multiples de comparables', 'per');
     html += porteeToggle();
     var med = S.comparables ? S.comparables.medianes : {};
-    html += S.comparables ? porteeNote(S.comparables) : note('Aucun comparable disponible pour calculer une médiane.');
-    html += note('Les multiples de référence sont par défaut les médianes du groupe de pairs ci-dessus ' +
-      '(détail dans l\'onglet Comparables). Vous pouvez leur substituer vos propres multiples.');
+    var statLbl = S.comparablesStat === 'moyenne' ? 'moyenne' : 'médiane';
+    html += S.comparables ? porteeNote(S.comparables) : note('Aucun comparable disponible pour calculer une ' + statLbl + '.');
+    html += note('Les multiples de référence sont par défaut la ' + statLbl + ' du groupe de pairs ci-dessus, pairs ' +
+      'exclus et statistique choisis dans l\'onglet Comparables. Vous pouvez leur substituer vos propres multiples.');
     html += '<div class="af-form">' +
-      champ('Cours sur bénéfice', 'num', 'perRef', fin(H.perRef) ? H.perRef : med.per, null, 'médiane : ' + or(n2(med.per), '—')) +
-      champ('Cours sur actif net', 'num', 'pbrRef', fin(H.pbrRef) ? H.pbrRef : med.pbr, null, 'médiane : ' + or(n2(med.pbr), '—')) +
-      champ('Cours sur chiffre d\'affaires', 'num', 'psrRef', fin(H.psrRef) ? H.psrRef : med.psr, null, 'médiane : ' + or(n2(med.psr), '—')) +
-      champ('Valeur d\'entreprise sur excédent brut', 'num', 'evEbitdaRef', fin(H.evEbitdaRef) ? H.evEbitdaRef : med.evEbitda, null, 'médiane : ' + or(n2(med.evEbitda), '—')) +
+      champ('Cours sur bénéfice', 'num', 'perRef', fin(H.perRef) ? H.perRef : med.per, null, statLbl + ' : ' + or(n2(med.per), '—')) +
+      champ('Cours sur actif net', 'num', 'pbrRef', fin(H.pbrRef) ? H.pbrRef : med.pbr, null, statLbl + ' : ' + or(n2(med.pbr), '—')) +
+      champ('Cours sur chiffre d\'affaires', 'num', 'psrRef', fin(H.psrRef) ? H.psrRef : med.psr, null, statLbl + ' : ' + or(n2(med.psr), '—')) +
+      champ('Valeur d\'entreprise sur excédent brut', 'num', 'evEbitdaRef', fin(H.evEbitdaRef) ? H.evEbitdaRef : med.evEbitda, null, statLbl + ' : ' + or(n2(med.evEbitda), '—')) +
       champ('Cours sur flux libre', 'num', 'pfcfRef', H.pfcfRef) +
       '</div>';
     html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Méthode</th><th class="r">Multiple</th>' +
@@ -999,7 +1030,7 @@
       return html;
     }
     var base = S.analyse;
-    var lignes = [base].concat(cmp.pairs);
+    var statLabel = S.comparablesStat === 'moyenne' ? 'Moyenne' : 'Médiane';
 
     var cols = [
       ['per', 'PER', 'n2', 'per'], ['pbr', 'PBR', 'n2', 'pbr'], ['psr', 'PSR', 'n2'],
@@ -1009,23 +1040,42 @@
     ];
 
     html += porteeNote(cmp);
+    html += groupe('Statistique et pairs retenus');
+    html += note('Un pair dont le bénéfice est tombé presque à zéro produit un PER ou un PBR sans signification ' +
+      'économique — à décocher au cas par cas plutôt qu\'à subir dans la moyenne ou la médiane du groupe. La médiane ' +
+      'reste la statistique recommandée (peu sensible à une valeur extrême isolée) ; la moyenne reste disponible pour ' +
+      'qui la préfère.');
+    html += statToggle();
+    var exclusIci = cmp.pairs.filter(function (a) { return S.comparablesExclus.indexOf(a.data.ticker) >= 0; }).map(function (a) { return a.data.ticker; });
+    if (exclusIci.length) {
+      html += note(exclusIci.length + ' pair(s) exclu(s) du calcul ici : ' + esc(exclusIci.join(', ')) +
+        '. <button type="button" class="af-lien" id="afReinitExclus">Rétablir tous les pairs</button>');
+    }
     html += note('Comparaison au dernier exercice publié de chaque société. Les sociétés n\'ayant pas publié la même ' +
       'année, les écarts de calendrier peuvent expliquer une partie des différences.');
-    html += '<div class="af-scroll"><table class="af-table af-comp"><thead><tr><th>Titre</th>' +
+    html += '<div class="af-scroll"><table class="af-table af-comp"><thead><tr><th></th><th>Titre</th>' +
       cols.map(function (c) { return '<th class="r">' + c[1] + (c[3] ? memo(c[3]) : '') + '</th>'; }).join('') +
       '</tr></thead><tbody>' +
-      lignes.map(function (a) {
+      '<tr class="af-moi"><td></td><td><strong>' + esc(base.data.ticker) + '</strong><small>' + esc(base.data.nom || '') + ' (ce titre)</small></td>' +
+      cols.map(function (c) {
+        var v = base.dernier[c[0]];
+        var txt = !fin(v) ? '—' : c[2] === 'pc' ? pc(v) : c[2] === 'pc2' ? pc(v, 2) : n2(v);
+        return '<td class="r">' + txt + '</td>';
+      }).join('') + '</tr>' +
+      cmp.pairs.map(function (a) {
         var r = a.dernier;
-        var moi = a.data.ticker === base.data.ticker;
-        return '<tr' + (moi ? ' class="af-moi"' : '') + ' data-afgoto="' + esc(a.data.ticker) + '">' +
-          '<td><strong>' + esc(a.data.ticker) + '</strong><small>' + esc(a.data.nom || '') + '</small></td>' +
+        var tick = a.data.ticker;
+        var exclu = S.comparablesExclus.indexOf(tick) >= 0;
+        return '<tr' + (exclu ? ' class="af-off"' : '') + '>' +
+          '<td><input type="checkbox" data-afexclu="' + esc(tick) + '"' + (exclu ? '' : ' checked') + ' aria-label="Inclure ' + esc(tick) + ' dans le calcul" title="Inclure ou exclure ce pair du calcul"></td>' +
+          '<td data-afgoto="' + esc(tick) + '" style="cursor:pointer"><strong>' + esc(tick) + '</strong><small>' + esc(a.data.nom || '') + '</small></td>' +
           cols.map(function (c) {
             var v = r[c[0]];
             var txt = !fin(v) ? '—' : c[2] === 'pc' ? pc(v) : c[2] === 'pc2' ? pc(v, 2) : n2(v);
             return '<td class="r">' + txt + '</td>';
           }).join('') + '</tr>';
       }).join('') +
-      '<tr class="af-mediane"><td>Médiane des pairs</td>' +
+      '<tr class="af-mediane"><td></td><td>' + statLabel + ' des ' + cmp.pairsRetenus.length + ' pair(s) retenu(s)</td>' +
       cols.map(function (c) {
         var v = cmp.medianes[c[0]];
         var txt = !fin(v) ? '—' : c[2] === 'pc' ? pc(v) : c[2] === 'pc2' ? pc(v, 2) : n2(v);
@@ -1034,15 +1084,16 @@
       '</tbody></table></div>';
 
     html += groupe('Valeur cible par les multiples du groupe de pairs');
-    html += note('Équation à l\'inconnue : le multiple médian des pairs (le fait observé) est appliqué à la grandeur ' +
-      'par action de la société (le fait publié) pour déduire le cours qu\'impliquerait un alignement sur ses pairs.');
+    html += note('Équation à l\'inconnue : le multiple (' + statLabel.toLowerCase() + ' des pairs retenus ci-dessus, le ' +
+      'fait observé) est appliqué à la grandeur par action de la société (le fait publié) pour déduire le cours ' +
+      'qu\'impliquerait un alignement sur ses pairs.');
     var exd = base.dernierExercice, drn = base.dernier;
     var cibles = [
       { l: 'PER × BPA', m: cmp.medianes.per, base: exd.bpa, unite: '×', cle: 'per' },
       { l: 'PBR × actif net par action', m: cmp.medianes.pbr, base: drn.anpa, unite: '×', cle: 'pbr' }
     ];
     html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Méthode</th>' +
-      '<th class="r">Multiple médian</th><th class="r">Grandeur par action</th><th class="r">Valeur cible</th><th class="r">Potentiel</th></tr></thead><tbody>' +
+      '<th class="r">Multiple (' + statLabel.toLowerCase() + ')</th><th class="r">Grandeur par action</th><th class="r">Valeur cible</th><th class="r">Potentiel</th></tr></thead><tbody>' +
       cibles.map(function (c) {
         var val = fin(c.m) && fin(c.base) && c.base > 0 ? c.m * c.base : NaN;
         var pot = fin(val) && pos(base.data.price) ? val / base.data.price - 1 : NaN;
@@ -1062,11 +1113,11 @@
       var ecart = v / m - 1;
       var inverse = ['per', 'pbr', 'psr', 'evEbitda', 'gearing'].indexOf(c[0]) >= 0;
       return st(c[1], pcs(ecart, 0), inverse
-        ? (ecart > 0 ? 'plus cher que la médiane' : 'moins cher que la médiane')
-        : (ecart > 0 ? 'au-dessus de la médiane' : 'en dessous de la médiane'));
+        ? (ecart > 0 ? 'plus cher que la ' + statLabel.toLowerCase() : 'moins cher que la ' + statLabel.toLowerCase())
+        : (ecart > 0 ? 'au-dessus de la ' + statLabel.toLowerCase() : 'en dessous de la ' + statLabel.toLowerCase()));
     }).join('') + '</div>';
-    html += note('Un multiple inférieur à la médiane n\'est pas en soi une occasion : il peut refléter une rentabilité ' +
-      'plus faible ou un risque plus élevé. Croisez systématiquement les multiples avec le ROE et le levier.');
+    html += note('Un multiple inférieur à la ' + statLabel.toLowerCase() + ' n\'est pas en soi une occasion : il peut ' +
+      'refléter une rentabilité plus faible ou un risque plus élevé. Croisez systématiquement les multiples avec le ROE et le levier.');
     return html;
   }
 
@@ -1397,6 +1448,18 @@
         return;
       }
 
+      var exclu = t.getAttribute && t.getAttribute('data-afexclu');
+      if (exclu) {
+        var idx = S.comparablesExclus.indexOf(exclu);
+        if (t.checked) { if (idx >= 0) S.comparablesExclus.splice(idx, 1); }
+        else { if (idx < 0) S.comparablesExclus.push(exclu); }
+        store(LS.exclus, S.comparablesExclus);
+        refreshComparables();
+        recompute();
+        render();
+        return;
+      }
+
       var ov = t.getAttribute && t.getAttribute('data-ov');
       if (ov) {
         var parts = ov.split(':');
@@ -1425,8 +1488,15 @@
       if ((v = t.getAttribute('data-afportee'))) {
         S.portee = v;
         store(LS.portee, v);
-        try { S.comparables = C.comparables(S.ticker, { portee: S.portee }); }
-        catch (err) { S.comparables = null; }
+        refreshComparables();
+        recompute();
+        render();
+        return;
+      }
+      if ((v = t.getAttribute('data-afstat'))) {
+        S.comparablesStat = v;
+        store(LS.stat, v);
+        refreshComparables();
         recompute();
         render();
         return;
@@ -1453,6 +1523,13 @@
         case 'afRapport': exportRapport(); break;
         case 'afCsv': exportCsv(); break;
         case 'afMemos': if (global.TCMemo) global.TCMemo.index(); break;
+        case 'afReinitExclus':
+          S.comparablesExclus = [];
+          store(LS.exclus, S.comparablesExclus);
+          refreshComparables();
+          recompute(); render();
+          notify('Tous les pairs sont de nouveau inclus.', 'success');
+          break;
       }
     });
   }
@@ -1466,6 +1543,8 @@
     if (!booted) {
       S.tab = read(LS.tab, 'synthese');
       S.poids = read(LS.poids, null) || Object.assign({}, V.POIDS_DEFAUT);
+      S.comparablesStat = read(LS.stat, 'mediane');
+      S.comparablesExclus = read(LS.exclus, []);
       bind();
       booted = true;
     }

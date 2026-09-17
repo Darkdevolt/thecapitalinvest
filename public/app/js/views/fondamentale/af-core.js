@@ -645,21 +645,41 @@
       }
     }
 
-    function col(k) { return pairs.map(function (a) { return a.dernier[k]; }).filter(function (v) { return fin(v) && v > 0 && v < 500; }); }
+    /* Deux réglages laissés à l'utilisateur plutôt que tranchés une fois
+       pour toutes dans le code : quelles sociétés du groupe comptent
+       vraiment comme comparables (un pair dont le bénéfice est tombé
+       presque à zéro produit un PER ou un PBR qui n'a plus rien
+       d'économique — à chacun de juger, au cas par cas, si BOAN ou SAFC
+       par exemple doivent peser dans la médiane du secteur bancaire), et
+       la statistique elle-même : médiane (recommandée, insensible aux
+       valeurs extrêmes) ou moyenne simple (plus sensible, parfois voulue
+       délibérément). L'exclusion ne rétrécit pas la portée choisie
+       ci-dessus : elle retire des sociétés précises du groupe déjà
+       retenu, sans déclencher de repli vers une portée plus large. */
+    var exclus = {};
+    (opts.exclus || []).forEach(function (t) { if (t) exclus[norm(t)] = 1; });
+    var pairsRetenus = pairs.filter(function (a) { return !exclus[norm(a.data.ticker)]; });
+    var stat = opts.stat === 'moyenne' ? 'moyenne' : 'mediane';
+    var agrege = stat === 'moyenne' ? mean : median;
+
+    function col(k) { return pairsRetenus.map(function (a) { return a.dernier[k]; }).filter(function (v) { return fin(v) && v > 0 && v < 500; }); }
     return {
       base: base,
       pairs: pairs,
+      pairsRetenus: pairsRetenus,
+      exclus: exclus,
+      stat: stat,
       secteur: secteur,
       sousSecteur: sousSecteur,
       portee: porteeEffective,
       porteeDemandee: portee,
       repli: repli,
       medianes: {
-        per: median(col('per')), pbr: median(col('pbr')), psr: median(col('psr')),
-        evEbitda: median(col('evEbitda')), rendement: median(pairs.map(function (a) { return a.dernier.rendement; })),
-        roe: median(pairs.map(function (a) { return a.dernier.roe; })),
-        margeNette: median(pairs.map(function (a) { return a.dernier.margeNette; })),
-        gearing: median(pairs.map(function (a) { return a.dernier.gearing; }))
+        per: agrege(col('per')), pbr: agrege(col('pbr')), psr: agrege(col('psr')),
+        evEbitda: agrege(col('evEbitda')), rendement: agrege(pairsRetenus.map(function (a) { return a.dernier.rendement; })),
+        roe: agrege(pairsRetenus.map(function (a) { return a.dernier.roe; })),
+        margeNette: agrege(pairsRetenus.map(function (a) { return a.dernier.margeNette; })),
+        gearing: agrege(pairsRetenus.map(function (a) { return a.dernier.gearing; }))
       }
     };
   }
