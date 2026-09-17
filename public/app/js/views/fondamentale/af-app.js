@@ -56,6 +56,11 @@
   var S = {
     ticker: '', analyse: null, hypotheses: null, wacc: null,
     tab: 'synthese', overrides: {}, poids: null,
+    /* Mémorise, en session seulement (pas persisté), le dernier poids
+       actif de chaque méthode désactivée par l'interrupteur on/off, pour
+       le restaurer tel quel à la réactivation plutôt que de retomber
+       sur le poids par défaut du secteur. */
+    poidsMemoire: {},
     resultats: null, comparables: null, unite: 'auto',
     portee: 'sousSecteur'
   };
@@ -894,17 +899,23 @@
       : 'Les méthodes ne se valent pas selon les sociétés. Sur une valeur de rendement, privilégiez l\'actualisation ' +
         'des dividendes ; sur une société de croissance, le DCF.') +
       ' Chaque multiple de comparables se pondère désormais individuellement — par exemple 60 % sur le PER et le reste ' +
-      'réparti sur les autres méthodes. Un poids nul écarte la méthode ; tout reste modifiable.');
+      'réparti sur les autres méthodes. L\'interrupteur active ou désactive une méthode sans perdre son poids : ' +
+      'décochée, elle sort entièrement du calcul et sa valeur reste affichée à titre de repère.');
     METHODE_GROUPES.forEach(function (grp) {
       html += '<div class="af-poids-groupe"><div class="af-poids-groupe-t">' + esc(grp.titre) + '</div>';
       grp.cles.forEach(function (k) {
         var ligne = syn.lignes.filter(function (l) { return l.cle === k; })[0];
+        var actif = (S.poids[k] || 0) > 0;
         var pctVal = Math.round((S.poids[k] || 0) * 100);
         var valTxt = ligne && fin(ligne.valeur) ? n0(ligne.valeur) + ' FCFA' : '<span class="af-nd">non calculable</span>';
         html += '<div class="af-poids-row' + (ligne && ligne.retenue ? '' : ' af-off') + '">' +
+          '<label class="af-poids-toggle-wrap" title="' + (actif ? 'Désactiver' : 'Activer') + ' cette méthode">' +
+            '<input type="checkbox" class="af-poids-toggle" data-poids-on="' + k + '"' + (actif ? ' checked' : '') + ' aria-label="Activer ' + esc(METHODE_LABELS[k]) + '">' +
+            '<span class="af-poids-toggle-track"></span>' +
+          '</label>' +
           '<div class="af-poids-label">' + esc(METHODE_LABELS[k]) + '</div>' +
-          '<input type="range" class="af-poids-slider" min="0" max="60" step="1" data-poids="' + k + '" value="' + pctVal + '" aria-label="Poids ' + esc(METHODE_LABELS[k]) + '">' +
-          '<div class="af-poids-pct"><input type="number" min="0" max="100" step="1" data-poids="' + k + '" value="' + pctVal + '"><span>%</span></div>' +
+          '<input type="range" class="af-poids-slider" min="0" max="60" step="1" data-poids="' + k + '" value="' + pctVal + '"' + (actif ? '' : ' disabled') + ' aria-label="Poids ' + esc(METHODE_LABELS[k]) + '">' +
+          '<div class="af-poids-pct"><input type="number" min="0" max="100" step="1" data-poids="' + k + '" value="' + pctVal + '"' + (actif ? '' : ' disabled') + '><span>%</span></div>' +
           '<div class="af-poids-val">' + valTxt + '</div>' +
           '</div>';
       });
@@ -1366,6 +1377,21 @@
       var poids = t.getAttribute && t.getAttribute('data-poids');
       if (poids) {
         S.poids[poids] = Math.max(0, Number(t.value) || 0) / 100;
+        store(LS.poids, S.poids);
+        recompute(); render();
+        return;
+      }
+
+      var poidsOn = t.getAttribute && t.getAttribute('data-poids-on');
+      if (poidsOn) {
+        if (t.checked) {
+          var restaure = S.poidsMemoire[poidsOn];
+          var defaut = (V.poidsDefaut(S.analyse.data) || {})[poidsOn];
+          S.poids[poidsOn] = fin(restaure) && restaure > 0 ? restaure : (fin(defaut) && defaut > 0 ? defaut : 0.10);
+        } else {
+          if (S.poids[poidsOn] > 0) S.poidsMemoire[poidsOn] = S.poids[poidsOn];
+          S.poids[poidsOn] = 0;
+        }
         store(LS.poids, S.poids);
         recompute(); render();
         return;
