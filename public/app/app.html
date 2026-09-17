@@ -101,7 +101,7 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
       <div class="tc-market-pill"><span class="tc-live"></span><span class="tc-market-label">BRVM</span><span class="tc-market-time" id="tcMarketClock">—</span></div>
       <div class="tc-clock" id="headerTime">—</div>
       <a class="tc-institute" href="/the-capital-institute/index.html" aria-label="The Capital Institute"><img src="/assets/the-capital-logo.png" alt=""><span class="tc-institute-label">Institute</span></a>
-      <a class="tc-iconbtn" href="/app/architecture.html" title="Guide de navigation" aria-label="Guide de navigation">◈</a>
+      <!-- Guide de navigation : remplacé par la boule d'or flottante (nav-orb.js), accessible depuis toutes les pages. -->
       <!-- Aucun lien vers /admin.html : l'accès admin se fait par saisie directe de l'URL, réservé aux administrateurs. -->
       <a class="tc-user" id="topnavUser" href="/app/account.html" aria-label="Mon compte et préférences"><div class="tc-avatar" id="headerAvatar">TC</div><span class="tc-user-name" id="headerName">—</span></a>
       <button class="tc-logout" type="button" data-action="logout" aria-label="Se déconnecter">↪</button>
@@ -323,6 +323,8 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
 <script src="/app/js/metric-picker.js?v=1"></script>
 <!-- Correctifs de coquille : recherche globale, déconnexion, identité d'en-tête -->
 <script src="/app/js/app-shell-fixes.js?v=2"></script>
+<!-- Boule d'or : navigation flottante (remplace l'ancien lien « Guide de navigation ») -->
+<script src="/app/js/nav-orb.js?v=1"></script>
 <script>
 (function(){
   'use strict';
