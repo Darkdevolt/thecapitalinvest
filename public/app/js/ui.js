@@ -30,9 +30,16 @@ function populateTickerSelects(){
     return '<option value="'+t+'">'+esc(t)+(nom?' — '+esc(nom):'')+'</option>';
   }).join('');
   // id → texte du placeholder
+  // afTicker VOLONTAIREMENT ABSENT : ce menu est la propriété exclusive de
+  // af-app.js (fillSelect), qui le restreint aux tickers ayant des états
+  // financiers exploitables (sous-ensemble de allCours/allEntreprises ici).
+  // Le repeupler ici à chaque tc:dataready écrasait périodiquement la bonne
+  // liste par la liste complète de la cote (y compris des titres sans
+  // aucun état financier), rendant le sélecteur incohérent avec ce que
+  // l'analyse peut réellement afficher.
   const targets={
     pfTicker:'Ticker...', alertTicker:'Ticker...',
-    fundTickerSelect:'Choisir un ticker...', afTicker:'Choisir un ticker...',
+    fundTickerSelect:'Choisir un ticker...',
     atTicker:'Ticker...', cmpTickerA:'Titre A', cmpTickerB:'Titre B'
   };
   Object.keys(targets).forEach(id=>{
