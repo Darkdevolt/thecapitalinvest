@@ -327,14 +327,36 @@
 
   /* La valeur comptable augmentée des sur-profits futurs actualisés.
      Utile quand les flux de trésorerie sont erratiques mais que les
-     capitaux propres sont fiables, ce qui est fréquent dans la banque. */
+     capitaux propres sont fiables, ce qui est fréquent dans la banque.
+
+     Deux hypothèses implicites corrigées : la croissance qui alimente le
+     bénéfice pendant l'horizon explicite N'EST PAS celle qu'on peut
+     supposer à l'infini dans la valeur terminale (même logique que le
+     DCF, qui fait converger sa croissance vers un rythme perpétuel
+     plafonné plutôt que de prolonger le taux observé indéfiniment — une
+     société qui grossit de 10 %/an pour toujours finirait par peser le
+     PIB mondial). Et la part du bénéfice réinvestie chaque année suit le
+     taux de distribution connu de la société plutôt qu'une mise en
+     réserve à 100 % non dite : sans dividende de référence, le modèle
+     supposait silencieusement qu'aucun bénéfice n'était jamais distribué,
+     ce qui gonfle la trajectoire des capitaux propres et fausse le calcul
+     pour toute société qui verse — même partiellement — un dividende. */
   function revenuResiduel(p) {
     var anpa = p.anpa, bpa = p.bpa, r = p.rendementExige;
-    var g = fin(p.croissance) ? p.croissance : 0.02;
+    var g1 = fin(p.croissance) ? p.croissance : 0.02;
+    var gInf = fin(p.croissancePerpetuelle) ? p.croissancePerpetuelle : Math.min(g1, 0.02);
     var n = Math.max(1, Math.min(15, Math.round(p.annees || 5)));
     if (!pos(anpa) || !fin(bpa) || !fin(r) || r <= 0)
       return { ok: false, raison: 'actif net par action, bénéfice par action et rendement exigé sont tous requis' };
-    if (g >= r) return { ok: false, raison: 'la croissance dépasse le rendement exigé' };
+    if (gInf >= r) return { ok: false, raison: 'la croissance perpétuelle dépasse le rendement exigé' };
+    if (gInf > 0.06) return { ok: false, raison: 'une croissance perpétuelle au-delà de 6 % par an n\'est pas soutenable à l\'infini' };
+
+    /* Taux de distribution appliqué à chaque exercice projeté : celui
+       fourni explicitement, sinon celui qu'impliquent le dividende et le
+       bénéfice de référence, sinon aucune distribution supposée (le cas
+       le plus défavorable, jamais un chiffre inventé). */
+    var payout = fin(p.payoutRef) ? p.payoutRef
+      : (fin(p.dpa) && pos(bpa) ? Math.max(0, p.dpa / bpa) : 0);
 
     /* e démarre au bénéfice constaté (année 0) et est mis à croître avant
        chaque usage, comme fcf0 dans le DCF : sans cela, l'année 1 du
@@ -344,21 +366,24 @@
     var vc = anpa, somme = 0, detail = [];
     var e = bpa;
     for (var i = 1; i <= n; i++) {
+      var g = n > 1 ? g1 + (gInf - g1) * ((i - 1) / (n - 1)) : g1;
       e = e * (1 + g);
       var rr = e - r * vc;
       var va = rr / Math.pow(1 + r, i);
       somme += va;
-      detail.push({ annee: i, valeurComptable: vc, benefice: e, revenuResiduel: rr, actualise: va });
-      vc = vc + e - (fin(p.dpa) ? p.dpa : 0);
+      detail.push({ annee: i, croissance: g, valeurComptable: vc, benefice: e, revenuResiduel: rr, actualise: va });
+      vc = vc + e * (1 - payout);
     }
     var dernierRr = detail[detail.length - 1].revenuResiduel;
-    var terminal = dernierRr * (1 + g) / (r - g) / Math.pow(1 + r, n);
+    var terminal = dernierRr * (1 + gInf) / (r - gInf) / Math.pow(1 + r, n);
     return {
       ok: true,
       valeur: anpa + somme + terminal,
       valeurComptable: anpa,
       surProfitsActualises: somme,
       terminalActualise: terminal,
+      payoutRetenu: payout,
+      croissancePerpetuelle: gInf,
       detail: detail,
       lecture: anpa ? 'La valeur ressort à ' + ((anpa + somme + terminal) / anpa).toFixed(2) + ' fois l\'actif net comptable.' : ''
     };
@@ -385,8 +410,23 @@
      défaut reflètent une pratique courante, mais restent modifiables :
      sur une banque on relèvera le revenu résiduel, sur une société de
      croissance le DCF, sur une valeur de rendement l'actualisation des
-     dividendes. */
-  var POIDS_DEFAUT = { dcf: 0.35, ddm: 0.20, multiples: 0.30, residuel: 0.10, graham: 0.05 };
+     dividendes.
+
+     Pondération fine, méthode par méthode plutôt que par famille : les
+     cinq multiples de comparables (PER, PBR, PSR, VE/EBE, cours sur flux
+     libre) étaient jusqu'ici fondus dans une seule case « Multiples »,
+     réduite en interne à leur médiane — impossible d'y faire porter
+     davantage de poids sur, par exemple, le PER que sur le PSR. Chaque
+     multiple est désormais une méthode à part entière, avec son propre
+     poids, exactement comme le DCF ou Graham. La somme des neuf poids
+     n'a pas besoin de faire 100 % : synthese() ne considère que les
+     méthodes exploitables (valeur calculable, poids non nul) et
+     renormalise sur elles seules. */
+  var POIDS_DEFAUT = {
+    dcf: 0.35, ddm: 0.20,
+    per: 0.15, pbr: 0.08, psr: 0.04, evEbitda: 0.02, pfcf: 0.01,
+    residuel: 0.10, graham: 0.05
+  };
 
   /* Pour une banque ou une assurance, le DCF classique n'a pas de sens :
      le flux de trésorerie disponible (CFO − capex) ne représente rien
@@ -399,11 +439,16 @@
      et l'actualisation des dividendes comme méthodes de référence pour
      les établissements financiers. Ce n'est qu'un point de départ :
      l'utilisateur reste libre de tout repondérer. */
-  var POIDS_DEFAUT_FINANCIER = { dcf: 0.10, ddm: 0.25, multiples: 0.25, residuel: 0.35, graham: 0.05 };
+  var POIDS_DEFAUT_FINANCIER = {
+    dcf: 0.10, ddm: 0.25,
+    per: 0.10, pbr: 0.12, psr: 0.01, evEbitda: 0.01, pfcf: 0.01,
+    residuel: 0.35, graham: 0.05
+  };
 
-  function estFinancier(secteur) {
-    return typeof secteur === 'string' && /financ|banque|assuran/i.test(secteur);
-  }
+  /* Source unique : af-core.js (partagée avec le score de qualité, qui a
+     besoin de la même détection pour adapter le pilier « Solidité
+     financière » aux banques et assureurs). */
+  var estFinancier = C.estFinancier;
 
   function poidsDefaut(data) {
     var secteur = (data && (data.secteur || data.sousSecteur)) || '';

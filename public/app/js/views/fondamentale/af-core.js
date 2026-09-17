@@ -379,10 +379,23 @@
      entier dans l'interface. Ce n'est pas une note de marché mais une
      grille de lecture assumée, que l'utilisateur peut contester poste
      par poste. */
-  function qualite(rows, ratiosList, croissances) {
+  /* Une banque ou une assurance ne se juge pas aux mêmes seuils qu'une
+     société industrielle : son bilan EST son métier (les dépôts et
+     emprunts interbancaires financent les crédits), une autonomie
+     financière de 7 à 12 % y est la norme et non un signal de fragilité,
+     et son « endettement » n'a pas la même lecture qu'une dette
+     industrielle rapportée à l'excédent brut. Même logique déjà
+     appliquée côté valorisation (voir POIDS_DEFAUT_FINANCIER dans
+     af-valuation.js) : cette fonction est la source commune des deux. */
+  function estFinancier(secteur) {
+    return typeof secteur === 'string' && /financ|banque|assuran/i.test(secteur);
+  }
+
+  function qualite(rows, ratiosList, croissances, data) {
     if (rows.length < 2) return { enough: false, raison: 'deux exercices au minimum' };
     var n = ratiosList.length - 1;
     var r = ratiosList[n];
+    var financier = estFinancier(data && (data.secteur || data.sousSecteur));
     var piliers = [];
 
     function pilier(nom, note, sur, motif, details) {
@@ -407,13 +420,32 @@
         : (croissances.ca && croissances.ca.raison) || ND,
       [{ l: 'Rythme', n: nTc, sur: 12 }, { l: 'Régularité', n: nReg, sur: 8 }]);
 
-    /* Solidité : gearing, autonomie, dette sur excédent brut */
-    var nGe = fin(r.gearing) ? (r.gearing <= 0.3 ? 8 : r.gearing <= 0.6 ? 6 : r.gearing <= 1 ? 4 : r.gearing <= 2 ? 2 : 0) : NaN;
-    var nAu = fin(r.autonomie) ? (r.autonomie >= 0.5 ? 6 : r.autonomie >= 0.35 ? 5 : r.autonomie >= 0.2 ? 3 : 1) : NaN;
-    var nDe = fin(r.detteEbitda) ? (r.detteEbitda <= 1 ? 6 : r.detteEbitda <= 2 ? 5 : r.detteEbitda <= 3 ? 3 : r.detteEbitda <= 4 ? 1 : 0) : (fin(r.gearing) ? 3 : NaN);
-    pilier('Solidité financière', fin(nGe) && fin(nAu) ? nGe + nAu + (fin(nDe) ? nDe : 0) : NaN, 20,
-      fin(r.gearing) ? 'levier de ' + r.gearing.toFixed(2) + ', autonomie de ' + (fin(r.autonomie) ? (r.autonomie * 100).toFixed(0) : '—') + ' %' : ND,
-      [{ l: 'Levier', n: nGe, sur: 8 }, { l: 'Autonomie', n: nAu, sur: 6 }, { l: 'Dette / excédent brut', n: nDe, sur: 6 }]);
+    /* Solidité : gearing, autonomie, dette sur excédent brut — sauf pour
+       une banque ou un assureur, où « dette financière » et « excédent
+       brut d'exploitation » ne se lisent pas comme chez un industriel
+       (les dépôts et le refinancement interbancaire sont la matière
+       première du métier, pas un levier au sens classique). On y
+       substitue l'autonomie financière, jugée à l'aune du secteur
+       bancaire (7 à 12 % y est courant, 50 % y serait impossible), et la
+       rentabilité des actifs (ROA), l'indicateur de solidité standard
+       pour un établissement de crédit. */
+    var nGe, nAu, nDe, motifSolidite, detailSolidite;
+    if (financier) {
+      nGe = NaN;
+      nAu = fin(r.autonomie) ? (r.autonomie >= 0.12 ? 10 : r.autonomie >= 0.09 ? 8 : r.autonomie >= 0.06 ? 6 : r.autonomie >= 0.04 ? 3 : 1) : NaN;
+      var roa = r.roa;
+      nDe = fin(roa) ? (roa >= 0.02 ? 10 : roa >= 0.015 ? 8 : roa >= 0.01 ? 6 : roa >= 0.005 ? 3 : roa > 0 ? 1 : 0) : NaN;
+      motifSolidite = fin(r.autonomie) ? 'autonomie de ' + (r.autonomie * 100).toFixed(1) + ' % (repère bancaire, pas industriel), ROA de ' + (fin(roa) ? (roa * 100).toFixed(2) : '—') + ' %' : ND;
+      detailSolidite = [{ l: 'Autonomie (repère bancaire)', n: nAu, sur: 10 }, { l: 'Rentabilité des actifs (ROA)', n: nDe, sur: 10 }];
+      pilier('Solidité financière', fin(nAu) && fin(nDe) ? nAu + nDe : NaN, 20, motifSolidite, detailSolidite);
+    } else {
+      nGe = fin(r.gearing) ? (r.gearing <= 0.3 ? 8 : r.gearing <= 0.6 ? 6 : r.gearing <= 1 ? 4 : r.gearing <= 2 ? 2 : 0) : NaN;
+      nAu = fin(r.autonomie) ? (r.autonomie >= 0.5 ? 6 : r.autonomie >= 0.35 ? 5 : r.autonomie >= 0.2 ? 3 : 1) : NaN;
+      nDe = fin(r.detteEbitda) ? (r.detteEbitda <= 1 ? 6 : r.detteEbitda <= 2 ? 5 : r.detteEbitda <= 3 ? 3 : r.detteEbitda <= 4 ? 1 : 0) : (fin(r.gearing) ? 3 : NaN);
+      pilier('Solidité financière', fin(nGe) && fin(nAu) ? nGe + nAu + (fin(nDe) ? nDe : 0) : NaN, 20,
+        fin(r.gearing) ? 'levier de ' + r.gearing.toFixed(2) + ', autonomie de ' + (fin(r.autonomie) ? (r.autonomie * 100).toFixed(0) : '—') + ' %' : ND,
+        [{ l: 'Levier', n: nGe, sur: 8 }, { l: 'Autonomie', n: nAu, sur: 6 }, { l: 'Dette / excédent brut', n: nDe, sur: 6 }]);
+    }
 
     /* Qualité des flux : conversion en trésorerie et marge de flux libre */
     var nCv = fin(r.conversionCash) ? (r.conversionCash >= 1.1 ? 12 : r.conversionCash >= 0.9 ? 10 : r.conversionCash >= 0.7 ? 7 : r.conversionCash >= 0.4 ? 4 : r.conversionCash > 0 ? 2 : 0) : NaN;
@@ -422,13 +454,37 @@
       fin(r.conversionCash) ? 'conversion de ' + r.conversionCash.toFixed(2) + ', marge de flux libre de ' + (fin(r.margeFcf) ? (r.margeFcf * 100).toFixed(1) : '—') + ' %' : ND,
       [{ l: 'Conversion en trésorerie', n: nCv, sur: 12 }, { l: 'Marge de flux libre', n: nFcf, sur: 8 }]);
 
-    /* Retour à l'actionnaire : rendement et soutenabilité du dividende */
-    var nRd = fin(r.rendement) ? (r.rendement >= 0.07 ? 10 : r.rendement >= 0.04 ? 8 : r.rendement >= 0.02 ? 5 : r.rendement > 0 ? 2 : 0) : 0;
-    var nPo = fin(r.payout) ? (r.payout <= 0 ? 0 : r.payout <= 0.5 ? 10 : r.payout <= 0.7 ? 8 : r.payout <= 0.9 ? 5 : r.payout <= 1 ? 2 : 0) : (fin(r.rendement) && r.rendement > 0 ? 4 : 0);
-    pilier('Retour à l\'actionnaire', nRd + nPo, 20,
-      fin(r.rendement) && r.rendement > 0
+    /* Retour à l'actionnaire : rendement et soutenabilité du dividende.
+       Absence de donnée sur le DERNIER exercice ≠ absence de dividende :
+       la société peut très bien verser un dividende régulier dont
+       l'exercice le plus récent n'a simplement pas encore été publié ou
+       saisi (cas fréquent : le DPA de l'exercice qui vient de clôturer
+       arrive après le reste des comptes). Mettre 0 dans ce cas revient à
+       compter une donnée manquante comme un fait défavorable avéré —
+       exactement ce que ce module s'interdit partout ailleurs (cf.
+       « Qualité des flux » juste au-dessus, qui exclut le pilier plutôt
+       que de le noter à zéro). On applique donc la même règle ici : si
+       aucun exercice récent ne permet de calculer un rendement, ou un
+       historique de dividende, le pilier est exclu de la note globale au
+       lieu d'être compté contre la société. Seul un dividende NUL déjà
+       publié (payout à 0 sur un exercice renseigné) reste noté 0, à bon
+       droit. */
+    var dpaHistorique = rows.some(function (row) { return fin(row.dpa) && row.dpa > 0; });
+    var nRd, nPo, motifRetour;
+    if (fin(r.rendement)) {
+      nRd = r.rendement >= 0.07 ? 10 : r.rendement >= 0.04 ? 8 : r.rendement >= 0.02 ? 5 : r.rendement > 0 ? 2 : 0;
+      nPo = fin(r.payout) ? (r.payout <= 0 ? 0 : r.payout <= 0.5 ? 10 : r.payout <= 0.7 ? 8 : r.payout <= 0.9 ? 5 : r.payout <= 1 ? 2 : 0) : (r.rendement > 0 ? 4 : 0);
+      motifRetour = r.rendement > 0
         ? 'rendement de ' + (r.rendement * 100).toFixed(2) + ' %, distribution de ' + (fin(r.payout) ? (r.payout * 100).toFixed(0) + ' %' : 'non déterminée')
-        : 'aucun dividende identifié sur le dernier exercice',
+        : 'aucun dividende identifié sur le dernier exercice';
+    } else if (dpaHistorique) {
+      nRd = NaN; nPo = NaN;
+      motifRetour = 'dividende versé par le passé, mais non renseigné sur le dernier exercice publié : pilier non noté plutôt que compté à zéro';
+    } else {
+      nRd = NaN; nPo = NaN;
+      motifRetour = ND;
+    }
+    pilier('Retour à l\'actionnaire', fin(nRd) && fin(nPo) ? nRd + nPo : NaN, 20, motifRetour,
       [{ l: 'Rendement', n: nRd, sur: 10 }, { l: 'Soutenabilité', n: nPo, sur: 10 }]);
 
     var notes = piliers.filter(function (p2) { return fin(p2.note); });
@@ -518,7 +574,7 @@
       dernierExercice: d.rows[d.rows.length - 1],
       croissances: croissances,
       piotroski: piotroski(d.rows, ratiosList),
-      qualite: qualite(d.rows, ratiosList, croissances),
+      qualite: qualite(d.rows, ratiosList, croissances, d),
       alertes: controles(d.rows, ratiosList),
       moyennes: {
         roe: mean(ratiosList.map(function (r) { return r.roe; })),
@@ -624,6 +680,7 @@
     controles: controles,
     analyse: analyse,
     univers: univers,
-    comparables: comparables
+    comparables: comparables,
+    estFinancier: estFinancier
   };
 })(typeof window !== 'undefined' ? window : globalThis);

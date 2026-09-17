@@ -28,6 +28,29 @@
     { id: 'marche', l: 'Marché entier' }
   ];
 
+  /* Une entrée par méthode de valorisation individuelle, y compris
+     chaque multiple pris séparément (PER, PBR, PSR, VE/EBE, cours sur
+     flux libre) : source unique du libellé, utilisée par la pondération,
+     le tableau de synthèse et le rapport exporté, pour ne jamais avoir
+     trois noms différents pour la même méthode. */
+  var METHODE_LABELS = {
+    dcf: 'Flux actualisés (DCF)',
+    ddm: 'Dividendes (Gordon-Shapiro)',
+    per: 'Cours / Bénéfice (PER)',
+    pbr: 'Cours / Actif net (PBR)',
+    psr: 'Cours / Chiffre d\'affaires (PSR)',
+    evEbitda: 'VE / Excédent brut',
+    pfcf: 'Cours / Flux libre',
+    residuel: 'Revenu résiduel',
+    graham: 'Graham'
+  };
+  var METHODE_GROUPES = [
+    { titre: 'Flux et dividendes', cles: ['dcf', 'ddm'] },
+    { titre: 'Multiples de comparables', cles: ['per', 'pbr', 'psr', 'evEbitda', 'pfcf'] },
+    { titre: 'Autres méthodes', cles: ['residuel', 'graham'] }
+  ];
+  var METHODE_COULEURS = ['#c8a24e', '#3fc98a', '#60a5fa', '#f0a72a', '#a78bfa', '#f0645e', '#4ade80', '#e879f9', '#38bdf8'];
+
   var S = {
     ticker: '', analyse: null, hypotheses: null, wacc: null,
     tab: 'synthese', overrides: {}, poids: null,
@@ -143,10 +166,21 @@
     if (!S.analyse || !S.analyse.enough || !S.hypotheses) { S.resultats = null; return; }
     var H = S.hypotheses;
     var a = S.analyse;
+    var financier = C.estFinancier(a.data.secteur || a.data.sousSecteur);
 
     var w = V.wacc(H);
     S.wacc = w;
-    var taux = fin(H.tauxManuel) ? H.tauxManuel : w.valeur;
+    /* Pour une banque ou un assureur, le WACC classique mélange le coût
+       des fonds propres à un coût de la « dette » dont la composition
+       réelle (dépôts, refinancement interbancaire...) n'a rien à voir
+       avec une dette industrielle destinée à financer des actifs — la
+       pondération capitaux propres / dette calculée plus haut (souvent
+       très majoritairement « dette ») sous-estimerait alors fortement le
+       taux d'actualisation. Le revenu résiduel, méthode de référence pour
+       ce secteur, actualise déjà uniquement au coût des fonds propres :
+       le DCF (mineur dans la pondération sectorielle mais pas nul) fait
+       de même par cohérence, sauf taux imposé manuellement. */
+    var taux = fin(H.tauxManuel) ? H.tauxManuel : (financier ? w.coutFondsPropres : w.valeur);
 
     var base = Object.assign({}, H, { taux: taux });
     var D = V.dcf(base);
@@ -165,12 +199,20 @@
     }));
     var rr = V.revenuResiduel(Object.assign({}, H, {
       rendementExige: fin(H.rendementExige) ? H.rendementExige : w.coutFondsPropres,
-      croissance: H.croissance, annees: H.annees
+      croissance: H.croissance, croissancePerpetuelle: H.croissancePerpetuelle, annees: H.annees,
+      /* Le dernier exercice est justement celui où le dividende manque le
+         plus souvent (publié après le reste des comptes) : on retient la
+         moyenne historique du taux de distribution plutôt que la seule
+         dernière année, qui reviendrait à supposer 0 % de distribution
+         future pour une société qui distribue depuis toujours. */
+      payoutRef: fin(H.payoutRef) ? H.payoutRef : a.moyennes.payout
     }));
     var gr = V.graham(H.bpa, H.anpa, H.facteurGraham);
 
+    function mult(cle) { var l = mu.lignes.filter(function (x) { return x.cle === cle; })[0]; return l && l.utilisable ? l.valeur : NaN; }
+
     S.resultats = {
-      taux: taux,
+      taux: taux, financier: financier,
       dcf: D,
       sensibilite: D.ok ? V.sensibilite(base) : null,
       inverse: D.ok ? V.dcfInverse(base, a.data.price) : null,
@@ -182,7 +224,7 @@
       synthese: V.synthese({
         dcf: D.ok ? D.parAction : NaN,
         ddm: dd.ok ? dd.valeur : NaN,
-        multiples: mu.mediane,
+        per: mult('per'), pbr: mult('pbr'), psr: mult('psr'), evEbitda: mult('evEbitda'), pfcf: mult('pfcf'),
         residuel: rr.ok ? rr.valeur : NaN,
         graham: gr.ok ? gr.valeur : NaN
       }, S.poids, a.data.price)
@@ -647,7 +689,7 @@
   /* ── Onglet Valorisation ──────────────────────────────────────── */
 
   function paneValorisation() {
-    var H = S.hypotheses, R = S.resultats, w = S.wacc;
+    var H = S.hypotheses, R = S.resultats, w = S.wacc, a = S.analyse;
     if (!R) return vide('Valorisation indisponible', 'Les hypothèses n\'ont pas pu être établies.');
     var html = '';
 
@@ -752,38 +794,79 @@
       }).join('') + '</tbody></table></div>';
 
     html += groupe('Autres méthodes');
-    html += '<div class="af-methode"><span>Revenu résiduel</span><strong>' +
+    html += note('Le revenu résiduel réutilise la croissance perpétuelle fixée ci-dessus pour l\'actualisation des flux ' +
+      '(pas la croissance de départ, économiquement intenable à l\'infini) et suppose, sauf indication contraire, que ' +
+      'la société continue à distribuer le même taux de son bénéfice que par le passé plutôt que 0 %.');
+    html += '<div class="af-form">' +
+      champ('Taux de distribution retenu (projection)', 'pct', 'payoutRef', H.payoutRef, null,
+        'par défaut la moyenne historique : ' + or(pc(a.moyennes.payout, 0), '0 % (aucun historique)')) +
+      '</div>';
+    html += '<div class="af-methode"><span>Revenu résiduel' + memo('revenu-residuel') + '</span><strong>' +
       (R.residuel.ok ? n0(R.residuel.valeur) + ' FCFA' : '<span class="af-nd">' + esc(R.residuel.raison) + '</span>') + '</strong></div>';
+    if (R.residuel.ok) html += note('Taux de distribution retenu pour la projection : ' + pc(R.residuel.payoutRetenu, 0) + '. Croissance perpétuelle : ' + pc(R.residuel.croissancePerpetuelle, 1) + '.');
     html += '<div class="af-methode"><span>Nombre de Graham' + memo('graham') + '</span><strong>' +
       (R.graham.ok ? n0(R.graham.valeur) + ' FCFA' : '<span class="af-nd">' + esc(R.graham.raison) + '</span>') + '</strong></div>';
 
-    html += groupe('Synthèse pondérée');
-    var infoSecteur = S.analyse.data;
-    html += note((V.estFinancier(infoSecteur.secteur || infoSecteur.sousSecteur)
-      ? 'Établissement financier : les poids de départ favorisent le revenu résiduel et les dividendes plutôt que le ' +
-        'DCF, dont le flux de trésorerie disponible n\'a pas de sens économique pour une banque ou un assureur.'
+    var syn = R.synthese;
+    html += groupe('Valeur cible pondérée', 'dcf');
+    var contribs = syn.lignes.filter(function (l) { return l.retenue; });
+    html += '<div class="af-cible-hero">' +
+      '<div class="af-cible-main"><div class="af-cible-l">Valeur cible pondérée</div><div class="af-cible-v">' +
+        (fin(syn.valeur) ? n0(syn.valeur) : '<span class="af-nd">non calculable</span>') + (fin(syn.valeur) ? ' <small>FCFA</small>' : '') + '</div></div>' +
+      '<div class="af-cible-side">' +
+        '<div class="af-cible-item"><span>Cours actuel</span><strong class="af-dim">' + or(n0(syn.cours), '—') + '</strong></div>' +
+        '<div class="af-cible-item"><span>Potentiel</span><strong class="' + (fin(syn.potentiel) ? (syn.potentiel >= 0 ? 'af-up' : 'af-down') : '') + '">' + or(pcs(syn.potentiel), '—') + '</strong></div>' +
+        '<div class="af-cible-item"><span>Méthodes retenues</span><strong>' + syn.retenues + ' / ' + syn.lignes.length + '</strong></div>' +
+      '</div>' +
+      (contribs.length ? '<div class="af-cible-bar">' + contribs.map(function (l, i) {
+        return '<span style="width:' + (l.poidsEffectif * 100) + '%;background:' + METHODE_COULEURS[i % METHODE_COULEURS.length] + '" title="' + esc(METHODE_LABELS[l.cle]) + '"></span>';
+      }).join('') + '</div>' +
+      '<div class="af-cible-legend">' + contribs.map(function (l, i) {
+        return '<span><i style="background:' + METHODE_COULEURS[i % METHODE_COULEURS.length] + '"></i>' + esc(METHODE_LABELS[l.cle]) + ' · ' + pc(l.poidsEffectif, 0) + '</span>';
+      }).join('') + '</div>' : '') +
+      '</div>';
+    if (syn.fourchette && contribs.length > 1) {
+      html += note('Fourchette des ' + syn.retenues + ' méthodes retenues : <strong>' + n0(syn.fourchette.bas) + '</strong> à <strong>' + n0(syn.fourchette.haut) + '</strong> FCFA.');
+    }
+    if (syn.avertissement) html += '<div class="af-warn">' + esc(syn.avertissement) + '</div>';
+
+    html += groupe('Pondération par méthode');
+    html += note((V.estFinancier(a.data.secteur || a.data.sousSecteur)
+      ? 'Établissement financier : les poids de départ favorisent le revenu résiduel, les dividendes et le PBR plutôt ' +
+        'que le DCF classique, dont le flux de trésorerie disponible n\'a pas de sens économique pour une banque ou un assureur.'
       : 'Les méthodes ne se valent pas selon les sociétés. Sur une valeur de rendement, privilégiez l\'actualisation ' +
         'des dividendes ; sur une société de croissance, le DCF.') +
-      ' Un poids nul écarte la méthode — tout reste modifiable ci-dessous.');
-    html += '<div class="af-poids">' + Object.keys(V.POIDS_DEFAUT).map(function (k) {
-      var lbl = { dcf: 'Flux actualisés', ddm: 'Dividendes', multiples: 'Multiples', residuel: 'Revenu résiduel', graham: 'Graham' }[k];
-      return '<label>' + lbl + '<input type="number" min="0" max="100" step="5" data-poids="' + k + '" value="' +
-        Math.round((S.poids[k] || 0) * 100) + '"><span>%</span></label>';
-    }).join('') + '<button type="button" class="af-lien" id="afResetPoids">Rétablir les poids par défaut du secteur</button></div>';
+      ' Chaque multiple de comparables se pondère désormais individuellement — par exemple 60 % sur le PER et le reste ' +
+      'réparti sur les autres méthodes. Un poids nul écarte la méthode ; tout reste modifiable.');
+    METHODE_GROUPES.forEach(function (grp) {
+      html += '<div class="af-poids-groupe"><div class="af-poids-groupe-t">' + esc(grp.titre) + '</div>';
+      grp.cles.forEach(function (k) {
+        var ligne = syn.lignes.filter(function (l) { return l.cle === k; })[0];
+        var pctVal = Math.round((S.poids[k] || 0) * 100);
+        var valTxt = ligne && fin(ligne.valeur) ? n0(ligne.valeur) + ' FCFA' : '<span class="af-nd">non calculable</span>';
+        html += '<div class="af-poids-row' + (ligne && ligne.retenue ? '' : ' af-off') + '">' +
+          '<div class="af-poids-label">' + esc(METHODE_LABELS[k]) + '</div>' +
+          '<input type="range" class="af-poids-slider" min="0" max="60" step="1" data-poids="' + k + '" value="' + pctVal + '" aria-label="Poids ' + esc(METHODE_LABELS[k]) + '">' +
+          '<div class="af-poids-pct"><input type="number" min="0" max="100" step="1" data-poids="' + k + '" value="' + pctVal + '"><span>%</span></div>' +
+          '<div class="af-poids-val">' + valTxt + '</div>' +
+          '</div>';
+      });
+      html += '</div>';
+    });
+    html += '<button type="button" class="af-lien" id="afResetPoids">Rétablir les poids par défaut du secteur</button>';
 
-    var syn = R.synthese;
+    html += groupe('Détail des méthodes');
     html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Méthode</th><th class="r">Valeur</th>' +
-      '<th class="r">Poids effectif</th></tr></thead><tbody>' +
+      '<th class="r">Poids saisi</th><th class="r">Poids effectif</th></tr></thead><tbody>' +
       syn.lignes.map(function (l) {
-        var lbl = { dcf: 'Flux actualisés', ddm: 'Dividendes', multiples: 'Multiples', residuel: 'Revenu résiduel', graham: 'Graham' }[l.cle];
-        return '<tr' + (l.retenue ? '' : ' class="af-off"') + '><td>' + lbl + '</td>' +
+        return '<tr' + (l.retenue ? '' : ' class="af-off"') + '><td>' + esc(METHODE_LABELS[l.cle]) + '</td>' +
           '<td class="r">' + (l.retenue ? n0(l.valeur) + ' FCFA' : '<span class="af-nd">écartée</span>') + '</td>' +
+          '<td class="r">' + pc(l.poids, 0) + '</td>' +
           '<td class="r">' + (l.retenue ? pc(l.poidsEffectif, 0) : '—') + '</td></tr>';
       }).join('') +
       (fin(syn.valeur) ? '<tr class="af-total"><td>Valeur retenue</td><td class="r">' + n0(syn.valeur) + ' FCFA</td>' +
-        '<td class="r">' + or(pcs(syn.potentiel), '—') + '</td></tr>' : '') +
+        '<td class="r"></td><td class="r">' + or(pcs(syn.potentiel), '—') + '</td></tr>' : '') +
       '</tbody></table></div>';
-    if (syn.avertissement) html += '<div class="af-warn">' + esc(syn.avertissement) + '</div>';
 
     html += '<div class="af-actions">' +
       '<button type="button" class="af-btn" id="afReset">Rétablir les hypothèses d\'origine</button>' +
@@ -1152,7 +1235,9 @@
         R.dcf.erreurs.forEach(function (e) { L.push('    ' + e); });
       }
       L.push('  Dividendes actualisés    : ' + (R.ddm.ok ? N(R.ddm.valeur) + ' FCFA' : 'inapplicable'));
-      L.push('  Multiples de comparables : ' + (fin(R.multiples.mediane) ? N(R.multiples.mediane) + ' FCFA sur ' + R.multiples.retenues + ' méthodes' : 'inapplicable'));
+      R.multiples.lignes.forEach(function (l) {
+        L.push('  ' + METHODE_LABELS[l.cle].padEnd(26) + ' : ' + (l.utilisable ? N(l.valeur) + ' FCFA (multiple ' + l.multiple.toFixed(2) + ')' : 'inapplicable'));
+      });
       L.push('  Revenu résiduel          : ' + (R.residuel.ok ? N(R.residuel.valeur) + ' FCFA' : 'inapplicable'));
       L.push('  Nombre de Graham         : ' + (R.graham.ok ? N(R.graham.valeur) + ' FCFA' : 'inapplicable'));
       L.push('');
