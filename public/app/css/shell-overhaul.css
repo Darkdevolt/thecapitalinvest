@@ -109,6 +109,31 @@ select:focus-visible{
   flex:0 0 16px;
 }
 
+/* -------------------------------------------------------------------------
+   Header / global search stacking
+   The search results live inside .tc-commandbar, while .tc-navstrip is its
+   following sibling. A z-index on the dropdown alone is not enough when the
+   header rows participate in separate stacking levels. Keep the command bar
+   above the navigation strip and the dropdown above both rows.
+   ------------------------------------------------------------------------- */
+.tc-commandbar{
+  position:relative!important;
+  z-index:1003!important;
+}
+.tc-search{
+  position:relative!important;
+  z-index:1005!important;
+}
+.tc-search-results{
+  position:absolute;
+  z-index:1100!important;
+  pointer-events:auto;
+}
+.tc-navstrip{
+  position:relative!important;
+  z-index:1002!important;
+}
+
 @media (max-width:1200px){
   .page-header{margin-bottom:16px}
 }
