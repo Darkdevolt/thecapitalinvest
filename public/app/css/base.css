@@ -18,3 +18,16 @@ button{cursor:pointer;}
 body.init-hidden{visibility:visible!important;opacity:1!important;}
 
 [hidden]{display:none!important;}
+
+/* -------------------------------------------------------------------------
+   Global header stacking
+   The search dropdown is a child of .tc-commandbar, while .tc-navstrip is a
+   following sibling. The command bar therefore needs its own higher stacking
+   level so the open search list can never be painted underneath the nav.
+   !important is intentional because app.html defines shell geometry in an
+   inline style block loaded after the stylesheets.
+   ------------------------------------------------------------------------- */
+.tc-commandbar{position:relative!important;z-index:1003!important;}
+.tc-search{position:relative!important;z-index:1005!important;}
+.tc-search-results{position:absolute;z-index:1100!important;pointer-events:auto!important;}
+.tc-navstrip{position:relative!important;z-index:1002!important;}
