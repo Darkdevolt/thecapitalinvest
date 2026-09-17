@@ -72,26 +72,36 @@ body.init-hidden{visibility:visible!important;opacity:1!important;}
 .tc-user:hover{background:rgba(184,150,78,.055)!important;}
 .tc-avatar{box-shadow:0 0 0 3px rgba(184,150,78,.045);}
 
-/* -------------------------------------------------------------------------
-   Horizontal navigation — enlarged premium financial-terminal treatment.
-   Only presentation is changed: route buttons, order and event handling stay
-   exactly as defined by app.html/router.js.
-   ------------------------------------------------------------------------- */
+/* Horizontal navigation — enlarged premium financial-terminal treatment. */
 .tc-navstrip{
   min-height:42px!important;
   padding:5px 8px!important;
-  background:
-    linear-gradient(180deg,rgba(32,27,20,.99) 0%,rgba(19,16,12,.99) 100%)!important;
+  background:linear-gradient(180deg,rgba(32,27,20,.99) 0%,rgba(19,16,12,.99) 100%)!important;
   border-top:1px solid rgba(255,255,255,.035)!important;
   border-bottom:1px solid rgba(184,150,78,.22)!important;
   box-shadow:0 9px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.022);
   gap:7px!important;
-  scrollbar-width:thin;
-  scrollbar-color:rgba(184,150,78,.48) transparent;
+  scrollbar-width:auto;
+  scrollbar-color:rgba(184,150,78,.62) rgba(255,255,255,.035);
 }
-.tc-navstrip::-webkit-scrollbar{height:3px;}
-.tc-navstrip::-webkit-scrollbar-track{background:transparent;}
-.tc-navstrip::-webkit-scrollbar-thumb{background:linear-gradient(90deg,rgba(184,150,78,.28),rgba(230,201,121,.62));border-radius:999px;}
+.tc-navstrip::-webkit-scrollbar{height:7px;}
+.tc-navstrip::-webkit-scrollbar-track{
+  background:rgba(255,255,255,.025);
+  border-radius:999px;
+  margin:0 8px;
+}
+.tc-navstrip::-webkit-scrollbar-thumb{
+  background:linear-gradient(90deg,rgba(150,116,51,.72),rgba(230,201,121,.92),rgba(150,116,51,.72));
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:999px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.18),0 1px 6px rgba(0,0,0,.30);
+}
+.tc-navstrip::-webkit-scrollbar-thumb:hover{
+  background:linear-gradient(90deg,rgba(184,150,78,.86),rgba(240,214,139,1),rgba(184,150,78,.86));
+}
+.tc-navstrip{
+  scrollbar-gutter:stable;
+}
 .tc-navitem{
   position:relative!important;
   height:36px!important;
@@ -104,50 +114,23 @@ body.init-hidden{visibility:visible!important;opacity:1!important;}
   letter-spacing:.05em!important;
   transition:color .16s ease,background .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease;
 }
-.tc-navitem::before{
-  content:"";
-  position:absolute;left:10px;right:10px;top:0;height:1px;
-  background:linear-gradient(90deg,transparent,rgba(230,201,121,.20),transparent);
-  opacity:0;transition:opacity .18s ease;
-}
-.tc-navitem::after{
-  content:"";
-  position:absolute;
-  left:14px;right:14px;bottom:3px;height:2px;
-  background:linear-gradient(90deg,transparent,var(--tc-gold),transparent);
-  border-radius:999px;
-  transform:scaleX(0);transform-origin:center;
-  transition:transform .18s ease;
-}
-.tc-navitem:hover{
-  transform:translateY(-1px);
-  color:var(--tc-white)!important;
-  background:rgba(184,150,78,.075)!important;
-  border-color:rgba(184,150,78,.14)!important;
-  box-shadow:0 5px 14px rgba(0,0,0,.12);
-}
+.tc-navitem::before{content:"";position:absolute;left:10px;right:10px;top:0;height:1px;background:linear-gradient(90deg,transparent,rgba(230,201,121,.20),transparent);opacity:0;transition:opacity .18s ease;}
+.tc-navitem::after{content:"";position:absolute;left:14px;right:14px;bottom:3px;height:2px;background:linear-gradient(90deg,transparent,var(--tc-gold),transparent);border-radius:999px;transform:scaleX(0);transform-origin:center;transition:transform .18s ease;}
+.tc-navitem:hover{transform:translateY(-1px);color:var(--tc-white)!important;background:rgba(184,150,78,.075)!important;border-color:rgba(184,150,78,.14)!important;box-shadow:0 5px 14px rgba(0,0,0,.12);}
 .tc-navitem:hover::before{opacity:1;}
 .tc-navitem:hover::after{transform:scaleX(.72);}
-.tc-navitem.active{
-  color:var(--tc-white)!important;
-  background:linear-gradient(180deg,rgba(184,150,78,.17),rgba(184,150,78,.075))!important;
-  border-color:rgba(184,150,78,.25)!important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.022),0 5px 16px rgba(0,0,0,.18)!important;
-}
+.tc-navitem.active{color:var(--tc-white)!important;background:linear-gradient(180deg,rgba(184,150,78,.17),rgba(184,150,78,.075))!important;border-color:rgba(184,150,78,.25)!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.022),0 5px 16px rgba(0,0,0,.18)!important;}
 .tc-navitem.active::before{opacity:1;}
 .tc-navitem.active::after{transform:scaleX(1);}
-.tc-navsep{
-  width:1px!important;height:22px!important;
-  margin:0 8px!important;flex:0 0 auto;
-  background:linear-gradient(180deg,transparent,rgba(184,150,78,.28),transparent)!important;
-}
+.tc-navsep{width:1px!important;height:22px!important;margin:0 8px!important;flex:0 0 auto;background:linear-gradient(180deg,transparent,rgba(184,150,78,.28),transparent)!important;}
 
 /* Keep the search dropdown above every header sibling. */
 .tc-shell,.tc-commandbar,.tc-search,.tc-search-results,.tc-navstrip{isolation:isolate;}
 .tc-search-results{isolation:auto;}
 
 @media(max-width:800px){
-  .tc-navstrip{min-height:40px!important;padding:4px 6px!important;gap:4px!important;}
+  .tc-navstrip{min-height:40px!important;padding:4px 6px!important;gap:4px!important;scrollbar-width:auto;}
+  .tc-navstrip::-webkit-scrollbar{height:6px;}
   .tc-navitem{height:34px!important;padding:0 11px!important;font-size:10px!important;}
   .tc-navsep{margin:0 4px!important;height:20px!important;}
 }
