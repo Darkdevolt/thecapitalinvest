@@ -16,21 +16,13 @@ button{cursor:pointer;}
 body.init-hidden{visibility:visible!important;opacity:1!important;}
 [hidden]{display:none!important;}
 
-/* -------------------------------------------------------------------------
-   Global header stacking
-   The search dropdown is a child of .tc-commandbar, while .tc-navstrip is a
-   following sibling. Keep the search layer above navigation without changing
-   the shell geometry or route behavior.
-   ------------------------------------------------------------------------- */
+/* Global header stacking */
 .tc-commandbar{position:relative!important;z-index:1003!important;}
 .tc-search{position:relative!important;z-index:1005!important;}
 .tc-search-results{position:absolute!important;z-index:1100!important;pointer-events:auto!important;}
 .tc-navstrip{position:relative!important;z-index:1002!important;}
 
-/* -------------------------------------------------------------------------
-   Header design refinement — visual only, no layout/behavior changes.
-   The existing shell remains authoritative for dimensions and routing.
-   ------------------------------------------------------------------------- */
+/* Header design refinement — visual only, no layout/behavior changes. */
 .tc-shell{isolation:isolate;}
 .tc-commandbar{
   background:linear-gradient(180deg,rgba(18,14,9,.99) 0%,rgba(10,8,4,.98) 100%)!important;
@@ -38,9 +30,7 @@ body.init-hidden{visibility:visible!important;opacity:1!important;}
   box-shadow:0 10px 30px rgba(0,0,0,.22)!important;
 }
 .tc-commandbar::before{
-  content:"";
-  position:absolute;
-  left:0;right:0;top:0;height:1px;
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;
   background:linear-gradient(90deg,transparent,rgba(230,201,121,.48),transparent);
   pointer-events:none;
 }
@@ -61,50 +51,90 @@ body.init-hidden{visibility:visible!important;opacity:1!important;}
 }
 .tc-search input:hover{border-color:rgba(184,150,78,.34)!important;}
 .tc-search input:focus{
-  border-color:rgba(230,201,121,.62)!important;
-  background:#211b16!important;
+  border-color:rgba(230,201,121,.62)!important;background:#211b16!important;
   box-shadow:0 0 0 3px rgba(184,150,78,.07),inset 0 1px 0 rgba(255,255,255,.035)!important;
 }
 .tc-search-results{
-  margin-top:2px;
-  border-color:rgba(184,150,78,.30)!important;
+  margin-top:2px;border-color:rgba(184,150,78,.30)!important;
   background:rgba(22,19,13,.985)!important;
   box-shadow:0 22px 55px rgba(0,0,0,.58),0 0 0 1px rgba(184,150,78,.035)!important;
   backdrop-filter:blur(12px);
 }
-
 .tc-command-actions{gap:7px!important;}
 .tc-market-pill,.tc-institute,.tc-iconbtn,.tc-logout{
-  border-color:rgba(184,150,78,.16)!important;
-  background:rgba(255,255,255,.018)!important;
+  border-color:rgba(184,150,78,.16)!important;background:rgba(255,255,255,.018)!important;
   transition:color .18s ease,border-color .18s ease,background .18s ease,transform .18s ease;
 }
 .tc-market-pill:hover,.tc-institute:hover,.tc-iconbtn:hover,.tc-logout:hover{
-  background:rgba(184,150,78,.055)!important;
-  border-color:rgba(184,150,78,.38)!important;
+  background:rgba(184,150,78,.055)!important;border-color:rgba(184,150,78,.38)!important;
 }
 .tc-iconbtn:hover,.tc-logout:hover,.tc-institute:hover{transform:translateY(-1px);}
 .tc-user:hover{background:rgba(184,150,78,.055)!important;}
 .tc-avatar{box-shadow:0 0 0 3px rgba(184,150,78,.045);}
 
+/* -------------------------------------------------------------------------
+   Horizontal navigation — premium financial-terminal treatment.
+   Only presentation is changed: route buttons, order and event handling stay
+   exactly as defined by app.html/router.js.
+   ------------------------------------------------------------------------- */
 .tc-navstrip{
-  background:linear-gradient(180deg,#1c1814 0%,#17130f 100%)!important;
-  border-bottom-color:rgba(184,150,78,.14)!important;
-  box-shadow:0 5px 18px rgba(0,0,0,.14);
+  background:
+    linear-gradient(180deg,rgba(30,25,19,.98) 0%,rgba(20,17,13,.99) 100%)!important;
+  border-top:1px solid rgba(255,255,255,.025)!important;
+  border-bottom:1px solid rgba(184,150,78,.18)!important;
+  box-shadow:0 7px 22px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.018);
+  gap:6px!important;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(184,150,78,.42) transparent;
 }
+.tc-navstrip::-webkit-scrollbar{height:3px;}
+.tc-navstrip::-webkit-scrollbar-track{background:transparent;}
+.tc-navstrip::-webkit-scrollbar-thumb{background:linear-gradient(90deg,rgba(184,150,78,.25),rgba(230,201,121,.55));border-radius:999px;}
 .tc-navitem{
-  position:relative;
-  transition:color .16s ease,background .16s ease,transform .16s ease;
+  position:relative!important;
+  height:32px!important;
+  padding:0 13px!important;
+  border:1px solid transparent!important;
+  border-radius:7px!important;
+  color:rgba(245,240,232,.58)!important;
+  font:600 10px/1 'DM Sans',sans-serif!important;
+  letter-spacing:.045em!important;
+  transition:color .16s ease,background .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease;
 }
-.tc-navitem:hover{transform:translateY(-1px);}
-.tc-navitem.active{
-  background:rgba(184,150,78,.105)!important;
+.tc-navitem::after{
+  content:"";
+  position:absolute;
+  left:14px;right:14px;bottom:3px;height:1px;
+  background:linear-gradient(90deg,transparent,var(--tc-gold),transparent);
+  transform:scaleX(0);transform-origin:center;
+  transition:transform .18s ease;
+}
+.tc-navitem:hover{
+  transform:translateY(-1px);
   color:var(--tc-white)!important;
-  box-shadow:inset 0 -2px 0 var(--tc-gold),0 3px 12px rgba(0,0,0,.10)!important;
+  background:rgba(184,150,78,.065)!important;
+  border-color:rgba(184,150,78,.10)!important;
 }
-.tc-navsep{background:rgba(184,150,78,.16)!important;}
+.tc-navitem:hover::after{transform:scaleX(.72);}
+.tc-navitem.active{
+  color:var(--tc-white)!important;
+  background:linear-gradient(180deg,rgba(184,150,78,.14),rgba(184,150,78,.065))!important;
+  border-color:rgba(184,150,78,.20)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.018),0 4px 14px rgba(0,0,0,.14)!important;
+}
+.tc-navitem.active::after{transform:scaleX(1);}
+.tc-navsep{
+  width:1px!important;height:20px!important;
+  margin:0 7px!important;flex:0 0 auto;
+  background:linear-gradient(180deg,transparent,rgba(184,150,78,.25),transparent)!important;
+}
 
-/* Keep the search dropdown above every header sibling even when other
-   components introduce their own stacking contexts. */
+/* Keep the search dropdown above every header sibling. */
 .tc-shell,.tc-commandbar,.tc-search,.tc-search-results,.tc-navstrip{isolation:isolate;}
 .tc-search-results{isolation:auto;}
+
+@media(max-width:800px){
+  .tc-navstrip{gap:3px!important;}
+  .tc-navitem{padding:0 10px!important;}
+  .tc-navsep{margin:0 4px!important;}
+}
