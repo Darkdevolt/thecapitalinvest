@@ -423,9 +423,9 @@
      méthodes exploitables (valeur calculable, poids non nul) et
      renormalise sur elles seules. */
   var POIDS_DEFAUT = {
-    dcf: 0.35, ddm: 0.20,
-    per: 0.15, pbr: 0.08, psr: 0.04, evEbitda: 0.02, pfcf: 0.01,
-    residuel: 0.10, graham: 0.05
+    dcf: 0.35, ddm: 0.20, dyMarche: 0.02,
+    per: 0.15, pbr: 0.06, psr: 0.04, evEbitda: 0.02, pfcf: 0.01,
+    vcpa: 0.04, residuel: 0.08, graham: 0.03
   };
 
   /* Pour une banque ou une assurance, le DCF classique n'a pas de sens :
@@ -440,9 +440,9 @@
      les établissements financiers. Ce n'est qu'un point de départ :
      l'utilisateur reste libre de tout repondérer. */
   var POIDS_DEFAUT_FINANCIER = {
-    dcf: 0.10, ddm: 0.25,
-    per: 0.10, pbr: 0.12, psr: 0.01, evEbitda: 0.01, pfcf: 0.01,
-    residuel: 0.35, graham: 0.05
+    dcf: 0.10, ddm: 0.20, dyMarche: 0.05,
+    per: 0.10, pbr: 0.08, psr: 0.01, evEbitda: 0.01, pfcf: 0.00,
+    vcpa: 0.15, residuel: 0.25, graham: 0.05
   };
 
   /* Source unique : af-core.js (partagée avec le score de qualité, qui a

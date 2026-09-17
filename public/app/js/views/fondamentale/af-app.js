@@ -36,18 +36,20 @@
   var METHODE_LABELS = {
     dcf: 'Flux actualisés (DCF)',
     ddm: 'Dividendes (Gordon-Shapiro)',
+    dyMarche: 'Dividende / rendement de marché',
     per: 'Cours / Bénéfice (PER)',
     pbr: 'Cours / Actif net (PBR)',
     psr: 'Cours / Chiffre d\'affaires (PSR)',
     evEbitda: 'VE / Excédent brut',
     pfcf: 'Cours / Flux libre',
+    vcpa: 'Actif net par action (VCPA)',
     residuel: 'Revenu résiduel',
     graham: 'Graham'
   };
   var METHODE_GROUPES = [
-    { titre: 'Flux et dividendes', cles: ['dcf', 'ddm'] },
+    { titre: 'Flux et dividendes', cles: ['dcf', 'ddm', 'dyMarche'] },
     { titre: 'Multiples de comparables', cles: ['per', 'pbr', 'psr', 'evEbitda', 'pfcf'] },
-    { titre: 'Autres méthodes', cles: ['residuel', 'graham'] }
+    { titre: 'Valeur comptable et autres', cles: ['vcpa', 'residuel', 'graham'] }
   ];
   var METHODE_COULEURS = ['#c8a24e', '#3fc98a', '#60a5fa', '#f0a72a', '#a78bfa', '#f0645e', '#4ade80', '#e879f9', '#38bdf8'];
 
@@ -155,6 +157,13 @@
     S.portee = read(LS.portee, null) || 'sousSecteur';
     try { S.comparables = C.comparables(S.ticker, { portee: S.portee }); }
     catch (e) { S.comparables = null; }
+    /* Rendement de référence pour la méthode « dividende / rendement de
+       marché » : toujours calculé sur le marché entier, indépendamment de
+       la portée choisie ci-dessus pour les multiples — un rendement
+       exigé n'a pas à se limiter au sous-secteur pour rester pertinent,
+       à la différence d'un PER ou d'un PBR. */
+    try { S.comparablesMarche = C.comparables(S.ticker, { portee: 'marche' }); }
+    catch (e) { S.comparablesMarche = null; }
     recompute();
     render();
     return true;
@@ -211,6 +220,33 @@
 
     function mult(cle) { var l = mu.lignes.filter(function (x) { return x.cle === cle; })[0]; return l && l.utilisable ? l.valeur : NaN; }
 
+    /* Valeur comptable par action retenue telle quelle comme cible (fair
+       value = 1× l'actif net), sans passer par un multiple de pairs :
+       une méthode à part entière, plus prudente que le PBR (qui suppose
+       que le marché a raison de payer plus ou moins que le comptable),
+       demandée explicitement pour compléter le PER, l'EV/EBIT et le
+       rendement plutôt que d'être noyée dans le multiple de comparables. */
+    var vcpaDirect = fin(H.anpa) && H.anpa > 0 ? H.anpa : NaN;
+
+    /* Dividende par action de référence : le dernier connu, même si
+       l'exercice le plus récent ne l'a pas encore publié (même logique
+       que le revenu résiduel plus haut). */
+    var dpaRef = fin(H.dividende) ? H.dividende : NaN;
+    if (!fin(dpaRef)) {
+      for (var iDpa = a.rows.length - 1; iDpa >= 0; iDpa--) {
+        if (fin(a.rows[iDpa].dpa) && a.rows[iDpa].dpa > 0) { dpaRef = a.rows[iDpa].dpa; break; }
+      }
+    }
+    /* Cible par le rendement : le dividende de référence rapporté au
+       rendement médian de l'ensemble du marché (pas du seul sous-secteur
+       — un rendement exigé se compare à l'éventail des placements
+       disponibles, pas seulement aux pairs directs), plutôt qu'à un coût
+       des fonds propres calculé par CAPM. Méthode plus simple que le
+       Gordon-Shapiro ci-dessus, à dessein : elle sert de recoupement,
+       pas de remplacement. */
+    var dyMarche = S.comparablesMarche ? S.comparablesMarche.medianes.rendement : NaN;
+    var vcDyMarche = pos(dpaRef) && fin(dyMarche) && dyMarche > 0 ? dpaRef / dyMarche : NaN;
+
     S.resultats = {
       taux: taux, financier: financier,
       dcf: D,
@@ -221,12 +257,16 @@
       ddm: dd,
       residuel: rr,
       graham: gr,
+      vcpaDirect: vcpaDirect,
+      dyMarche: { dpaRef: dpaRef, rendementMarche: dyMarche, valeur: vcDyMarche },
       synthese: V.synthese({
         dcf: D.ok ? D.parAction : NaN,
         ddm: dd.ok ? dd.valeur : NaN,
         per: mult('per'), pbr: mult('pbr'), psr: mult('psr'), evEbitda: mult('evEbitda'), pfcf: mult('pfcf'),
         residuel: rr.ok ? rr.valeur : NaN,
-        graham: gr.ok ? gr.valeur : NaN
+        graham: gr.ok ? gr.valeur : NaN,
+        vcpa: vcpaDirect,
+        dyMarche: vcDyMarche
       }, S.poids, a.data.price)
     };
   }
@@ -771,6 +811,17 @@
       html += '<div class="af-warn">' + R.ddm.erreurs.map(esc).join('<br>') + '</div>';
     }
 
+    html += groupe('Dividende / rendement de marché');
+    html += note('Cible plus simple que le Gordon-Shapiro : le dividende de référence rapporté au rendement médian de ' +
+      '<strong>l\'ensemble du marché</strong> (toutes valeurs BRVM suivies, pas seulement les pairs du secteur), sans ' +
+      'hypothèse de croissance ni de coût du capital. Sert de recoupement, pas de remplacement.');
+    if (pos(R.dyMarche.valeur)) {
+      html += '<div class="af-methode"><span>Dividende ' + or(n0(R.dyMarche.dpaRef), '—') + ' FCFA ÷ rendement marché ' +
+        or(pc(R.dyMarche.rendementMarche, 2), '—') + '</span><strong>' + n0(R.dyMarche.valeur) + ' FCFA</strong></div>';
+    } else {
+      html += '<div class="af-warn">' + (!pos(R.dyMarche.dpaRef) ? 'Aucun dividende connu, même historique, pour ce titre.' : 'Rendement médian du marché indisponible.') + '</div>';
+    }
+
     html += groupe('Multiples de comparables', 'per');
     html += porteeToggle();
     var med = S.comparables ? S.comparables.medianes : {};
@@ -793,7 +844,13 @@
           '<td class="r">' + (l.utilisable ? n0(l.valeur) + ' FCFA' : '<span class="af-nd">' + esc(l.note) + '</span>') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
 
-    html += groupe('Autres méthodes');
+    html += groupe('Valeur comptable et autres méthodes');
+    html += note('L\'actif net par action est ici retenu <strong>tel quel</strong> comme valeur cible — un P/B de 1×, ' +
+      'plus prudent que le PBR ci-dessus qui applique le multiple que le marché accorde aux pairs. C\'est une méthode ' +
+      'à part entière, pas une variante du PBR : elle ne suppose aucune prime ni décote sur les fonds propres.');
+    html += '<div class="af-methode"><span>Actif net par action (VCPA)</span><strong>' +
+      (pos(R.vcpaDirect) ? n0(R.vcpaDirect) + ' FCFA' : '<span class="af-nd">non calculable</span>') + '</strong></div>';
+
     html += note('Le revenu résiduel réutilise la croissance perpétuelle fixée ci-dessus pour l\'actualisation des flux ' +
       '(pas la croissance de départ, économiquement intenable à l\'infini) et suppose, sauf indication contraire, que ' +
       'la société continue à distribuer le même taux de son bénéfice que par le passé plutôt que 0 %.');
@@ -1235,9 +1292,11 @@
         R.dcf.erreurs.forEach(function (e) { L.push('    ' + e); });
       }
       L.push('  Dividendes actualisés    : ' + (R.ddm.ok ? N(R.ddm.valeur) + ' FCFA' : 'inapplicable'));
+      L.push('  Dividende / rdt marché   : ' + (pos(R.dyMarche.valeur) ? N(R.dyMarche.valeur) + ' FCFA' : 'inapplicable'));
       R.multiples.lignes.forEach(function (l) {
         L.push('  ' + METHODE_LABELS[l.cle].padEnd(26) + ' : ' + (l.utilisable ? N(l.valeur) + ' FCFA (multiple ' + l.multiple.toFixed(2) + ')' : 'inapplicable'));
       });
+      L.push('  Actif net par action     : ' + (pos(R.vcpaDirect) ? N(R.vcpaDirect) + ' FCFA' : 'inapplicable'));
       L.push('  Revenu résiduel          : ' + (R.residuel.ok ? N(R.residuel.valeur) + ' FCFA' : 'inapplicable'));
       L.push('  Nombre de Graham         : ' + (R.graham.ok ? N(R.graham.valeur) + ' FCFA' : 'inapplicable'));
       L.push('');
