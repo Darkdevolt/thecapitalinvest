@@ -73,60 +73,73 @@ body.init-hidden{visibility:visible!important;opacity:1!important;}
 .tc-avatar{box-shadow:0 0 0 3px rgba(184,150,78,.045);}
 
 /* -------------------------------------------------------------------------
-   Horizontal navigation — premium financial-terminal treatment.
+   Horizontal navigation — enlarged premium financial-terminal treatment.
    Only presentation is changed: route buttons, order and event handling stay
    exactly as defined by app.html/router.js.
    ------------------------------------------------------------------------- */
 .tc-navstrip{
+  min-height:42px!important;
+  padding:5px 8px!important;
   background:
-    linear-gradient(180deg,rgba(30,25,19,.98) 0%,rgba(20,17,13,.99) 100%)!important;
-  border-top:1px solid rgba(255,255,255,.025)!important;
-  border-bottom:1px solid rgba(184,150,78,.18)!important;
-  box-shadow:0 7px 22px rgba(0,0,0,.20),inset 0 1px 0 rgba(255,255,255,.018);
-  gap:6px!important;
+    linear-gradient(180deg,rgba(32,27,20,.99) 0%,rgba(19,16,12,.99) 100%)!important;
+  border-top:1px solid rgba(255,255,255,.035)!important;
+  border-bottom:1px solid rgba(184,150,78,.22)!important;
+  box-shadow:0 9px 26px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.022);
+  gap:7px!important;
   scrollbar-width:thin;
-  scrollbar-color:rgba(184,150,78,.42) transparent;
+  scrollbar-color:rgba(184,150,78,.48) transparent;
 }
 .tc-navstrip::-webkit-scrollbar{height:3px;}
 .tc-navstrip::-webkit-scrollbar-track{background:transparent;}
-.tc-navstrip::-webkit-scrollbar-thumb{background:linear-gradient(90deg,rgba(184,150,78,.25),rgba(230,201,121,.55));border-radius:999px;}
+.tc-navstrip::-webkit-scrollbar-thumb{background:linear-gradient(90deg,rgba(184,150,78,.28),rgba(230,201,121,.62));border-radius:999px;}
 .tc-navitem{
   position:relative!important;
-  height:32px!important;
-  padding:0 13px!important;
-  border:1px solid transparent!important;
-  border-radius:7px!important;
-  color:rgba(245,240,232,.58)!important;
-  font:600 10px/1 'DM Sans',sans-serif!important;
-  letter-spacing:.045em!important;
+  height:36px!important;
+  min-width:max-content;
+  padding:0 15px!important;
+  border:1px solid rgba(255,255,255,.035)!important;
+  border-radius:8px!important;
+  color:rgba(245,240,232,.66)!important;
+  font:600 11px/1 'DM Sans',sans-serif!important;
+  letter-spacing:.05em!important;
   transition:color .16s ease,background .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.tc-navitem::before{
+  content:"";
+  position:absolute;left:10px;right:10px;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(230,201,121,.20),transparent);
+  opacity:0;transition:opacity .18s ease;
 }
 .tc-navitem::after{
   content:"";
   position:absolute;
-  left:14px;right:14px;bottom:3px;height:1px;
+  left:14px;right:14px;bottom:3px;height:2px;
   background:linear-gradient(90deg,transparent,var(--tc-gold),transparent);
+  border-radius:999px;
   transform:scaleX(0);transform-origin:center;
   transition:transform .18s ease;
 }
 .tc-navitem:hover{
   transform:translateY(-1px);
   color:var(--tc-white)!important;
-  background:rgba(184,150,78,.065)!important;
-  border-color:rgba(184,150,78,.10)!important;
+  background:rgba(184,150,78,.075)!important;
+  border-color:rgba(184,150,78,.14)!important;
+  box-shadow:0 5px 14px rgba(0,0,0,.12);
 }
+.tc-navitem:hover::before{opacity:1;}
 .tc-navitem:hover::after{transform:scaleX(.72);}
 .tc-navitem.active{
   color:var(--tc-white)!important;
-  background:linear-gradient(180deg,rgba(184,150,78,.14),rgba(184,150,78,.065))!important;
-  border-color:rgba(184,150,78,.20)!important;
-  box-shadow:inset 0 0 0 1px rgba(255,255,255,.018),0 4px 14px rgba(0,0,0,.14)!important;
+  background:linear-gradient(180deg,rgba(184,150,78,.17),rgba(184,150,78,.075))!important;
+  border-color:rgba(184,150,78,.25)!important;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.022),0 5px 16px rgba(0,0,0,.18)!important;
 }
+.tc-navitem.active::before{opacity:1;}
 .tc-navitem.active::after{transform:scaleX(1);}
 .tc-navsep{
-  width:1px!important;height:20px!important;
-  margin:0 7px!important;flex:0 0 auto;
-  background:linear-gradient(180deg,transparent,rgba(184,150,78,.25),transparent)!important;
+  width:1px!important;height:22px!important;
+  margin:0 8px!important;flex:0 0 auto;
+  background:linear-gradient(180deg,transparent,rgba(184,150,78,.28),transparent)!important;
 }
 
 /* Keep the search dropdown above every header sibling. */
@@ -134,7 +147,7 @@ body.init-hidden{visibility:visible!important;opacity:1!important;}
 .tc-search-results{isolation:auto;}
 
 @media(max-width:800px){
-  .tc-navstrip{gap:3px!important;}
-  .tc-navitem{padding:0 10px!important;}
-  .tc-navsep{margin:0 4px!important;}
+  .tc-navstrip{min-height:40px!important;padding:4px 6px!important;gap:4px!important;}
+  .tc-navitem{height:34px!important;padding:0 11px!important;font-size:10px!important;}
+  .tc-navsep{margin:0 4px!important;height:20px!important;}
 }
