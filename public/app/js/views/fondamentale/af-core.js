@@ -74,7 +74,7 @@
     actions: ['nombre_actions', 'nb_actions', 'actions', 'shares', 'nbActions'],
     bpa: ['bpa', 'eps', 'benefice_par_action'],
     dpa: ['dpa', 'dividende_par_action', 'dps', 'dividende'],
-    treso: ['tresorerie', 'treso', 'liquidites', 'disponibilites', 'cash'],
+    treso: ['tresorerie_actif', 'tresorerie', 'treso', 'liquidites', 'disponibilites', 'cash'],
     impot: ['impots', 'impot', 'charge_impot', 'tax']
   };
 
