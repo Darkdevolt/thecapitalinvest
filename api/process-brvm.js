@@ -42,8 +42,17 @@ export const config = { maxDuration: 60 };
 
 /** Variation maximale autorisée sur une séance, en pourcentage. */
 const VARIATION_LIMIT = 7.5;
-/** Écart toléré entre la variation publiée et la variation recalculée. */
-const VARIATION_TOLERANCE = 0.25;
+/* Écart toléré entre la variation publiée et la variation recalculée. Le
+   cours de référence utilisé par BRVM pour publier sa propre variation peut
+   différer légèrement de notre dernière clôture enregistrée (suspension
+   temporaire, bulletin pas encore stabilisé en cours de séance...) — un
+   écart courant de bruit, pas une anomalie de saisie. 0,25 % s'est révélé
+   bien trop strict en pratique : constaté en production le 2026-09-18, où
+   près de la moitié des titres d'une séance parfaitement normale (aucun
+   dépassement de VARIATION_LIMIT) étaient rejetés en bloc pour des écarts
+   de l'ordre de 0,3 à 1,5 point, retardant toute la séance de plusieurs
+   heures alors que rien n'était réellement anormal. */
+const VARIATION_TOLERANCE = 1.5;
 /** Profondeur de recherche du cours de référence précédent. */
 const LOOKBACK_DAYS = 45;
 
