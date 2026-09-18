@@ -13,7 +13,8 @@
     "check": "node scripts/check-assets.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.0"
+    "@supabase/supabase-js": "^2.39.0",
+    "sharp": "^0.33.5"
   },
   "license": "ISC"
 }
