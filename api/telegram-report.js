@@ -13,8 +13,8 @@
  */
 import sharp from 'sharp';
 import { supabaseAdmin } from '../lib/supabase.js';
-import { isMachineRequest } from '../lib/middleware.js';
-import { json, fail, handlePreflight, requestUrl } from '../lib/http.js';
+import { isMachineRequest, handlePreflight } from '../lib/middleware.js';
+import { json, fail, requestUrl } from '../lib/http.js';
 import appConfig from '../lib/config.js';
 
 export const config = { maxDuration: 30 };
