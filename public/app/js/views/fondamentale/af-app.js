@@ -302,15 +302,20 @@
 
   /* ── Onglets ──────────────────────────────────────────────────── */
 
+  /* Le "sep" marque le début d'un groupe visuel dans la barre d'onglets
+     (simple séparateur, aucune incidence sur le routage : chaque onglet
+     garde son data-aftab et son gestionnaire de clic habituels). Sert à
+     donner une structure lisible à neuf onglets plutôt qu'une rangée
+     plate : vue d'ensemble, données chiffrées, valorisation, évaluation. */
   var TABS = [
     { id: 'synthese', l: 'Synthèse' },
-    { id: 'etats', l: 'États financiers' },
+    { id: 'etats', l: 'États financiers', sep: true },
     { id: 'ratios', l: 'Ratios' },
     { id: 'croissance', l: 'Croissance' },
-    { id: 'valorisation', l: 'Valorisation' },
+    { id: 'valorisation', l: 'Valorisation', sep: true },
     { id: 'sensibilite', l: 'Sensibilité' },
     { id: 'comparables', l: 'Comparables' },
-    { id: 'qualite', l: 'Qualité' },
+    { id: 'qualite', l: 'Qualité', sep: true },
     { id: 'donnees', l: 'Données & hypothèses' }
   ];
 
@@ -319,7 +324,8 @@
     if (!host) return;
     var t = $('afTabs');
     if (t) t.innerHTML = TABS.map(function (x) {
-      return '<button type="button" class="af-tab' + (x.id === S.tab ? ' on' : '') + '" data-aftab="' + x.id + '">' + x.l + '</button>';
+      return (x.sep ? '<span class="af-tab-sep"></span>' : '') +
+        '<button type="button" class="af-tab' + (x.id === S.tab ? ' on' : '') + '" data-aftab="' + x.id + '">' + x.l + '</button>';
     }).join('');
 
     renderHeader();
@@ -588,17 +594,17 @@
         t: 'Rentabilité', l: [
           ['margeBrute', 'Marge d\'exploitation (RBE)', 'pc', 'marge-exploitation'],
           ['margeNette', 'Marge nette', 'pc', 'marge-nette'],
-          ['roe', 'Rentabilité des capitaux propres', 'pc', 'roe'],
+          ['roe', 'Rentabilité des capitaux propres', 'pc', 'roe', [0.12]],
           ['roa', 'Rentabilité des actifs', 'pc', 'roa'],
           ['roce', 'Rentabilité des capitaux employés', 'pc']
         ]
       },
       {
         t: 'Structure financière', l: [
-          ['gearing', 'Levier financier', 'n2', 'gearing'],
+          ['gearing', 'Levier financier', 'n2', 'gearing', [1, true]],
           ['autonomie', 'Autonomie financière', 'pc', 'autonomie'],
           ['detteActif', 'Dette rapportée au bilan', 'pc'],
-          ['detteEbitda', 'Dette nette sur excédent brut', 'n2', 'dette-ebitda'],
+          ['detteEbitda', 'Dette nette sur excédent brut', 'n2', 'dette-ebitda', [3, true]],
           ['levier', 'Multiplicateur des capitaux propres', 'n2']
         ]
       },
@@ -625,7 +631,7 @@
           ['psr', 'Cours sur chiffre d\'affaires', 'n2'],
           ['evEbitda', 'Valeur d\'entreprise sur excédent brut', 'n2', 'ev-ebitda'],
           ['pfcf', 'Cours sur flux libre', 'n2'],
-          ['rendement', 'Rendement du dividende', 'pc2', 'rendement'],
+          ['rendement', 'Rendement du dividende', 'pc2', 'rendement', [0.04]],
           ['payout', 'Taux de distribution', 'pc', 'payout']
         ]
       }
@@ -640,13 +646,17 @@
       html += '<div class="af-scroll"><table class="af-table"><thead><tr><th></th>' +
         a.years.map(function (y) { return '<th class="r">' + y + '</th>'; }).join('') + '</tr></thead><tbody>';
       b.l.forEach(function (row) {
-        var k = row[0], lbl = row[1], fmt = row[2], mk = row[3];
+        var k = row[0], lbl = row[1], fmt = row[2], mk = row[3], seuil = row[4];
         html += '<tr><td>' + esc(lbl) + (mk ? memo(mk) : '') + '</td>' +
-          a.ratios.map(function (r) {
+          a.ratios.map(function (r, i) {
             var v = r[k];
             var txt = !fin(v) ? '—'
               : fmt === 'pc' ? pc(v) : fmt === 'pc2' ? pc(v, 2) : fmt === 'n0' ? n0(v) : n2(v);
-            return '<td class="r' + (fin(v) ? '' : ' af-vide') + '">' + txt + '</td>';
+            /* Seul le dernier exercice est colorisé bon/mauvais : sur
+               l'historique complet, la couleur guiderait l'œil vers des
+               années qui ne représentent plus la situation actuelle. */
+            var cls = seuil && i === a.ratios.length - 1 ? ' ' + tone(v, seuil[0], seuil[1]) : '';
+            return '<td class="r' + (fin(v) ? '' : ' af-vide') + cls + '">' + txt + '</td>';
           }).join('') + '</tr>';
       });
       html += '</tbody></table></div>';
