@@ -756,6 +756,27 @@ async function runDcbrSync({ categories, maxPages, limit }) {
   return result;
 }
 
+/* Une exception levée dans runPipeline() (scraper en échec, écriture Supabase
+   qui échoue, panne inattendue) remontait jusqu'ici sans jamais être écrite
+   dans brvm_scrape_runs : le pipeline plantait en silence, une simple réponse
+   HTTP 500 que personne ne regarde puisque le cron n'a pas d'observateur.
+   Cet enrobage journalise systématiquement le plantage sous status: 'error'
+   avant de renvoyer l'erreur, pour que le run apparaisse dans le même journal
+   que les séances bloquées — et donc soit couvert par la même alerte. */
+async function runPipelineWithLogging(res, mode) {
+  const startedAt = new Date().toISOString();
+  try {
+    return await runPipeline(res, mode);
+  } catch (error) {
+    console.error('[PROCESS-BRVM] runPipeline', error);
+    await safeRunLog({
+      started_at: startedAt, finished_at: new Date().toISOString(),
+      status: 'error', error: String(error?.message || error)
+    });
+    return fail(res, 500, 'Traitement de la séance impossible.', 'PROCESS_BRVM_ERROR', error);
+  }
+}
+
 async function runPipeline(res, mode) {
   const startedAt = new Date().toISOString();
   const payload = await scrapeBrvm();
@@ -1002,7 +1023,7 @@ export default async function handler(req, res) {
             status: 'error', error: String(e?.message || e), result: { source: 'auto' }
           });
         }
-        return await runPipeline(res, cfg.mode);
+        return await runPipelineWithLogging(res, cfg.mode);
       }
     }
 
@@ -1091,7 +1112,7 @@ export default async function handler(req, res) {
       if (current.mode !== 'auto') {
         return json(res, 200, { success: true, skipped: true, reason: 'automatic_processing_disabled' });
       }
-      return await runPipeline(res, current.mode);
+      return await runPipelineWithLogging(res, current.mode);
     }
 
     // Consultation des réglages par l'interface d'administration.
@@ -1109,7 +1130,7 @@ export default async function handler(req, res) {
     if (machine && !admin && current.mode !== 'auto') {
       return json(res, 200, { success: true, skipped: true, reason: 'automatic_processing_disabled' });
     }
-    return await runPipeline(res, current.mode);
+    return await runPipelineWithLogging(res, current.mode);
   } catch (error) {
     return fail(res, 500, 'Traitement de la séance impossible.', 'PROCESS_BRVM_ERROR', error);
   }
