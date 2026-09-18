@@ -125,13 +125,31 @@
             const runs = r.runs || [];
             body.innerHTML = runs.length ? runs.map(function (run) {
                 const res = run.result || {};
-                const tone = run.status === 'success' ? 'badge-green' : 'badge-orange';
+                const warnings = Array.isArray(res.warnings) ? res.warnings : [];
+                /* Une séance "success" avec des avertissements reste écrite en base
+                   (le contrôle ne bloque que sur un vrai dépassement ±7,5 %), mais
+                   ce n'est pas la même chose qu'une séance sans aucune anomalie :
+                   l'admin doit pouvoir repérer laquelle mérite un coup d'œil sans
+                   ouvrir chaque ligne. */
+                const tone = run.status === 'success'
+                    ? (warnings.length ? 'badge-orange' : 'badge-green')
+                    : 'badge-orange';
+                const statusLabel = run.status === 'success' && warnings.length ? 'success (à vérifier)' : run.status;
                 const detailBits = [];
                 if (run.error) detailBits.push(run.error);
-                if (Array.isArray(res.violations) && res.violations.length) detailBits.push(res.violations.length + ' variation(s) hors limite');
+                if (Array.isArray(res.violations) && res.violations.length) {
+                    const horsLimite = res.violations.filter(v => v.type === 'variation_hors_limite').length;
+                    const incoherente = res.violations.length - horsLimite;
+                    if (horsLimite) detailBits.push(horsLimite + ' dépassement(s) réel(s) du seuil ±7,5 %');
+                    if (incoherente) detailBits.push(incoherente + ' écart(s) variation publiée/recalculée');
+                }
+                if (warnings.length) {
+                    detailBits.push(warnings.length + ' avertissement(s) non bloquant(s) : ' +
+                        warnings.map(function (w) { return TC.esc(w.ticker || '?'); }).join(', '));
+                }
                 return '<tr>' +
                     '<td class="td-mono">' + TC.esc(new Date(run.started_at).toLocaleString('fr-FR')) + '</td>' +
-                    '<td><span class="badge ' + tone + '">' + TC.esc(run.status) + '</span></td>' +
+                    '<td><span class="badge ' + tone + '">' + TC.esc(statusLabel) + '</span></td>' +
                     '<td class="td-mono">' + TC.esc(res.date_seance || '—') + '</td>' +
                     '<td class="r td-mono">' + TC.esc(res.historique ?? res.courses ?? res.count ?? '—') + '</td>' +
                     '<td class="r td-mono">' + TC.esc(res.indices ?? '—') + '</td>' +
