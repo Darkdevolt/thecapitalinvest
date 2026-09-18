@@ -589,6 +589,204 @@
     };
   }
 
+  /* ── Périodes intermédiaires (trimestres et semestres) ────────────
+
+     La source publie parfois un trimestre isolé (T1), parfois un cumul
+     (S1, l'annuel), rarement les quatre trimestres. Un même exercice
+     peut ainsi avoir T1 et S1 connus mais pas T2 : comme S1 = T1 + T2
+     par construction comptable, T2 se déduit par soustraction plutôt
+     que d'être laissé vide alors qu'il est parfaitement déterminé.
+     Seules les grandeurs de flux (compte de résultat) s'additionnent
+     ainsi sur une période — un bilan (capitaux propres, dette...) est
+     une photo à une date, pas une somme de trimestres : il est donc
+     exclu de cette reconstruction. */
+
+  var FLUX_INTER = ['ca', 'rbe', 'rn'];
+  var LABEL_PERIODE = { t1: 'T1', t2: 'T2', t3: 'T3', t4: 'T4', s1: 'S1', s2: 'S2', annuel: 'Annuel' };
+
+  /* Une valeur déduite plutôt que publiée est marquée `brut:false` pour
+     que l'interface la distingue visuellement, exactement comme les
+     données saisies manuellement ailleurs dans ce module. Deux passes
+     suffisent : la première résout les cas directs (T2 = S1 − T1, T4 =
+     Annuel − T1 − T2 − T3), la seconde profite des valeurs que la
+     première vient de déduire (S1 déduit de T1 + T2 permet alors de
+     déduire S2 = Annuel − S1). */
+  function resoudPeriode(v) {
+    for (var pass = 0; pass < 2; pass++) {
+      if (v.t1 && v.s1 && !v.t2) v.t2 = { valeur: v.s1.valeur - v.t1.valeur, brut: false };
+      if (v.t2 && v.s1 && !v.t1) v.t1 = { valeur: v.s1.valeur - v.t2.valeur, brut: false };
+      if (v.t1 && v.t2 && !v.s1) v.s1 = { valeur: v.t1.valeur + v.t2.valeur, brut: false };
+      if (v.t1 && v.t2 && v.t3 && v.annuel && !v.t4) v.t4 = { valeur: v.annuel.valeur - v.t1.valeur - v.t2.valeur - v.t3.valeur, brut: false };
+      if (v.t3 && v.t4 && !v.s2) v.s2 = { valeur: v.t3.valeur + v.t4.valeur, brut: false };
+      if (v.s1 && v.annuel && !v.s2) v.s2 = { valeur: v.annuel.valeur - v.s1.valeur, brut: false };
+      if (v.s2 && v.annuel && !v.s1) v.s1 = { valeur: v.annuel.valeur - v.s2.valeur, brut: false };
+      if (v.s1 && v.s2 && !v.annuel) v.annuel = { valeur: v.s1.valeur + v.s2.valeur, brut: false };
+      if (v.t3 && v.s2 && !v.t4) v.t4 = { valeur: v.s2.valeur - v.t3.valeur, brut: false };
+    }
+    return v;
+  }
+
+  /* Reconstitue, pour un champ de flux et une année, les six périodes
+     possibles (t1..t4, s1, s2) à partir de ce que la source publie
+     réellement pour cet exercice. */
+  function periodesAnnee(byPeriode, champ) {
+    var v = {};
+    /* T4 et S2 ne sont quasiment jamais publiés tels quels sur la BRVM,
+       mais si la source les tague un jour explicitement, ils comptent
+       comme bruts au même titre que les autres plutôt que d'être ignorés. */
+    ['t1', 't2', 't3', 't4', 's1', 's2', 'annuel'].forEach(function (p) {
+      var row = byPeriode[p];
+      var val = row ? row[champ] : NaN;
+      v[p] = fin(val) ? { valeur: val, brut: true } : null;
+    });
+    return resoudPeriode(v);
+  }
+
+  /* Croissance d'une période par rapport à la MÊME période de l'exercice
+     précédent — jamais un trimestre contre un semestre, qui n'auraient
+     rien de comparable. */
+  function croissancePeriode(cur, prev) {
+    if (!cur || !prev || !pos(prev.valeur)) return NaN;
+    return cur.valeur / prev.valeur - 1;
+  }
+
+  /* Cumul depuis le début de l'exercice, borné au dernier trimestre
+     entièrement déterminé (publié ou déduit) : s'arrêter avant plutôt
+     que d'agréger un trimestre manquant comme s'il valait zéro. */
+  function cumulPartiel(v) {
+    var n = 0, somme = 0;
+    for (var i = 1; i <= 3; i++) {
+      var p = v['t' + i];
+      if (!p) break;
+      somme += p.valeur; n = i;
+    }
+    if (n > 0) return { n: n, valeur: somme, label: n === 1 ? 'T1' : 'T1–T' + n };
+    if (v.s1) return { n: 2, valeur: v.s1.valeur, label: 'S1' };
+    return null;
+  }
+
+  function intermediaire(ticker) {
+    var q = norm(ticker);
+    var all = Array.isArray(global.allFinancials) ? global.allFinancials : [];
+    var rows = all.filter(function (f) { return norm(f.ticker) === q; }).map(normalizeRow)
+      .filter(function (f) { return fin(f.annee); });
+    if (!rows.length) return { enough: false, raison: 'aucun état financier disponible pour ce titre' };
+
+    /* Une correction publiée plus tard écrase la version précédente du
+       même exercice et de la même période, comme pour la série annuelle. */
+    var parAnnee = {};
+    rows.forEach(function (r) {
+      parAnnee[r.annee] = parAnnee[r.annee] || {};
+      parAnnee[r.annee][r.periode || 'annuel'] = r;
+    });
+    var annees = Object.keys(parAnnee).map(Number).sort(function (a, b) { return a - b; });
+
+    var champs = {};
+    FLUX_INTER.forEach(function (c) {
+      champs[c] = {};
+      annees.forEach(function (y) { champs[c][y] = periodesAnnee(parAnnee[y], c); });
+    });
+
+    var aDesPeriodes = annees.some(function (y) {
+      return ['t1', 't2', 't3', 's1'].some(function (p) { return !!parAnnee[y][p]; });
+    });
+    if (!aDesPeriodes) return { enough: false, raison: 'seuls des exercices annuels complets sont disponibles, aucun trimestre ni semestre publié' };
+
+    var derniere = annees[annees.length - 1];
+
+    /* Comparaisons d'une période à la même période l'an dernier, pour
+       chaque type de période effectivement publié ou déduit sur le
+       dernier exercice — jamais deux périodes de nature différente. */
+    var comparaisons = [];
+    ['t1', 't2', 't3', 's1'].forEach(function (p) {
+      var cur = champs.ca[derniere] ? champs.ca[derniere][p] : null;
+      if (!cur) return;
+      var champsPeriode = {};
+      FLUX_INTER.forEach(function (c) {
+        var cv = champs[c][derniere][p];
+        var pv = champs[c][derniere - 1] ? champs[c][derniere - 1][p] : null;
+        champsPeriode[c] = { valeur: cv, croissance: croissancePeriode(cv, pv), precedent: pv };
+      });
+      comparaisons.push({ periode: p, label: LABEL_PERIODE[p], annee: derniere, brut: cur.brut, champs: champsPeriode });
+    });
+
+    /* Cumul depuis le début du dernier exercice contre le même point de
+       l'exercice précédent : la question qu'un investisseur pose le
+       plus souvent en cours d'année — « fait-on mieux que l'an dernier
+       à date comparable ? » — plutôt qu'un trimestre isolé. */
+    var ytd = null;
+    var reachCourant = cumulPartiel(champs.ca[derniere]);
+    if (reachCourant) {
+      var ytdChamps = {};
+      FLUX_INTER.forEach(function (c) {
+        var v = champs[c][derniere], vp = champs[c][derniere - 1];
+        function cumul(vv, n) {
+          if (!vv) return NaN;
+          if (n === 2 && vv.s1) return vv.s1.valeur;
+          var s = 0;
+          for (var i = 1; i <= n; i++) { if (!vv['t' + i]) return NaN; s += vv['t' + i].valeur; }
+          return s;
+        }
+        var courant = cumul(v, reachCourant.n);
+        var precedent = cumul(vp, reachCourant.n);
+        ytdChamps[c] = { courant: courant, precedent: precedent, croissance: fin(courant) && pos(precedent) ? courant / precedent - 1 : NaN };
+      });
+      ytd = { annee: derniere, anneePrecedente: derniere - 1, label: reachCourant.label, champs: ytdChamps };
+    }
+
+    /* Saisonnalité : part moyenne du chiffre d'affaires réalisée dans
+       chaque trimestre (ou, à défaut, chaque semestre) sur l'ensemble
+       des exercices où le rapprochement à l'annuel est possible — publié
+       ou déduit, peu importe, la part relative est la même identité
+       comptable dans les deux cas. */
+    var partsTrim = { t1: [], t2: [], t3: [], t4: [] };
+    var partsSem = { s1: [], s2: [] };
+    annees.forEach(function (y) {
+      var v = champs.ca[y];
+      if (!v || !v.annuel || !pos(v.annuel.valeur)) return;
+      ['t1', 't2', 't3', 't4'].forEach(function (p) { if (v[p]) partsTrim[p].push(v[p].valeur / v.annuel.valeur); });
+      ['s1', 's2'].forEach(function (p) { if (v[p]) partsSem[p].push(v[p].valeur / v.annuel.valeur); });
+    });
+    var nAnneesTrim = Math.max(partsTrim.t1.length, partsTrim.t2.length, partsTrim.t3.length, partsTrim.t4.length);
+    var saisonnalite = null;
+    if (nAnneesTrim >= 1) {
+      var partsT = { t1: mean(partsTrim.t1), t2: mean(partsTrim.t2), t3: mean(partsTrim.t3), t4: mean(partsTrim.t4) };
+      var maxP = -1, maxK = null;
+      ['t1', 't2', 't3', 't4'].forEach(function (k) { if (fin(partsT[k]) && partsT[k] > maxP) { maxP = partsT[k]; maxK = k; } });
+      saisonnalite = {
+        granularite: 'trimestre', parts: partsT, exercices: nAnneesTrim,
+        marquee: fin(maxP) && maxP - 0.25 > 0.08,
+        dominante: maxK, dominanteLabel: maxK ? LABEL_PERIODE[maxK] : null,
+        verdict: !fin(maxP) ? ND
+          : (maxP - 0.25 > 0.08 ? LABEL_PERIODE[maxK] + ' concentre en moyenne ' + Math.round(maxP * 100) + ' % du chiffre d\'affaires annuel : activité nettement saisonnière.'
+            : 'Le chiffre d\'affaires se répartit assez régulièrement sur l\'année, sans trimestre nettement dominant.')
+      };
+    } else if (partsSem.s1.length || partsSem.s2.length) {
+      var partsS = { s1: mean(partsSem.s1), s2: mean(partsSem.s2) };
+      var ecart = fin(partsS.s1) ? partsS.s1 - 0.5 : (fin(partsS.s2) ? 0.5 - partsS.s2 : NaN);
+      saisonnalite = {
+        granularite: 'semestre', parts: partsS, exercices: Math.max(partsSem.s1.length, partsSem.s2.length),
+        marquee: fin(ecart) && Math.abs(ecart) > 0.08,
+        dominante: fin(ecart) ? (ecart > 0 ? 's1' : 's2') : null,
+        dominanteLabel: fin(ecart) ? (ecart > 0 ? 'S1' : 'S2') : null,
+        verdict: !fin(ecart) ? ND
+          : (Math.abs(ecart) > 0.08 ? (ecart > 0 ? 'S1' : 'S2') + ' concentre en moyenne ' + Math.round((ecart > 0 ? partsS.s1 : partsS.s2) * 100) + ' % du chiffre d\'affaires annuel : activité plus soutenue sur ce semestre.'
+            : 'Le chiffre d\'affaires se répartit assez également entre les deux semestres.')
+      };
+    }
+
+    return {
+      enough: true,
+      annees: annees,
+      champs: champs,
+      derniere: derniere,
+      comparaisons: comparaisons,
+      ytd: ytd,
+      saisonnalite: saisonnalite,
+      labels: LABEL_PERIODE
+    };
+  }
+
   /* ── Comparaison sectorielle ──────────────────────────────────── */
 
   function univers(filtre) {
@@ -699,6 +897,7 @@
     qualite: qualite,
     controles: controles,
     analyse: analyse,
+    intermediaire: intermediaire,
     univers: univers,
     comparables: comparables,
     estFinancier: estFinancier

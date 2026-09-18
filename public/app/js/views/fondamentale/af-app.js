@@ -57,7 +57,7 @@
   var METHODE_COULEURS = ['#c8a24e', '#3fc98a', '#60a5fa', '#f0a72a', '#a78bfa', '#f0645e', '#4ade80', '#e879f9', '#38bdf8'];
 
   var S = {
-    ticker: '', analyse: null, hypotheses: null, wacc: null,
+    ticker: '', analyse: null, inter: null, hypotheses: null, wacc: null,
     tab: 'synthese', overrides: {}, poids: null,
     /* Mémorise, en session seulement (pas persisté), le dernier poids
        actif de chaque méthode désactivée par l'interrupteur on/off, pour
@@ -160,6 +160,7 @@
     S.overrides = read(LS.ov + S.ticker, {}) || {};
     var a = C.analyse(S.ticker, S.overrides);
     S.analyse = a;
+    try { S.inter = C.intermediaire(S.ticker); } catch (e) { S.inter = { enough: false, raison: 'erreur de calcul' }; }
     if (!a.enough) {
       S.hypotheses = null; S.resultats = null;
       render();
@@ -308,15 +309,16 @@
      donner une structure lisible à neuf onglets plutôt qu'une rangée
      plate : vue d'ensemble, données chiffrées, valorisation, évaluation. */
   var TABS = [
-    { id: 'synthese', l: 'Synthèse' },
-    { id: 'etats', l: 'États financiers', sep: true },
-    { id: 'ratios', l: 'Ratios' },
-    { id: 'croissance', l: 'Croissance' },
-    { id: 'valorisation', l: 'Valorisation', sep: true },
-    { id: 'sensibilite', l: 'Sensibilité' },
-    { id: 'comparables', l: 'Comparables' },
-    { id: 'qualite', l: 'Qualité', sep: true },
-    { id: 'donnees', l: 'Données & hypothèses' }
+    { id: 'synthese', l: 'Synthèse', t: 'Vue d\'ensemble : score de qualité, valorisation de synthèse et signaux de lecture.' },
+    { id: 'etats', l: 'États financiers', sep: true, t: 'Comptes annuels publiés, exercice par exercice.' },
+    { id: 'ratios', l: 'Ratios', t: 'Rentabilité, structure financière, flux et valorisation, sur tous les exercices.' },
+    { id: 'croissance', l: 'Croissance', t: 'Taux de croissance annuel moyen, régularité et projection.' },
+    { id: 'intermediaire', l: 'Intermédiaire', t: 'Trimestres et semestres : comparaison à la même période l\'an dernier, cumul depuis le début de l\'exercice, saisonnalité.' },
+    { id: 'valorisation', l: 'Valorisation', sep: true, t: 'Hypothèses et calcul de la valeur cible (DCF, multiples, dividendes...).' },
+    { id: 'sensibilite', l: 'Sensibilité', t: 'Matrice de sensibilité de la valorisation et scénarios pessimiste/central/optimiste.' },
+    { id: 'comparables', l: 'Comparables', t: 'Comparaison aux pairs du secteur ou du marché.' },
+    { id: 'qualite', l: 'Qualité', sep: true, t: 'Score de qualité maison et score de Piotroski, en détail.' },
+    { id: 'donnees', l: 'Données & hypothèses', t: 'Remarques sur les données, saisie des postes manquants, hypothèses en vigueur.' }
   ];
 
   function render() {
@@ -325,7 +327,7 @@
     var t = $('afTabs');
     if (t) t.innerHTML = TABS.map(function (x) {
       return (x.sep ? '<span class="af-tab-sep"></span>' : '') +
-        '<button type="button" class="af-tab' + (x.id === S.tab ? ' on' : '') + '" data-aftab="' + x.id + '">' + x.l + '</button>';
+        '<button type="button" class="af-tab' + (x.id === S.tab ? ' on' : '') + '" data-aftab="' + x.id + '" title="' + esc(x.t || '') + '">' + x.l + '</button>';
     }).join('');
 
     renderHeader();
@@ -337,6 +339,7 @@
     }
     var fn = {
       synthese: paneSynthese, etats: paneEtats, ratios: paneRatios, croissance: paneCroissance,
+      intermediaire: paneIntermediaire,
       valorisation: paneValorisation, sensibilite: paneSensibilite, comparables: paneComparables,
       qualite: paneQualite, donnees: paneDonnees
     }[S.tab] || paneSynthese;
@@ -769,6 +772,118 @@
       : methode === 'manuel' ? 'Méthode retenue : taux saisi manuellement, appliqué uniformément.'
         : 'Méthode retenue : prolongement du taux de croissance annuel moyen observé, propre à chaque grandeur.';
     return ok ? out : null;
+  }
+
+  /* ── Onglet Intermédiaire ─────────────────────────────────────── */
+
+  var LABEL_CHAMP_INTER = { ca: 'Chiffre d\'affaires', rbe: 'Résultat brut d\'exploitation', rn: 'Résultat net' };
+
+  /* Une valeur déduite (T2 = S1 − T1, par exemple) porte le même badge
+     ambré que les données saisies manuellement ailleurs dans ce module :
+     une seule convention visuelle pour « ceci ne vient pas tel quel de
+     la source », plutôt que d'en inventer une deuxième. */
+  function badgeDeduit(brut) {
+    return brut ? '' : '<span class="af-badge-deduit" title="Valeur déduite par soustraction (période cumulée moins périodes déjà connues), non publiée telle quelle">déduit</span>';
+  }
+
+  function paneIntermediaire() {
+    var it = S.inter;
+    if (!it || !it.enough) {
+      return vide('Aucune donnée intermédiaire', it && it.raison ? it.raison.charAt(0).toUpperCase() + it.raison.slice(1) + '.' : 'Aucun trimestre ni semestre publié pour ce titre.');
+    }
+    var html = '';
+
+    html += groupe('Trimestres et semestres');
+    html += note('Quand un cumul publié (semestre ou annuel) et une période déjà connue permettent de déduire la ' +
+      'période manquante par simple soustraction, elle est calculée ici et signalée <span class="af-badge-deduit">déduit</span> ' +
+      'plutôt que laissée vide. Seules les grandeurs du compte de résultat s\'y prêtent : un bilan est une photo à une ' +
+      'date, pas une somme de trimestres.');
+    html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Exercice</th>' +
+      ['t1', 't2', 't3', 't4', 's1', 's2', 'annuel'].map(function (p) { return '<th class="r">' + esc(it.labels[p]) + '</th>'; }).join('') +
+      '</tr></thead><tbody>' +
+      it.annees.slice().reverse().map(function (y) {
+        var v = it.champs.ca[y];
+        return '<tr><td>' + y + '</td>' + ['t1', 't2', 't3', 't4', 's1', 's2', 'annuel'].map(function (p) {
+          var cell = v[p];
+          if (!cell) return '<td class="r af-vide">—</td>';
+          return '<td class="r' + (cell.brut ? '' : ' af-saisi') + '">' + mont(cell.valeur) + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div>';
+    html += note('Grandeur affichée : chiffre d\'affaires. Le résultat brut d\'exploitation et le résultat net suivent la ' +
+      'même reconstruction et servent aux comparaisons ci-dessous.');
+
+    html += groupe('Comparaison à la même période l\'an dernier');
+    html += note('Chaque période n\'est comparée qu\'à son équivalent exact de l\'exercice précédent — un trimestre ' +
+      'contre le même trimestre, un semestre contre le même semestre, jamais l\'un contre l\'autre.');
+    if (!it.comparaisons.length) {
+      html += note('Aucune période récente n\'a d\'équivalent publié sur l\'exercice précédent pour établir une comparaison.');
+    } else {
+      it.comparaisons.forEach(function (cmp) {
+        html += '<div class="af-cat">' + esc(cmp.label) + ' ' + cmp.annee + ' vs ' + esc(cmp.label) + ' ' + (cmp.annee - 1) + badgeDeduit(cmp.brut) + '</div>';
+        html += '<div class="af-stats">' + FLUX_KEYS.map(function (c) {
+          var f = cmp.champs[c];
+          if (!f.valeur) return '';
+          return st(LABEL_CHAMP_INTER[c], mont(f.valeur.valeur),
+            fin(f.croissance) ? '<span class="' + (f.croissance >= 0 ? 'af-up' : 'af-down') + '">' + pcs(f.croissance) + '</span> vs ' + or(mont(f.precedent && f.precedent.valeur), '—')
+              : (f.precedent ? '' : 'aucune période équivalente l\'an dernier'));
+        }).join('') + '</div>';
+      });
+    }
+
+    html += groupe('Cumul depuis le début de l\'exercice');
+    if (!it.ytd) {
+      html += note('Aucun trimestre du dernier exercice n\'est encore déterminé : le cumul depuis le début de l\'année ne peut pas être établi.');
+    } else {
+      var yc = it.ytd.champs.ca;
+      html += note('Cumul ' + esc(it.ytd.label) + ' ' + it.ytd.annee + ' comparé au même cumul, à date comparable, sur l\'exercice ' + it.ytd.anneePrecedente + '.');
+      html += '<div class="af-val-head">' +
+        '<div><div class="af-val-l">Cumul ' + esc(it.ytd.label) + ' ' + it.ytd.annee + '</div><div class="af-val-v">' + or(mont(yc.courant)) + '</div></div>' +
+        '<div><div class="af-val-l">Même cumul, ' + it.ytd.anneePrecedente + '</div><div class="af-val-v af-dim">' + or(mont(yc.precedent)) + '</div></div>' +
+        '<div><div class="af-val-l">Évolution</div><div class="af-val-v ' + (fin(yc.croissance) ? (yc.croissance >= 0 ? 'af-up' : 'af-down') : '') + '">' + or(pcs(yc.croissance), '—') + '</div></div>' +
+        '</div>';
+      html += '<div class="af-stats">' + FLUX_KEYS.filter(function (c) { return c !== 'ca'; }).map(function (c) {
+        var f = it.ytd.champs[c];
+        return st(LABEL_CHAMP_INTER[c], or(mont(f.courant), '—'), fin(f.croissance) ? pcs(f.croissance) + ' vs même cumul l\'an dernier' : '');
+      }).join('') + '</div>';
+    }
+
+    html += groupe('Saisonnalité de l\'activité');
+    var s = it.saisonnalite;
+    if (!s) {
+      html += note('Pas assez d\'exercices avec à la fois un détail infra-annuel et un annuel complet pour établir une saisonnalité.');
+    } else {
+      html += note('Part moyenne du chiffre d\'affaires réalisée par ' + s.granularite + ', sur ' + s.exercices +
+        ' exercice(s) où le rapprochement à l\'annuel est possible. La ligne pointillée marque le partage parfaitement ' +
+        'égal (' + (s.granularite === 'trimestre' ? '25 % chacun' : '50 % chacun') + ') : au-dessus, ce ' + s.granularite + ' pèse plus que sa part théorique.');
+      html += saisonBars(s);
+      html += '<div class="af-warn" style="' + (s.marquee ? '' : 'background:var(--af-panel-2);border-left-color:var(--af-line-strong)') + '">' + esc(s.verdict) + '</div>';
+    }
+
+    return html;
+  }
+
+  var FLUX_KEYS = ['ca', 'rbe', 'rn'];
+
+  function saisonBars(s) {
+    var keys = s.granularite === 'trimestre' ? ['t1', 't2', 't3', 't4'] : ['s1', 's2'];
+    var labels = { t1: 'T1', t2: 'T2', t3: 'T3', t4: 'T4', s1: 'S1', s2: 'S2' };
+    var baseline = s.granularite === 'trimestre' ? 0.25 : 0.5;
+    var vals = keys.map(function (k) { return fin(s.parts[k]) ? s.parts[k] : 0; });
+    var maxScale = Math.max(baseline * 1.4, Math.max.apply(null, vals) * 1.15, 0.01);
+    var baselinePct = Math.min(96, baseline / maxScale * 100);
+    return '<div class="af-season">' +
+      '<div class="af-season-baseline" style="bottom:' + baselinePct + '%"></div>' +
+      keys.map(function (k, i) {
+        var v = s.parts[k];
+        var h = fin(v) ? Math.min(100, v / maxScale * 100) : 0;
+        var dominant = s.dominante === k;
+        return '<div class="af-season-col">' +
+          '<div class="af-season-v">' + (fin(v) ? pc(v, 0) : '—') + '</div>' +
+          '<div class="af-season-track"><div class="af-season-bar' + (dominant && s.marquee ? ' af-season-dom' : '') + '" style="height:' + h + '%"></div></div>' +
+          '<div class="af-season-l">' + labels[k] + '</div>' +
+          '</div>';
+      }).join('') +
+      '</div>';
   }
 
   /* ── Onglet Valorisation ──────────────────────────────────────── */

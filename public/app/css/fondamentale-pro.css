@@ -561,6 +561,41 @@
 .af-test-l { font-size: 12.5px; color: var(--af-dim); }
 .af-test-d { font-family: 'DM Mono', monospace; font-size: 10.5px; color: var(--af-faint); text-align: right; }
 
+/* ── Intermédiaire (trimestres et semestres) ───────────────────── */
+
+.af-badge-deduit {
+  display: inline-block; margin-left: 8px; padding: 2px 7px;
+  font-size: 9px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700;
+  color: var(--af-warn); background: var(--af-warn-soft);
+  border: 1px solid rgba(243, 181, 85, .35); border-radius: 20px;
+  vertical-align: middle;
+}
+
+.af-season {
+  position: relative;
+  display: flex; align-items: flex-end; gap: 18px;
+  height: 190px; padding: 0 8px 0;
+  margin: 4px 0 16px;
+}
+.af-season-baseline {
+  position: absolute; left: 0; right: 0; height: 0;
+  border-top: 1px dashed var(--af-line-strong);
+}
+.af-season-baseline::after {
+  content: 'répartition égale'; position: absolute; right: 0; top: -16px;
+  font-size: 9.5px; letter-spacing: .04em; color: var(--af-faint); white-space: nowrap;
+}
+.af-season-col { flex: 1 1 0; display: flex; flex-direction: column; align-items: center; height: 100%; }
+.af-season-v { font-family: 'DM Mono', monospace; font-size: 13px; font-weight: 600; color: var(--af-dim); margin-bottom: 8px; }
+.af-season-track { flex: 1 1 auto; width: 100%; max-width: 64px; display: flex; align-items: flex-end; }
+.af-season-bar {
+  width: 100%; min-height: 3px; border-radius: 5px 5px 0 0;
+  background: linear-gradient(180deg, var(--af-gold), rgba(216, 181, 104, .45));
+  transition: height .2s;
+}
+.af-season-bar.af-season-dom { background: linear-gradient(180deg, var(--af-warn), rgba(243, 181, 85, .5)); }
+.af-season-l { margin-top: 9px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--af-faint); font-weight: 600; }
+
 /* ── Écrans étroits ─────────────────────────────────────────────── */
 
 @media (max-width: 720px) {
@@ -573,4 +608,5 @@
   .af-panel { padding: 16px 14px 32px; }
   .af-cible-v { font-size: 34px; }
   .af-verdict { flex-wrap: wrap; }
+  .af-season { gap: 10px; height: 160px; }
 }
