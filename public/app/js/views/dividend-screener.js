@@ -172,6 +172,8 @@
     if (!card || !tbody) return;
     const list = upcomingDetachments();
     card.style.display = list.length ? '' : 'none';
+    const count = document.getElementById('divUpcomingCount');
+    if (count) count.textContent = list.length + ' événement' + (list.length > 1 ? 's' : '');
     if (!list.length) return;
     tbody.innerHTML = list.map(u => `<tr>
       <td><strong style="color:var(--gold)">${esc(u.ticker)}</strong></td>
@@ -407,6 +409,7 @@
     tbody.querySelectorAll('.div-ticker').forEach(el=>el.addEventListener('click',()=>{
       const t=el.dataset.ticker;
       if(typeof window.nav==='function') window.nav('fiche='+encodeURIComponent(t));
+      else window.location.hash = '#fiche='+encodeURIComponent(t);
       else if(typeof window.openSecuritySheet==='function') window.openSecuritySheet(t);
     }));
   }
