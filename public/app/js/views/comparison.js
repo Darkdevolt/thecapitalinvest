@@ -67,6 +67,13 @@
   function buildRows() {
     var mp = window.TC_METRICS;
     var keys = mp ? mp.getSelection('comparison', CMP_DEFAULT).filter(function (k) { return VF[k]; }) : CMP_DEFAULT;
+    // Ordre du catalogue (Marché → Valorisation → Rentabilité → Solidité → Synthèse),
+    // pas l'ordre des clics : sinon P/B se retrouvait sous Volume, loin du PER.
+    if (mp && mp.CAT) {
+      var pos = {};
+      mp.CAT.forEach(function (m, i) { pos[m.k] = i; });
+      keys = keys.slice().sort(function (a, b) { return pos[a] - pos[b]; });
+    }
     return keys.map(function (k) {
       var m = mp && mp.metaFor(k);
       return { k: k, l: m ? m.l : k, f: VF[k], hi: m ? m.hi : null };
