@@ -98,10 +98,19 @@
   function mount(host, viewId, defaults, onChange) {
     injectCss();
     var sel = getSelection(viewId, defaults);
+    // Les vues reconstruisent souvent leur DOM après un changement (le
+    // Comparateur refait tout son rendu) : sans mémoire, la liste se refermait
+    // à chaque case cochée et l'utilisateur devait la rouvrir pour chaque
+    // indicateur. L'état ouvert + le défilement survivent donc au remontage.
+    var states = (window.__tcMpState = window.__tcMpState || {});
+    var st = states[viewId] || (states[viewId] = { open: false, scroll: 0, off: null });
+    if (st.off) document.removeEventListener('click', st.off); // un seul écouteur par vue
     var wrap = document.createElement('span');
     wrap.className = 'tc-mp-wrap';
     var btn = document.createElement('button');
-    btn.type = 'button'; btn.className = 'tc-mp-btn'; btn.textContent = '⚙ Indicateurs';
+    btn.type = 'button'; btn.className = 'tc-mp-btn';
+    function label() { btn.textContent = '⚙ Indicateurs (' + sel.length + ')'; }
+    label();
     var pop = document.createElement('div'); pop.className = 'tc-mp-pop'; pop.hidden = true;
     wrap.appendChild(btn); wrap.appendChild(pop);
     host.appendChild(wrap);
@@ -122,18 +131,32 @@
           else sel = sel.filter(function (v) { return v !== cb.value; });
           if (!sel.length) { sel = ['cours']; }
           setSelection(viewId, sel);
+          label();
+          st.scroll = pop.scrollTop;
           onChange(sel.slice());
         });
       });
       pop.querySelectorAll('[data-p]').forEach(function (b) {
         b.addEventListener('click', function () {
           sel = (PRESETS[b.getAttribute('data-p')] || PRESETS.Complet).slice();
-          setSelection(viewId, sel); paint(); onChange(sel.slice());
+          setSelection(viewId, sel); label(); paint(); onChange(sel.slice());
         });
       });
     }
-    btn.addEventListener('click', function (e) { e.stopPropagation(); pop.hidden = !pop.hidden; if (!pop.hidden) paint(); });
-    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) pop.hidden = true; });
+    btn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      pop.hidden = !pop.hidden;
+      st.open = !pop.hidden;
+      if (!pop.hidden) { paint(); pop.scrollTop = 0; st.scroll = 0; }
+    });
+    pop.addEventListener('scroll', function () { st.scroll = pop.scrollTop; });
+    st.off = function (e) {
+      // wrap peut avoir été retiré du DOM par un remontage : on ne ferme que sur un vrai clic extérieur.
+      if (!wrap.contains(e.target)) { pop.hidden = true; st.open = false; }
+    };
+    document.addEventListener('click', st.off);
+
+    if (st.open) { pop.hidden = false; paint(); pop.scrollTop = st.scroll; }
 
     return sel.slice();
   }

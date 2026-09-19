@@ -10,6 +10,8 @@
 
   var chart = null;
   var picks = [];
+  var started = false;    // la comparaison ne se calcule qu'après « Lancer »
+  var hashParsed = false; // le lien #comparison=… n'est lu qu'une fois
 
   function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
   // null / '' = donnée absente, jamais 0 (Number(null) vaut 0 : une colonne
@@ -96,7 +98,12 @@
       '#view-comparison .cmp-notes{margin:14px 0 0;padding:12px 0 0 16px;border-top:1px solid var(--border2);font-size:11px;line-height:1.55;color:var(--dim)}',
       '#view-comparison .cmp-radar{height:360px}',
       '#view-comparison .cmp-bar{display:flex;justify-content:flex-end;gap:8px;margin:14px 0 8px}',
-      '#view-comparison .cmp-bar button{border:1px solid var(--border2);background:transparent;color:var(--gold-l);border-radius:7px;padding:6px 12px;font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}',
+      '#view-comparison .cmp-bar #cmpCsv{border:1px solid var(--border2);background:transparent;color:var(--gold-l);border-radius:7px;padding:6px 12px;font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}',
+      '#view-comparison .cmp-bar #cmpCsv:hover{border-color:var(--gold)}',
+      '#view-comparison .cmp-start{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:26px 24px}',
+      '#view-comparison .cmp-start-t{font:600 15px var(--serif);color:var(--cream)}',
+      '#view-comparison .cmp-go{margin-top:10px;border:0;background:var(--gold);color:#1a1408;border-radius:8px;padding:10px 20px;font:700 11px var(--sans);text-transform:uppercase;letter-spacing:.08em;cursor:pointer}',
+      '#view-comparison .cmp-go:disabled{opacity:.35;cursor:not-allowed}',
       '#view-comparison .fch-muted{color:var(--dim);font-size:12px}',
       '@media(max-width:900px){#view-comparison .cmp-cols{grid-template-columns:1fr}}'
     ].join('\n');
@@ -162,7 +169,7 @@
       data: { labels: RADAR.map(function (k) { return labels[k]; }), datasets: datasets },
       options: {
         responsive: true, maintainAspectRatio: false,
-        scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: 'rgba(184,150,78,.12)' }, angleLines: { color: 'rgba(184,150,78,.12)' }, pointLabels: { color: 'rgba(245,240,232,.6)', font: { size: 10 } } } },
+        scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: 'rgba(184,150,78,.12)' }, angleLines: { color: 'rgba(184,150,78,.12)' }, pointLabels: { color: 'rgba(245,240,232,.88)', font: { size: 11, weight: '600' } } } },
         plugins: {
           legend: { position: 'bottom', labels: { color: 'rgba(245,240,232,.7)', boxWidth: 10, font: { size: 10 } } },
           tooltip: { callbacks: { label: function (ctx) {
@@ -200,13 +207,60 @@
     if (!companies.length) { view.innerHTML = '<div class="page-header"><h1>Comparaison</h1></div><div class="fch-muted">Données sociétés indisponibles.</div>'; return; }
     var known = {};
     companies.forEach(function (c) { known[String(c.ticker).toUpperCase()] = true; });
-    if (!picks.length) {
+    // Le lien #comparison=A,B,C n'est lu qu'une fois : c'est un choix explicite
+    // (≥ 2 valeurs valides → comparaison lancée). Sans lien, on part d'une
+    // sélection vide : plus aucune société n'est choisie à la place de l'utilisateur.
+    if (!hashParsed) {
+      hashParsed = true;
       var m = (location.hash || '').match(/^#comparison=(.+)$/);
       // Un ticker inconnu dans le lien (société retirée, faute de frappe) donnerait une colonne vide.
       picks = m ? decodeURIComponent(m[1]).split(',').map(function (x) { return x.trim().toUpperCase(); })
         .filter(function (x, i, a) { return known[x] && a.indexOf(x) === i; }).slice(0, 6) : [];
-      if (picks.length < 2) picks = companies.slice(0, 3).map(function (c) { return String(c.ticker).toUpperCase(); });
+      started = picks.length >= 2;
     }
+    if (picks.length < 2) started = false;
+
+    var head = '<div class="page-header"><h1>Comparaison <span style="color:var(--gold)">de sociétés</span></h1>'
+      + '<p>2 à 6 valeurs — tableau, radar et export. Meilleure valeur par ligne en vert ; le radar situe chaque société parmi toutes les valeurs cotées.</p></div>'
+      + '<div class="cmp-pick">'
+      + picks.map(function (t) { return '<span class="cmp-chip">' + esc(t) + '<button type="button" data-rm="' + esc(t) + '">×</button></span>'; }).join('')
+      + (picks.length < 6 ? '<select id="cmpAdd"><option value="">+ Ajouter une société…</option>'
+        + companies.filter(function (c) { return picks.indexOf(String(c.ticker).toUpperCase()) < 0; })
+          .map(function (c) { return '<option value="' + esc(c.ticker) + '">' + esc(c.ticker) + ' — ' + esc(c.nom || c.nom_court || '') + '</option>'; }).join('')
+        + '</select>' : '')
+      + '</div>';
+
+    function wirePicks() {
+      var add = document.getElementById('cmpAdd');
+      if (add) add.addEventListener('change', function () {
+        var v = String(this.value || '').toUpperCase();
+        if (v && picks.indexOf(v) < 0 && picks.length < 6) { picks.push(v); render(); }
+      });
+      view.querySelectorAll('[data-rm]').forEach(function (b) {
+        b.addEventListener('click', function () {
+          var t = b.getAttribute('data-rm');
+          picks = picks.filter(function (x) { return x !== t; });
+          if (picks.length < 2) started = false;
+          render();
+        });
+      });
+      var go = document.getElementById('cmpGo');
+      if (go) go.addEventListener('click', function () { started = true; render(); });
+    }
+
+    // Étape 1 : choisir. La comparaison ne se calcule qu'après « Lancer ».
+    if (!started) {
+      var n = picks.length;
+      view.innerHTML = head
+        + '<div class="card cmp-start"><div class="cmp-start-t">' + (n === 0 ? 'Choisissez les sociétés à comparer'
+          : n === 1 ? '1 société choisie — ajoutez-en au moins une autre' : n + ' sociétés choisies') + '</div>'
+        + '<div class="fch-muted">De 2 à 6 valeurs. Le tableau et le radar s\'affichent une fois la comparaison lancée.</div>'
+        + '<button type="button" id="cmpGo" class="cmp-go"' + (n < 2 ? ' disabled' : '') + '>Lancer la comparaison</button></div>';
+      wirePicks();
+      try { if (/^#comparison=/.test(location.hash)) history.replaceState(null, '', '#comparison'); } catch (e) {}
+      return;
+    }
+
     var snaps = picks.map(snapshot);
     ROWS = buildRows();
 
@@ -225,16 +279,7 @@
     }
     if (snaps.some(function (s) { return s.financial; })) notes.push('n.s. : non significatif (dette nette / fonds propres pour un établissement financier).');
 
-    view.innerHTML =
-      '<div class="page-header"><h1>Comparaison <span style="color:var(--gold)">de sociétés</span></h1>'
-      + '<p>2 à 6 valeurs — tableau, radar et export. Meilleure valeur par ligne en vert ; le radar situe chaque société parmi toutes les valeurs cotées.</p></div>'
-      + '<div class="cmp-pick">'
-      + picks.map(function (t) { return '<span class="cmp-chip">' + esc(t) + '<button type="button" data-rm="' + esc(t) + '">×</button></span>'; }).join('')
-      + (picks.length < 6 ? '<select id="cmpAdd"><option value="">+ Ajouter une société…</option>'
-        + companies.filter(function (c) { return picks.indexOf(String(c.ticker).toUpperCase()) < 0; })
-          .map(function (c) { return '<option value="' + esc(c.ticker) + '">' + esc(c.ticker) + ' — ' + esc(c.nom || c.nom_court || '') + '</option>'; }).join('')
-        + '</select>' : '')
-      + '</div>'
+    view.innerHTML = head
       + '<div class="cmp-bar"><span id="cmpActions"><button type="button" id="cmpCsv">Export CSV</button> </span></div>'
       + '<div class="cmp-cols">'
       + '<div class="card" style="overflow-x:auto"><table><thead><tr><th>Indicateur</th>'
@@ -268,24 +313,13 @@
     drawRadar(snaps);
     try { history.replaceState(null, '', '#comparison=' + encodeURIComponent(picks.join(','))); } catch (e) {}
 
-    var add = document.getElementById('cmpAdd');
-    if (add) add.addEventListener('change', function () {
-      var v = String(this.value || '').toUpperCase();
-      if (v && picks.indexOf(v) < 0 && picks.length < 6) { picks.push(v); render(); }
-    });
-    view.querySelectorAll('[data-rm]').forEach(function (b) {
-      b.addEventListener('click', function () {
-        var t = b.getAttribute('data-rm');
-        picks = picks.filter(function (x) { return x !== t; });
-        if (picks.length < 2) { var c0 = companies.find(function (c) { return picks.indexOf(String(c.ticker).toUpperCase()) < 0; }); if (c0) picks.push(String(c0.ticker).toUpperCase()); }
-        render();
-      });
-    });
+    wirePicks();
     var cx = document.getElementById('cmpCsv');
     if (cx) cx.addEventListener('click', function () { csv(snaps); });
 
-    if (window.TC_METRICS && !document.getElementById('cmpActions').querySelector('.tc-mp-wrap')) {
-      window.TC_METRICS.mount(document.getElementById('cmpActions'), 'comparison', CMP_DEFAULT, function () { render(); });
+    var actions = document.getElementById('cmpActions');
+    if (window.TC_METRICS && actions && !actions.querySelector('.tc-mp-wrap')) {
+      window.TC_METRICS.mount(actions, 'comparison', CMP_DEFAULT, function () { render(); });
     }
   }
 
