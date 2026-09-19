@@ -11,30 +11,18 @@
   var CRIT = {};
 
   function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
-  function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
-  function nf(v, dec) { var n = Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
-  function pf(v, dec) { var n = Number(v); return isFinite(n) ? (n > 0 ? '+' : '') + n.toFixed(dec == null ? 1 : dec) + ' %' : '—'; }
+  // null / vide = donnée absente, jamais 0 (Number(null) vaut 0).
+  function num(v) { if (v == null || v === '') return null; var n = Number(v); return isFinite(n) ? n : null; }
+  function nf(v, dec) { var n = (v == null || v === '') ? NaN : Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
+  function pf(v, dec) { var n = (v == null || v === '') ? NaN : Number(v); return isFinite(n) ? (n > 0 ? '+' : '') + n.toFixed(dec == null ? 1 : dec) + ' %' : '—'; }
   function money(v) {
-    var n = Number(v); if (!isFinite(n)) return '—';
+    var n = (v == null || v === '') ? NaN : Number(v); if (!isFinite(n)) return '—';
     var a = Math.abs(n);
     if (a >= 1e9) return (n / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Md';
     if (a >= 1e6) return (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M';
     return nf(n);
   }
 
-  function latestFin(ticker) {
-    return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(function (f) { return f && String(f.ticker).toUpperCase() === ticker; })
-      .sort(function (a, b) { return Number(b.annee || 0) - Number(a.annee || 0); })[0] || null;
-  }
-  function caGrowth(ticker) {
-    var rows = (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(function (f) { return f && String(f.ticker).toUpperCase() === ticker; })
-      .sort(function (a, b) { return Number(b.annee || 0) - Number(a.annee || 0); });
-    if (rows.length < 2) return null;
-    var a = Number(rows[0].chiffre_affaires), b = Number(rows[1].chiffre_affaires);
-    return isFinite(a) && isFinite(b) && b !== 0 ? (a / b - 1) * 100 : null;
-  }
 
   // Un enregistrement par titre, tous indicateurs calculés une fois.
   function buildRows() {
@@ -49,24 +37,14 @@
     return Object.keys(coursByT).map(function (t) {
       var c = coursByT[t];
       var e = ent[t] || {};
-      var f = latestFin(t);
+      // Indicateurs : source unique partagée avec le score et le comparateur (score-maison.js).
+      var m = typeof window.tcMetricsFor === 'function' ? window.tcMetricsFor(t) : {};
       var cp = num(c.cloture != null ? c.cloture : c.cours);
-      var bpa = f ? num(f.bpa) : null, dpa = f ? num(f.dpa) : null;
-      var fp = f ? num(f.fonds_propres != null ? f.fonds_propres : f.capitaux_propres) : null;
-      var na = (f && num(f.nombre_actions)) || num(e.nombre_actions) || num(e.nb_actions);
-      var roe = f ? num(f.roe) : null; if (roe != null && roe <= 1.5) roe *= 100;
-      if (roe == null && f && num(f.resultat_net) != null && fp) roe = (f.resultat_net / fp) * 100;
-      var marge = f ? num(f.marge_nette) : null; if (marge != null && marge <= 1.5) marge *= 100;
-      if (marge == null && f && num(f.resultat_net) != null && num(f.chiffre_affaires)) marge = (f.resultat_net / f.chiffre_affaires) * 100;
-      var yld = f ? num(f.dividend_yield != null ? f.dividend_yield : f.rendement_dividende) : null;
-      if (yld != null && yld <= 1.5) yld *= 100;
-      if (yld == null && dpa != null && cp) yld = (dpa / cp) * 100;
-      var dette = f ? num(f.dette_nette != null ? f.dette_nette : f.dettes_financieres) : null;
-      var detteFp = (dette != null && fp) ? dette / fp : null;
+      var roe = m.roe != null ? m.roe : null, marge = m.marge != null ? m.marge : null, yld = m.rdt != null ? m.rdt : null;
+      var detteFp = m.detteFp != null ? m.detteFp : null;
       var secteur = e.secteur || (typeof getSector === 'function' ? getSector(t) : '') || '—';
-      var per = (cp != null && bpa != null && bpa > 0) ? cp / bpa : null;
-      var pbr = (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null;
-      var croissance = caGrowth(t);
+      var per = m.per != null ? m.per : null, pbr = m.pbr != null ? m.pbr : null;
+      var croissance = m.croissance != null ? m.croissance : null;
       var score = null;
       if (typeof window.tcScoreFromMetrics === 'function') {
         if (!(secteur in secMedCache)) secMedCache[secteur] = (typeof window.tcSectorMedians === 'function') ? window.tcSectorMedians(secteur) : {};
@@ -81,13 +59,13 @@
         variation: num(c.variation_pct != null ? c.variation_pct : c.variation),
         volume: num(c.volume),
         turnover: num(c.valeur_totale != null ? c.valeur_totale : c.valeur_transigee),
-        capi: num(c.capitalisation) || (cp && na ? cp * na : null),
+        capi: m.capi != null ? m.capi : num(c.capitalisation),
         per: per,
         pbr: pbr,
         roe: roe, marge: marge, rdt: yld, detteFp: detteFp,
         croissance: croissance,
         score: score,
-        exercice: f ? f.annee : null
+        exercice: m.exercice != null ? m.exercice : null
       };
     });
   }

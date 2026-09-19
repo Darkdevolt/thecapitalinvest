@@ -13,7 +13,10 @@
   'use strict';
   if (window.tcScoreFromMetrics) return;
 
-  function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
+  // null / '' = donnée absente, jamais 0 : Number(null) vaut 0, et une colonne
+  // vide se lisait comme « 0 % de rendement » ou « dette nulle » (15/15 en solidité).
+  function num(v) { if (v == null || v === '') return null; var n = Number(v); return isFinite(n) ? n : null; }
+  function firstNum() { for (var i = 0; i < arguments.length; i++) { var n = num(arguments[i]); if (n != null) return n; } return null; }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
   function median(a) {
     var x = (a || []).filter(function (v) { return isFinite(v); }).sort(function (m, n) { return m - n; });
@@ -26,40 +29,79 @@
   function coursOf(t) {
     return (Array.isArray(window.allCours) ? window.allCours : []).find(function (c) { return c && String(c.ticker).toUpperCase() === t; }) || {};
   }
+  // Seuls les exercices annuels se comparent entre eux : une ligne semestrielle
+  // ou trimestrielle (onglet « Intermédiaire ») fausserait ROE, marge, croissance.
+  var INTERIM = /^(s[12]|t[1-4]|sem|trim|interm)/i;
   function finsOf(t) {
     return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(function (f) { return f && String(f.ticker).toUpperCase() === t; })
+      .filter(function (f) { return f && String(f.ticker).toUpperCase() === t && !INTERIM.test(String(f.periode || '')); })
       .sort(function (a, b) { return Number(b.annee || 0) - Number(a.annee || 0); });
   }
+  function isFinancial(e) { return /financ|banque|assur/i.test(String((e && (e.secteur || e.sous_secteur)) || '')); }
 
-  // metrics normalisées d'un titre (mêmes conventions que screener/comparaison)
+  // Dernier dividende brut connu : calendrier des dividendes ET colonne dpa des
+  // états financiers ; on garde l'exercice le plus récent (calendrier en cas d'égalité).
+  function lastDividend(t, fs) {
+    var best = null;
+    fs.forEach(function (f) {
+      var ex = num(f.annee), v = num(f.dpa);
+      if (ex != null && v != null && (!best || ex > best.ex)) best = { ex: ex, v: v };
+    });
+    (Array.isArray(window.allDividendes) ? window.allDividendes : []).forEach(function (r) {
+      if (!r || String(r.ticker).toUpperCase() !== t || /annul|suspend/i.test(String(r.statut || ''))) return;
+      var ex = num(r.exercice != null ? r.exercice : r.annee), v = num(r.montant);
+      if (ex != null && v != null && (!best || ex >= best.ex)) best = { ex: ex, v: v };
+    });
+    return best;
+  }
+
+  // SOURCE UNIQUE des indicateurs par titre : score, comparateur, screener et
+  // outils l'utilisent, pour que les quatre affichent les mêmes chiffres.
+  // Les colonnes roe / marge_nette / dividend_yield sont déjà en pourcentage.
   function metricsFor(ticker) {
     var t = String(ticker || '').toUpperCase();
     var e = entOf(t), c = coursOf(t), fs = finsOf(t), f = fs[0] || null, f1 = fs[1] || null;
     var cp = num(c.cloture != null ? c.cloture : c.cours);
     var bpa = f ? num(f.bpa) : null;
-    var fp = f ? num(f.fonds_propres != null ? f.fonds_propres : f.capitaux_propres) : null;
-    var na = (f && num(f.nombre_actions)) || num(e.nombre_actions) || num(e.nb_actions);
-    var roe = f ? num(f.roe) : null; if (roe != null && roe <= 1.5) roe *= 100;
-    if (roe == null && f && num(f.resultat_net) != null && fp) roe = f.resultat_net / fp * 100;
-    var marge = f ? num(f.marge_nette) : null; if (marge != null && marge <= 1.5) marge *= 100;
-    if (marge == null && f && num(f.resultat_net) != null && num(f.chiffre_affaires)) marge = f.resultat_net / f.chiffre_affaires * 100;
-    var dpa = f ? num(f.dpa) : null;
-    var yld = f ? num(f.dividend_yield != null ? f.dividend_yield : f.rendement_dividende) : null;
-    if (yld != null && yld <= 1.5) yld *= 100;
-    if (yld == null && dpa != null && cp) yld = dpa / cp * 100;
-    var dette = f ? num(f.dette_nette != null ? f.dette_nette : f.dettes_financieres) : null;
-    var croiss = (f && f1 && num(f.chiffre_affaires) != null && num(f1.chiffre_affaires) && f1.chiffre_affaires)
-      ? (f.chiffre_affaires / f1.chiffre_affaires - 1) * 100 : null;
+    var fp = f ? firstNum(f.fonds_propres, f.capitaux_propres) : null;
+    var na = firstNum(f && f.nombre_actions, f && f.nb_actions, e.nombre_actions, e.nb_actions);
+    var rn = f ? num(f.resultat_net) : null, ca = f ? num(f.chiffre_affaires) : null;
+    var roe = f ? num(f.roe) : null;
+    if (roe == null && rn != null && fp > 0) roe = rn / fp * 100;
+    var marge = f ? num(f.marge_nette) : null;
+    if (marge == null && rn != null && ca > 0) marge = rn / ca * 100;
+    var yld = f ? firstNum(f.dividend_yield, f.rendement_dividende) : null, yldEx = null;
+    if (yld == null) {
+      var ld = lastDividend(t, fs);
+      if (ld && cp > 0) { yld = ld.v / cp * 100; yldEx = ld.ex; }
+    }
+    // Dette nette : pour un établissement financier les dépôts sont une dette
+    // d'exploitation, le ratio n'a pas de sens (absent → critère non noté).
+    var financial = isFinancial(e), dette = null;
+    if (f && !financial) {
+      dette = num(f.dette_nette);
+      if (dette == null) {
+        var brute = firstNum(f.dettes_financieres, f.dettes_financieres_total, f.dette_fin, f.emprunts_dettes_financieres);
+        var cash = num(f.tresorerie_actif);
+        if (brute != null && cash != null) dette = brute - cash;
+      }
+    }
+    var ca1 = f1 ? num(f1.chiffre_affaires) : null;
+    var croiss = (ca != null && ca1 > 0 && num(f.annee) - num(f1.annee) === 1) ? (ca / ca1 - 1) * 100 : null;
     return {
-      ticker: t, nom: e.nom || e.nom_court || t, secteur: e.secteur || '—', exercice: f ? f.annee : null,
+      ticker: t, nom: e.nom || e.nom_court || t, secteur: e.secteur || '—', pays: e.pays || '—', financial: financial,
+      exercice: f ? num(f.annee) : null,
+      provisoire: !!f && f.validation_status != null && f.validation_status !== 'validated',
+      cours: cp,
+      capi: num(c.capitalisation) || (cp && na ? cp * na : null),
       per: (cp != null && bpa != null && bpa > 0) ? cp / bpa : null,
-      pbr: (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null,
-      roe: roe, marge: marge, rdt: yld,
-      detteFp: (dette != null && fp) ? dette / fp : null,
+      pbr: (cp != null && fp != null && na > 0 && fp > 0) ? cp / (fp / na) : null,
+      roe: roe, marge: marge, rdt: yld, rdtEx: yldEx,
+      detteFp: (dette != null && fp > 0) ? dette / fp : null,
       croissance: croiss
     };
   }
+  window.tcMetricsFor = metricsFor;
 
   window.tcSectorMedians = function (secteur) {
     var peers = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])

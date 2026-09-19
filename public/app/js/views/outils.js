@@ -16,7 +16,7 @@
   var TAB = 'compose';
 
   function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
-  function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
+  function num(v) { if (v == null || v === '') return null; var n = Number(v); return isFinite(n) ? n : null; }
   function nf(v, dec) {
     var n = Number(v); if (!isFinite(n)) return '—';
     return n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec });
@@ -187,37 +187,10 @@
       .map(function (e) { return { ticker: String(e.ticker).toUpperCase(), nom: e.nom || e.nom_court || '', ref: String(e.ticker).toUpperCase() }; })
       .sort(function (a, b) { return a.ticker.localeCompare(b.ticker); });
   }
-  function ent(t) { return (window.entMap && window.entMap[t]) || {}; }
   function coursOf(t) { return (Array.isArray(window.allCours) ? window.allCours : []).find(function (c) { return c && String(c.ticker).toUpperCase() === t; }) || {}; }
-  function finsOf(t) {
-    return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(function (f) { return f && String(f.ticker).toUpperCase() === t; })
-      .sort(function (a, b) { return Number(b.annee || 0) - Number(a.annee || 0); });
-  }
+  // Indicateurs : source unique partagée (score-maison.js), identique au comparateur et au screener.
   function snapshot(t) {
-    var e = ent(t), c = coursOf(t), fs = finsOf(t), f = fs[0] || null, f1 = fs[1] || null;
-    var cp = num(c.cloture != null ? c.cloture : c.cours);
-    var bpa = f ? num(f.bpa) : null;
-    var fp = f ? num(f.fonds_propres != null ? f.fonds_propres : f.capitaux_propres) : null;
-    var na = (f && num(f.nombre_actions)) || num(e.nombre_actions) || num(e.nb_actions);
-    var roe = f ? num(f.roe) : null; if (roe != null && roe <= 1.5) roe *= 100;
-    if (roe == null && f && num(f.resultat_net) != null && fp) roe = f.resultat_net / fp * 100;
-    var marge = f ? num(f.marge_nette) : null; if (marge != null && marge <= 1.5) marge *= 100;
-    if (marge == null && f && num(f.resultat_net) != null && num(f.chiffre_affaires)) marge = f.resultat_net / f.chiffre_affaires * 100;
-    var dpa = f ? num(f.dpa) : null;
-    var yld = f ? num(f.dividend_yield != null ? f.dividend_yield : f.rendement_dividende) : null;
-    if (yld != null && yld <= 1.5) yld *= 100;
-    if (yld == null && dpa != null && cp) yld = dpa / cp * 100;
-    var dette = f ? num(f.dette_nette != null ? f.dette_nette : f.dettes_financieres) : null;
-    var croiss = (f && f1 && num(f.chiffre_affaires) != null && num(f1.chiffre_affaires) && f1.chiffre_affaires) ? (f.chiffre_affaires / f1.chiffre_affaires - 1) * 100 : null;
-    return {
-      ticker: t, nom: e.nom || e.nom_court || t, secteur: e.secteur || '—',
-      per: (cp != null && bpa != null && bpa > 0) ? cp / bpa : null,
-      pbr: (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null,
-      roe: roe, marge: marge, rdt: yld,
-      detteFp: (dette != null && fp) ? dette / fp : null,
-      croissance: croiss, exercice: f ? f.annee : null
-    };
+    return typeof window.tcMetricsFor === 'function' ? window.tcMetricsFor(t) : { ticker: t, nom: t, secteur: '—' };
   }
   function sectorMedians(secteur) {
     var peers = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])

@@ -1,7 +1,7 @@
 // ============================================================================
 // COMPARAISON DE SOCIÉTÉS v2  (P1 roadmap) — 2 à 6 sociétés
-// Tableau multi-indicateurs + radar normalisé + export CSV.
-// Sources : allEntreprises · allCours · allFinancials. Absent = « — ».
+// Tableau multi-indicateurs + radar (rang parmi la cote) + export CSV.
+// Indicateurs : window.tcMetricsFor (score-maison.js). Absent = « — ».
 // ============================================================================
 (function () {
   'use strict';
@@ -15,91 +15,27 @@
   // null / '' = donnée absente, jamais 0 (Number(null) vaut 0 : une colonne
   // vide s'affichait « 0,00 % » et passait pour la meilleure valeur).
   function num(v) { if (v == null || v === '') return null; var n = Number(v); return isFinite(n) ? n : null; }
-  function firstNum() { for (var i = 0; i < arguments.length; i++) { var n = num(arguments[i]); if (n != null) return n; } return null; }
-  function nf(v, dec) { var n = Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
+  function nf(v, dec) { var n = (v == null || v === '') ? NaN : Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
   function money(v) {
-    var n = Number(v); if (!isFinite(n)) return '—';
+    var n = (v == null || v === '') ? NaN : Number(v); if (!isFinite(n)) return '—';
     var a = Math.abs(n);
     if (a >= 1e9) return (n / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Md';
     if (a >= 1e6) return (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M';
     return nf(n);
   }
 
-  function ent(t) { return (window.entMap && window.entMap[t]) || {}; }
   function cours(t) { return (Array.isArray(window.allCours) ? window.allCours : []).find(function (c) { return c && String(c.ticker).toUpperCase() === t; }) || {}; }
-  // Seuls les exercices annuels se comparent entre eux : une ligne semestrielle
-  // ou trimestrielle (onglet « Intermédiaire ») fausserait ROE, marge, croissance.
-  var INTERIM = /^(s[12]|t[1-4]|sem|trim|interm)/i;
-  function fins(t) {
-    return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(function (f) { return f && String(f.ticker).toUpperCase() === t && !INTERIM.test(String(f.periode || '')); })
-      .sort(function (a, b) { return Number(b.annee || 0) - Number(a.annee || 0); });
-  }
-  function isFinancial(e) { return /financ|banque|assur/i.test(String((e && (e.secteur || e.sous_secteur)) || '')); }
 
-  // Dernier dividende brut connu : calendrier des dividendes ET colonne dpa des
-  // états financiers ; on garde l'exercice le plus récent (calendrier en cas d'égalité).
-  function lastDividend(t, fs) {
-    var best = null;
-    fs.forEach(function (f) {
-      var ex = num(f.annee), v = num(f.dpa);
-      if (ex != null && v != null && (!best || ex > best.ex)) best = { ex: ex, v: v };
-    });
-    (Array.isArray(window.allDividendes) ? window.allDividendes : []).forEach(function (r) {
-      if (!r || String(r.ticker).toUpperCase() !== t || /annul|suspend/i.test(String(r.statut || ''))) return;
-      var ex = num(r.exercice != null ? r.exercice : r.annee), v = num(r.montant);
-      if (ex != null && v != null && (!best || ex >= best.ex)) best = { ex: ex, v: v };
-    });
-    return best;
-  }
-
-  // Indicateurs chiffrés (sans le score, plus coûteux) : sert aussi à situer
-  // chaque société dans l'ensemble du marché pour le radar.
+  // Indicateurs fondamentaux : source unique partagée avec le score, le screener
+  // et les outils (score-maison.js), pour que tous affichent les mêmes chiffres.
+  // Ici on ajoute seulement les données de séance propres au tableau.
   function metrics(t) {
-    var e = ent(t), c = cours(t), fs = fins(t), f = fs[0] || null, f1 = fs[1] || null;
-    var cp = num(c.cloture != null ? c.cloture : c.cours);
-    var bpa = f ? num(f.bpa) : null;
-    var fp = f ? firstNum(f.fonds_propres, f.capitaux_propres) : null;
-    var na = firstNum(f && f.nombre_actions, f && f.nb_actions, e.nombre_actions, e.nb_actions);
-    var rn = f ? num(f.resultat_net) : null, ca = f ? num(f.chiffre_affaires) : null;
-    // Les colonnes roe / marge_nette / dividend_yield sont déjà en pourcentage.
-    var roe = f ? num(f.roe) : null;
-    if (roe == null && rn != null && fp > 0) roe = rn / fp * 100;
-    var marge = f ? num(f.marge_nette) : null;
-    if (marge == null && rn != null && ca > 0) marge = rn / ca * 100;
-    var yld = f ? firstNum(f.dividend_yield, f.rendement_dividende) : null, yldEx = null;
-    if (yld == null) {
-      var ld = lastDividend(t, fs);
-      if (ld && cp > 0) { yld = ld.v / cp * 100; yldEx = ld.ex; }
-    }
-    // Dette nette : pour un établissement financier les dépôts sont une dette
-    // d'exploitation, le ratio n'a pas de sens (affiché « n.s. »).
-    var financial = isFinancial(e), dette = null;
-    if (f && !financial) {
-      dette = num(f.dette_nette);
-      if (dette == null) {
-        var brute = firstNum(f.dettes_financieres, f.dettes_financieres_total, f.dette_fin, f.emprunts_dettes_financieres);
-        var cash = num(f.tresorerie_actif);
-        if (brute != null && cash != null) dette = brute - cash;
-      }
-    }
-    var ca1 = f1 ? num(f1.chiffre_affaires) : null;
-    var croiss = (ca != null && ca1 > 0 && num(f.annee) - num(f1.annee) === 1) ? (ca / ca1 - 1) * 100 : null;
-    return {
-      ticker: t, nom: e.nom || e.nom_court || t, secteur: e.secteur || '—',
-      pays: e.pays || '—', financial: financial,
-      cours: cp,
-      variation: num(c.variation_pct != null ? c.variation_pct : c.variation),
-      volume: num(c.volume),
-      turnover: num(c.valeur_totale != null ? c.valeur_totale : c.valeur_transigee),
-      capi: num(c.capitalisation) || (cp && na ? cp * na : null),
-      per: (cp != null && bpa != null && bpa > 0) ? cp / bpa : null,
-      pbr: (cp != null && fp != null && na > 0 && fp > 0) ? cp / (fp / na) : null,
-      roe: roe, marge: marge, rdt: yld, rdtEx: yldEx,
-      detteFp: (dette != null && fp > 0) ? dette / fp : null,
-      croissance: croiss, exercice: f ? num(f.annee) : null,
-      provisoire: !!f && f.validation_status != null && f.validation_status !== 'validated'
-    };
+    var s = typeof window.tcMetricsFor === 'function' ? window.tcMetricsFor(t) : { ticker: t, nom: t, secteur: '—', pays: '—' };
+    var c = cours(t);
+    s.variation = num(c.variation_pct != null ? c.variation_pct : c.variation);
+    s.volume = num(c.volume);
+    s.turnover = num(c.valeur_totale != null ? c.valeur_totale : c.valeur_transigee);
+    return s;
   }
 
   function snapshot(t) {

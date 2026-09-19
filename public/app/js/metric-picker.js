@@ -11,9 +11,9 @@
   'use strict';
   if (window.TC_METRICS) return;
 
-  function nf(v, d) { var n = Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: d || 0, maximumFractionDigits: d == null ? 0 : d }) : '—'; }
-  function pf(v, d) { var n = Number(v); return isFinite(n) ? (n > 0 ? '+' : '') + nf(n, d == null ? 2 : d) + ' %' : '—'; }
-  function money(v) { var n = Number(v); if (!isFinite(n)) return '—'; var a = Math.abs(n); if (a >= 1e9) return nf(n / 1e9, 2) + ' Md'; if (a >= 1e6) return nf(n / 1e6, 1) + ' M'; return nf(n); }
+  function nf(v, d) { var n = (v == null || v === '') ? NaN : Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: d || 0, maximumFractionDigits: d == null ? 0 : d }) : '—'; }
+  function pf(v, d) { var n = (v == null || v === '') ? NaN : Number(v); return isFinite(n) ? (n > 0 ? '+' : '') + nf(n, d == null ? 2 : d) + ' %' : '—'; }
+  function money(v) { var n = (v == null || v === '') ? NaN : Number(v); if (!isFinite(n)) return '—'; var a = Math.abs(n); if (a >= 1e9) return nf(n / 1e9, 2) + ' Md'; if (a >= 1e6) return nf(n / 1e6, 1) + ' M'; return nf(n); }
   function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
   function x1(v) { return v != null && isFinite(v) ? Number(v).toFixed(1) + 'x' : '—'; }
   function x2(v) { return v != null && isFinite(v) ? Number(v).toFixed(2) + 'x' : '—'; }
