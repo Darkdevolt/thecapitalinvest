@@ -12,7 +12,10 @@
   var picks = [];
 
   function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
-  function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
+  // null / '' = donnée absente, jamais 0 (Number(null) vaut 0 : une colonne
+  // vide s'affichait « 0,00 % » et passait pour la meilleure valeur).
+  function num(v) { if (v == null || v === '') return null; var n = Number(v); return isFinite(n) ? n : null; }
+  function firstNum() { for (var i = 0; i < arguments.length; i++) { var n = num(arguments[i]); if (n != null) return n; } return null; }
   function nf(v, dec) { var n = Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
   function money(v) {
     var n = Number(v); if (!isFinite(n)) return '—';
@@ -24,43 +27,86 @@
 
   function ent(t) { return (window.entMap && window.entMap[t]) || {}; }
   function cours(t) { return (Array.isArray(window.allCours) ? window.allCours : []).find(function (c) { return c && String(c.ticker).toUpperCase() === t; }) || {}; }
+  // Seuls les exercices annuels se comparent entre eux : une ligne semestrielle
+  // ou trimestrielle (onglet « Intermédiaire ») fausserait ROE, marge, croissance.
+  var INTERIM = /^(s[12]|t[1-4]|sem|trim|interm)/i;
   function fins(t) {
     return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
-      .filter(function (f) { return f && String(f.ticker).toUpperCase() === t; })
+      .filter(function (f) { return f && String(f.ticker).toUpperCase() === t && !INTERIM.test(String(f.periode || '')); })
       .sort(function (a, b) { return Number(b.annee || 0) - Number(a.annee || 0); });
   }
+  function isFinancial(e) { return /financ|banque|assur/i.test(String((e && (e.secteur || e.sous_secteur)) || '')); }
 
-  function snapshot(t) {
+  // Dernier dividende brut connu : calendrier des dividendes ET colonne dpa des
+  // états financiers ; on garde l'exercice le plus récent (calendrier en cas d'égalité).
+  function lastDividend(t, fs) {
+    var best = null;
+    fs.forEach(function (f) {
+      var ex = num(f.annee), v = num(f.dpa);
+      if (ex != null && v != null && (!best || ex > best.ex)) best = { ex: ex, v: v };
+    });
+    (Array.isArray(window.allDividendes) ? window.allDividendes : []).forEach(function (r) {
+      if (!r || String(r.ticker).toUpperCase() !== t || /annul|suspend/i.test(String(r.statut || ''))) return;
+      var ex = num(r.exercice != null ? r.exercice : r.annee), v = num(r.montant);
+      if (ex != null && v != null && (!best || ex >= best.ex)) best = { ex: ex, v: v };
+    });
+    return best;
+  }
+
+  // Indicateurs chiffrés (sans le score, plus coûteux) : sert aussi à situer
+  // chaque société dans l'ensemble du marché pour le radar.
+  function metrics(t) {
     var e = ent(t), c = cours(t), fs = fins(t), f = fs[0] || null, f1 = fs[1] || null;
     var cp = num(c.cloture != null ? c.cloture : c.cours);
-    var bpa = f ? num(f.bpa) : null, dpa = f ? num(f.dpa) : null;
-    var fp = f ? num(f.fonds_propres != null ? f.fonds_propres : f.capitaux_propres) : null;
-    var na = (f && num(f.nombre_actions)) || num(e.nombre_actions) || num(e.nb_actions);
-    var roe = f ? num(f.roe) : null; if (roe != null && roe <= 1.5) roe *= 100;
-    if (roe == null && f && num(f.resultat_net) != null && fp) roe = f.resultat_net / fp * 100;
-    var marge = f ? num(f.marge_nette) : null; if (marge != null && marge <= 1.5) marge *= 100;
-    if (marge == null && f && num(f.resultat_net) != null && num(f.chiffre_affaires)) marge = f.resultat_net / f.chiffre_affaires * 100;
-    var yld = f ? num(f.dividend_yield != null ? f.dividend_yield : f.rendement_dividende) : null;
-    if (yld != null && yld <= 1.5) yld *= 100;
-    if (yld == null && dpa != null && cp) yld = dpa / cp * 100;
-    var dette = f ? num(f.dette_nette != null ? f.dette_nette : f.dettes_financieres) : null;
-    var croiss = (f && f1 && num(f.chiffre_affaires) != null && num(f1.chiffre_affaires)) ? (f.chiffre_affaires / f1.chiffre_affaires - 1) * 100 : null;
-    var score = null;
-    try { if (typeof window.tcScoreMaison === 'function') score = window.tcScoreMaison(t).score; } catch (e) {}
+    var bpa = f ? num(f.bpa) : null;
+    var fp = f ? firstNum(f.fonds_propres, f.capitaux_propres) : null;
+    var na = firstNum(f && f.nombre_actions, f && f.nb_actions, e.nombre_actions, e.nb_actions);
+    var rn = f ? num(f.resultat_net) : null, ca = f ? num(f.chiffre_affaires) : null;
+    // Les colonnes roe / marge_nette / dividend_yield sont déjà en pourcentage.
+    var roe = f ? num(f.roe) : null;
+    if (roe == null && rn != null && fp > 0) roe = rn / fp * 100;
+    var marge = f ? num(f.marge_nette) : null;
+    if (marge == null && rn != null && ca > 0) marge = rn / ca * 100;
+    var yld = f ? firstNum(f.dividend_yield, f.rendement_dividende) : null, yldEx = null;
+    if (yld == null) {
+      var ld = lastDividend(t, fs);
+      if (ld && cp > 0) { yld = ld.v / cp * 100; yldEx = ld.ex; }
+    }
+    // Dette nette : pour un établissement financier les dépôts sont une dette
+    // d'exploitation, le ratio n'a pas de sens (affiché « n.s. »).
+    var financial = isFinancial(e), dette = null;
+    if (f && !financial) {
+      dette = num(f.dette_nette);
+      if (dette == null) {
+        var brute = firstNum(f.dettes_financieres, f.dettes_financieres_total, f.dette_fin, f.emprunts_dettes_financieres);
+        var cash = num(f.tresorerie_actif);
+        if (brute != null && cash != null) dette = brute - cash;
+      }
+    }
+    var ca1 = f1 ? num(f1.chiffre_affaires) : null;
+    var croiss = (ca != null && ca1 > 0 && num(f.annee) - num(f1.annee) === 1) ? (ca / ca1 - 1) * 100 : null;
     return {
       ticker: t, nom: e.nom || e.nom_court || t, secteur: e.secteur || '—',
-      pays: e.pays || '—',
+      pays: e.pays || '—', financial: financial,
       cours: cp,
       variation: num(c.variation_pct != null ? c.variation_pct : c.variation),
       volume: num(c.volume),
       turnover: num(c.valeur_totale != null ? c.valeur_totale : c.valeur_transigee),
       capi: num(c.capitalisation) || (cp && na ? cp * na : null),
       per: (cp != null && bpa != null && bpa > 0) ? cp / bpa : null,
-      pbr: (cp != null && fp != null && na && na > 0 && fp > 0) ? cp / (fp / na) : null,
-      roe: roe, marge: marge, rdt: yld,
-      detteFp: (dette != null && fp) ? dette / fp : null,
-      croissance: croiss, score: score, exercice: f ? f.annee : null
+      pbr: (cp != null && fp != null && na > 0 && fp > 0) ? cp / (fp / na) : null,
+      roe: roe, marge: marge, rdt: yld, rdtEx: yldEx,
+      detteFp: (dette != null && fp > 0) ? dette / fp : null,
+      croissance: croiss, exercice: f ? num(f.annee) : null,
+      provisoire: !!f && f.validation_status != null && f.validation_status !== 'validated'
     };
+  }
+
+  function snapshot(t) {
+    var s = metrics(t), score = null;
+    try { if (typeof window.tcScoreMaison === 'function') score = window.tcScoreMaison(t).score; } catch (e) {}
+    s.score = score;
+    return s;
   }
 
   // Formatteurs par valeur (le catalogue partagé formate par ligne).
@@ -109,6 +155,9 @@
       '#view-comparison thead th{font:600 8px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}',
       '#view-comparison thead th b{display:block;color:var(--gold);font:600 12px var(--mono)}',
       '#view-comparison td.best{color:var(--green);font-weight:600}',
+      '#view-comparison td.warn{color:var(--orange)}',
+      '#view-comparison .cmp-sub{display:block;font:400 9px var(--sans);letter-spacing:0;text-transform:none;color:var(--dim);margin-top:2px}',
+      '#view-comparison .cmp-notes{margin:14px 0 0;padding:12px 0 0 16px;border-top:1px solid var(--border2);font-size:11px;line-height:1.55;color:var(--dim)}',
       '#view-comparison .cmp-radar{height:360px}',
       '#view-comparison .cmp-bar{display:flex;justify-content:flex-end;gap:8px;margin:14px 0 8px}',
       '#view-comparison .cmp-bar button{border:1px solid var(--border2);background:transparent;color:var(--gold-l);border-radius:7px;padding:6px 12px;font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}',
@@ -118,37 +167,57 @@
     document.head.appendChild(s);
   }
 
-  function bestIndex(vals, hi) {
-    if (!hi) return -1;
-    var idx = -1, best = null;
-    vals.forEach(function (v, i) {
-      if (v == null || !isFinite(v)) return;
-      if (best == null || (hi === 'high' ? v > best : v < best)) { best = v; idx = i; }
-    });
-    return idx;
+  function valid(v) { return v != null && isFinite(v); }
+
+  // Meilleures valeurs de la ligne. Aucune mise en évidence s'il y a moins de
+  // deux valeurs comparables ou si toutes sont égales (un 0 % contre un 0 %
+  // n'a pas de gagnant) ; en cas d'ex æquo en tête, tous les ex æquo sont marqués.
+  function bestSet(vals, hi) {
+    var out = vals.map(function () { return false; });
+    if (!hi) return out;
+    var pres = vals.filter(valid);
+    if (pres.length < 2) return out;
+    var best = pres.reduce(function (a, b) { return hi === 'high' ? Math.max(a, b) : Math.min(a, b); });
+    if (pres.every(function (v) { return v === best; })) return out;
+    vals.forEach(function (v, i) { if (valid(v) && v === best) out[i] = true; });
+    return out;
+  }
+
+  // Le radar situe chaque société parmi toutes les valeurs cotées disposant de
+  // la donnée (100 = meilleure du marché). Une échelle min-max entre les seules
+  // sociétés affichées envoyait toujours la moins bonne à 0, même avec un bon ROE.
+  function universeMetrics() {
+    return (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])
+      .filter(function (e) { return e && e.ticker && e.actif !== false; })
+      .map(function (e) { return metrics(String(e.ticker).toUpperCase()); });
+  }
+  function percentile(v, all) {
+    var below = 0, same = 0;
+    all.forEach(function (x) { if (x < v) below++; else if (x === v) same++; });
+    return (below + same / 2) / all.length * 100;
   }
 
   function drawRadar(snaps) {
     var cv = document.getElementById('cmpRadar');
     if (!cv || typeof Chart === 'undefined') return;
     var palette = ['#B8964E', '#60a5fa', '#4ade80', '#f87171', '#e6c979', '#c084fc'];
-    var ranges = {};
-    RADAR.forEach(function (k) {
-      var vs = snaps.map(function (s) { return s[k]; }).filter(function (v) { return v != null && isFinite(v); });
-      ranges[k] = vs.length ? { min: Math.min.apply(null, vs), max: Math.max.apply(null, vs) } : null;
-    });
+    var uni = universeMetrics();
+    var pools = {};
+    RADAR.forEach(function (k) { pools[k] = uni.map(function (u) { return u[k]; }).filter(valid); });
     var labels = { roe: 'ROE', marge: 'Marge', rdt: 'Rendement', croissance: 'Croiss. CA', per: 'PER (inv.)', pbr: 'P/B (inv.)' };
     var datasets = snaps.map(function (s, i) {
       var col = palette[i % palette.length];
       return {
         label: s.ticker,
+        raw: RADAR.map(function (k) { return s[k]; }),
         data: RADAR.map(function (k) {
-          var r = ranges[k], v = s[k];
-          if (!r || v == null || !isFinite(v) || r.max === r.min) return r && v != null ? 50 : 0;
-          var t = (v - r.min) / (r.max - r.min) * 100;
-          return (k === 'per' || k === 'pbr') ? 100 - t : t; // valorisation : plus bas = mieux
+          var v = s[k];
+          if (!valid(v) || pools[k].length < 3) return null; // donnée absente : point non tracé, jamais 0
+          var p = percentile(v, pools[k]);
+          return (k === 'per' || k === 'pbr') ? 100 - p : p; // valorisation : plus bas = mieux
         }),
-        borderColor: col, backgroundColor: col + '22', borderWidth: 2, pointRadius: 2
+        spanGaps: true,
+        borderColor: col, backgroundColor: col + '22', borderWidth: 2, pointRadius: 3
       };
     });
     if (chart) { try { chart.destroy(); } catch (e) {} }
@@ -158,16 +227,27 @@
       options: {
         responsive: true, maintainAspectRatio: false,
         scales: { r: { min: 0, max: 100, ticks: { display: false }, grid: { color: 'rgba(184,150,78,.12)' }, angleLines: { color: 'rgba(184,150,78,.12)' }, pointLabels: { color: 'rgba(245,240,232,.6)', font: { size: 10 } } } },
-        plugins: { legend: { position: 'bottom', labels: { color: 'rgba(245,240,232,.7)', boxWidth: 10, font: { size: 10 } } } }
+        plugins: {
+          legend: { position: 'bottom', labels: { color: 'rgba(245,240,232,.7)', boxWidth: 10, font: { size: 10 } } },
+          tooltip: { callbacks: { label: function (ctx) {
+            var k = RADAR[ctx.dataIndex], raw = ctx.dataset.raw[ctx.dataIndex];
+            if (ctx.raw == null) return ctx.dataset.label + ' : donnée absente';
+            return ctx.dataset.label + ' : ' + VF[k](raw) + ' — devant ' + Math.round(ctx.raw) + ' % des valeurs';
+          } } }
+        }
       }
     });
   }
 
   function csv(snaps) {
     var head = 'Indicateur;' + snaps.map(function (s) { return s.ticker; }).join(';');
-    var lines = ROWS.map(function (row) {
-      return row.l + ';' + snaps.map(function (s) { var v = s[row.k]; return v == null ? '' : String(v).replace('.', ','); }).join(';');
-    });
+    var lines = ['Exercice;' + snaps.map(function (s) { return s.exercice == null ? '' : s.exercice; }).join(';')].concat(ROWS.map(function (row) {
+      return row.l + ';' + snaps.map(function (s) {
+        if (row.k === 'detteFp' && s.financial) return 'n.s.';
+        var v = s[row.k];
+        return v == null ? '' : String(Math.round(v * 100) / 100).replace('.', ',');
+      }).join(';');
+    }));
     var blob = new Blob(['﻿' + head + '\n' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = 'comparaison-brvm.csv'; a.click();
@@ -182,17 +262,36 @@
       .filter(function (e) { return e && e.ticker && e.actif !== false; })
       .sort(function (a, b) { return String(a.ticker).localeCompare(String(b.ticker)); });
     if (!companies.length) { view.innerHTML = '<div class="page-header"><h1>Comparaison</h1></div><div class="fch-muted">Données sociétés indisponibles.</div>'; return; }
+    var known = {};
+    companies.forEach(function (c) { known[String(c.ticker).toUpperCase()] = true; });
     if (!picks.length) {
       var m = (location.hash || '').match(/^#comparison=(.+)$/);
-      picks = m ? decodeURIComponent(m[1]).split(',').map(function (x) { return x.toUpperCase(); }).filter(Boolean).slice(0, 6)
-        : companies.slice(0, 3).map(function (c) { return String(c.ticker).toUpperCase(); });
+      // Un ticker inconnu dans le lien (société retirée, faute de frappe) donnerait une colonne vide.
+      picks = m ? decodeURIComponent(m[1]).split(',').map(function (x) { return x.trim().toUpperCase(); })
+        .filter(function (x, i, a) { return known[x] && a.indexOf(x) === i; }).slice(0, 6) : [];
+      if (picks.length < 2) picks = companies.slice(0, 3).map(function (c) { return String(c.ticker).toUpperCase(); });
     }
     var snaps = picks.map(snapshot);
     ROWS = buildRows();
 
+    // Rappels sous le tableau : ce qui rend une comparaison trompeuse si on l'ignore.
+    var years = snaps.map(function (s) { return s.exercice; }).filter(valid);
+    var yearsDiffer = years.length > 1 && years.some(function (y) { return y !== years[0]; });
+    var notes = [];
+    if (snaps.some(function (s) { return s.financial; }) && snaps.some(function (s) { return !s.financial; })) {
+      notes.push('Banque ou assurance comparée à une société non financière : PER, P/B, marge et dette ne sont pas comparables d\'un secteur à l\'autre.');
+    }
+    if (yearsDiffer) notes.push('Les derniers exercices publiés diffèrent d\'une société à l\'autre (ligne « Exercice »).');
+    var draft = snaps.filter(function (s) { return s.provisoire; }).map(function (s) { return s.ticker; });
+    if (draft.length) notes.push('Comptes non encore validés : ' + esc(draft.join(', ')) + '.');
+    if (snaps.some(function (s) { return s.rdtEx != null; })) {
+      notes.push('Rendement = dernier dividende brut connu ÷ cours actuel ; « ex. » donne l\'exercice de ce dividende.');
+    }
+    if (snaps.some(function (s) { return s.financial; })) notes.push('n.s. : non significatif (dette nette / fonds propres pour un établissement financier).');
+
     view.innerHTML =
       '<div class="page-header"><h1>Comparaison <span style="color:var(--gold)">de sociétés</span></h1>'
-      + '<p>2 à 6 valeurs — tableau, radar normalisé et export. Meilleure valeur par ligne en vert.</p></div>'
+      + '<p>2 à 6 valeurs — tableau, radar et export. Meilleure valeur par ligne en vert ; le radar situe chaque société parmi toutes les valeurs cotées.</p></div>'
       + '<div class="cmp-pick">'
       + picks.map(function (t) { return '<span class="cmp-chip">' + esc(t) + '<button type="button" data-rm="' + esc(t) + '">×</button></span>'; }).join('')
       + (picks.length < 6 ? '<select id="cmpAdd"><option value="">+ Ajouter une société…</option>'
@@ -203,16 +302,29 @@
       + '<div class="cmp-bar"><span id="cmpActions"><button type="button" id="cmpCsv">Export CSV</button> </span></div>'
       + '<div class="cmp-cols">'
       + '<div class="card" style="overflow-x:auto"><table><thead><tr><th>Indicateur</th>'
-      + snaps.map(function (s) { return '<th><b>' + esc(s.ticker) + '</b>' + esc(s.nom) + '</th>'; }).join('')
+      + snaps.map(function (s) { return '<th><b>' + esc(s.ticker) + '</b>' + esc(s.nom) + '<span class="cmp-sub">' + esc(s.secteur) + '</span></th>'; }).join('')
       + '</tr></thead><tbody>'
+      + '<tr><td>Exercice</td>' + snaps.map(function (s) {
+        return '<td class="' + (yearsDiffer ? 'warn' : '') + '">' + (s.exercice != null ? esc(s.exercice) : '—')
+          + (s.provisoire ? '<span class="cmp-sub" title="Comptes non validés">provisoire</span>' : '') + '</td>';
+      }).join('') + '</tr>'
       + ROWS.map(function (row) {
         var vals = snaps.map(function (s) { return s[row.k]; });
-        var bi = bestIndex(vals, row.hi);
-        return '<tr><td>' + row.l + '</td>' + vals.map(function (v, i) {
-          return '<td class="' + (i === bi ? 'best' : '') + '">' + row.f(v) + '</td>';
+        var best = bestSet(vals, row.hi);
+        return '<tr><td>' + row.l + '</td>' + snaps.map(function (s, i) {
+          var v = vals[i], txt;
+          if (row.k === 'detteFp' && s.financial) {
+            txt = '<span title="Non significatif pour un établissement financier">n.s.</span>';
+          } else {
+            txt = row.f(v);
+            if (row.k === 'rdt' && v != null && s.rdtEx != null) txt += '<span class="cmp-sub">ex. ' + esc(s.rdtEx) + '</span>';
+          }
+          return '<td class="' + (best[i] ? 'best' : '') + '">' + txt + '</td>';
         }).join('') + '</tr>';
       }).join('')
-      + '</tbody></table></div>'
+      + '</tbody></table>'
+      + (notes.length ? '<ul class="cmp-notes">' + notes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>' : '')
+      + '</div>'
       + '<div class="card"><div class="fch-muted" style="margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--gold)">Profil relatif</div>'
       + '<div class="cmp-radar"><canvas id="cmpRadar"></canvas></div></div>'
       + '</div>';
