@@ -367,6 +367,8 @@
   border-radius: var(--af-radius-sm);
   transition: background .15s;
 }
+.af-poids-total { display: flex; justify-content: flex-end; align-items: baseline; gap: 8px; padding: 10px 4px 2px; font-size: 13px; border-top: 1px solid var(--af-line-strong, var(--af-line)); margin-top: 6px; }
+.af-poids-total strong { font-size: 15px; font-variant-numeric: tabular-nums; }
 .af-poids-row:hover { background: var(--af-panel-2); }
 .af-poids-row:last-child { border-bottom: none; }
 .af-poids-row.af-off { opacity: .45; }

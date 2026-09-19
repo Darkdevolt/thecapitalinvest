@@ -169,7 +169,7 @@
     }
     var saved = read(LS.hyp + S.ticker, null);
     S.hypotheses = Object.assign(V.hypothesesInitiales(a), saved || {});
-    S.poids = read(LS.poids, null) || V.poidsDefaut(a.data);
+    S.poids = poidsInitiaux(V.poidsDefaut(a.data));
     S.portee = read(LS.portee, null) || 'sousSecteur';
     refreshComparables();
     recompute();
@@ -863,6 +863,52 @@
     return html;
   }
 
+  /* ── Poids des méthodes : le total reste TOUJOURS à 100 % ─────────────
+     Un poids modifié à la main est compensé, au prorata, sur les autres
+     méthodes actives ; désactiver une méthode reporte son poids sur les autres,
+     l'activer le prélève sur elles. Sans cela, monter le PER à 60 % laissait un
+     total de 145 % que le calcul renormalisait en silence : ce que l'on saisissait
+     n'était pas ce qui s'appliquait. Les poids sont manipulés en pourcentages
+     entiers, répartis par la méthode du plus fort reste : la somme tombe
+     exactement sur 100. */
+  function repartirPoids(poids, total) {
+    var keys = Object.keys(poids || {});
+    var vals = keys.map(function (k) { return Math.max(0, Number(poids[k]) || 0); });
+    var somme = vals.reduce(function (s, v) { return s + v; }, 0);
+    var out = {};
+    keys.forEach(function (k) { out[k] = 0; });
+    if (!somme || !(total > 0)) return out;
+    var brut = vals.map(function (v) { return v / somme * total; });
+    var ent = brut.map(Math.floor);
+    var reste = total - ent.reduce(function (s, v) { return s + v; }, 0);
+    brut.map(function (b, i) { return { i: i, f: b - ent[i] }; })
+      .filter(function (o) { return vals[o.i] > 0; })
+      .sort(function (a, b) { return b.f - a.f; })
+      .slice(0, reste).forEach(function (o) { ent[o.i]++; });
+    keys.forEach(function (k, i) { out[k] = ent[i] / 100; });
+    return out;
+  }
+
+  /* Poids de départ : ceux enregistrés s'ils existent et sont exploitables, sinon ceux du secteur ; toujours ramenés à 100 %. */
+  function poidsInitiaux(defauts) {
+    var saved = read(LS.poids, null);
+    var exploitable = saved && Object.keys(saved).some(function (k) { return Number(saved[k]) > 0; });
+    return repartirPoids(exploitable ? saved : defauts, 100);
+  }
+
+  function fixerPoids(cle, pct) {
+    pct = Math.max(0, Math.min(100, Math.round(Number(pct) || 0)));
+    var autres = {};
+    Object.keys(S.poids).forEach(function (k) { if (k !== cle && (S.poids[k] || 0) > 0) autres[k] = S.poids[k]; });
+    if (!Object.keys(autres).length) pct = 100;
+    var nouveau = repartirPoids(autres, 100 - pct);
+    Object.keys(S.poids).forEach(function (k) { S.poids[k] = k === cle ? pct / 100 : (nouveau[k] || 0); });
+  }
+
+  function totalPoids() {
+    return Math.round(Object.keys(S.poids).reduce(function (s, k) { return s + (S.poids[k] || 0); }, 0) * 100);
+  }
+
   var FLUX_KEYS = ['ca', 'rbe', 'rn'];
 
   function saisonBars(s) {
@@ -1055,9 +1101,9 @@
         'que le DCF classique, dont le flux de trésorerie disponible n\'a pas de sens économique pour une banque ou un assureur.'
       : 'Les méthodes ne se valent pas selon les sociétés. Sur une valeur de rendement, privilégiez l\'actualisation ' +
         'des dividendes ; sur une société de croissance, le DCF.') +
-      ' Chaque multiple de comparables se pondère désormais individuellement — par exemple 60 % sur le PER et le reste ' +
-      'réparti sur les autres méthodes. L\'interrupteur active ou désactive une méthode sans perdre son poids : ' +
-      'décochée, elle sort entièrement du calcul et sa valeur reste affichée à titre de repère.');
+      ' Chaque multiple de comparables se pondère individuellement, et le total reste toujours à 100 % : ce que vous ' +
+      'ajoutez à une méthode (jusqu\'à 100 %) est retiré, au prorata, aux autres. L\'interrupteur active ou désactive une méthode : ' +
+      'décochée, elle sort du calcul, son poids est reporté sur les autres, et sa valeur reste affichée à titre de repère.');
     METHODE_GROUPES.forEach(function (grp) {
       html += '<div class="af-poids-groupe"><div class="af-poids-groupe-t">' + esc(grp.titre) + '</div>';
       grp.cles.forEach(function (k) {
@@ -1071,13 +1117,21 @@
             '<span class="af-poids-toggle-track"></span>' +
           '</label>' +
           '<div class="af-poids-label">' + esc(METHODE_LABELS[k]) + '</div>' +
-          '<input type="range" class="af-poids-slider" min="0" max="60" step="1" data-poids="' + k + '" value="' + pctVal + '"' + (actif ? '' : ' disabled') + ' aria-label="Poids ' + esc(METHODE_LABELS[k]) + '">' +
+          '<input type="range" class="af-poids-slider" min="0" max="100" step="1" data-poids="' + k + '" value="' + pctVal + '"' + (actif ? '' : ' disabled') + ' aria-label="Poids ' + esc(METHODE_LABELS[k]) + '">' +
           '<div class="af-poids-pct"><input type="number" min="0" max="100" step="1" data-poids="' + k + '" value="' + pctVal + '"' + (actif ? '' : ' disabled') + '><span>%</span></div>' +
           '<div class="af-poids-val">' + valTxt + '</div>' +
           '</div>';
       });
       html += '</div>';
     });
+    var totalSaisi = totalPoids();
+    var poidsNonCalculables = syn.lignes.filter(function (l) { return l.poids > 0 && !l.retenue; }).reduce(function (s, l) { return s + l.poids; }, 0);
+    html += '<div class="af-poids-total ' + (totalSaisi === 100 ? 'af-up' : 'af-down') + '">Total des poids : <strong>' + totalSaisi + ' %</strong>' +
+      (totalSaisi === 100 ? ' — réparti à 100 %' : ' — anormal, rétablissez les poids par défaut') + '</div>';
+    if (poidsNonCalculables > 0.0001) {
+      html += note(Math.round(poidsNonCalculables * 100) + ' % du poids porte sur des méthodes non calculables pour cette société : il est reporté au ' +
+        'prorata sur les méthodes retenues (colonne « Poids effectif » ci-dessous), de sorte que la valeur retenue reste bien une moyenne pondérée à 100 %.');
+    }
     html += '<button type="button" class="af-lien" id="afResetPoids">Rétablir les poids par défaut du secteur</button>';
 
     html += groupe('Détail des méthodes');
@@ -1089,6 +1143,7 @@
           '<td class="r">' + pc(l.poids, 0) + '</td>' +
           '<td class="r">' + (l.retenue ? pc(l.poidsEffectif, 0) : '—') + '</td></tr>';
       }).join('') +
+      '<tr class="af-total"><td>Total</td><td class="r"></td><td class="r">' + totalPoids() + ' %</td><td class="r">' + (syn.retenues ? '100 %' : '—') + '</td></tr>' +
       (fin(syn.valeur) ? '<tr class="af-total"><td>Valeur retenue</td><td class="r">' + n0(syn.valeur) + ' FCFA</td>' +
         '<td class="r"></td><td class="r">' + or(pcs(syn.potentiel), '—') + '</td></tr>' : '') +
       '</tbody></table></div>';
@@ -1553,7 +1608,8 @@
 
       var poids = t.getAttribute && t.getAttribute('data-poids');
       if (poids) {
-        S.poids[poids] = Math.max(0, Number(t.value) || 0) / 100;
+        if (t.value === '') return;               /* champ vidé le temps de retaper : on attend la valeur */
+        fixerPoids(poids, Number(t.value));       /* le total reste à 100 % : les autres poids s'ajustent */
         store(LS.poids, S.poids);
         recompute(); render();
         return;
@@ -1564,10 +1620,15 @@
         if (t.checked) {
           var restaure = S.poidsMemoire[poidsOn];
           var defaut = (V.poidsDefaut(S.analyse.data) || {})[poidsOn];
-          S.poids[poidsOn] = fin(restaure) && restaure > 0 ? restaure : (fin(defaut) && defaut > 0 ? defaut : 0.10);
+          fixerPoids(poidsOn, Math.round((fin(restaure) && restaure > 0 ? restaure : (fin(defaut) && defaut > 0 ? defaut : 0.10)) * 100));
         } else {
-          if (S.poids[poidsOn] > 0) S.poidsMemoire[poidsOn] = S.poids[poidsOn];
-          S.poids[poidsOn] = 0;
+          var actives = Object.keys(S.poids).filter(function (k) { return (S.poids[k] || 0) > 0; });
+          if (actives.length > 1) {
+            S.poidsMemoire[poidsOn] = S.poids[poidsOn];
+            fixerPoids(poidsOn, 0);
+          } else {
+            notify('Une méthode au moins doit rester active : le total des poids est toujours de 100 %.', 'info');
+          }
         }
         store(LS.poids, S.poids);
         recompute(); render();
@@ -1668,7 +1729,7 @@
     if (!$('afPanel')) return false;
     if (!booted) {
       S.tab = read(LS.tab, 'synthese');
-      S.poids = read(LS.poids, null) || Object.assign({}, V.POIDS_DEFAUT);
+      S.poids = poidsInitiaux(Object.assign({}, V.POIDS_DEFAUT));
       S.comparablesStat = read(LS.stat, 'mediane');
       S.comparablesExclus = read(LS.exclus, []);
       bind();

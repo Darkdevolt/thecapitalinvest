@@ -418,10 +418,11 @@
      réduite en interne à leur médiane — impossible d'y faire porter
      davantage de poids sur, par exemple, le PER que sur le PSR. Chaque
      multiple est désormais une méthode à part entière, avec son propre
-     poids, exactement comme le DCF ou Graham. La somme des neuf poids
-     n'a pas besoin de faire 100 % : synthese() ne considère que les
-     méthodes exploitables (valeur calculable, poids non nul) et
-     renormalise sur elles seules. */
+     poids, exactement comme le DCF ou Graham. L'interface maintient la somme
+     des poids saisis à 100 % (af-app.js : fixerPoids). synthese() renormalise
+     malgré tout sur les seules méthodes exploitables (valeur calculable, poids
+     non nul), car une méthode non calculable pour une société ne peut pas porter
+     de poids : c'est le « poids effectif », toujours à 100 %. */
   var POIDS_DEFAUT = {
     dcf: 0.35, ddm: 0.20, dyMarche: 0.02,
     per: 0.15, pbr: 0.06, psr: 0.04, evEbitda: 0.02, pfcf: 0.01,
