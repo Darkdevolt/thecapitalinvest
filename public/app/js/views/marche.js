@@ -12,6 +12,7 @@
   var courseQuery = '';
   var pubFilter = 'all';
   var pubQuery = '';
+  var courseSort = { key: 'variation', dir: -1 };
 
   function esc(value) {
     if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
@@ -140,16 +141,22 @@
       return;
     }
 
-    filtered.sort(function (a, b) { return courseTicker(a).localeCompare(courseTicker(b)); });
-    body.innerHTML = filtered.map(function (row) {
+    var sortKey = courseSort.key;
+    filtered.sort(function (a,b) {
+      if(sortKey==='ticker') return courseTicker(a).localeCompare(courseTicker(b))*courseSort.dir;
+      var av=sortKey==='variation'?courseVariation(a):sortKey==='volume'?num(a.volume):sortKey==='capitalisation'?num(a.capitalisation):num(coursePrice(a));
+      var bv=sortKey==='variation'?courseVariation(b):sortKey==='volume'?num(b.volume):sortKey==='capitalisation'?num(b.capitalisation):num(coursePrice(b));
+      return ((av==null?-Infinity:av)-(bv==null?-Infinity:bv))*courseSort.dir;
+    });
+    body.innerHTML = filtered.map(function (row,i) {
       var ticker = courseTicker(row);
       var variation = courseVariation(row);
       var variationStyle = variation > 0 ? 'var(--green)' : (variation < 0 ? 'var(--red)' : 'var(--muted)');
       return '<tr>' +
-        '<td><strong style="color:var(--gold)">' + esc(ticker) + '</strong></td>' +
+        '<td><span class="market-ticker" data-market-ticker="' + esc(ticker) + '">' + esc(ticker) + '</span></td>' +
         '<td>' + esc(courseName(row)) + '</td>' +
         '<td class="right">' + money(coursePrice(row)) + '</td>' +
-        '<td class="right" style="color:' + variationStyle + '">' + pct(variation) + '</td>' +
+        '<td class="right"><span class="market-signal ' + (variation > 0 ? 'up' : (variation < 0 ? 'down' : 'flat')) + '">' + pct(variation) + '</span></td>' +
         '<td class="right">' + money(row.plus_haut || row.plus_high || row.high) + '</td>' +
         '<td class="right">' + money(row.plus_bas || row.plus_low || row.low) + '</td>' +
         '<td class="right">' + money(row.volume) + '</td>' +
@@ -157,6 +164,9 @@
         '<td>' + esc(courseSector(row)) + '</td>' +
       '</tr>';
     }).join('');
+    body.querySelectorAll('.market-ticker').forEach(function(el){
+      el.addEventListener('click',function(){ window.setMarcheTicker(el.dataset.marketTicker); });
+    });
   }
 
   function moverRows(rows, descending) {
@@ -337,7 +347,45 @@
     });
   }
 
+  function injectMarketCss() {
+    if (document.getElementById('tc-market-ux-css')) return;
+    var s=document.createElement('style'); s.id='tc-market-ux-css';
+    s.textContent=[
+      '#view-marche .market-hero{display:grid;grid-template-columns:minmax(0,1.6fr) repeat(4,minmax(135px,1fr));gap:12px;margin-bottom:18px}',
+      '#view-marche .market-hero-main,#view-marche .market-kpi{border:1px solid var(--border2);border-radius:14px;background:linear-gradient(145deg,rgba(255,255,255,.045),rgba(255,255,255,.015));padding:17px;box-shadow:0 8px 28px rgba(0,0,0,.12)}',
+      '#view-marche .market-eyebrow{font-size:10px;color:var(--gold);letter-spacing:.14em;text-transform:uppercase;font-weight:700;margin-bottom:7px}',
+      '#view-marche .market-hero h1{margin:0 0 6px;font-size:28px;letter-spacing:-.03em}',
+      '#view-marche .market-hero p{margin:0;color:var(--dim);font-size:12px;line-height:1.5}',
+      '#view-marche .market-kpi-label{font-size:10px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}',
+      '#view-marche .market-kpi-value{font-size:21px;font-weight:750;margin-top:7px}',
+      '#view-marche .market-kpi-note{font-size:10px;color:var(--dim);margin-top:4px}',
+      '#view-marche .market-breadth{display:flex;height:7px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.05);margin-top:9px}',
+      '#view-marche .market-breadth-up{background:var(--green)} #view-marche .market-breadth-down{background:var(--red)} #view-marche .market-breadth-flat{background:var(--muted)}',
+      '#view-marche .market-section-head{display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;margin-bottom:10px}',
+      '#view-marche .market-section-meta{font-size:10px;color:var(--dim)}',
+      '#view-marche .market-table thead th{position:sticky;top:0;z-index:2;background:var(--surface,#111)}',
+      '#view-marche .market-sort{cursor:pointer;user-select:none;white-space:nowrap}',
+      '#view-marche .market-sort:hover{color:var(--gold)}',
+      '#view-marche .market-sort-ind{font-size:9px;color:var(--gold);margin-left:3px}',
+      '#view-marche .market-ticker{color:var(--gold);font-weight:750;cursor:pointer}',
+      '#view-marche .market-ticker:hover{text-decoration:underline}',
+      '#view-marche .market-table tbody tr{transition:background .15s ease}',
+      '#view-marche .market-table tbody tr:hover{background:rgba(196,157,83,.05)}',
+      '#view-marche .market-signal{font-size:9px;border:1px solid;border-radius:999px;padding:3px 7px;white-space:nowrap}',
+      '#view-marche .market-signal.up{color:var(--green);border-color:rgba(74,222,128,.3)}',
+      '#view-marche .market-signal.down{color:var(--red);border-color:rgba(248,113,113,.3)}',
+      '#view-marche .market-signal.flat{color:var(--dim);border-color:var(--border2)}',
+      '#view-marche .market-quick{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}',
+      '#view-marche .market-quick button{border:1px solid var(--border2);background:transparent;color:var(--dim);border-radius:8px;padding:7px 10px;cursor:pointer;font-size:10px}',
+      '#view-marche .market-quick button:hover{color:var(--gold);border-color:var(--gold)}',
+      '@media(max-width:1150px){#view-marche .market-hero{grid-template-columns:1fr 1fr}#view-marche .market-hero-main{grid-column:1/-1}}',
+      '@media(max-width:700px){#view-marche .market-hero{grid-template-columns:1fr}#view-marche .market-hero-main{grid-column:auto}}'
+    ].join('\n');
+    document.head.appendChild(s);
+  }
+
   function renderMarketShell(container) {
+    injectMarketCss();
     var cours = getCours();
     var composite = getIndex(['COMPOSITE']);
     var brvm30 = getIndex(['BRVM-30', 'BRVM 30', '30']);
@@ -345,7 +393,15 @@
 
     container.innerHTML = '' +
       '<div class="page-content">' +
-        '<div class="page-header"><h1>Marché <span style="color:var(--gold)">BRVM</span></h1><p>Bourse Régionale des Valeurs Mobilières · Données de la séance · Abidjan, Côte d’Ivoire</p></div>' +
+        '<section class="market-hero">' +
+          '<div class="market-hero-main"><div class="market-eyebrow">The Capital · Market Intelligence</div><h1>Marché <span style="color:var(--gold)">BRVM</span></h1><p>Vue consolidée de la séance : indices, breadth, liquidité, mouvements, dividendes et publications.</p><div class="market-quick"><button type="button" data-market-scroll="cours">Cours</button><button type="button" data-market-scroll="palmares">Palmarès</button><button type="button" data-market-scroll="dividendes">Dividendes</button><button type="button" data-market-scroll="publications">Publications</button></div></div>' +
+          '<div class="market-kpi"><div class="market-kpi-label">Titres</div><div class="market-kpi-value" id="marketKpiTitles">—</div><div class="market-kpi-note">univers de cotation</div></div>' +
+          '<div class="market-kpi"><div class="market-kpi-label">Volume</div><div class="market-kpi-value" id="marketKpiVolume">—</div><div class="market-kpi-note">titres échangés</div></div>' +
+          '<div class="market-kpi"><div class="market-kpi-label">Capitalisation</div><div class="market-kpi-value" id="marketKpiCapitalisation">—</div><div class="market-kpi-note">somme disponible</div></div>' +
+          '<div class="market-kpi"><div class="market-kpi-label">Leader séance</div><div class="market-kpi-value" id="marketKpiLeader">—</div><div class="market-kpi-note" id="marketKpiLeaderNote">—</div></div>' +
+          '<div class="market-kpi" style="grid-column:1/-1"><div class="market-kpi-label">Breadth de la séance</div><div class="market-kpi-value" style="font-size:13px" id="marketKpiBreadth">—</div><div class="market-breadth" id="marketHeroBreadth"></div></div>' +
+        '</section>' +
+        '<div class="page-header"><h1 style="display:none">Marché BRVM</h1></div>' +
         '<div class="section" id="indices">' +
           '<div class="section-title">Cours des Indices</div><div class="section-sub">Évolution des indices de référence de la BRVM</div>' +
           '<div class="grid-3 mb20">' + indexCard('BRVM Composite', composite) + indexCard('BRVM 30', brvm30) + indexCard('BRVM Prestige', prestige) + '</div>' +
@@ -367,7 +423,7 @@
             '<button class="filter-btn" data-marche-filter="course-telecom" type="button">Telecom</button>' +
           '</div>' +
           '<div class="card"><div class="card-header"><div class="card-title">Séance du <span id="marche-coursDate">—</span></div><div style="font-size:12px;color:var(--dim)" id="marche-coursCount">—</div></div>' +
-            '<div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours (FCFA)</th><th class="right">Variation</th><th class="right">+ Haut</th><th class="right">+ Bas</th><th class="right">Volume</th><th class="right">Capitalisation</th><th>Secteur</th></tr></thead><tbody id="marche-coursTable"></tbody></table></div></div>' +
+            '<div class="table-wrap"><table class="market-table"><thead><tr><th class="market-sort" data-market-sort="ticker">Ticker <span class="market-sort-ind"></span></th><th>Société</th><th class="right market-sort" data-market-sort="price">Cours <span class="market-sort-ind"></span></th><th class="right market-sort" data-market-sort="variation">Variation <span class="market-sort-ind">↓</span></th><th class="right">+ Haut</th><th class="right">+ Bas</th><th class="right market-sort" data-market-sort="volume">Volume <span class="market-sort-ind"></span></th><th class="right market-sort" data-market-sort="capitalisation">Capitalisation <span class="market-sort-ind"></span></th><th>Secteur</th></tr></thead><tbody id="marche-coursTable"></tbody></table></div></div>' +
         '</div>' +
         '<div class="section" id="palmares">' +
           '<div class="section-title">Palmarès</div><div class="section-sub">Meilleures et moins bonnes performances de la séance</div>' +
@@ -399,7 +455,43 @@
     refreshMarket(cours);
   }
 
+  function renderMarketHero(cours) {
+    var up=cours.filter(function(r){return (courseVariation(r)||0)>0;}).length;
+    var down=cours.filter(function(r){return (courseVariation(r)||0)<0;}).length;
+    var flat=cours.length-up-down;
+    var totalVol=cours.reduce(function(s,r){return s+(num(r.volume)||0);},0);
+    var cap=cours.reduce(function(s,r){return s+(num(r.capitalisation)||0);},0);
+    var best=moverRows(cours.filter(function(r){return (courseVariation(r)||0)>0;}),true)[0];
+    var el=document.getElementById('marketHeroBreadth');
+    if(el){
+      var total=cours.length||1;
+      el.innerHTML='<span class="market-breadth-up" style="width:'+up/total*100+'%"></span><span class="market-breadth-flat" style="width:'+flat/total*100+'%"></span><span class="market-breadth-down" style="width:'+down/total*100+'%"></span>';
+    }
+    var set=function(id,value){var x=document.getElementById(id);if(x)x.textContent=value;};
+    set('marketKpiTitles',cours.length);
+    set('marketKpiVolume',money(totalVol));
+    set('marketKpiCapitalisation',money(cap));
+    set('marketKpiLeader',best?courseTicker(best):'—');
+    set('marketKpiBreadth',up+' hausse · '+flat+' stable · '+down+' baisse');
+    set('marketKpiLeaderNote',best?pct(courseVariation(best)):'Aucune hausse');
+  }
+
   function bindMarketEvents() {
+    document.querySelectorAll('#view-marche [data-market-sort]').forEach(function(th){
+      th.addEventListener('click',function(){
+        var key=th.dataset.marketSort;
+        if(courseSort.key===key) courseSort.dir*=-1; else {courseSort.key=key;courseSort.dir=-1;}
+        document.querySelectorAll('#view-marche .market-sort-ind').forEach(function(x){x.textContent='';});
+        var ind=th.querySelector('.market-sort-ind'); if(ind) ind.textContent=courseSort.dir===-1?'↓':'↑';
+        renderCourses(getCours());
+      });
+    });
+    document.querySelectorAll('#view-marche [data-market-scroll]').forEach(function(b){
+      b.addEventListener('click',function(){var target=document.getElementById(b.dataset.marketScroll);if(target)target.scrollIntoView({behavior:'smooth',block:'start'});});
+    });
+    document.querySelectorAll('#view-marche .market-ticker').forEach(function(el){
+      el.addEventListener('click',function(){window.setMarcheTicker(el.dataset.marketTicker);});
+    });
     var search = document.getElementById('marche-searchCours');
     if (search) search.addEventListener('input', function () { courseQuery = search.value || ''; renderCourses(getCours()); });
 
@@ -431,6 +523,7 @@
   }
 
   function refreshMarket(cours) {
+    renderMarketHero(cours);
     renderCourses(cours);
     renderMovers(cours);
     renderDividends();
