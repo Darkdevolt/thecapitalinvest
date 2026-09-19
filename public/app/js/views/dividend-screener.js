@@ -409,8 +409,8 @@
     tbody.querySelectorAll('.div-ticker').forEach(el=>el.addEventListener('click',()=>{
       const t=el.dataset.ticker;
       if(typeof window.nav==='function') window.nav('fiche='+encodeURIComponent(t));
-      else window.location.hash = '#fiche='+encodeURIComponent(t);
       else if(typeof window.openSecuritySheet==='function') window.openSecuritySheet(t);
+      else window.location.hash = '#fiche='+encodeURIComponent(t);
     }));
   }
 
