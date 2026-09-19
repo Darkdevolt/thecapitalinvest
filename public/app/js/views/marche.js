@@ -164,6 +164,9 @@
         '<td>' + esc(courseSector(row)) + '</td>' +
       '</tr>';
     }).join('');
+    body.querySelectorAll('.market-ticker').forEach(function(el){
+      el.addEventListener('click',function(){ window.setMarcheTicker(el.dataset.marketTicker); });
+    });
   }
 
   function moverRows(rows, descending) {
