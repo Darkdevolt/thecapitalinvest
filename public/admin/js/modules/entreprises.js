@@ -30,6 +30,69 @@
         { id: 'e-desc', label: 'Description', type: 'textarea', wide: true, rows: 3, placeholder: 'Activité, positionnement, faits marquants…' }
     ];
 
+    /* ── Logos ───────────────────────────────────────────────
+       Envoyés directement au bucket public « logos-societes » avec la session
+       de l'administrateur : la politique du bucket réserve l'écriture aux
+       administrateurs. Chaque envoi reçoit un nom neuf pour qu'un logo remplacé
+       ne reste pas en cache chez les visiteurs. */
+    const LOGO_BUCKET = 'logos-societes';
+    const LOGO_MAX = 1024 * 1024;
+    const LOGO_TYPES = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
+
+    function storageBase() { return String(TC.env.SUPABASE_URL || '').replace(/\/+$/, '') + '/storage/v1'; }
+
+    async function storageHeaders(extra) {
+        await TC.ensureToken();
+        return Object.assign({ apikey: TC.env.SUPABASE_ANON, Authorization: 'Bearer ' + TC.session.token }, extra || {});
+    }
+
+    function logoPath(url) {
+        const marker = '/' + LOGO_BUCKET + '/';
+        const at = String(url || '').indexOf(marker);
+        return at === -1 ? '' : String(url).slice(at + marker.length);
+    }
+
+    async function uploadLogo(ticker, file) {
+        const path = ticker + '/' + Date.now() + '.' + LOGO_TYPES[file.type];
+        const r = await fetch(storageBase() + '/object/' + LOGO_BUCKET + '/' + path, {
+            method: 'POST',
+            headers: await storageHeaders({ 'Content-Type': file.type, 'Cache-Control': 'max-age=31536000' }),
+            body: file
+        });
+        if (!r.ok) {
+            let detail = '';
+            try { const j = await r.json(); detail = j.message || j.error || ''; } catch (e) { /* corps vide */ }
+            if (r.status === 401 || r.status === 403) {
+                throw new Error('Envoi refusé : seuls les administrateurs peuvent déposer un logo. Reconnectez-vous puis réessayez.');
+            }
+            if (r.status === 404) throw new Error('Le bucket « ' + LOGO_BUCKET + ' » est introuvable dans Supabase.');
+            throw new Error('Envoi du logo impossible (HTTP ' + r.status + ')' + (detail ? ' : ' + detail : '.'));
+        }
+        return storageBase() + '/object/public/' + LOGO_BUCKET + '/' + path;
+    }
+
+    /** Suppression au mieux : un ancien fichier orphelin ne doit pas bloquer l'enregistrement. */
+    async function deleteLogo(url) {
+        const path = logoPath(url);
+        if (!path) return;
+        try {
+            await fetch(storageBase() + '/object/' + LOGO_BUCKET + '/' + path, { method: 'DELETE', headers: await storageHeaders() });
+        } catch (e) { /* fichier orphelin toléré */ }
+    }
+
+    function logoField() {
+        return '<div class="field wide" id="e-logo-box">' +
+            '<label for="e-logo-file">Logo <span class="col">→ logo_url</span></label>' +
+            '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+            '<div id="e-logo-prev" style="width:84px;height:84px;flex:none;display:flex;align-items:center;justify-content:center;' +
+            'background:#fff;border:1px solid var(--border);border-radius:12px;overflow:hidden;color:#8a8f98;font-size:11px;text-align:center;">Aucun logo</div>' +
+            '<div style="display:flex;flex-direction:column;gap:8px;align-items:flex-start;">' +
+            '<input type="file" id="e-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml">' +
+            '<button type="button" class="btn btn-outline btn-sm" id="e-logo-clear" style="display:none;">Retirer le logo</button></div></div>' +
+            '<div class="hint">PNG, JPG, WebP ou SVG · 1 Mo maximum · de préférence carré, sur fond transparent. ' +
+            'Le logo s\'affiche à côté du ticker dans toute l\'application.</div></div>';
+    }
+
     function view() {
         return '' +
             '<div class="page-head">' +
@@ -54,9 +117,9 @@
             '<button class="btn btn-outline btn-sm" id="ent-bulk-reset">Tout désélectionner</button></div>' +
             '<div class="tw capped" id="bulk-ent-scope"><table><thead><tr>' +
             '<th><input type="checkbox" class="rowcheck" id="ent-all"></th>' +
-            '<th>Ticker</th><th>Dénomination</th><th>Secteur</th><th>Pays</th><th>Compartiment</th>' +
+            '<th>Logo</th><th>Ticker</th><th>Dénomination</th><th>Secteur</th><th>Pays</th><th>Compartiment</th>' +
             '<th class="r">Nb actions</th><th>Complétude</th><th></th>' +
-            '</tr></thead><tbody id="ent-tbody">' + TC.rowsLoading(10) + '</tbody></table></div></div>';
+            '</tr></thead><tbody id="ent-tbody">' + TC.rowsLoading(11) + '</tbody></table></div></div>';
     }
 
     function missingOf(r) {
@@ -70,7 +133,7 @@
     }
 
     async function load() {
-        TC.el('ent-tbody').innerHTML = TC.rowsLoading(10);
+        TC.el('ent-tbody').innerHTML = TC.rowsLoading(11);
         const data = await TC.get('entreprises', 'select=*&order=ticker.asc&limit=1000');
         rows = (data || []).filter(r => r && r.ticker && !TC.isIndice(r.ticker));
         rows.forEach(r => { r.__missing = missingOf(r); });
@@ -87,6 +150,7 @@
         TC.el('ent-kpis').innerHTML =
             kpi('Sociétés', rows.length) +
             kpi('Fiches complètes', complete + ' / ' + rows.length, complete === rows.length ? '' : 'orange') +
+            kpi('Logos déposés', rows.filter(r => r.logo_url).length + ' / ' + rows.length) +
             kpi('Compartiment Prestige', prestige) +
             kpi('Pays représentés', countries) +
             kpi('Secteurs', sectors);
@@ -101,7 +165,7 @@
         const tbody = TC.el('ent-tbody');
         TC.el('ent-count').textContent = list.length + ' fiche(s)';
         if (!list.length) {
-            tbody.innerHTML = TC.rowsEmpty(9, 'Aucune société',
+            tbody.innerHTML = TC.rowsEmpty(11, 'Aucune société',
                 'Créez les sociétés cotées avant tout import de cours ou d\'états financiers.');
             return;
         }
@@ -111,6 +175,12 @@
             const actions = TC.toNumber(r.nombre_actions || r.nb_actions);
             return '<tr class="' + (gaps.length >= 3 ? 'row-flag' : gaps.length ? 'row-warn' : '') + '">' +
                 '<td><input type="checkbox" class="rowcheck" data-id="' + TC.esc(r.ticker) + '"></td>' +
+                '<td><span data-edit="' + TC.esc(r.ticker) + '" title="' + (r.logo_url ? 'Changer le logo' : 'Ajouter un logo') + '" ' +
+                'style="cursor:pointer;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;' +
+                (r.logo_url ? 'background:#fff;' : 'border:1px dashed var(--border);color:var(--muted);font-size:14px;') + '">' +
+                (r.logo_url
+                    ? '<img src="' + TC.esc(r.logo_url) + '" alt="" loading="lazy" style="width:26px;height:26px;object-fit:contain;">'
+                    : '+') + '</span></td>' +
                 '<td class="td-key">' + TC.esc(r.ticker) + '</td>' +
                 '<td>' + TC.esc(r.nom || '—') + '</td>' +
                 '<td class="td-muted">' + TC.esc(r.secteur || '—') + '</td>' +
@@ -139,8 +209,52 @@
         }));
     }
 
+    /**
+     * Gère le choix du logo dans la fiche. Rien n'est envoyé avant
+     * « Enregistrer » : le ticker d'une nouvelle société n'existe pas encore
+     * et l'annulation de la fenêtre ne doit laisser aucun fichier orphelin.
+     */
+    function wireLogo(existing) {
+        const state = { file: null, remove: false, preview: '' };
+        const box = TC.el('e-logo-prev'), clear = TC.el('e-logo-clear'), input = TC.el('e-logo-file');
+        const current = existing && existing.logo_url ? existing.logo_url : '';
+
+        function paintPreview() {
+            const src = state.file ? state.preview : (state.remove ? '' : current);
+            box.innerHTML = src
+                ? '<img src="' + TC.esc(src) + '" alt="" style="max-width:100%;max-height:100%;object-fit:contain;padding:6px;box-sizing:border-box;">'
+                : 'Aucun logo';
+            clear.style.display = src ? '' : 'none';
+        }
+
+        input.addEventListener('change', function () {
+            const file = input.files && input.files[0];
+            if (!file) return;
+            if (!LOGO_TYPES[file.type]) {
+                input.value = '';
+                TC.modal.msg('Format non accepté : utilisez un PNG, JPG, WebP ou SVG.', 'err'); return;
+            }
+            if (file.size > LOGO_MAX) {
+                input.value = '';
+                TC.modal.msg('Logo trop lourd (' + (file.size / 1048576).toFixed(1) + ' Mo) : 1 Mo maximum.', 'err'); return;
+            }
+            TC.modal.msg('', '');
+            if (state.preview) URL.revokeObjectURL(state.preview);
+            state.file = file; state.remove = false; state.preview = URL.createObjectURL(file);
+            paintPreview();
+        });
+        clear.addEventListener('click', function () {
+            if (state.preview) URL.revokeObjectURL(state.preview);
+            state.file = null; state.preview = ''; state.remove = true; input.value = '';
+            paintPreview();
+        });
+        paintPreview();
+        return state;
+    }
+
     function openForm(existing) {
         const isNew = !existing;
+        let logo = { file: null, remove: false };
         TC.modal.open({
             title: isNew ? 'Nouvelle société cotée' : 'Fiche ' + existing.ticker,
             subtitle: isNew
@@ -148,8 +262,9 @@
                 : (existing.__missing.length ? 'Manque : ' + existing.__missing.join(', ') : 'Fiche complète'),
             saveLabel: isNew ? 'Créer la société' : 'Enregistrer',
             body: '<div class="form-grid">' + TC.fields(FORM.map(f =>
-                (!isNew && f.id === 'e-ticker') ? Object.assign({}, f, { readonly: true }) : f)) + '</div>',
+                (!isNew && f.id === 'e-ticker') ? Object.assign({}, f, { readonly: true }) : f)) + logoField() + '</div>',
             afterOpen() {
+                logo = wireLogo(existing);
                 if (isNew) { TC.setVal('e-compart', 'PRINCIPAL'); return; }
                 TC.setVal('e-ticker', existing.ticker);
                 TC.setVal('e-nom', existing.nom);
@@ -187,13 +302,24 @@
                     actif: true
                 };
 
+                const previous = existing && existing.logo_url ? existing.logo_url : '';
+                let uploaded = '';
+                TC.modal.busy(true);
                 try {
+                    if (logo.file) { uploaded = await uploadLogo(ticker, logo.file); body.logo_url = uploaded; }
+                    else if (logo.remove) body.logo_url = null;
+
                     if (isNew) await TC.post('entreprises', body, 'ticker');
                     else await TC.patch('entreprises', 'ticker=eq.' + encodeURIComponent(ticker), body);
+
+                    if (previous && (uploaded || logo.remove)) deleteLogo(previous);
                     TC.modal.close();
                     TC.toast(isNew ? 'Société ' + ticker + ' créée' : 'Fiche ' + ticker + ' mise à jour', 'ok');
                     load();
-                } catch (e) { TC.modal.msg(e.message, 'err'); }
+                } catch (e) {
+                    if (uploaded) deleteLogo(uploaded);
+                    TC.modal.msg(e.message, 'err');
+                } finally { TC.modal.busy(false); }
             }
         });
     }

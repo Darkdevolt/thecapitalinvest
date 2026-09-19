@@ -147,11 +147,18 @@ function fchRatios(f, cp, nbActions) {
   return out;
 }
 
+/* Un semestre ou un trimestre ne remplace pas l'exercice : ses résultats
+   partiels fausseraient le P/E, le ROE et la comparaison sectorielle. */
+function fchIsAnnual(f) {
+  var p = String(f && f.periode || 'annuel').toLowerCase();
+  return p === '' || p === 'annuel';
+}
+
 function fchSectorBenchmark(sector, exclTicker, coursByTicker, entByTicker) {
   var fins = Array.isArray(window.allFinancials) ? window.allFinancials : [];
   var latestByTicker = {};
   fins.forEach(function (f) {
-    if (!f || !f.ticker) return;
+    if (!f || !f.ticker || !fchIsAnnual(f)) return;
     var t = String(f.ticker).toUpperCase();
     var ent = entByTicker[t];
     if (!ent || String(ent.secteur || '') !== String(sector || '')) return;
@@ -249,6 +256,7 @@ function injectFicheCss() {
     '#view-fiche .fch-back:hover{color:var(--gold-l);border-color:var(--gold)}',
     '#view-fiche .fch-head{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;flex-wrap:wrap;padding-bottom:18px;border-bottom:1px solid var(--border2)}',
     '#view-fiche .fch-id .fch-tkr{font:600 11px/1 var(--mono);letter-spacing:.14em;color:var(--gold);text-transform:uppercase}',
+    '#view-fiche .fch-id .fch-logo{display:block;margin:0 0 12px;padding:6px;border-radius:14px}',
     '#view-fiche .fch-id h1{margin:7px 0 5px;font:600 clamp(24px,3vw,34px)/1.1 var(--serif);color:var(--cream)}',
     '#view-fiche .fch-id .fch-tags{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;color:var(--muted)}',
     '#view-fiche .fch-id .fch-tags span{border:1px solid var(--border2);border-radius:5px;padding:2px 8px}',
@@ -457,7 +465,7 @@ async function _openFicheInner(from, noHash, T) {
 
   var ent = entList.find(function (e) { return String(e && e.ticker || '').toUpperCase() === T; }) || {};
   var coursNow = coursList.find(function (c) { return String(c && c.ticker || '').toUpperCase() === T; }) || {};
-  var fins = finList.filter(function (f) { return String(f && f.ticker || '').toUpperCase() === T; })
+  var fins = finList.filter(function (f) { return String(f && f.ticker || '').toUpperCase() === T && fchIsAnnual(f); })
     .sort(function (a, b) { return Number(b.annee) - Number(a.annee); });
   var divs = divList.filter(function (d) { return String(d && d.ticker || '').toUpperCase() === T; })
     .sort(function (a, b) { return Number(b.exercice || b.annee || 0) - Number(a.exercice || a.annee || 0); });
@@ -501,6 +509,7 @@ async function _openFicheInner(from, noHash, T) {
 
   // 1 · En-tête
   H.push('<div class="fch-head"><div class="fch-id">'
+    + (window.tcLogo ? window.tcLogo(T, { size: 64, className: 'fch-logo' }) : '')
     + '<div class="fch-tkr">' + fchEsc(T) + (ent.compartiment ? ' · ' + fchEsc(ent.compartiment) : '') + '</div>'
     + '<h1>' + fchEsc(ent.nom || ent.nom_court || T) + '</h1>'
     + '<div class="fch-tags">'
