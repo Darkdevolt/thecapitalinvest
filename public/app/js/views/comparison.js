@@ -80,36 +80,70 @@
     var s = document.createElement('style');
     s.id = 'tc-cmp-v2-css';
     s.textContent = [
-      '#view-comparison{padding:24px clamp(14px,3vw,32px) 56px;max-width:1240px;margin-inline:auto}',
-      '#view-comparison .cmp-pick{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}',
-      '#view-comparison .cmp-pick select{background:var(--surface);border:1px solid var(--border2);border-radius:8px;color:var(--cream);padding:8px 12px;font:400 12px var(--sans);min-width:200px}',
-      '#view-comparison .cmp-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--gold);background:var(--gold-bg);color:var(--gold-l);border-radius:999px;padding:5px 8px 5px 12px;font:600 11px var(--mono)}',
-      '#view-comparison .cmp-chip button{border:0;background:transparent;color:inherit;cursor:pointer;font-size:13px;line-height:1}',
-      '#view-comparison .cmp-cols{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,420px);gap:18px;align-items:start}',
-      '#view-comparison .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px}',
-      '#view-comparison table{width:100%;border-collapse:collapse;font-size:12px}',
-      '#view-comparison th,#view-comparison td{padding:9px 11px;border-bottom:1px solid var(--border2);text-align:right;font-variant-numeric:tabular-nums;color:var(--cream);white-space:nowrap}',
-      '#view-comparison th:first-child,#view-comparison td:first-child{text-align:left;color:var(--muted)}',
-      '#view-comparison thead th{font:600 8px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}',
-      '#view-comparison thead th b{display:block;color:var(--gold);font:600 12px var(--mono)}',
-      '#view-comparison td.best{color:var(--green);font-weight:600}',
+      '#view-comparison{padding:30px clamp(16px,3.5vw,42px) 64px;max-width:1440px;margin-inline:auto}',
+      '#view-comparison .page-header{margin:0 0 24px;padding:0 0 22px;border-bottom:1px solid var(--border2);position:relative}',
+      '#view-comparison .page-header:after{content:"";position:absolute;left:0;bottom:-1px;width:88px;height:1px;background:var(--gold)}',
+      '#view-comparison .page-header h1{font-size:clamp(27px,2.4vw,38px);line-height:1.08;margin:0 0 8px;letter-spacing:-.025em}',
+      '#view-comparison .page-header p{max-width:850px;margin:0;color:var(--muted);font-size:12px;line-height:1.65}',
+      '#view-comparison .cmp-pick{display:grid;grid-template-columns:repeat(2,minmax(210px,1fr)) minmax(190px,1fr);gap:10px;margin:0 0 18px}',
+      '#view-comparison .cmp-company{position:relative;min-height:72px;padding:13px 36px 12px 15px;border:1px solid var(--border);border-radius:10px;background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.012));box-shadow:inset 0 1px 0 rgba(255,255,255,.025);display:flex;flex-direction:column;justify-content:center}',
+      '#view-comparison .cmp-company:hover{border-color:rgba(184,150,78,.55)}',
+      '#view-comparison .cmp-company-t{font:700 12px var(--mono);color:var(--gold-l);letter-spacing:.03em}',
+      '#view-comparison .cmp-company-n{margin-top:4px;color:var(--cream);font-size:11px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}',
+      '#view-comparison .cmp-company-s{margin-top:3px;color:var(--dim);font-size:9px}',
+      '#view-comparison .cmp-remove{position:absolute;right:10px;top:9px;width:22px;height:22px;border:1px solid var(--border2);border-radius:50%;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;line-height:19px}',
+      '#view-comparison .cmp-remove:hover{border-color:var(--gold);color:var(--gold-l);background:var(--gold-bg)}',
+      '#view-comparison .cmp-add{min-height:72px;border:1px dashed rgba(184,150,78,.55);border-radius:10px;background:rgba(184,150,78,.025);color:var(--gold-l);padding:0 14px;cursor:pointer;font:600 11px var(--sans);text-align:left}',
+      '#view-comparison .cmp-add:hover{background:var(--gold-bg);border-color:var(--gold)}',
+      '#view-comparison .cmp-add strong{display:block;font:700 13px var(--serif);color:var(--cream);margin-bottom:3px}',
+      '#view-comparison .cmp-add span{color:var(--dim);font-size:9px}',
+      '#view-comparison .cmp-pick select{width:100%;height:72px;background:var(--surface);border:1px dashed var(--border2);border-radius:10px;color:var(--cream);padding:0 13px;font:400 11px var(--sans);cursor:pointer}',
+      '#view-comparison .cmp-pick select:hover{border-color:var(--gold)}',
+      '#view-comparison .cmp-tools{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 0 12px}',
+      '#view-comparison .cmp-count{font:600 9px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}',
+      '#view-comparison .cmp-count b{color:var(--gold-l)}',
+      '#view-comparison .cmp-bar{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:0 0 12px}',
+      '#view-comparison .cmp-bar button,#view-comparison .cmp-bar #cmpCsv{border:1px solid var(--border2);background:rgba(255,255,255,.018);color:var(--gold-l);border-radius:7px;padding:8px 12px;font:600 9px var(--sans);text-transform:uppercase;letter-spacing:.07em;cursor:pointer;transition:.18s ease}',
+      '#view-comparison .cmp-bar button:hover,#view-comparison .cmp-bar #cmpCsv:hover{border-color:var(--gold);background:var(--gold-bg);transform:translateY(-1px)}',
+      '#view-comparison .cmp-cols{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(330px,.8fr);gap:14px;align-items:start}',
+      '#view-comparison .card{background:linear-gradient(145deg,rgba(255,255,255,.026),rgba(255,255,255,.012));border:1px solid var(--border);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.16);overflow:hidden}',
+      '#view-comparison .cmp-table-card{min-width:0}',
+      '#view-comparison .cmp-card-head{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px;border-bottom:1px solid var(--border2);background:rgba(255,255,255,.012)}',
+      '#view-comparison .cmp-card-title{display:flex;align-items:center;gap:10px}',
+      '#view-comparison .cmp-icon{width:30px;height:30px;display:grid;place-items:center;border:1px solid rgba(184,150,78,.35);border-radius:8px;background:var(--gold-bg);color:var(--gold-l);font-size:13px}',
+      '#view-comparison .cmp-card-title strong{display:block;font:600 15px var(--serif);color:var(--cream)}',
+      '#view-comparison .cmp-card-title span{display:block;margin-top:2px;color:var(--dim);font-size:9px}',
+      '#view-comparison .cmp-view-label{font:600 8px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--dim);white-space:nowrap}',
+      '#view-comparison .cmp-table-scroll{overflow:auto;max-height:620px}',
+      '#view-comparison table{width:100%;min-width:620px;border-collapse:separate;border-spacing:0;font-size:12px}',
+      '#view-comparison th,#view-comparison td{padding:10px 13px;border-bottom:1px solid rgba(255,255,255,.055);text-align:right;font-variant-numeric:tabular-nums;color:var(--cream);white-space:nowrap}',
+      '#view-comparison th:first-child,#view-comparison td:first-child{text-align:left;position:sticky;left:0;z-index:2;background:#17140f;color:var(--muted);min-width:155px}',
+      '#view-comparison thead th{position:sticky;top:0;z-index:3;background:#181510;font:600 8px var(--sans);letter-spacing:.09em;text-transform:uppercase;color:var(--dim);border-bottom:1px solid var(--border)}',
+      '#view-comparison thead th:not(:first-child){min-width:150px}',
+      '#view-comparison thead th:first-child{z-index:4}',
+      '#view-comparison thead th b{display:block;color:var(--gold);font:700 12px var(--mono);letter-spacing:.02em}',
+      '#view-comparison tbody tr:hover td{background:rgba(184,150,78,.025)}',
+      '#view-comparison tbody tr:hover td:first-child{background:#1b1711}',
+      '#view-comparison td.best{color:var(--green);font-weight:700;background:rgba(74,222,128,.035)}',
       '#view-comparison td.warn{color:var(--orange)}',
       '#view-comparison .cmp-sub{display:block;font:400 9px var(--sans);letter-spacing:0;text-transform:none;color:var(--dim);margin-top:2px}',
-      '#view-comparison .cmp-notes{margin:14px 0 0;padding:12px 0 0 16px;border-top:1px solid var(--border2);font-size:11px;line-height:1.55;color:var(--dim)}',
-      '#view-comparison .cmp-radar{height:360px}',
-      '#view-comparison .cmp-bar{display:flex;justify-content:flex-end;gap:8px;margin:14px 0 8px}',
-      '#view-comparison .cmp-bar #cmpCsv{border:1px solid var(--border2);background:transparent;color:var(--gold-l);border-radius:7px;padding:6px 12px;font:600 10px var(--sans);text-transform:uppercase;letter-spacing:.06em;cursor:pointer}',
-      '#view-comparison .cmp-bar #cmpCsv:hover{border-color:var(--gold)}',
-      '#view-comparison .cmp-start{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:26px 24px}',
-      '#view-comparison .cmp-start-t{font:600 15px var(--serif);color:var(--cream)}',
-      '#view-comparison .cmp-go{margin-top:10px;border:0;background:var(--gold);color:#1a1408;border-radius:8px;padding:10px 20px;font:700 11px var(--sans);text-transform:uppercase;letter-spacing:.08em;cursor:pointer}',
-      '#view-comparison .cmp-go:disabled{opacity:.35;cursor:not-allowed}',
+      '#view-comparison .cmp-notes{margin:0;padding:13px 18px 15px 32px;border-top:1px solid var(--border2);font-size:10px;line-height:1.55;color:var(--dim);background:rgba(0,0,0,.08)}',
+      '#view-comparison .cmp-notes li+li{margin-top:4px}',
+      '#view-comparison .cmp-radar-card{min-width:0}',
+      '#view-comparison .cmp-radar-head{padding:16px 18px 4px}',
+      '#view-comparison .cmp-radar{height:390px;padding:8px 10px 14px}',
+      '#view-comparison .cmp-radar-help{font-size:9px;color:var(--dim);line-height:1.5;margin-top:3px}',
+      '#view-comparison .cmp-start{display:flex;flex-direction:column;align-items:flex-start;gap:8px;padding:28px 24px}',
+      '#view-comparison .cmp-start-t{font:600 16px var(--serif);color:var(--cream)}',
       '#view-comparison .fch-muted{color:var(--dim);font-size:12px}',
-      '@media(max-width:900px){#view-comparison .cmp-cols{grid-template-columns:1fr}}'
+      '#view-comparison .cmp-go{margin-top:10px;border:0;background:var(--gold);color:#1a1408;border-radius:8px;padding:10px 20px;font:700 10px var(--sans);text-transform:uppercase;letter-spacing:.08em;cursor:pointer}',
+      '#view-comparison .cmp-go:disabled{opacity:.35;cursor:not-allowed}',
+      '@media(max-width:1050px){#view-comparison .cmp-pick{grid-template-columns:repeat(2,minmax(0,1fr));}#view-comparison .cmp-add{grid-column:1/-1}}',
+      '@media(max-width:900px){#view-comparison .cmp-cols{grid-template-columns:1fr}#view-comparison .cmp-radar{height:350px}}',
+      '@media(max-width:620px){#view-comparison{padding-inline:12px}.cmp-pick{grid-template-columns:1fr!important}.cmp-add{grid-column:auto!important}.cmp-tools{align-items:flex-start;flex-direction:column}.cmp-bar{justify-content:flex-start!important;flex-wrap:wrap}.cmp-card-head{align-items:flex-start!important}.cmp-view-label{display:none}}'
     ].join('\n');
     document.head.appendChild(s);
   }
-
   function valid(v) { return v != null && isFinite(v); }
 
   // Meilleures valeurs de la ligne. Aucune mise en évidence s'il y a moins de
@@ -221,10 +255,16 @@
     if (picks.length < 2) started = false;
 
     var head = '<div class="page-header"><h1>Comparaison <span style="color:var(--gold)">de sociétés</span></h1>'
-      + '<p>2 à 6 valeurs — tableau, radar et export. Meilleure valeur par ligne en vert ; le radar situe chaque société parmi toutes les valeurs cotées.</p></div>'
+      + '<p>Comparez de 2 à 6 valeurs sur leurs principaux indicateurs financiers, leur valorisation et leur profil relatif.</p></div>'
       + '<div class="cmp-pick">'
-      + picks.map(function (t) { return '<span class="cmp-chip">' + esc(t) + '<button type="button" data-rm="' + esc(t) + '">×</button></span>'; }).join('')
-      + (picks.length < 6 ? '<select id="cmpAdd"><option value="">+ Ajouter une société…</option>'
+      + picks.map(function (t) {
+          var co = companies.find(function (x) { return String(x.ticker).toUpperCase() === t; }) || {};
+          return '<div class="cmp-company"><span class="cmp-company-t">' + esc(t) + '</span>'
+            + '<span class="cmp-company-n">' + esc(co.nom || co.nom_court || t) + '</span>'
+            + '<span class="cmp-company-s">' + esc(co.secteur || 'Société cotée') + '</span>'
+            + '<button type="button" class="cmp-remove" data-rm="' + esc(t) + '" aria-label="Retirer ' + esc(t) + '">×</button></div>';
+        }).join('')
+      + (picks.length < 6 ? '<select id="cmpAdd" aria-label="Ajouter une société"><option value="">+ Ajouter une société…</option>'
         + companies.filter(function (c) { return picks.indexOf(String(c.ticker).toUpperCase()) < 0; })
           .map(function (c) { return '<option value="' + esc(c.ticker) + '">' + esc(c.ticker) + ' — ' + esc(c.nom || c.nom_court || '') + '</option>'; }).join('')
         + '</select>' : '')
@@ -280,9 +320,11 @@
     if (snaps.some(function (s) { return s.financial; })) notes.push('n.s. : non significatif (dette nette / fonds propres pour un établissement financier).');
 
     view.innerHTML = head
-      + '<div class="cmp-bar"><span id="cmpActions"><button type="button" id="cmpCsv">Export CSV</button> </span></div>'
+      + '<div class="cmp-tools"><span class="cmp-count"><b>' + picks.length + ' / 6</b> sociétés sélectionnées</span>'
+      + '<div class="cmp-bar"><span id="cmpActions"><button type="button" id="cmpCsv">Export CSV</button></span></div></div>'
       + '<div class="cmp-cols">'
-      + '<div class="card" style="overflow-x:auto"><table><thead><tr><th>Indicateur</th>'
+      + '<div class="card cmp-table-card"><div class="cmp-card-head"><div class="cmp-card-title"><span class="cmp-icon">◈</span><div><strong>Indicateurs clés</strong><span>Lecture comparative des données disponibles</span></div></div><span class="cmp-view-label">Valeurs absolues</span></div>'
+      + '<div class="cmp-table-scroll"><table><thead><tr><th>Indicateur</th>'
       + snaps.map(function (s) { return '<th><b>' + esc(s.ticker) + '</b>' + esc(s.nom) + '<span class="cmp-sub">' + esc(s.secteur) + '</span></th>'; }).join('')
       + '</tr></thead><tbody>'
       + '<tr><td>Exercice</td>' + snaps.map(function (s) {
@@ -305,8 +347,8 @@
       }).join('')
       + '</tbody></table>'
       + (notes.length ? '<ul class="cmp-notes">' + notes.map(function (n) { return '<li>' + n + '</li>'; }).join('') + '</ul>' : '')
-      + '</div>'
-      + '<div class="card"><div class="fch-muted" style="margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--gold)">Profil relatif</div>'
+      + '</div></div>'
+      + '<div class="card cmp-radar-card"><div class="cmp-radar-head"><div class="cmp-card-title"><span class="cmp-icon">⌁</span><div><strong>Profil relatif</strong><span>Positionnement percentile parmi les valeurs cotées</span></div></div></div>'
       + '<div class="cmp-radar"><canvas id="cmpRadar"></canvas></div></div>'
       + '</div>';
 
