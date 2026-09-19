@@ -795,16 +795,30 @@ async function runPipeline(res, mode) {
     });
   }
 
-  const violations = await validateVariations(rows);
+  const allViolations = await validateVariations(rows);
+  /* Seul un dépassement réel du plafond +/-7,5 % bloque désormais l'écriture.
+     Le contrôle "incohérente" (variation publiée par BRVM vs recalculée
+     depuis notre dernière clôture) reste utile en signal, mais s'est révélé
+     trop fragile pour justifier de bloquer 47 titres à cause de 5 -
+     constaté en prod le 2026-09-18 : BOAM/CABC/FTSC/SMBC/TTLS ont bloqué
+     toute la séance de 10h à 16h, avec des chiffres figés dès le milieu de
+     séance (variation recalculée immobile à 0 %) évoquant des titres
+     suspendus en cours de journée - une clôture de référence différente
+     entre BRVM et nous dans ce cas-là n'a rien d'une anomalie de saisie,
+     et 42 titres parfaitement valides n'ont aucune raison d'attendre le
+     lendemain pour ça. Dégradé en avertissement, publié avec la séance.
+     Un vrai dépassement des +/-7,5 %, lui, reste bloquant sans exception. */
+  const violations = allViolations.filter(v => v.type === 'variation_hors_limite');
+  const warnings = allViolations.filter(v => v.type !== 'variation_hors_limite');
   if (violations.length) {
     await safeRunLog({
       started_at: startedAt, finished_at: new Date().toISOString(),
       status: 'blocked_validation',
-      result: { date_seance: payload.date_seance, count: rows.length, violations },
-      error: 'Contrôle BRVM : variation hors limite ou incohérente'
+      result: { date_seance: payload.date_seance, count: rows.length, violations, ...(warnings.length ? { warnings } : {}) },
+      error: 'Contrôle BRVM : variation hors limite (+/-7,5 %)'
     });
     return json(res, 422, {
-      success: false, blocked: true, reason: 'BRVM_VARIATION_CONTROL',
+      success: false, blocked: true, reason: 'BRVM_VARIATION_LIMIT',
       limit: VARIATION_LIMIT, violations, date_seance: payload.date_seance
     });
   }
@@ -812,12 +826,13 @@ async function runPipeline(res, mode) {
   const result = await writeSession(payload, rows);
   await safeRunLog({
     started_at: startedAt, finished_at: new Date().toISOString(), status: 'success',
-    result: { ...result, date_seance: payload.date_seance, source: 'BRVM', mapping }
+    result: { ...result, date_seance: payload.date_seance, source: 'BRVM', mapping, ...(warnings.length ? { warnings } : {}) }
   });
 
   return json(res, 200, {
     success: true, processed: true, mode,
-    date_seance: payload.date_seance, mapping, ...result
+    date_seance: payload.date_seance, mapping, ...result,
+    ...(warnings.length ? { warnings } : {})
   });
 }
 
