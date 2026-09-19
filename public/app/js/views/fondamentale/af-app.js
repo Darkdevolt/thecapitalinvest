@@ -800,11 +800,11 @@
       'plutôt que laissée vide. Seules les grandeurs du compte de résultat s\'y prêtent : un bilan est une photo à une ' +
       'date, pas une somme de trimestres.');
     html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Exercice</th>' +
-      ['t1', 't2', 't3', 't4', 's1', 's2', 'annuel'].map(function (p) { return '<th class="r">' + esc(it.labels[p]) + '</th>'; }).join('') +
+      ['t1', 't2', 't3', 't4', 's1', 's2', 'm9', 'annuel'].map(function (p) { return '<th class="r">' + esc(it.labels[p]) + '</th>'; }).join('') +
       '</tr></thead><tbody>' +
       it.annees.slice().reverse().map(function (y) {
         var v = it.champs.ca[y];
-        return '<tr><td>' + y + '</td>' + ['t1', 't2', 't3', 't4', 's1', 's2', 'annuel'].map(function (p) {
+        return '<tr><td>' + y + '</td>' + ['t1', 't2', 't3', 't4', 's1', 's2', 'm9', 'annuel'].map(function (p) {
           var cell = v[p];
           if (!cell) return '<td class="r af-vide">—</td>';
           return '<td class="r' + (cell.brut ? '' : ' af-saisi') + '">' + mont(cell.valeur) + '</td>';

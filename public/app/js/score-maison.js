@@ -31,7 +31,7 @@
   }
   // Seuls les exercices annuels se comparent entre eux : une ligne semestrielle
   // ou trimestrielle (onglet « Intermédiaire ») fausserait ROE, marge, croissance.
-  var INTERIM = /^(s[12]|t[1-4]|sem|trim|interm)/i;
+  var INTERIM = /^(s[12]|[tq][1-4]|9m|ttm|sem|trim|interm)/i;
   function finsOf(t) {
     return (Array.isArray(window.allFinancials) ? window.allFinancials : [])
       .filter(function (f) { return f && String(f.ticker).toUpperCase() === t && !INTERIM.test(String(f.periode || '')); })

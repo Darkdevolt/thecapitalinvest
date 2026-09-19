@@ -61,7 +61,8 @@
   // Financials le plus proche de l'exercice du dividende (même année, sinon
   // année antérieure la plus récente, sinon dernier exercice connu).
   function finFor(ticker, year) {
-    const list = financials().filter(f => String(f.ticker || '').toUpperCase() === ticker).sort((a, b) => n(b.annee) - n(a.annee));
+    /* Exercices annuels seulement : un semestre ou un cumul trimestriel de la même année n'a ni DPA ni payout. */
+    const list = financials().filter(f => String(f.ticker || '').toUpperCase() === ticker && (!f.periode || String(f.periode).toLowerCase() === 'annuel')).sort((a, b) => n(b.annee) - n(a.annee));
     if (!list.length) return null;
     return list.find(f => n(f.annee) === year) || list.find(f => year == null || n(f.annee) <= year) || list[0];
   }

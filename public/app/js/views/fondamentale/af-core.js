@@ -81,7 +81,9 @@
   function normalizeRow(r) {
     var o = {
       annee: num(r.annee) || num(r.exercice) || num(r.year),
-      periode: String(r.periode || 'annuel').toLowerCase(),
+      /* La base code un trimestre « Q1 » et le cumul des neuf mois « 9M » ; ce
+         module raisonne en t1…t4 et m9. */
+      periode: String(r.periode || 'annuel').toLowerCase().replace(/^q([1-4])$/, 't$1').replace(/^9m$/, 'm9'),
       source: r.source || '', sourceUrl: r.source_url || r.sourceUrl || '',
       sourcePage: r.source_page || r.sourcePage || ''
     };
@@ -602,7 +604,9 @@
      exclu de cette reconstruction. */
 
   var FLUX_INTER = ['ca', 'rbe', 'rn'];
-  var LABEL_PERIODE = { t1: 'T1', t2: 'T2', t3: 'T3', t4: 'T4', s1: 'S1', s2: 'S2', annuel: 'Annuel' };
+  /* T3 est le trimestre isolé (« réel »), m9 le cumul des neuf premiers mois tel
+     que publié au 30 septembre : les deux se lisent côte à côte. */
+  var LABEL_PERIODE = { t1: 'T1', t2: 'T2', t3: 'T3', t4: 'T4', s1: 'S1', s2: 'S2', m9: '9 mois', annuel: 'Annuel' };
 
   /* Une valeur déduite plutôt que publiée est marquée `brut:false` pour
      que l'interface la distingue visuellement, exactement comme les
@@ -622,6 +626,12 @@
       if (v.s2 && v.annuel && !v.s1) v.s1 = { valeur: v.annuel.valeur - v.s2.valeur, brut: false };
       if (v.s1 && v.s2 && !v.annuel) v.annuel = { valeur: v.s1.valeur + v.s2.valeur, brut: false };
       if (v.t3 && v.s2 && !v.t4) v.t4 = { valeur: v.s2.valeur - v.t3.valeur, brut: false };
+      /* Cumul 9 mois publié : T3 réel = 9 mois − S1 (ou − T1 − T2), T4 = annuel − 9 mois ;
+         et inversement le cumul se reconstitue quand T1, T2, T3 sont connus. */
+      if (v.m9 && v.s1 && !v.t3) v.t3 = { valeur: v.m9.valeur - v.s1.valeur, brut: false };
+      if (v.m9 && v.t1 && v.t2 && !v.t3) v.t3 = { valeur: v.m9.valeur - v.t1.valeur - v.t2.valeur, brut: false };
+      if (v.m9 && v.annuel && !v.t4) v.t4 = { valeur: v.annuel.valeur - v.m9.valeur, brut: false };
+      if (v.t1 && v.t2 && v.t3 && !v.m9) v.m9 = { valeur: v.t1.valeur + v.t2.valeur + v.t3.valeur, brut: false };
     }
     return v;
   }
@@ -634,7 +644,7 @@
     /* T4 et S2 ne sont quasiment jamais publiés tels quels sur la BRVM,
        mais si la source les tague un jour explicitement, ils comptent
        comme bruts au même titre que les autres plutôt que d'être ignorés. */
-    ['t1', 't2', 't3', 't4', 's1', 's2', 'annuel'].forEach(function (p) {
+    ['t1', 't2', 't3', 't4', 's1', 's2', 'm9', 'annuel'].forEach(function (p) {
       var row = byPeriode[p];
       var val = row ? row[champ] : NaN;
       v[p] = fin(val) ? { valeur: val, brut: true } : null;
@@ -688,7 +698,7 @@
     });
 
     var aDesPeriodes = annees.some(function (y) {
-      return ['t1', 't2', 't3', 's1'].some(function (p) { return !!parAnnee[y][p]; });
+      return ['t1', 't2', 't3', 's1', 'm9'].some(function (p) { return !!parAnnee[y][p]; });
     });
     if (!aDesPeriodes) return { enough: false, raison: 'seuls des exercices annuels complets sont disponibles, aucun trimestre ni semestre publié' };
 
@@ -698,7 +708,7 @@
        chaque type de période effectivement publié ou déduit sur le
        dernier exercice — jamais deux périodes de nature différente. */
     var comparaisons = [];
-    ['t1', 't2', 't3', 's1'].forEach(function (p) {
+    ['t1', 't2', 't3', 's1', 'm9'].forEach(function (p) {
       var cur = champs.ca[derniere] ? champs.ca[derniere][p] : null;
       if (!cur) return;
       var champsPeriode = {};

@@ -52,6 +52,34 @@ function finGrowth(curr, prev) {
   return ` <small class="fin-delta ${cls}">${arrow} ${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</small>`;
 }
 
+// Libellé d'une période. S1 et 9M sont des CUMULS depuis le 1er janvier, tels que
+// publiés ; Q1…Q4 sont des trimestres isolés.
+function finPeriodLabel(p) {
+  const labels = { S1: 'S1 · cumul 6 mois', S2: 'S2', Q1: 'T1 · 3 mois', Q2: 'T2 isolé', Q3: 'T3 isolé', Q4: 'T4 isolé', '9M': 'T3 cumulé · 9 mois', TTM: '12 mois glissants' };
+  return labels[String(p)] || String(p);
+}
+
+// Trimestre « réel » (isolé), déduit par soustraction de deux cumuls publiés la
+// même année : T2 = S1 − T1, T3 = 9 mois − S1, T4 = annuel − 9 mois. Jamais stocké,
+// toujours signalé comme déduit ; seuls les postes de flux du compte de résultat s'y prêtent.
+function finIsolatedCard(f, fins) {
+  const periode = String(f?.periode || 'annuel');
+  const rule = { S1: ['Q1', 'Trimestre 2 isolé', 'S1 − T1'], '9M': ['S1', 'Trimestre 3 isolé', '9 mois − S1'], annuel: ['9M', 'Trimestre 4 isolé', 'annuel − 9 mois'] }[periode];
+  if (!rule) return '';
+  const base = (Array.isArray(fins) ? fins : []).find(x => Number(x.annee) === Number(f.annee) && String(x.periode) === rule[0]);
+  if (!base) return '';
+  const pick = (row, key) => key === 'rbe' ? (row.rbe ?? row.ebitda) : row[key];
+  const diff = key => {
+    const a = Number(pick(f, key)), b = Number(pick(base, key));
+    return Number.isFinite(a) && Number.isFinite(b) ? a - b : null;
+  };
+  return finCard(`${rule[1]} (déduit : ${rule[2]})`, [
+    ["Chiffre d'affaires", finValue(diff('chiffre_affaires'))],
+    ['RBE', finValue(diff('rbe'))],
+    ['Résultat net', finValue(diff('resultat_net'))]
+  ]);
+}
+
 // Période comparable la plus récente avant f : même périodicité uniquement,
 // pour ne jamais comparer un exercice annuel à un semestre.
 function finPreviousPeriod(fins, f) {
@@ -358,13 +386,13 @@ function openFinDetail(ticker) {
   const container = document.getElementById('finDetailPeriods');
   if (!container) return;
   container.innerHTML = fins.map(f => {
-    const title = !f.periode || f.periode==='annuel' ? `${finEsc(f.annee)} · Annuel` : `${finEsc(f.annee)} · ${finEsc(String(f.periode).charAt(0).toUpperCase()+String(f.periode).slice(1))}`;
+    const title = !f.periode || f.periode==='annuel' ? `${finEsc(f.annee)} · Annuel` : `${finEsc(f.annee)} · ${finEsc(finPeriodLabel(f.periode))}`;
     const prev = finPreviousPeriod(fins, f);
     const lecture = finLecture(f, prev);
     const sections = [
       finCard('Compte de résultat', [
         ["Chiffre d'affaires",finValue(f.chiffre_affaires),finGrowth(f.chiffre_affaires,prev?.chiffre_affaires)],
-        ['RBE',finValue(f.rbe),finGrowth(f.rbe,prev?.rbe)],
+        ['RBE',finValue(f.rbe ?? f.ebitda),finGrowth(f.rbe ?? f.ebitda,prev?.rbe ?? prev?.ebitda)],
         ['Résultat net',finValue(f.resultat_net),finGrowth(f.resultat_net,prev?.resultat_net)],
         ['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],
         ['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—',finGrowth(f.dpa,prev?.dpa)]
@@ -376,7 +404,8 @@ function openFinDetail(ticker) {
       ]),
       finCard('Flux de trésorerie', [['Cash-flow opérationnel',finValue(f.cash_flow_operationnel)],['CAPEX',finValue(f.capex)]]),
       finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x': '—']]),
-      finCard('Dividende', [['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—'],['Taux de distribution (payout)',finPayoutRatio(f)!=null?finPayoutRatio(f).toFixed(1)+'%': '—',finGrowth(finPayoutRatio(f),finPayoutRatio(prev))]])
+      finCard('Dividende', [['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—'],['Taux de distribution (payout)',finPayoutRatio(f)!=null?finPayoutRatio(f).toFixed(1)+'%': '—',finGrowth(finPayoutRatio(f),finPayoutRatio(prev))]]),
+      finIsolatedCard(f, fins)
     ].join('');
     const lectureHtml = lecture.length
       ? `<div class="fin-lecture"><h4>Lecture automatique</h4>${lecture.map(n => `<p class="${n.tone}">${finEsc(n.text)}</p>`).join('')}</div>`

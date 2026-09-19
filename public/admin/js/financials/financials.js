@@ -12,7 +12,7 @@ function validateFinancialPayload(body, mode) {
     if (!ticker) errors.push('Ticker obligatoire.');
     if (!/^[A-Z0-9.\-]{2,20}$/.test(ticker)) errors.push('Ticker invalide : 2 à 20 caractères alphanumériques, point ou tiret.');
     if (!Number.isInteger(annee) || annee < 1900 || annee > 2100) errors.push('Année invalide : 1900–2100.');
-    if (!['annuel','S1','S2','Q1','Q2','Q3','Q4','TTM'].includes(periode)) errors.push('Période invalide.');
+    if (!['annuel','S1','S2','Q1','Q2','Q3','Q4','9M','TTM'].includes(periode)) errors.push('Période invalide.');
 
     const nonNegative = [
         ['chiffre_affaires','Chiffre d’affaires'], ['ebitda','EBITDA'], ['fonds_propres','Fonds propres'],

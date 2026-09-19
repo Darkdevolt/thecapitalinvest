@@ -45,12 +45,16 @@ TC.RECOS = ['Acheter', 'Renforcer', 'Conserver', 'Alléger', 'Vendre'];
 
 TC.PERIODES_FIN = [
     { v: 'annuel', l: 'Annuel' },
-    { v: 'S1', l: 'Semestre 1' },
+    /* Les codes sont ceux que la base accepte (contrainte financials_data_quality_guard) :
+       Q1…Q4 et non T1…T4, qu'elle refuserait. S1 et 9M sont des CUMULS depuis le 1er janvier,
+       comme les publient les sociétés ; Q1…Q4 sont des trimestres isolés. */
+    { v: 'S1', l: 'Semestre 1 (cumul 6 mois)' },
     { v: 'S2', l: 'Semestre 2' },
-    { v: 'T1', l: 'Trimestre 1' },
-    { v: 'T2', l: 'Trimestre 2' },
-    { v: 'T3', l: 'Trimestre 3' },
-    { v: 'T4', l: 'Trimestre 4' },
+    { v: 'Q1', l: 'Trimestre 1 (3 mois)' },
+    { v: 'Q2', l: 'Trimestre 2 isolé' },
+    { v: 'Q3', l: 'Trimestre 3 isolé' },
+    { v: 'Q4', l: 'Trimestre 4 isolé' },
+    { v: '9M', l: 'Cumul 9 mois (à fin septembre)' },
     { v: 'TTM', l: '12 mois glissants' }
 ];
 
