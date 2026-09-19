@@ -14,6 +14,9 @@
 
     let rows = [];
     let editing = null;
+    /* Dernier montant saisi à la main (brut ou net) : c'est lui qui fait foi,
+       l'autre en est déduit, y compris quand on change le taux d'IRVM. */
+    let lastEdited = 'brut';
     const sel = TC.selection('div');
 
     const STATUTS = [
@@ -26,7 +29,7 @@
         return '' +
             '<div class="page-head">' +
             '<div><div class="page-title">Calendrier des <em>dividendes</em></div>' +
-            '<div class="page-sub">Un dividende se rattache à l\'exercice qui l\'a produit, jamais à l\'année où il est versé. Le montant saisi est le dividende brut ; le net est calculé automatiquement après retenue de l\'IRVM. Le rendement affiché est recalculé sur le cours de clôture à la date de détachement (ou la séance précédente la plus proche) : sans date de détachement, il est estimé sur le dernier cours connu.</div></div>' +
+            '<div class="page-sub">Un dividende se rattache à l\'exercice qui l\'a produit, jamais à l\'année où il est versé. Saisissez le brut ou le net (celui que publie la BRVM) : l\'autre se calcule automatiquement avec le taux d\'IRVM de la ligne, et c\'est toujours le brut qui sert au rendement. Le rendement affiché est recalculé sur le cours de clôture à la date de détachement (ou la séance précédente la plus proche) : sans date de détachement, il est estimé sur le dernier cours connu.</div></div>' +
             '<div class="page-actions">' +
             '<button class="btn btn-outline btn-sm" id="div-refresh-yield">↻ Recalculer les rendements</button>' +
             '<button class="btn btn-outline btn-sm" id="div-refresh-net">↻ Recalculer les nets (IRVM)</button>' +
@@ -49,8 +52,9 @@
             '<div class="form-grid">' + TC.fields([
                 { id: 'd-ticker', label: 'Ticker', upper: true, placeholder: 'SNTS' },
                 { id: 'd-annee', label: 'Exercice bénéficiaire', type: 'number', step: '1', col: 'annee', placeholder: String(new Date().getFullYear() - 1), hint: 'Année des comptes, pas celle du versement.' },
-                { id: 'd-montant', label: 'Dividende brut par action', type: 'number', col: 'montant', placeholder: '229', hint: 'Montant voté, avant retenue de l\'IRVM.' },
-                { id: 'd-irvm', label: 'IRVM (%)', type: 'number', step: '0.1', col: 'taux_irvm', placeholder: '12', hint: 'Impôt sur le Revenu des Valeurs Mobilières, retenu à la source. 12 % par défaut, modifiable par ligne.' },
+                { id: 'd-montant', label: 'Dividende brut par action', type: 'number', col: 'montant', placeholder: '229', hint: 'Montant voté, avant retenue de l\'IRVM. Saisi ici, il recalcule le net.' },
+                { id: 'd-net', label: 'Dividende net par action', type: 'number', col: 'montant_net', placeholder: '201', hint: 'Montant reçu après IRVM, tel que la BRVM le publie. Saisi ici, il recalcule le brut.' },
+                { id: 'd-irvm', label: 'IRVM (%)', type: 'number', step: '0.1', col: 'taux_irvm', placeholder: '12', hint: 'Impôt sur le Revenu des Valeurs Mobilières, retenu à la source : 10 % au Sénégal, 12 % par défaut. À ajuster par ligne selon le pays.' },
                 { id: 'd-detach', label: 'Date de détachement', type: 'date', col: 'date_detachement' },
                 { id: 'd-paiement', label: 'Date de paiement', type: 'date' },
                 { id: 'd-statut', label: 'Statut', type: 'select', options: STATUTS },
@@ -160,9 +164,28 @@
         return Math.round(montant * (1 - taux / 100) * 100) / 100;
     }
 
+    /**
+     * Brut déduit d'un net publié : brut = net ÷ (1 − IRVM).
+     * Un dividende est voté en francs entiers et son net est publié arrondi
+     * au franc : si un brut entier redonne exactement ce net, c'est le montant
+     * voté (1 740 F net à 10 % → 1 933 F, et non 1 933,33). Sinon, deux décimales.
+     */
+    function grossOf(net, irvm) {
+        const n = TC.toNumber(net);
+        const t = irvm !== null && irvm !== undefined && irvm !== '' ? TC.toNumber(irvm) : 12;
+        if (n === null || t === null || t < 0 || t >= 100) return null;
+        const keep = 1 - t / 100;
+        const raw = n / keep;
+        const whole = Math.round(raw);
+        if (Number.isInteger(n) && Math.round(whole * keep) === n) return whole;
+        return Math.round(raw * 100) / 100;
+    }
+
     function audit(r) {
         const issues = [];
         const montant = TC.toNumber(r.montant);
+        const net = TC.toNumber(r.montant_net);
+        if (montant !== null && net !== null && net > montant + 0.005) issues.push('net supérieur au brut');
         const annee = parseInt(r.annee, 10);
         const currentYear = new Date().getFullYear();
 
@@ -205,6 +228,7 @@
             r.__issues = audit(r);
             return r;
         });
+        flagRows();
         paintKpis();
         paint(rows);
     }
@@ -276,6 +300,22 @@
             (!statut || (r.statut || 'confirmé') === statut)));
     }
 
+    /** Recalcule l'autre montant à partir de celui qui vient d'être saisi. */
+    function syncAmounts(source) {
+        if (source === 'brut' || source === 'net') lastEdited = source;
+        const irvm = TC.num('d-irvm');
+        if (lastEdited === 'net') {
+            const net = TC.num('d-net');
+            const brut = net !== null ? grossOf(net, irvm) : null;
+            TC.setVal('d-montant', brut !== null ? brut : '');
+        } else {
+            const brut = TC.num('d-montant');
+            const net = brut !== null ? netOf(brut, irvm) : null;
+            TC.setVal('d-net', net !== null ? net : '');
+        }
+        paintLive();
+    }
+
     async function paintLive() {
         const ticker = TC.val('d-ticker').toUpperCase();
         const montant = TC.num('d-montant');
@@ -283,11 +323,12 @@
         const node = TC.el('div-live');
         const irvmRaw = TC.num('d-irvm');
         const irvm = irvmRaw !== null ? irvmRaw : 12;
-        const net = netOf(montant, irvm);
+        const netField = TC.num('d-net');
+        const net = netField !== null ? netField : netOf(montant, irvm);
 
         if (!ticker || montant === null) {
             node.className = 'note';
-            node.innerHTML = 'Saisissez le ticker et le montant brut : le net et le rendement se calculent automatiquement.';
+            node.innerHTML = 'Saisissez le ticker et le montant brut ou net : l\'autre montant et le rendement se calculent automatiquement.';
             return;
         }
 
@@ -335,7 +376,14 @@
 
         const irvmInput = TC.num('d-irvm');
         const irvm = irvmInput !== null ? irvmInput : 12;
-        const net = netOf(montant, irvm);
+        /* Le net saisi (ou publié par la BRVM) est conservé tel quel : le
+           recalculer depuis le brut arrondi le ferait dériver de quelques
+           dixièmes de franc (1 933 × 0,9 = 1 739,7 au lieu des 1 740 publiés). */
+        const netInput = TC.num('d-net');
+        const net = netInput !== null ? netInput : netOf(montant, irvm);
+        if (net !== null && net > montant + 0.005) {
+            TC.say('div-msg', 'Le net (' + TC.fmt(net) + ' F) ne peut pas dépasser le brut (' + TC.fmt(montant) + ' F).', 'err'); return;
+        }
 
         const body = {
             ticker, annee, exercice: annee,
@@ -360,8 +408,9 @@
             } else {
                 await TC.post('dividendes_calendrier', body);
                 TC.say('div-msg', ticker + ' — exercice ' + annee + ' enregistré.', 'ok');
-                TC.clear(['d-montant', 'd-rendement', 'd-detach', 'd-paiement', 'd-notes']);
+                TC.clear(['d-montant', 'd-net', 'd-rendement', 'd-detach', 'd-paiement', 'd-notes']);
                 TC.setVal('d-irvm', 12);
+                lastEdited = 'brut';
             }
             load();
         } catch (e) { TC.say('div-msg', e.message, 'err'); }
@@ -374,7 +423,9 @@
         TC.setVal('d-ticker', row.ticker);
         TC.setVal('d-annee', row.annee || row.exercice);
         TC.setVal('d-montant', row.montant !== null && row.montant !== undefined ? row.montant : row.montant_net);
+        TC.setVal('d-net', row.montant_net !== null && row.montant_net !== undefined ? row.montant_net : netOf(row.montant, row.taux_irvm));
         TC.setVal('d-irvm', row.taux_irvm !== null && row.taux_irvm !== undefined ? row.taux_irvm : 12);
+        lastEdited = 'brut';
         TC.setVal('d-rendement', row.taux_rendement);
         TC.setVal('d-detach', TC.toISODate(row.date_detachement || row.ex_date) || '');
         TC.setVal('d-paiement', TC.toISODate(row.date_paiement) || '');
@@ -391,9 +442,10 @@
 
     function resetForm() {
         editing = null;
-        TC.clear(['d-ticker', 'd-annee', 'd-montant', 'd-rendement', 'd-detach', 'd-paiement', 'd-notes']);
+        TC.clear(['d-ticker', 'd-annee', 'd-montant', 'd-net', 'd-rendement', 'd-detach', 'd-paiement', 'd-notes']);
         TC.setVal('d-statut', 'confirmé');
         TC.setVal('d-irvm', 12);
+        lastEdited = 'brut';
         TC.el('div-form-title').textContent = 'Enregistrer un dividende';
         TC.el('div-save').textContent = 'Enregistrer';
         TC.el('div-cancel-edit').hidden = true;
@@ -412,6 +464,29 @@
 
     function esvKey(ticker, date) { return String(ticker || '').toUpperCase() + '|' + (date || ''); }
 
+    /**
+     * La BRVM ne publie que le net. Un « brut » identique au net publié pour le
+     * même détachement signale que le net a été saisi dans la colonne brut :
+     * le rendement est alors sous-évalué et le net recalculé est faux.
+     */
+    function flagRows() {
+        const nets = {};
+        esvRows.forEach(function (e) {
+            const n = TC.toNumber(e.montant_net);
+            if (n === null) return;
+            const key = esvKey(e.ticker, TC.toISODate(e.date_ex));
+            (nets[key] = nets[key] || []).push(n);
+        });
+        rows.forEach(function (r) {
+            const montant = TC.toNumber(r.montant);
+            const published = nets[esvKey(r.ticker, TC.toISODate(r.date_detachement || r.ex_date))] || [];
+            r.__issues = r.__issues.filter(i => i.indexOf('brut égal au net') !== 0);
+            if (montant !== null && published.some(n => Math.abs(n - montant) < 0.005)) {
+                r.__issues.push('brut égal au net publié par la BRVM : net saisi comme brut ?');
+            }
+        });
+    }
+
     async function loadEsvDividends() {
         TC.el('div-esv-body').innerHTML = TC.rowsLoading(4);
         try {
@@ -422,6 +497,9 @@
             TC.el('div-esv-body').innerHTML = '<tr><td colspan="7" class="td-muted">Lecture des Évènements Sur Valeurs impossible : ' + TC.esc(e.message) + '</td></tr>';
             return;
         }
+        flagRows();
+        paintKpis();
+        filter();
         paintEsvDividends();
     }
 
@@ -458,11 +536,11 @@
         TC.setVal('d-detach', TC.toISODate(r.date_ex) || '');
         TC.setVal('d-irvm', 12);
         const net = TC.toNumber(r.montant_net);
-        if (net !== null) TC.setVal('d-montant', Math.round((net / 0.88) * 100) / 100);
+        if (net !== null) { TC.setVal('d-net', net); syncAmounts('net'); }
         TC.setVal('d-statut', 'confirmé');
-        TC.setVal('d-notes', 'Montant brut estimé à partir du net BRVM (IRVM 12 %) — à vérifier contre l\'avis. Exercice bénéficiaire à confirmer.');
+        TC.setVal('d-notes', 'Net publié par la BRVM ; brut déduit avec l\'IRVM saisi — à vérifier contre l\'avis. Exercice bénéficiaire à confirmer.');
         paintLive();
-        TC.say('div-msg', 'Repris depuis les Évènements Sur Valeurs : le montant brut est une estimation (net ÷ 0,88), vérifiez-le contre l\'avis, et renseignez l\'exercice bénéficiaire avant d\'enregistrer.', 'info');
+        TC.say('div-msg', 'Repris depuis les Évènements Sur Valeurs : la BRVM ne publie que le NET, saisi tel quel dans « Dividende net ». Le brut en est déduit avec le taux d\'IRVM du pays (10 % au Sénégal, 12 % par défaut) : ajustez le taux si besoin, vérifiez le brut contre l\'avis, et renseignez l\'exercice bénéficiaire avant d\'enregistrer.', 'info');
         TC.el('panel-dividendes').scrollIntoView({ behavior: 'smooth', block: 'start' });
         TC.el('d-annee').focus();
     }
@@ -489,7 +567,9 @@
     async function refreshNet() {
         const drift = rows.filter(r => {
             const expected = netOf(r.montant, r.__irvm);
-            return expected !== null && TC.toNumber(r.montant_net) !== expected;
+            const stored = TC.toNumber(r.montant_net);
+            /* Un net publié est arrondi au franc : 1 740 pour 1 933 × 0,9 = 1 739,7 est cohérent. */
+            return expected !== null && (stored === null || Math.abs(stored - expected) > 1);
         });
         if (!drift.length) { TC.toast('Tous les nets sont à jour', 'ok'); return; }
         if (!confirm('Recalculer ' + drift.length + ' dividende(s) net(s) ?\n\n' +
@@ -546,8 +626,9 @@
             TC.on('div-refresh-yield', 'click', refreshYields);
             TC.on('div-refresh-net', 'click', refreshNet);
             TC.on('d-ticker', 'input', paintLive);
-            TC.on('d-montant', 'input', paintLive);
-            TC.on('d-irvm', 'input', paintLive);
+            TC.on('d-montant', 'input', () => syncAmounts('brut'));
+            TC.on('d-net', 'input', () => syncAmounts('net'));
+            TC.on('d-irvm', 'input', () => syncAmounts('irvm'));
             TC.on('d-detach', 'input', paintLive);
             TC.on('div-export', 'click', function () {
                 if (!rows.length) return;
