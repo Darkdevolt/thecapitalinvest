@@ -106,7 +106,8 @@
   function mont(v) {
     if (!fin(v)) return null;
     var a = Math.abs(v);
-    if (a >= 1e12) return (v / 1e12).toFixed(2) + ' Bn';
+    /* Jamais de « Bn » (billion anglais, 10^12) : au-delà de 1 000 milliards on
+       reste en Mrd, l'unité de tout le reste de l'application. */
     if (a >= 1e9) return (v / 1e9).toFixed(a >= 1e10 ? 1 : 2) + ' Mrd';
     if (a >= 1e6) return (v / 1e6).toFixed(1) + ' M';
     if (a >= 1e3) return Math.round(v).toLocaleString('fr-FR');

@@ -24,7 +24,8 @@ function fchMoney(v) {
   var n = Number(v);
   if (!isFinite(n)) return '—';
   var a = Math.abs(n);
-  if (a >= 1e12) return (n / 1e12).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Bn';
+  /* Jamais de « Bn » : c'est le billion anglais (10^12), absurde en FCFA. Au-delà
+     de 1 000 milliards on reste en Md, comme partout ailleurs dans l'application. */
   if (a >= 1e9) return (n / 1e9).toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' Md';
   if (a >= 1e6) return (n / 1e6).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' M';
   return fchNum(n);
