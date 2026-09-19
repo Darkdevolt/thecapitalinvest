@@ -11,7 +11,8 @@
   var courseFilter = 'all';
   var courseQuery = '';
   var pubFilter = 'all';
-  var pubQuery = '';\n  var courseSort = { key: 'variation', dir: -1 };
+  var pubQuery = '';
+  var courseSort = { key: 'variation', dir: -1 };
 
   function esc(value) {
     if (typeof window.escapeHtml === 'function') return window.escapeHtml(value);
