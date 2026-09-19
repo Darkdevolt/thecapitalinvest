@@ -26,7 +26,7 @@
         { col: 'resultat_exploitation', label: "Résultat d'exploitation", groupe: 'resultat', ref: 'XE', signe: 'libre' },
         { col: 'ebitda', label: 'EBITDA', groupe: 'resultat', signe: 'libre', aide: 'Renseignez si le rapport le publie sous cette forme ; sinon, laissez vide.' },
         { col: 'ebit', label: 'EBIT', groupe: 'resultat', signe: 'libre' },
-        { col: 'resultat_net', label: 'Résultat net', groupe: 'resultat', ref: 'XI', signe: 'libre', aide: 'Résultat net de l\'exercice, part du groupe.' },
+        { col: 'resultat_net', label: 'Résultat net', groupe: 'resultat', ref: 'XI', signe: 'libre', aide: 'Résultat net consolidé publié (minoritaires inclus). Le BPA, lui, se calcule sur la part du groupe : renseignez-le explicitement.' },
 
         /* ── Bilan ── */
         { col: 'total_actif', label: 'Total actif', groupe: 'bilan', ref: 'BZ', signe: 'positif' },
