@@ -159,6 +159,27 @@
     return svg;
   }
 
+  function sparkline(values, format) {
+    var vs = (values || []).map(function(v){ return fin(v) ? v : NaN; });
+    var valid = vs.filter(fin);
+    if (valid.length < 2) return '';
+    var W = 92, H = 26, P = 2;
+    var min = Math.min.apply(null, valid), max = Math.max.apply(null, valid);
+    if (min === max) { min -= 1; max += 1; }
+    function x(i){ return P + (vs.length <= 1 ? 0 : i * (W - P*2) / (vs.length-1)); }
+    function y(v){ return H-P - ((v-min)/(max-min))*(H-P*2); }
+    var path = '', last = null;
+    vs.forEach(function(v,i){
+      if (!fin(v)) { last = null; return; }
+      path += (last === null ? 'M' : 'L') + ' ' + x(i).toFixed(1) + ' ' + y(v).toFixed(1) + ' ';
+      last = v;
+    });
+    var lastIdx = -1;
+    for (var i=vs.length-1;i>=0;i--) { if(fin(vs[i])) { lastIdx=i; break; } }
+    var dot = lastIdx >= 0 ? '<circle cx="'+x(lastIdx).toFixed(1)+'" cy="'+y(vs[lastIdx]).toFixed(1)+'" r="2.2" class="af-spark-dot"><title>'+esc(format ? format(vs[lastIdx]) : vs[lastIdx])+'</title></circle>' : '';
+    return '<span class="af-spark" aria-hidden="true"><svg viewBox="0 0 '+W+' '+H+'"><path d="'+path+'" class="af-spark-line"/>'+dot+'</svg></span>';
+  }
+
   function financialCharts(a){
     var labels=a.years.map(String);
     return '<div class="af-chart-grid">'+
@@ -527,12 +548,12 @@
 
     html += groupe('Dernier exercice publié · ' + ex.annee);
     html += '<div class="af-stats">' +
-      st(ca(), or(mont(ex.ca)), pcs(r.croissanceCa) ? 'variation de ' + pcs(r.croissanceCa) : '', 'ca') +
-      st('Résultat brut d\'exploitation', or(mont(ex.rbe)), or(pc(r.margeBrute), '') + ' de marge', 'marge-exploitation') +
-      st('Résultat net', or(mont(ex.rn)), or(pc(r.margeNette), '') + ' de marge', 'marge-nette') +
-      st('Flux de trésorerie libre', or(mont(ex.fcf)), or(pc(r.margeFcf), '') + ' du ' + ca('min'), 'fcf') +
-      st('Capitaux propres', or(mont(ex.cp)), or(pc(r.autonomie), '') + ' du bilan', 'autonomie') +
-      st('Dette financière', or(mont(ex.dette)), 'levier de ' + or(n2(r.gearing), '—'), 'gearing') +
+      st(ca(), or(mont(ex.ca)), pcs(r.croissanceCa) ? 'variation de ' + pcs(r.croissanceCa) : '', 'ca', a.rows.map(function(x){return x.ca;}), mont) +
+      st('Résultat brut d\'exploitation', or(mont(ex.rbe)), or(pc(r.margeBrute), '') + ' de marge', 'marge-exploitation', a.rows.map(function(x){return x.rbe;}), mont) +
+      st('Résultat net', or(mont(ex.rn)), or(pc(r.margeNette), '') + ' de marge', 'marge-nette', a.rows.map(function(x){return x.rn;}), mont) +
+      st('Flux de trésorerie libre', or(mont(ex.fcf)), or(pc(r.margeFcf), '') + ' du ' + ca('min'), 'fcf', a.rows.map(function(x){return x.fcf;}), mont) +
+      st('Capitaux propres', or(mont(ex.cp)), or(pc(r.autonomie), '') + ' du bilan', 'autonomie', a.rows.map(function(x){return x.cp;}), mont) +
+      st('Dette financière', or(mont(ex.dette)), 'levier de ' + or(n2(r.gearing), '—'), 'gearing', a.rows.map(function(x){return x.dette;}), mont) +
       '</div>';
 
     html += groupe('Signaux de lecture');
@@ -557,9 +578,10 @@
     return html;
   }
 
-  function st(l, v, s, cle) {
-    return '<div class="af-stat"><div class="af-stat-l">' + esc(l) + (cle ? memo(cle) : '') + '</div>' +
-      '<div class="af-stat-v">' + v + '</div>' + (s ? '<div class="af-stat-s">' + s + '</div>' : '') + '</div>';
+  function st(l, v, s, cle, values, format) {
+    return '<div class="af-stat"><div class="af-stat-top"><div class="af-stat-l">' + esc(l) + (cle ? memo(cle) : '') + '</div>' +
+      sparkline(values, format) + '</div><div class="af-stat-v">' + v + '</div>' +
+      (s ? '<div class="af-stat-s">' + s + '</div>' : '') + '</div>';
   }
 
   /* Quelques lectures automatiques, chacune motivée par une phrase. */
@@ -729,7 +751,9 @@
         a.years.map(function (y) { return '<th class="r">' + y + '</th>'; }).join('') + '</tr></thead><tbody>';
       b.l.forEach(function (row) {
         var k = row[0], lbl = row[1], fmt = row[2], mk = row[3], seuil = row[4];
-        html += '<tr><td>' + esc(lbl) + (mk ? memo(mk) : '') + '</td>' +
+        html += '<tr><td><span class="af-ratio-label">' + esc(lbl) + (mk ? memo(mk) : '') + '</span>' +
+          sparkline(a.ratios.map(function(x){ return x[k]; }), function(v){ return fmt === 'pc' || fmt === 'pc2' ? pc(v, fmt === 'pc2' ? 2 : 1) : n2(v); }) +
+          '</td>' +
           a.ratios.map(function (r, i) {
             var v = r[k];
             var txt = !fin(v) ? '—'
