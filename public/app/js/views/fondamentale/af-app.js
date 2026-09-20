@@ -145,24 +145,54 @@
      Couche purement visuelle : toutes les valeurs proviennent de S.analyse.
      Aucun calcul métier n'est modifié. */
 
-  /* Variation entre le premier et le dernier point de la série principale
-     d'un graphique, affichée en tête : la première chose qui doit sauter
-     aux yeux est si la courbe est globalement en hausse ou en baisse. */
-  function chartDelta(s0) {
-    if (!s0) return '';
+  /* Évolution d'une série entre son premier et son dernier point connu,
+     annualisée (taux de croissance annuel moyen) dès que c'est possible :
+     une variation totale sur cinq ans ne répond pas à « ça progresse de
+     combien par an ? ». Repli sur la variation simple si l'un des deux
+     bornes n'est pas strictement positive (le TCAM n'a alors pas de sens). */
+  function seriesGrowth(s) {
     var idx = [];
-    s0.values.forEach(function (v, i) { if (fin(v)) idx.push(i); });
-    if (idx.length < 2) return '';
-    var first = s0.values[idx[0]], last = s0.values[idx[idx.length - 1]];
-    if (!first) return '';
-    var delta = (last - first) / Math.abs(first);
-    var up = delta >= 0;
-    return '<span class="af-chart-delta ' + (up ? 'af-up' : 'af-down') + '">' + (up ? '▲ +' : '▼ ') +
-      (up ? '' : '−') + Math.abs(delta * 100).toFixed(1) + ' %</span>';
+    s.values.forEach(function (v, i) { if (fin(v)) idx.push(i); });
+    if (idx.length < 2) return null;
+    var i0 = idx[0], i1 = idx[idx.length - 1];
+    var first = s.values[i0], last = s.values[i1], n = i1 - i0;
+    if (n < 1) return null;
+    if (first > 0 && last > 0) {
+      var cagr = Math.pow(last / first, 1 / n) - 1;
+      return { up: cagr >= 0, txt: (cagr >= 0 ? '+' : '') + (cagr * 100).toFixed(1) + ' %/an', annuel: true };
+    }
+    if (first !== 0) {
+      var delta = (last - first) / Math.abs(first);
+      return { up: delta >= 0, txt: (delta >= 0 ? '+' : '') + (delta * 100).toFixed(1) + ' %', annuel: false };
+    }
+    return null;
+  }
+
+  /* Même calcul que seriesGrowth, sur un tableau de valeurs brut plutôt
+     qu'un objet série de graphique — pour l'afficher à côté d'un libellé
+     de ligne de tableau (états financiers), pas seulement dans une légende
+     de courbe. */
+  function croissanceAnnualisee(vals) { return seriesGrowth({ values: vals }); }
+
+  /* Badge de croissance annualisée à poser à côté d'un libellé de ligne :
+     répond directement à « ça progresse de combien par an, au total ? »,
+     complément de la flèche `trend()` qui ne compare que les deux derniers
+     exercices. */
+  function tcamBadge(vals, inverse) {
+    var g = croissanceAnnualisee(vals);
+    if (!g) return '';
+    var bon = inverse ? !g.up : g.up;
+    return '<span class="af-row-tcam ' + (bon ? 'af-up' : 'af-down') + '" title="Taux de variation annualisé sur toute la période affichée">' +
+      (g.up ? '▲' : '▼') + ' ' + (g.annuel ? 'TCAM ' : '') + g.txt + '</span>';
+  }
+
+  function dernierFini(vs) {
+    for (var i = vs.length - 1; i >= 0; i--) { if (fin(vs[i])) return vs[i]; }
+    return null;
   }
 
   function chartSerie(titre, desc, labels, series, format) {
-    var W = 760, H = 260, L = 66, R = 44, T = 22, B = 38;
+    var W = 760, H = 250, L = 66, R = 20, T = 20, B = 34;
     var vals = [];
     series.forEach(function(s){ s.values.forEach(function(v){ if(fin(v)) vals.push(v); }); });
     if (!vals.length) return '';
@@ -182,25 +212,29 @@
       grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="af-chart-grid"/>';
       grid += '<text x="' + (L - 8) + '" y="' + (yy + 3).toFixed(1) + '" class="af-chart-ylabel" text-anchor="end">' + esc(format(t)) + '</text>';
     });
-    var svg='<div class="af-chart"><div class="af-chart-head"><div><strong>'+esc(titre)+'</strong><span>'+esc(desc||'')+'</span></div>'+
-      chartDelta(series[0])+'</div>'+
+    var svg='<div class="af-chart"><div class="af-chart-head"><div><strong>'+esc(titre)+'</strong><span>'+esc(desc||'')+'</span></div></div>'+
       '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(titre)+'">'+grid;
     if(zero!==null) svg+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+zero.toFixed(1)+'" y2="'+zero.toFixed(1)+'" class="af-chart-zero"/>';
     series.forEach(function(s,si){
       svg+='<path d="'+path(s.values)+'" class="af-chart-line af-chart-c'+(si%5)+'"/>';
-      var lastIdx = -1;
-      s.values.forEach(function(v,i){
-        if (!fin(v)) return;
-        lastIdx = i;
-        svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"><title>'+esc(s.label)+' · '+esc(labels[i])+': '+esc(format(v))+'</title></circle>';
-      });
-      /* Étiquette de la dernière valeur, posée directement sur le graphique :
-         le chiffre le plus utile ne doit pas dépendre d'un survol à la souris. */
-      if (lastIdx >= 0) svg += '<text x="' + (x(lastIdx) + 7).toFixed(1) + '" y="' + (y(s.values[lastIdx]) + 3.5).toFixed(1) +
-        '" class="af-chart-endlabel af-chart-c' + (si % 5) + '">' + esc(format(s.values[lastIdx])) + '</text>';
+      s.values.forEach(function(v,i){ if(fin(v)) svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"><title>'+esc(s.label)+' · '+esc(labels[i])+': '+esc(format(v))+'</title></circle>'; });
     });
-    labels.forEach(function(lb,i){ svg+='<text x="'+x(i).toFixed(1)+'" y="'+(H-14)+'" class="af-chart-label" text-anchor="middle">'+esc(lb)+'</text>'; });
-    svg+='</svg><div class="af-chart-legend">'+series.map(function(s,si){return '<span><i class="af-chart-key af-chart-c'+(si%5)+'"></i>'+esc(s.label)+'</span>';}).join('')+'</div></div>';
+    labels.forEach(function(lb,i){ svg+='<text x="'+x(i).toFixed(1)+'" y="'+(H-12)+'" class="af-chart-label" text-anchor="middle">'+esc(lb)+'</text>'; });
+    svg+='</svg>';
+    /* La légende, pas le graphique, porte les chiffres : un nom de série,
+       sa dernière valeur, et son taux de croissance annualisé, chacun sur
+       sa propre ligne — jamais un texte posé sur la courbe, qui se
+       chevauche dès que deux lignes se rapprochent. */
+    svg += '<div class="af-chart-legend">' + series.map(function (s, si) {
+      var last = dernierFini(s.values);
+      var g = seriesGrowth(s);
+      return '<span class="af-chart-leg-row"><i class="af-chart-key af-chart-c' + (si % 5) + '"></i>' +
+        '<span class="af-chart-leg-l">' + esc(s.label) + '</span>' +
+        (last != null ? '<span class="af-chart-leg-v">' + esc(format(last)) + '</span>' : '') +
+        (g ? '<span class="af-chart-leg-t ' + (g.up ? 'af-up' : 'af-down') + '">' + (g.up ? '▲' : '▼') + ' ' +
+          (g.annuel ? 'TCAM ' : '') + g.txt + '</span>' : '') +
+        '</span>';
+    }).join('') + '</div></div>';
     return svg;
   }
 
@@ -236,13 +270,60 @@
        séparé, sans quoi le polygone de remplissage a un coin manquant. */
     var area = path ? ('M ' + x(firstIdx).toFixed(1) + ' ' + (H - P) + ' ' + path.replace(/^M /, 'L ') + 'L ' + x(lastIdx).toFixed(1) + ' ' + (H - P) + ' Z') : '';
     var dot = lastIdx >= 0 ? '<circle cx="'+x(lastIdx).toFixed(1)+'" cy="'+y(vs[lastIdx]).toFixed(1)+'" r="2.6" class="af-spark-dot af-spark-c-'+dirColor+'"><title>'+esc(format ? format(vs[lastIdx]) : vs[lastIdx])+'</title></circle>' : '';
-    var arrow = dirRaw === 'up' ? '▲' : dirRaw === 'down' ? '▼' : '';
+    var arrow = dirRaw === 'up' ? '▲' : dirRaw === 'down' ? '▼' : '→';
+    /* Le rouge et le vert seuls ne disent pas « de combien » : un chiffre
+       à côté de la flèche évite de deviner l'ampleur du mouvement rien
+       qu'à l'œil sur un tracé large de quelques dizaines de pixels. */
+    var pctTxt = '';
+    if (firstIdx >= 0 && lastIdx > firstIdx && vs[firstIdx]) {
+      var deltaP = (vs[lastIdx] - vs[firstIdx]) / Math.abs(vs[firstIdx]);
+      pctTxt = (deltaP >= 0 ? '+' : '') + (deltaP * 100).toFixed(0) + ' %';
+    }
     return '<span class="af-spark-wrap af-spark-w-' + dirColor + '">' +
       '<span class="af-spark" aria-hidden="true"><svg viewBox="0 0 '+W+' '+H+'">' +
       (area ? '<path d="' + area + '" class="af-spark-area af-spark-c-' + dirColor + '"/>' : '') +
       '<path d="'+path+'" class="af-spark-line af-spark-c-'+dirColor+'"/>'+dot+'</svg></span>' +
-      (arrow ? '<span class="af-spark-arrow af-spark-c-' + dirColor + '">' + arrow + '</span>' : '') +
+      '<span class="af-spark-txt af-spark-c-' + dirColor + '">' + arrow + (pctTxt ? ' ' + pctTxt : '') + '</span>' +
       '</span>';
+  }
+
+  /* Historique en trait plein, projection en pointillé, séparés par un
+     repère vertical : un tableau de chiffres projetés ne permet pas de
+     voir d'un coup d'œil si la projection prolonge sagement la tendance
+     ou part dans une direction que l'historique ne suggérait pas. */
+  function chartProjection(titre, anneesHist, valsHist, anneesProj, valsProj, format) {
+    var labels = anneesHist.concat(anneesProj);
+    var allVals = valsHist.concat(valsProj).filter(fin);
+    if (allVals.length < 2) return '';
+    var W = 760, H = 210, L = 66, R = 20, T = 18, B = 32;
+    var min = Math.min.apply(null, allVals), max = Math.max.apply(null, allVals);
+    if (min === max) { min -= 1; max += 1; }
+    function x(i) { return L + (labels.length <= 1 ? 0 : i * (W - L - R) / (labels.length - 1)); }
+    function y(v) { return H - B - ((v - min) / (max - min)) * (H - T - B); }
+    var grid = '', ticks = [max, min + (max - min) / 2, min];
+    ticks.forEach(function (t, g) {
+      var yy = T + g * (H - T - B) / 2;
+      grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="af-chart-grid"/>';
+      grid += '<text x="' + (L - 8) + '" y="' + (yy + 3).toFixed(1) + '" class="af-chart-ylabel" text-anchor="end">' + esc(format(t)) + '</text>';
+    });
+    var histPts = [];
+    valsHist.forEach(function (v, i) { if (fin(v)) histPts.push([x(i), y(v), i]); });
+    var pathHist = histPts.map(function (p, i) { return (i ? 'L' : 'M') + ' ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+    var projPts = histPts.length ? [histPts[histPts.length - 1]] : [];
+    valsProj.forEach(function (v, i) { if (fin(v)) projPts.push([x(valsHist.length + i), y(v)]); });
+    var pathProj = projPts.length > 1 ? projPts.map(function (p, i) { return (i ? 'L' : 'M') + ' ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ') : '';
+    var sepX = x(valsHist.length - 0.5);
+    var svg = '<div class="af-chart"><div class="af-chart-head"><div><strong>' + esc(titre) + '</strong>' +
+      '<span>Trait plein : historique publié · pointillé : projection</span></div></div>' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(titre) + '">' + grid +
+      '<line x1="' + sepX.toFixed(1) + '" x2="' + sepX.toFixed(1) + '" y1="' + T + '" y2="' + (H - B) + '" class="af-chart-zero"/>' +
+      (pathHist ? '<path d="' + pathHist + '" class="af-chart-line af-chart-c0"/>' : '') +
+      (pathProj ? '<path d="' + pathProj + '" class="af-chart-line af-chart-c0 af-chart-line-proj"/>' : '');
+    histPts.forEach(function (p, i) { svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" class="af-chart-dot af-chart-c0"><title>' + esc(String(labels[p[2]])) + ' : ' + esc(format(valsHist[p[2]])) + '</title></circle>'; });
+    projPts.slice(1).forEach(function (p, i) { svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" class="af-chart-dot af-chart-c0 af-chart-dot-proj"><title>' + esc(String(anneesProj[i])) + ' (projeté) : ' + esc(format(valsProj[i])) + '</title></circle>'; });
+    labels.forEach(function (lb, i) { svg += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 10) + '" class="af-chart-label" text-anchor="middle">' + esc(String(lb)) + '</text>'; });
+    svg += '</svg></div>';
+    return svg;
   }
 
   function financialCharts(a){
@@ -721,7 +802,9 @@
     var html = groupe('États financiers annuels · ' + a.rows.length + ' exercices');
     html += financialCharts(a);
     html += note('Les montants sont exprimés en francs CFA. Les valeurs sur fond ambré ont été saisies dans l\'onglet ' +
-      'Données et ne proviennent pas des états publiés. Les cellules vides correspondent à des postes non publiés par la source.');
+      'Données et ne proviennent pas des états publiés. Les cellules vides correspondent à des postes non publiés par la source. ' +
+      'Le taux à côté de chaque libellé (« TCAM ») est le taux de croissance annuel moyen sur toute la période affichée ; ' +
+      'la flèche sur le dernier exercice compare seulement celui-ci au précédent.');
     html += '<div class="af-scroll"><table class="af-table af-etats"><thead><tr><th></th>' +
       a.years.map(function (y) { return '<th class="r">' + y + '</th>'; }).join('') + '</tr></thead><tbody>';
 
@@ -731,7 +814,8 @@
         return;
       }
       var serie = a.rows.map(function (r) { return r[li.k]; });
-      html += '<tr' + (li.gras ? ' class="af-gras"' : '') + '><td>' + esc(li.l) + (li.memo ? memo(li.memo) : '') + '</td>' +
+      html += '<tr' + (li.gras ? ' class="af-gras"' : '') + '><td>' + esc(li.l) + (li.memo ? memo(li.memo) : '') +
+        tcamBadge(serie, li.inverse) + '</td>' +
         a.rows.map(function (r, i) {
           var v = r[li.k];
           var saisi = r['_saisi_' + li.k];
@@ -894,6 +978,10 @@
 
     var proj = projection();
     if (proj) {
+      html += '<div class="af-chart-grid">' + ['ca', 'rn', 'fcf'].map(function (k) {
+        var lbl = { ca: ca(), rn: 'Résultat net', fcf: 'Flux libre' }[k];
+        return chartProjection(lbl, a.years, a.rows.map(function (r) { return r[k]; }), proj.annees, proj[k], mont);
+      }).join('') + '</div>';
       html += '<div class="af-scroll"><table class="af-table"><thead><tr><th></th>' +
         proj.annees.map(function (y) { return '<th class="r">' + y + '</th>'; }).join('') + '</tr></thead><tbody>' +
         ['ca', 'rn', 'fcf'].map(function (k) {
@@ -1113,6 +1201,19 @@
 
   /* ── Onglet Valorisation ──────────────────────────────────────── */
 
+  /* Une ligne de barre horizontale, à l'échelle passée en paramètre :
+     factorisée parce que la comparaison des méthodes de valorisation et
+     la composition du DCF ont exactement le même besoin — une colonne de
+     chiffres ne permet pas de voir d'un coup d'œil les ordres de grandeur
+     relatifs. */
+  function barreValeur(label, val, max, cls, off, fmt) {
+    var w = Math.max(2, Math.abs(val) / max * 100);
+    return '<div class="af-vbar-row' + (off ? ' af-off' : '') + '">' +
+      '<div class="af-vbar-label">' + esc(label) + '</div>' +
+      '<div class="af-vbar-track"><div class="af-vbar-fill ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
+      '<div class="af-vbar-val">' + fmt(val) + '</div></div>';
+  }
+
   /* Barres horizontales, toutes à la même échelle que le cours actuel :
      une colonne de chiffres ne permet pas de voir d'un coup d'œil combien
      de méthodes situent la société au-dessus ou en dessous de son cours. */
@@ -1122,20 +1223,52 @@
     if (!lignes.length) return '';
     var max = Math.max.apply(null, lignes.map(function (l) { return l.valeur; }).concat(fin(cours) ? [cours] : []));
     if (!max) return '';
-    function ligne(label, val, cls, off) {
-      var w = Math.max(2, val / max * 100);
-      return '<div class="af-vbar-row' + (off ? ' af-off' : '') + '">' +
-        '<div class="af-vbar-label">' + esc(label) + '</div>' +
-        '<div class="af-vbar-track"><div class="af-vbar-fill ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
-        '<div class="af-vbar-val">' + n0(val) + '</div></div>';
-    }
     var html = '<div class="af-vbars">';
-    if (fin(cours)) html += ligne('Cours actuel', cours, 'af-vbar-cours');
+    if (fin(cours)) html += barreValeur('Cours actuel', cours, max, 'af-vbar-cours', false, function (v) { return n0(v) + ' FCFA'; });
     lignes.forEach(function (l) {
       var cls = fin(cours) ? (l.valeur >= cours ? 'af-vbar-up' : 'af-vbar-down') : 'af-vbar-neutre';
-      html += ligne(METHODE_LABELS[l.cle], l.valeur, cls, !l.retenue);
+      html += barreValeur(METHODE_LABELS[l.cle], l.valeur, max, cls, !l.retenue, function (v) { return n0(v) + ' FCFA'; });
     });
     html += '</div>';
+    return html;
+  }
+
+  /* Camembert de répartition : le tracé s'appuie sur l'astuce classique
+     du cercle en pointillés (stroke-dasharray) plutôt que sur une
+     bibliothèque externe, pour rester cohérent avec le reste du module. */
+  function chartDonut(segments) {
+    var total = segments.reduce(function (s, x) { return s + (fin(x.value) && x.value > 0 ? x.value : 0); }, 0);
+    if (!total) return '';
+    var R = 42, CX = 54, CY = 54, EP = 20, C = 2 * Math.PI * R;
+    var offset = 0;
+    var arcs = segments.map(function (seg) {
+      var v = fin(seg.value) && seg.value > 0 ? seg.value : 0;
+      var frac = v / total;
+      var len = frac * C;
+      var arc = v > 0 ? '<circle cx="' + CX + '" cy="' + CY + '" r="' + R + '" fill="none" stroke="' + seg.color + '" stroke-width="' + EP +
+        '" stroke-dasharray="' + len.toFixed(1) + ' ' + (C - len).toFixed(1) + '" stroke-dashoffset="' + (-offset).toFixed(1) + '">' +
+        '<title>' + esc(seg.label) + ' · ' + (frac * 100).toFixed(0) + ' %</title></circle>' : '';
+      offset += len;
+      return arc;
+    }).join('');
+    return '<svg viewBox="0 0 108 108" class="af-donut" role="img" aria-label="Répartition des poids par méthode">' +
+      '<g transform="rotate(-90 ' + CX + ' ' + CY + ')">' + arcs + '</g></svg>';
+  }
+
+  /* Composition visuelle de la valeur d'entreprise : chaque flux annuel
+     actualisé, puis la valeur terminale actualisée — pour voir d'un coup
+     d'œil la part que représente chacun, plutôt que de la déduire du
+     pourcentage isolé affiché dans le tableau. */
+  function dcfBars(D) {
+    var rows = D.flux.map(function (f) { return { label: 'Flux actualisé — année ' + f.annee, val: f.actualise }; });
+    rows.push({ label: 'Valeur terminale actualisée', val: D.valeurTerminaleActualisee, accent: true });
+    var vals = rows.map(function (r) { return r.val; }).filter(fin);
+    if (!vals.length) return '';
+    var max = Math.max.apply(null, vals.map(Math.abs));
+    if (!max) return '';
+    var html = '<div class="af-vbars">' + rows.map(function (r) {
+      return barreValeur(r.label, r.val, max, r.accent ? 'af-vbar-cours' : 'af-vbar-neutre', false, mont);
+    }).join('') + '</div>';
     return html;
   }
 
@@ -1194,6 +1327,13 @@
         '<tr class="af-gras"><td colspan="4">Valeur des fonds propres</td><td class="r">' + mont(D.valeurFondsPropres) + '</td></tr>' +
         '<tr class="af-total"><td colspan="4">Valeur par action</td><td class="r">' + n0(D.parAction) + ' FCFA</td></tr>' +
         '</tbody></table></div>';
+      var dbars = dcfBars(D);
+      if (dbars) {
+        html += note('Composition de la valeur d\'entreprise : chaque flux actualisé, à la même échelle que la valeur ' +
+          'terminale actualisée (en or) — souvent la part la plus importante, ce que le tableau ci-dessus indique déjà ' +
+          'en pourcentage.');
+        html += dbars;
+      }
       D.reserves.forEach(function (r) { html += '<div class="af-warn">' + esc(r) + '</div>'; });
     }
 
@@ -1287,12 +1427,12 @@
         '<div class="af-cible-item"><span>Potentiel</span><strong class="' + (fin(syn.potentiel) ? (syn.potentiel >= 0 ? 'af-up' : 'af-down') : '') + '">' + or(pcs(syn.potentiel), '—') + '</strong></div>' +
         '<div class="af-cible-item"><span>Méthodes retenues</span><strong>' + syn.retenues + ' / ' + syn.lignes.length + '</strong></div>' +
       '</div>' +
-      (contribs.length ? '<div class="af-cible-bar">' + contribs.map(function (l, i) {
-        return '<span style="width:' + (l.poidsEffectif * 100) + '%;background:' + METHODE_COULEURS[i % METHODE_COULEURS.length] + '" title="' + esc(METHODE_LABELS[l.cle]) + '"></span>';
-      }).join('') + '</div>' +
-      '<div class="af-cible-legend">' + contribs.map(function (l, i) {
-        return '<span><i style="background:' + METHODE_COULEURS[i % METHODE_COULEURS.length] + '"></i>' + esc(METHODE_LABELS[l.cle]) + ' · ' + pc(l.poidsEffectif, 0) + '</span>';
-      }).join('') + '</div>' : '') +
+      (contribs.length ? '<div class="af-cible-donut-row">' +
+        chartDonut(contribs.map(function (l, i) { return { label: METHODE_LABELS[l.cle], value: l.poidsEffectif, color: METHODE_COULEURS[i % METHODE_COULEURS.length] }; })) +
+        '<div class="af-cible-legend">' + contribs.map(function (l, i) {
+          return '<span><i style="background:' + METHODE_COULEURS[i % METHODE_COULEURS.length] + '"></i>' + esc(METHODE_LABELS[l.cle]) + ' · ' + pc(l.poidsEffectif, 0) + '</span>';
+        }).join('') + '</div>' +
+      '</div>' : '') +
       '</div>';
     if (syn.fourchette && contribs.length > 1) {
       html += note('Fourchette des ' + syn.retenues + ' méthodes retenues : <strong>' + n0(syn.fourchette.bas) + '</strong> à <strong>' + n0(syn.fourchette.haut) + '</strong> FCFA.');
@@ -1482,22 +1622,44 @@
       'fait observé) est appliqué à la grandeur par action de la société (le fait publié) pour déduire le cours ' +
       'qu\'impliquerait un alignement sur ses pairs.');
     var exd = base.dernierExercice, drn = base.dernier;
+    var dn = fin(drn.detteNette) ? drn.detteNette : 0, actions = base.data.shares;
+    /* Quatre multiples, pas seulement PER et PBR : chacun raconte une
+       histoire différente (rentabilité, actif, chiffre d'affaires, cash
+       operationnel avant amortissements), et les passer sous silence
+       laisserait croire que seuls deux d'entre eux se prêtent à l'exercice. */
     var cibles = [
-      { l: 'PER × BPA', m: cmp.medianes.per, base: exd.bpa, unite: '×', cle: 'per' },
-      { l: 'PBR × actif net par action', m: cmp.medianes.pbr, base: drn.anpa, unite: '×', cle: 'pbr' }
+      { l: 'PER × BPA', m: cmp.medianes.per, base: exd.bpa, cle: 'per',
+        calc: function () { return fin(this.m) && fin(this.base) && this.base > 0 ? this.m * this.base : NaN; } },
+      { l: 'PBR × actif net par action', m: cmp.medianes.pbr, base: drn.anpa, cle: 'pbr',
+        calc: function () { return fin(this.m) && fin(this.base) && this.base > 0 ? this.m * this.base : NaN; } },
+      { l: 'PSR × ' + ca('min') + ' par action', m: cmp.medianes.psr, base: drn.capa, cle: 'psr',
+        calc: function () { return fin(this.m) && fin(this.base) && this.base > 0 ? this.m * this.base : NaN; } },
+      { l: 'VE/EBE appliqué au résultat brut', m: cmp.medianes.evEbitda, base: exd.rbe, cle: 'evEbitda',
+        calc: function () { return fin(this.m) && fin(this.base) && this.base > 0 && pos(actions) ? (this.m * this.base - dn) / actions : NaN; } }
     ];
+    cibles.forEach(function (c) { c.valeur = c.calc(); });
     html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Méthode</th>' +
       '<th class="r">Multiple (' + statLabel.toLowerCase() + ')</th><th class="r">Grandeur par action</th><th class="r">Valeur cible</th><th class="r">Potentiel</th></tr></thead><tbody>' +
       cibles.map(function (c) {
-        var val = fin(c.m) && fin(c.base) && c.base > 0 ? c.m * c.base : NaN;
-        var pot = fin(val) && pos(base.data.price) ? val / base.data.price - 1 : NaN;
+        var pot = fin(c.valeur) && pos(base.data.price) ? c.valeur / base.data.price - 1 : NaN;
         return '<tr><td>' + esc(c.l) + '</td><td class="r">' + or(n2(c.m), '—') + '</td>' +
           '<td class="r">' + or(n0(c.base), '—') + '</td>' +
-          '<td class="r">' + (fin(val) ? n0(val) + ' FCFA' : '<span class="af-nd">non calculable</span>') + '</td>' +
+          '<td class="r">' + (fin(c.valeur) ? n0(c.valeur) + ' FCFA' : '<span class="af-nd">non calculable</span>') + '</td>' +
           '<td class="r ' + (fin(pot) ? (pot >= 0 ? 'af-up' : 'af-down') : '') + '">' + or(pcs(pot), '—') + '</td></tr>';
       }).join('') + '</tbody></table></div>';
     html += note('Valeurs reportées automatiquement comme multiples de référence par défaut dans l\'onglet Valorisation ' +
       '(section « Multiples de comparables »), où elles peuvent être remplacées par vos propres hypothèses.');
+    var cibleValides = cibles.filter(function (c) { return fin(c.valeur) && c.valeur > 0; });
+    if (cibleValides.length) {
+      var maxCible = Math.max.apply(null, cibleValides.map(function (c) { return c.valeur; }).concat(pos(base.data.price) ? [base.data.price] : []));
+      html += '<div class="af-vbars">';
+      if (pos(base.data.price)) html += barreValeur('Cours actuel', base.data.price, maxCible, 'af-vbar-cours', false, function (v) { return n0(v) + ' FCFA'; });
+      cibleValides.forEach(function (c) {
+        var cls = pos(base.data.price) ? (c.valeur >= base.data.price ? 'af-vbar-up' : 'af-vbar-down') : 'af-vbar-neutre';
+        html += barreValeur(c.l, c.valeur, maxCible, cls, false, function (v) { return n0(v) + ' FCFA'; });
+      });
+      html += '</div>';
+    }
 
     html += groupe('Position relative');
     var r = base.dernier;

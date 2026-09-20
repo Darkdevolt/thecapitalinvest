@@ -239,7 +239,7 @@
 
 /* ── Comparaison visuelle des méthodes de valorisation ─────────── */
 .af-vbars { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 24px; }
-.af-vbar-row { display: grid; grid-template-columns: 190px 1fr 96px; align-items: center; gap: 12px; }
+.af-vbar-row { display: grid; grid-template-columns: 210px 1fr 112px; align-items: center; gap: 12px; }
 .af-vbar-row.af-off { opacity: .45; }
 .af-vbar-label { font-size: 11.5px; color: var(--af-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .af-vbar-row:first-child .af-vbar-label { font-weight: 700; color: var(--af-gold); }
@@ -249,10 +249,11 @@
 .af-vbar-fill.af-vbar-down { background: linear-gradient(90deg, var(--af-down), rgba(242, 118, 111, .55)); }
 .af-vbar-fill.af-vbar-cours { background: linear-gradient(90deg, var(--af-gold), #efd28f); }
 .af-vbar-fill.af-vbar-neutre { background: linear-gradient(90deg, var(--af-gold), rgba(216, 181, 104, .5)); }
-.af-vbar-val { font-family: 'DM Mono', monospace; font-size: 12px; text-align: right; color: var(--af-text); }
+.af-vbar-val { font-family: 'DM Mono', monospace; font-size: 12px; text-align: right; color: var(--af-text); white-space: nowrap; }
 @media (max-width: 640px) {
-  .af-vbar-row { grid-template-columns: 118px 1fr 74px; gap: 8px; }
+  .af-vbar-row { grid-template-columns: 128px 1fr 84px; gap: 8px; }
   .af-vbar-label { font-size: 10.5px; }
+  .af-vbar-val { font-size: 11px; }
 }
 
 /* ── Statistiques ───────────────────────────────────────────────── */
@@ -370,10 +371,14 @@
 .af-cible-item { display: flex; flex-direction: column; gap: 7px; }
 .af-cible-item span { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--af-faint); font-weight: 600; }
 .af-cible-item strong { font-family: 'DM Mono', monospace; font-size: 23px; font-weight: 600; }
-.af-cible-bar { width: 100%; flex: 1 1 100%; height: 12px; border-radius: 7px; overflow: hidden; display: flex; background: var(--af-line-soft); }
-.af-cible-bar span { height: 100%; }
-.af-cible-legend { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 9px 18px; font-size: 11px; color: var(--af-dim); }
+.af-cible-donut-row { width: 100%; flex: 1 1 100%; display: flex; align-items: center; gap: 22px; margin-top: 4px; }
+.af-donut { width: 92px; height: 92px; flex: none; }
+.af-cible-legend { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 9px 18px; font-size: 11px; color: var(--af-dim); align-content: center; }
 .af-cible-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+@media (max-width: 560px) {
+  .af-cible-donut-row { flex-wrap: wrap; }
+  .af-donut { width: 76px; height: 76px; }
+}
 
 /* ── Pondération fine par méthode ───────────────────────────────── */
 
@@ -514,6 +519,18 @@
 .af-trend-up { color: var(--af-up); }
 .af-trend-down { color: var(--af-down); }
 .af-trend-flat { color: var(--af-faint); }
+
+/* Taux de croissance annuel moyen sur toute la période, à côté du libellé
+   de chaque ligne des états financiers : répond à « ça progresse de
+   combien par an, au total ? », que la flèche de tendance (exercice
+   contre exercice précédent) ne dit pas. */
+.af-row-tcam {
+  display: inline-block; margin-left: 9px; padding: 1px 7px; border-radius: 10px;
+  font-family: 'DM Mono', monospace; font-size: 9.5px; font-weight: 600;
+  vertical-align: middle; white-space: nowrap; cursor: default;
+}
+.af-row-tcam.af-up { background: var(--af-up-soft); color: var(--af-up); }
+.af-row-tcam.af-down { background: var(--af-down-soft); color: var(--af-down); }
 
 .af-saisie input {
   width: 122px; padding: 6px 8px; text-align: right;
@@ -795,12 +812,6 @@
 #view-analyse-fondamentale .af-chart-head span{
   display:block;margin-top:4px;font-size:10.5px;color:var(--af-faint)
 }
-#view-analyse-fondamentale .af-chart-delta{
-  flex:none;font-family:'DM Mono',monospace;font-size:12px;font-weight:700;
-  padding:3px 10px;border-radius:20px;white-space:nowrap
-}
-#view-analyse-fondamentale .af-chart-delta.af-up{background:var(--af-up-soft);color:var(--af-up)}
-#view-analyse-fondamentale .af-chart-delta.af-down{background:var(--af-down-soft);color:var(--af-down)}
 #view-analyse-fondamentale .af-chart svg{
   display:block;width:100%;height:auto;overflow:visible
 }
@@ -816,29 +827,43 @@
 #view-analyse-fondamentale .af-chart-ylabel{
   fill:rgba(244,240,230,.55);font:9px 'DM Mono',monospace
 }
-#view-analyse-fondamentale .af-chart-endlabel{
-  font:700 10px 'DM Mono',monospace;
-  paint-order:stroke;stroke:rgba(18,15,10,.92);stroke-width:3px;stroke-linejoin:round
-}
 #view-analyse-fondamentale .af-chart-line{
   fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round
 }
 #view-analyse-fondamentale .af-chart-dot{stroke-width:1.5}
+#view-analyse-fondamentale .af-chart-line-proj{stroke-dasharray:5 4;opacity:.7}
+#view-analyse-fondamentale .af-chart-dot-proj{opacity:.7}
 #view-analyse-fondamentale .af-chart-c0{stroke:#d8b568;fill:#d8b568}
 #view-analyse-fondamentale .af-chart-c1{stroke:#4ddb9c;fill:#4ddb9c}
 #view-analyse-fondamentale .af-chart-c2{stroke:#60a5fa;fill:#60a5fa}
 #view-analyse-fondamentale .af-chart-c3{stroke:#f3b555;fill:#f3b555}
 #view-analyse-fondamentale .af-chart-c4{stroke:#c084fc;fill:#c084fc}
+
+/* Légende = tableau de lecture : une ligne par série, avec sa dernière
+   valeur et son taux de croissance annualisé — jamais du texte posé sur
+   le tracé, qui se chevauche dès que deux courbes se rapprochent. */
 #view-analyse-fondamentale .af-chart-legend{
-  display:flex;flex-wrap:wrap;gap:7px 14px;margin-top:3px
+  display:flex;flex-direction:column;gap:5px;margin-top:12px;
+  padding-top:10px;border-top:1px solid var(--af-line-soft)
 }
-#view-analyse-fondamentale .af-chart-legend span{
-  display:inline-flex;align-items:center;gap:6px;
-  font-size:10px;color:var(--af-faint)
+#view-analyse-fondamentale .af-chart-leg-row{
+  display:flex;align-items:center;gap:8px;font-size:11px
 }
 #view-analyse-fondamentale .af-chart-key{
-  width:7px;height:7px;border-radius:50%;display:inline-block
+  width:8px;height:8px;border-radius:50%;display:inline-block;flex:none
 }
+#view-analyse-fondamentale .af-chart-leg-l{
+  color:var(--af-dim);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+#view-analyse-fondamentale .af-chart-leg-v{
+  font-family:'DM Mono',monospace;font-size:11.5px;font-weight:700;color:var(--af-text);flex:none
+}
+#view-analyse-fondamentale .af-chart-leg-t{
+  font-family:'DM Mono',monospace;font-size:10px;font-weight:600;
+  padding:2px 8px;border-radius:20px;white-space:nowrap;flex:none;min-width:78px;text-align:center
+}
+#view-analyse-fondamentale .af-chart-leg-t.af-up{background:var(--af-up-soft);color:var(--af-up)}
+#view-analyse-fondamentale .af-chart-leg-t.af-down{background:var(--af-down-soft);color:var(--af-down)}
 #view-analyse-fondamentale .af-etats{margin-top:0}
 @media(max-width:900px){
   #view-analyse-fondamentale .af-chart-grid{grid-template-columns:1fr}
@@ -846,6 +871,8 @@
 @media(max-width:640px){
   #view-analyse-fondamentale .af-chart{padding:13px 10px 11px}
   #view-analyse-fondamentale .af-chart-head strong{font-size:12px}
+  #view-analyse-fondamentale .af-chart-leg-row{flex-wrap:wrap}
+  #view-analyse-fondamentale .af-chart-leg-l{flex-basis:100%;white-space:normal}
 }
 
 
@@ -873,7 +900,10 @@
   fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round
 }
 #view-analyse-fondamentale .af-spark-area{stroke:none;opacity:.2}
-#view-analyse-fondamentale .af-spark-arrow{font-size:9px;line-height:1;flex:0 0 auto}
+#view-analyse-fondamentale .af-spark-txt{
+  font-family:'DM Mono',monospace;font-size:10px;font-weight:700;line-height:1;
+  white-space:nowrap;flex:0 0 auto
+}
 #view-analyse-fondamentale .af-spark-c-up{stroke:var(--af-up);fill:var(--af-up);color:var(--af-up)}
 #view-analyse-fondamentale .af-spark-c-down{stroke:var(--af-down);fill:var(--af-down);color:var(--af-down)}
 #view-analyse-fondamentale .af-spark-c-flat{stroke:var(--af-gold);fill:var(--af-gold);color:var(--af-gold)}
