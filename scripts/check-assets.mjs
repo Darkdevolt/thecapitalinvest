@@ -131,8 +131,12 @@ for (const file of files) {
 // Bump 2026-09-14 : cache-buster de public/admin/js/modules/scraper.js
 // (v2026091001 -> v2026091401) pour le nouveau bloc « Journal des passages
 // automatiques » (historique brvm_scrape_runs). Changement délibéré et revu.
+// Bump 2026-09-20 : trois modules codés mais jamais chargés (seances-excel.js,
+// institute.js, parametres.js) ajoutés à la page ; cache-buster de
+// dividendes.js et financials.js pour leurs calendriers visuels et l'onglet
+// Documents (PDF). Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = 'c749a5ff6c34ddfbd68313271be4c40a99ee2be6';
+const expectedAdminBlobSha = '203b99e52cf385d5843b1960ba4b8912a7d2a434';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
