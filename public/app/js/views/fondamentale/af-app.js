@@ -719,7 +719,7 @@
     ];
 
     var html = ratioCharts(a);
-    var html = note('Chaque ratio est calculé pour tous les exercices disponibles. Les multiples de valorisation ' +
+    html += note('Chaque ratio est calculé pour tous les exercices disponibles. Les multiples de valorisation ' +
       'rapportent le <strong>cours d\'aujourd\'hui</strong> aux comptes de chaque exercice : ils servent à situer la ' +
       'valorisation actuelle par rapport à l\'histoire de la société, pas à reconstituer une valorisation passée.');
 
