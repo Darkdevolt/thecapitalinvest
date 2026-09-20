@@ -93,6 +93,78 @@
             'Le logo s\'affiche à côté du ticker dans toute l\'application.</div></div>';
     }
 
+    /* ── Opérations sur titres ───────────────────────────────
+       Fractionnements, attributions gratuites, regroupements : elles changent le nombre d'actions SANS apport
+       d'argent, donc les BPA / DPA / cours d'avant ne sont plus comparables à ceux d'après. Chaque opération
+       saisie ici ajuste automatiquement (côté base et côté site) tous les BPA, DPA et cours antérieurs.
+       Une augmentation de capital EN NUMÉRAIRE ou une fusion est seulement mémorisée (aucun ajustement). */
+    const OP_TYPES = [
+        { v: 'attribution_gratuite', l: 'Attribution gratuite', adj: true, hint: 'ratio = 1 + parité (1 pour 2 → 1,5 ; 1 pour 1 → 2)' },
+        { v: 'fractionnement', l: 'Fractionnement', adj: true, hint: 'ratio = actions nouvelles pour 1 ancienne (10 pour 1 → 10)' },
+        { v: 'regroupement', l: 'Regroupement', adj: true, hint: 'ratio < 1 (1 nouvelle pour 10 anciennes → 0,1)' },
+        { v: 'augmentation_numeraire', l: 'Augmentation en numéraire', adj: false, hint: 'sans ajustement des BPA ni des cours' },
+        { v: 'fusion', l: 'Fusion / absorption', adj: false, hint: 'sans ajustement' },
+        { v: 'autre', l: 'Autre opération', adj: false, hint: 'sans ajustement' }
+    ];
+    const OP_STYLE = 'padding:6px 8px;background:var(--surface);border:1px solid var(--border);color:var(--cream);border-radius:5px;';
+
+    function opRowHtml(o) {
+        o = o || {};
+        return '<div class="op-row" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">' +
+            '<input type="date" class="op-date" value="' + TC.esc(String(o.date || '').slice(0, 10)) + '" title="Première séance ex-droit (ou date de l\'avis pour une augmentation en numéraire)" style="' + OP_STYLE + '">' +
+            '<select class="op-type" style="' + OP_STYLE + '">' + OP_TYPES.map(t => '<option value="' + t.v + '"' + (o.type === t.v ? ' selected' : '') + '>' + t.l + '</option>').join('') + '</select>' +
+            '<input type="number" step="any" class="op-ratio" placeholder="ratio" value="' + (o.ratio != null ? TC.esc(o.ratio) : '') + '" style="width:90px;' + OP_STYLE + '">' +
+            '<select class="op-brut" title="Les cours de la base sont-ils bruts (non ajustés) avant cette date ?" style="' + OP_STYLE + '">' +
+            '<option value="1"' + (o.cours_bruts !== false ? ' selected' : '') + '>Cours bruts</option><option value="0"' + (o.cours_bruts === false ? ' selected' : '') + '>Cours déjà ajustés</option></select>' +
+            '<input type="text" class="op-note" placeholder="Note : parité, AGE, avis BRVM, capital avant/après…" value="' + TC.esc(o.note || '') + '" style="flex:1;min-width:220px;' + OP_STYLE + '">' +
+            '<button type="button" class="btn btn-outline btn-sm op-del" title="Retirer">✕</button></div>';
+    }
+
+    function opsField() {
+        return '<div class="field wide" id="e-ops-box"><label>Opérations sur titres <span class="col">→ operations_capital</span></label>' +
+            '<div id="e-ops-list"></div>' +
+            '<button type="button" class="btn btn-outline btn-sm" id="e-ops-add" style="margin-top:8px;">+ Ajouter une opération</button>' +
+            '<div class="hint">Un fractionnement ou une attribution gratuite fait chuter le cours sans perte pour l\'actionnaire : renseignez-le pour que le BPA, le DPA, le PER, les cours ajustés et les graphiques restent comparables. ' +
+            'Le facteur d\'ajustement des états financiers est ensuite calculé automatiquement. Le contrôle « sauts de cours sans opération » de la base signale ceux qui manquent.</div></div>';
+    }
+
+    function wireOps(existing) {
+        const list = TC.el('e-ops-list');
+        const ops = existing && Array.isArray(existing.operations_capital) ? existing.operations_capital : [];
+        list.innerHTML = ops.map(opRowHtml).join('');
+        TC.el('e-ops-add').addEventListener('click', () => { list.insertAdjacentHTML('beforeend', opRowHtml({})); });
+        list.addEventListener('click', e => { const b = e.target.closest && e.target.closest('.op-del'); if (b) b.closest('.op-row').remove(); });
+    }
+
+    /** Lit et valide les lignes ; lève une Error explicite au premier problème. */
+    function readOps(existing) {
+        const kept = existing && Array.isArray(existing.operations_capital) ? existing.operations_capital : [];
+        const out = [];
+        document.querySelectorAll('#e-ops-list .op-row').forEach((row, i) => {
+            const date = row.querySelector('.op-date').value;
+            const type = row.querySelector('.op-type').value;
+            const meta = OP_TYPES.find(t => t.v === type);
+            const ratioRaw = row.querySelector('.op-ratio').value;
+            const ratio = ratioRaw === '' ? null : Number(ratioRaw);
+            const note = row.querySelector('.op-note').value.trim();
+            const label = 'Opération ' + (i + 1) + ' : ';
+            if (!date) throw new Error(label + 'la date est obligatoire.');
+            if (meta.adj) {
+                if (!(ratio > 0)) throw new Error(label + 'le ratio est obligatoire (' + meta.hint + ').');
+                if ((type === 'attribution_gratuite' || type === 'fractionnement') && ratio <= 1) throw new Error(label + 'le ratio doit être supérieur à 1 (' + meta.hint + ').');
+                if (type === 'regroupement' && ratio >= 1) throw new Error(label + 'le ratio doit être inférieur à 1 (' + meta.hint + ').');
+            } else if (ratio !== null && !(ratio > 0)) throw new Error(label + 'ratio invalide.');
+            const o = { date, type };
+            if (ratio !== null) o.ratio = ratio;
+            if (meta.adj) o.cours_bruts = row.querySelector('.op-brut').value === '1';
+            if (note) o.note = note;
+            // conserve les champs techniques d'une opération déjà enregistrée (ex. deja_ajuste_avant)
+            const before = kept.find(k => k && String(k.date).slice(0, 10) === date && k.type === type);
+            if (before && before.deja_ajuste_avant) o.deja_ajuste_avant = before.deja_ajuste_avant;
+            out.push(o);
+        });
+        return out.sort((a, b) => String(a.date) < String(b.date) ? -1 : 1);
+    }
     function view() {
         return '' +
             '<div class="page-head">' +
@@ -262,9 +334,10 @@
                 : (existing.__missing.length ? 'Manque : ' + existing.__missing.join(', ') : 'Fiche complète'),
             saveLabel: isNew ? 'Créer la société' : 'Enregistrer',
             body: '<div class="form-grid">' + TC.fields(FORM.map(f =>
-                (!isNew && f.id === 'e-ticker') ? Object.assign({}, f, { readonly: true }) : f)) + logoField() + '</div>',
+                (!isNew && f.id === 'e-ticker') ? Object.assign({}, f, { readonly: true }) : f)) + logoField() + opsField() + '</div>',
             afterOpen() {
                 logo = wireLogo(existing);
+                wireOps(existing);
                 if (isNew) { TC.setVal('e-compart', 'PRINCIPAL'); return; }
                 TC.setVal('e-ticker', existing.ticker);
                 TC.setVal('e-nom', existing.nom);
@@ -285,6 +358,8 @@
                 if (!/^[A-Z0-9.\-]{2,20}$/.test(ticker)) {
                     TC.modal.msg('Ticker invalide : 2 à 20 caractères, lettres, chiffres, point ou tiret.', 'err'); return;
                 }
+                let operations;
+                try { operations = readOps(existing); } catch (err) { TC.modal.msg(err.message, 'err'); return; }
                 const actions = TC.int('e-actions');
                 if (actions !== null && actions <= 0) { TC.modal.msg('Le nombre d\'actions doit être strictement positif.', 'err'); return; }
 
@@ -299,6 +374,7 @@
                     siege_social: TC.val('e-siege') || null,
                     date_introduction: TC.val('e-intro') || null,
                     description: TC.val('e-desc') || null,
+                    operations_capital: operations,
                     actif: true
                 };
 

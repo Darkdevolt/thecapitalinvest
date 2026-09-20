@@ -39,7 +39,7 @@
   // (entreprises.operations_capital, cf. state.js) : sans cela BOAB « perd » la moitié de son dividende en 2024.
   function shareFactor(t,day){
     let f=1; const ops=typeof window.tcCapitalOps==='function'?window.tcCapitalOps(t):[];
-    ops.forEach(o=>{ if(day&&day<String(o.date).slice(0,10)) f/=Number(o.ratio); });
+    ops.forEach(o=>{ if(typeof window.tcOpAdjusts==='function'&&window.tcOpAdjusts(o)&&day&&day<String(o.date).slice(0,10)) f/=Number(o.ratio); });
     return f;
   }
 

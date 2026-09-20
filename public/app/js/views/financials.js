@@ -400,8 +400,8 @@ function openFinDetail(ticker) {
         [finCa(ticker),finValue(f.chiffre_affaires),finGrowth(f.chiffre_affaires,prev?.chiffre_affaires)],
         ['RBE',finValue(f.rbe ?? f.ebitda),finGrowth(f.rbe ?? f.ebitda,prev?.rbe ?? prev?.ebitda)],
         ['Résultat net',finValue(f.resultat_net),finGrowth(f.resultat_net,prev?.resultat_net)],
-        ['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],
-        ['DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—',finGrowth(f.dpa,prev?.dpa)]
+        [f.tc_ajuste?'BPA (retraité)':'BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],
+        [f.tc_ajuste?'DPA (retraité)':'DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—',finGrowth(f.dpa,prev?.dpa)]
       ]),
       finCard('Bilan', [
         ['Total actif',finValue(f.total_actif),finGrowth(f.total_actif,prev?.total_actif)],

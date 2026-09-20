@@ -114,6 +114,11 @@
   /* ── Liens entre notions voisines ─────────────────────────────── */
 
   var VOISINS = {
+    'operations-sur-titres': ['fractionnement', 'attribution-gratuite', 'augmentation-capital-numeraire', 'regroupement-actions'],
+    fractionnement: ['operations-sur-titres', 'attribution-gratuite'],
+    'attribution-gratuite': ['operations-sur-titres', 'reserves', 'fractionnement'],
+    'regroupement-actions': ['operations-sur-titres', 'fractionnement'],
+    'augmentation-capital-numeraire': ['operations-sur-titres', 'reserves'],
     rsi: ['divergence', 'stoch', 'macd'],
     macd: ['rsi', 'divergence', 'ma'],
     ma: ['supertrend', 'adx', 'linreg'],

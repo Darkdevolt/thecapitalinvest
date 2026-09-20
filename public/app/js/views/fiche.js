@@ -136,6 +136,35 @@ function histClose(r) {
   return Number(r && (r.cours_cloture != null ? r.cours_cloture : r.cours_normal != null ? r.cours_normal : r.cours));
 }
 
+// Libellé lisible d'une opération sur titres (entreprises.operations_capital).
+function fchOpLabel(o) {
+  var r = Number(o.ratio), nouv = r - 1;
+  switch (o.type) {
+    case 'attribution_gratuite': return 'Attribution gratuite ' + (nouv >= 1 ? Math.round(nouv * 100) / 100 + ' pour 1' : '1 pour ' + Math.round(1 / nouv));
+    case 'fractionnement': return 'Fractionnement ×' + r;
+    case 'regroupement': return 'Regroupement ' + (r > 0 && r < 1 ? Math.round(1 / r * 100) / 100 + ' pour 1' : '');
+    case 'augmentation_numeraire': return 'Augmentation de capital en numéraire';
+    case 'fusion': return 'Fusion / absorption';
+    default: return 'Opération sur titres';
+  }
+}
+function fchOpEffect(o) {
+  var adj = typeof window.tcOpAdjusts === 'function' && window.tcOpAdjusts(o);
+  if (!adj) return 'Aucun ajustement rétroactif (apport d\'argent ou changement de périmètre) : le nombre d\'actions et le BPA de chaque période sont ceux de l\'époque.';
+  return 'BPA, DPA et cours d\'avant cette date divisés par ' + (Math.round(Number(o.ratio) * 1000) / 1000) + ' pour rester comparables ; le cours de l\'époque reste visible en mode « Brut ».';
+}
+// Section « Opérations sur titres » de la fiche : rien n'est affiché sans opération connue.
+function fchOpsSection(T) {
+  var ops = typeof window.tcCapitalOps === 'function' ? window.tcCapitalOps(T) : [];
+  if (!ops.length) return '';
+  var icon = window.TCMemo ? window.TCMemo.icon('operations-sur-titres') : '';
+  return fchSec('Opérations sur titres' + icon,
+    '<div class="fch-card" style="overflow-x:auto"><table class="fch-fin"><thead><tr><th>Date</th><th>Opération</th><th>Effet sur les données</th><th>Détail</th></tr></thead><tbody>'
+    + ops.map(function (o) {
+      var d = String(o.date).slice(0, 10).split('-');
+      return '<tr><td>' + d[2] + '/' + d[1] + '/' + d[0] + '</td><td><b>' + fchEsc(fchOpLabel(o)) + '</b></td><td>' + fchEsc(fchOpEffect(o)) + '</td><td class="fch-muted">' + fchEsc(o.note || '') + '</td></tr>';
+    }).join('') + '</tbody></table></div>');
+}
 // ── Calculs ──────────────────────────────────────────────────────────────
 function fchRatios(f, cp, nbActions) {
   var out = { per: NaN, pbr: NaN, rdt: NaN, roe: NaN, marge: NaN, capi: NaN };
@@ -555,6 +584,8 @@ async function _openFicheInner(from, noHash, T) {
     : '<div class="fch-card fch-muted">États financiers non disponibles pour cette société.</div>'));
 
   // 4 · Valorisation + secteur
+  var opsHtml = fchOpsSection(T);
+  if (opsHtml) H.push(opsHtml);
   H.push(fchSec('Valorisation', '<div class="fch-cols">'
     + '<div class="fch-card">' + fchGrid([
       fchCell('PER', isFinite(r.per) ? r.per.toFixed(1) + 'x' : '—'),
@@ -758,7 +789,8 @@ function renderFicheChart() {
         marks.ops.forEach(function (o, k) {
           var px = x.getPixelForValue(o.index);
           c.save();
-          c.strokeStyle = '#E0A030'; c.fillStyle = '#E0A030'; c.lineWidth = 1.2; c.setLineDash([5, 4]);
+          var col = o.adj ? '#E0A030' : '#60A5FA';
+          c.strokeStyle = col; c.fillStyle = col; c.lineWidth = 1.2; c.setLineDash([5, 4]);
           c.beginPath(); c.moveTo(px, area.top); c.lineTo(px, area.bottom); c.stroke();
           c.setLineDash([]);
           c.font = '10px DM Mono, monospace';
@@ -796,12 +828,8 @@ function ficheChartMarks(ticker, data, vals) {
   ops.forEach(function (o) {
     var i = indexOf(String(o.date).slice(0, 10));
     if (i < 0) return;
-    var r = Number(o.ratio), nouv = r - 1;
-    var txt = o.type === 'attribution_gratuite'
-      ? 'Attribution gratuite ' + (nouv >= 1 ? Math.round(nouv * 100) / 100 + ' pour 1' : '1 pour ' + Math.round(1 / nouv))
-      : (r > 1 ? 'Fractionnement ×' + r : 'Regroupement ×' + Math.round((1 / r) * 100) / 100);
     var dt = String(o.date).slice(0, 10).split('-');
-    out.ops.push({ index: i, text: txt + ' · ' + dt[2] + '/' + dt[1] + '/' + dt[0] });
+    out.ops.push({ index: i, text: fchOpLabel(o) + ' · ' + dt[2] + '/' + dt[1] + '/' + dt[0], adj: typeof window.tcOpAdjusts === 'function' && window.tcOpAdjusts(o) });
   });
   (Array.isArray(window.allDividendes) ? window.allDividendes : []).forEach(function (r) {
     if (!r || String(r.ticker).toUpperCase() !== ticker || /annul|suspend/i.test(String(r.statut || ''))) return;

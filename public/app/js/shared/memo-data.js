@@ -599,6 +599,46 @@
       formule: 'Aucune formule unique : la lecture rassemble le taux de distribution, la couverture, les réserves en années de dividendes, le coussin de fonds propres, le coût du risque et le flux de trésorerie libre.',
       lecture: 'Les alertes sont comptées : aucune, le dividende est solide ; une, à surveiller ; deux ou plus, fragile. Les seuils sont des repères usuels, pas des règles.',
       limites: 'Un verdict n\'est pas une recommandation. Il ne remplace pas la lecture des rapports, en particulier pour comprendre l\'origine d\'un coût du risque exceptionnel.'
+    },
+    /* ─────────────────────────────────────────────────────────────
+       OPÉRATIONS SUR TITRES — FRACTIONNEMENT, ATTRIBUTION GRATUITE, AUGMENTATION DE CAPITAL
+       ───────────────────────────────────────────────────────────── */
+
+    'operations-sur-titres': {
+      titre: 'Opérations sur titres',
+      quoi: 'Les décisions d\'une société qui changent le nombre de ses actions : fractionnement, attribution d\'actions gratuites, regroupement, augmentation de capital en numéraire, fusion.',
+      formule: 'Fractionnement, attribution gratuite et regroupement : nouveau nombre d\'actions = ancien × ratio, sans apport d\'argent. Augmentation en numéraire : nouvelles actions souscrites contre de l\'argent frais.',
+      lecture: 'Les trois premières ne changent rien à la valeur de la société : le cours est mécaniquement divisé (ou multiplié) par le ratio, le bénéfice par action et le dividende par action aussi. Le site retraite donc tous les BPA, DPA et cours d\'avant l\'opération pour qu\'ils restent comparables à ceux d\'après. Une augmentation en numéraire, elle, dilue ou finance la société : rien n\'est retraité.',
+      limites: 'Sans retraitement, un fractionnement 1 pour 1 fait croire que le dividende et le bénéfice par action ont été divisés par deux, et que le cours a chuté de 50 %. Une opération non enregistrée dans la base fausse les PER, rendements et graphiques : un contrôle automatique repère les sauts de cours quotidiens supérieurs à 25 % sans opération connue.',
+      brvm: 'Sur la BRVM, ces opérations sont fréquentes : un cours devenu très élevé pousse la société à distribuer des actions gratuites ou à fractionner pour rendre le titre plus liquide (les banques du groupe BOA en 2024, par exemple). Le cours affiché le jour du détachement chute d\'autant, sans perte pour l\'actionnaire.'
+    },
+    'fractionnement': {
+      titre: 'Fractionnement d\'actions',
+      quoi: 'Chaque action ancienne est remplacée par plusieurs actions nouvelles de moindre valeur nominale (10 pour 1, par exemple).',
+      formule: 'Nombre d\'actions × ratio ; cours, BPA et DPA ÷ ratio.',
+      lecture: 'Rend un titre au cours élevé plus accessible et plus liquide. Neutre pour la valeur : la capitalisation ne change pas.',
+      limites: 'Ne crée aucune richesse. Comparer un cours d\'avant à un cours d\'après sans ajustement donne une baisse fictive.'
+    },
+    'attribution-gratuite': {
+      titre: 'Attribution d\'actions gratuites',
+      quoi: 'La société incorpore une partie de ses réserves ou primes au capital et distribue des actions nouvelles aux actionnaires, sans qu\'ils paient (1 pour 2 : une action nouvelle pour deux anciennes).',
+      formule: 'Ratio = 1 + parité (1 pour 2 → 1,5 ; 1 pour 1 → 2). Cours, BPA, DPA d\'avant ÷ ratio.',
+      lecture: 'La valeur des fonds propres est inchangée : les réserves deviennent du capital. Le cours baisse du ratio, mais l\'actionnaire détient plus d\'actions.',
+      limites: 'Les réserves incorporées ne sont plus distribuables sous forme de dividende. Ce n\'est ni un dividende ni un signal de résultat : c\'est une opération de bilan.'
+    },
+    'regroupement-actions': {
+      titre: 'Regroupement d\'actions',
+      quoi: 'L\'inverse d\'un fractionnement : plusieurs actions anciennes sont échangées contre une action nouvelle (1 pour 10, par exemple).',
+      formule: 'Ratio < 1 (1 pour 10 → 0,1). Cours d\'avant ÷ ratio, donc multiplié.',
+      lecture: 'Utilisé pour relever un cours devenu trop bas. Neutre pour la valeur.',
+      limites: 'Un regroupement est parfois le signe d\'un titre en difficulté : lisez l\'historique du cours avant de conclure.'
+    },
+    'augmentation-capital-numeraire': {
+      titre: 'Augmentation de capital en numéraire',
+      quoi: 'La société émet des actions nouvelles contre de l\'argent frais, souvent proposées d\'abord aux actionnaires existants (droits de souscription).',
+      formule: 'Nouvelles actions × prix d\'émission (nominal + prime). Le nombre d\'actions augmente et les fonds propres aussi.',
+      lecture: 'Renforce les fonds propres (utile pour respecter les ratios prudentiels d\'une banque). Si l\'actionnaire ne souscrit pas, sa part diminue : c\'est une dilution.',
+      limites: 'Contrairement à un fractionnement, le BPA et le cours d\'avant ne sont pas retraités : l\'entreprise a réellement reçu des fonds et le bénéfice se répartit sur plus d\'actions.'
     }
   };
 

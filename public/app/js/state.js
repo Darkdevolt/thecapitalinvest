@@ -67,8 +67,14 @@
     var e = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])
       .find(function (x) { return x && String(x.ticker).toUpperCase() === t; });
     var ops = e && Array.isArray(e.operations_capital) ? e.operations_capital : [];
-    return ops.filter(function (o) { return o && o.date && Number(o.ratio) > 0; })
+    return ops.filter(function (o) { return o && o.date; })
       .sort(function (a, b) { return String(a.date) < String(b.date) ? -1 : 1; });
+  };
+  /* Une opération AJUSTE-t-elle les BPA, DPA et cours antérieurs ? Oui pour un fractionnement, une attribution gratuite ou un
+     regroupement (le nombre d'actions change sans apport d'argent). Non pour une augmentation en numéraire, une fusion, etc.
+     (types alignés sur facteur_actions_a côté base). */
+  window.tcOpAdjusts = function (o) {
+    return !!o && /^(fractionnement|attribution_gratuite|regroupement)$/.test(String(o.type)) && Number(o.ratio) > 0;
   };
   /* Facteur d'ajustement d'un COURS brut du jour `ymd` (AAAA-MM-JJ) à la base d'actions actuelle :
      produit des 1/ratio des opérations datées APRÈS ce jour (BOAB : 0,5 avant le 03/09/2024, 1 ensuite).
@@ -77,7 +83,7 @@
   window.tcShareFactorAt = function (ticker, ymd) {
     var day = String(ymd || '').slice(0, 10), f = 1;
     window.tcCapitalOps(ticker).forEach(function (o) {
-      if (o.cours_bruts === true && day && day < String(o.date).slice(0, 10) && !(o.deja_ajuste_avant && day < String(o.deja_ajuste_avant).slice(0, 10))) f /= Number(o.ratio);
+      if (window.tcOpAdjusts(o) && o.cours_bruts === true && day && day < String(o.date).slice(0, 10) && !(o.deja_ajuste_avant && day < String(o.deja_ajuste_avant).slice(0, 10))) f /= Number(o.ratio);
     });
     return f;
   };
@@ -87,7 +93,7 @@
   window.tcRawScaleAt = function (ticker, ymd) {
     var day = String(ymd || '').slice(0, 10), m = 1;
     window.tcCapitalOps(ticker).forEach(function (o) {
-      if (o.cours_bruts === true && o.deja_ajuste_avant && day && day < String(o.deja_ajuste_avant).slice(0, 10) && day < String(o.date).slice(0, 10)) m *= Number(o.ratio);
+      if (window.tcOpAdjusts(o) && o.cours_bruts === true && o.deja_ajuste_avant && day && day < String(o.deja_ajuste_avant).slice(0, 10) && day < String(o.date).slice(0, 10)) m *= Number(o.ratio);
     });
     return m;
   };

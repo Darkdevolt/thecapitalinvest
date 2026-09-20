@@ -67,7 +67,7 @@ TC.COLUMNS = {
     entreprises: ['ticker', 'nom', 'nom_court', 'secteur', 'sous_secteur', 'pays', 'devise',
         'description', 'siege_social', 'site_web', 'date_introduction', 'nb_actions',
         'flottant_pct', 'valeur_nominale', 'pdg', 'dg', 'compartiment', 'code_isin',
-        'logo_url', 'actif', 'isin', 'nombre_actions'],
+        'logo_url', 'actif', 'isin', 'nombre_actions', 'operations_capital'],
 
     historique: ['ticker', 'date_seance', 'cloture', 'cours_cloture', 'cours_ouverture',
         'plus_haut', 'plus_bas', 'volume', 'variation', 'variation_pct', 'valeur_totale',
