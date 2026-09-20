@@ -191,11 +191,31 @@
     return null;
   }
 
+  /* ── Registre des graphiques interactifs ──────────────────────────
+     Chaque graphique (ligne, barres ou projection) enregistre ici la
+     position de ses points en coordonnées SVG. Le survol à la souris,
+     câblé une seule fois par délégation d'évènement (voir afChartsInit),
+     retrouve ainsi instantanément les valeurs sous le curseur sans avoir
+     à ré-analyser le graphique. Remis à zéro à chaque rendu complet (voir
+     render()) pour ne pas accumuler indéfiniment les graphiques quittés. */
+  var CHART_SEQ = 0;
+  var CHART_DATA = {};
+  var CHART_COLORS = ['#d8b568', '#4ddb9c', '#60a5fa', '#f3b555', '#c084fc'];
+
+  /* Un graphique sans point à tracer ne doit jamais disparaître en
+     silence : la case vide qui en résultait dans une mise en page à deux
+     colonnes se lisait comme une erreur d'affichage plutôt que comme
+     l'absence, légitime, de cette donnée pour la société. */
+  function chartVide(titre, desc, message) {
+    return '<div class="af-chart af-chart-empty"><div class="af-chart-head"><div><strong>' + esc(titre) + '</strong><span>' + esc(desc || '') + '</span></div></div>' +
+      '<div class="af-chart-empty-msg">' + esc(message || 'Historique insuffisant pour tracer un graphique.') + '</div></div>';
+  }
+
   function chartSerie(titre, desc, labels, series, format) {
     var W = 760, H = 250, L = 66, R = 20, T = 20, B = 34;
     var vals = [];
     series.forEach(function(s){ s.values.forEach(function(v){ if(fin(v)) vals.push(v); }); });
-    if (!vals.length) return '';
+    if (!vals.length) return chartVide(titre, desc);
     var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
     if (min === max) { min -= 1; max += 1; }
     var zero = min < 0 && max > 0 ? H - B - ((0-min)/(max-min))*(H-T-B) : null;
@@ -212,12 +232,22 @@
       grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="af-chart-grid"/>';
       grid += '<text x="' + (L - 8) + '" y="' + (yy + 3).toFixed(1) + '" class="af-chart-ylabel" text-anchor="end">' + esc(format(t)) + '</text>';
     });
-    var svg='<div class="af-chart"><div class="af-chart-head"><div><strong>'+esc(titre)+'</strong><span>'+esc(desc||'')+'</span></div></div>'+
+    var id = 'c' + (++CHART_SEQ);
+    var points = labels.map(function (lb, i) {
+      var items = [];
+      series.forEach(function (s, si) {
+        var v = s.values[i];
+        if (fin(v)) items.push({ label: s.label, value: format(v), color: CHART_COLORS[si % 5] });
+      });
+      return { x: x(i), label: lb, items: items };
+    });
+    CHART_DATA[id] = { W: W, H: H, T: T, B: B, points: points };
+    var svg='<div class="af-chart" data-chart-id="'+id+'"><div class="af-chart-head"><div><strong>'+esc(titre)+'</strong><span>'+esc(desc||'')+'</span></div></div>'+
       '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(titre)+'">'+grid;
     if(zero!==null) svg+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+zero.toFixed(1)+'" y2="'+zero.toFixed(1)+'" class="af-chart-zero"/>';
     series.forEach(function(s,si){
       svg+='<path d="'+path(s.values)+'" class="af-chart-line af-chart-c'+(si%5)+'"/>';
-      s.values.forEach(function(v,i){ if(fin(v)) svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"><title>'+esc(s.label)+' · '+esc(labels[i])+': '+esc(format(v))+'</title></circle>'; });
+      s.values.forEach(function(v,i){ if(fin(v)) svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"/>'; });
     });
     labels.forEach(function(lb,i){ svg+='<text x="'+x(i).toFixed(1)+'" y="'+(H-12)+'" class="af-chart-label" text-anchor="middle">'+esc(lb)+'</text>'; });
     svg+='</svg>';
@@ -225,6 +255,63 @@
        sa dernière valeur, et son taux de croissance annualisé, chacun sur
        sa propre ligne — jamais un texte posé sur la courbe, qui se
        chevauche dès que deux lignes se rapprochent. */
+    svg += '<div class="af-chart-legend">' + series.map(function (s, si) {
+      var last = dernierFini(s.values);
+      var g = seriesGrowth(s);
+      return '<span class="af-chart-leg-row"><i class="af-chart-key af-chart-c' + (si % 5) + '"></i>' +
+        '<span class="af-chart-leg-l">' + esc(s.label) + '</span>' +
+        (last != null ? '<span class="af-chart-leg-v">' + esc(format(last)) + '</span>' : '') +
+        (g ? '<span class="af-chart-leg-t ' + (g.up ? 'af-up' : 'af-down') + '">' + (g.up ? '▲' : '▼') + ' ' +
+          (g.annuel ? 'TCAM ' : '') + g.txt + '</span>' : '') +
+        '</span>';
+    }).join('') + '</div></div>';
+    return svg;
+  }
+
+  /* Diagramme en bâtons : un agrégat annuel (chiffre d'affaires, résultat,
+     flux) est un montant ponctuel par exercice, pas une grandeur qui
+     « coule » d'une année à l'autre — une barre par exercice se lit plus
+     naturellement qu'une ligne pour ce type de donnée, peu nombreuse et
+     discrète. */
+  function chartBarresVert(titre, desc, labels, series, format) {
+    var W = 760, H = 250, L = 66, R = 20, T = 20, B = 34;
+    var vals = [];
+    series.forEach(function (s) { s.values.forEach(function (v) { if (fin(v)) vals.push(v); }); });
+    if (!vals.length) return chartVide(titre, desc);
+    var max = Math.max.apply(null, vals.concat([0])), min = Math.min.apply(null, vals.concat([0]));
+    if (max === min) max += 1;
+    function y(v) { return H - B - ((v - min) / (max - min)) * (H - T - B); }
+    var zeroY = y(0);
+    var groupW = (W - L - R) / labels.length;
+    var gap = Math.max(3, groupW * 0.1);
+    var barW = Math.max(2, (groupW - gap * (series.length + 1)) / series.length);
+    var grid = '', ticks = [max, min + (max - min) / 2, min];
+    ticks.forEach(function (t, g) {
+      var yy = T + g * (H - T - B) / 2;
+      grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="af-chart-grid"/>';
+      grid += '<text x="' + (L - 8) + '" y="' + (yy + 3).toFixed(1) + '" class="af-chart-ylabel" text-anchor="end">' + esc(format(t)) + '</text>';
+    });
+    var bars = '', points = [];
+    labels.forEach(function (lb, i) {
+      var gx = L + i * groupW, items = [];
+      series.forEach(function (s, si) {
+        var v = s.values[i];
+        if (!fin(v)) return;
+        var bx = gx + gap + si * (barW + gap);
+        var yTop = Math.min(y(v), zeroY), h = Math.max(1, Math.abs(y(v) - zeroY));
+        bars += '<rect x="' + bx.toFixed(1) + '" y="' + yTop.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + h.toFixed(1) + '" rx="2" class="af-bar-rect af-chart-c' + (si % 5) + '"/>';
+        items.push({ label: s.label, value: format(v), color: CHART_COLORS[si % 5] });
+      });
+      points.push({ x: gx + groupW / 2, label: lb, items: items });
+    });
+    var id = 'c' + (++CHART_SEQ);
+    CHART_DATA[id] = { W: W, H: H, T: T, B: B, points: points };
+    var svg = '<div class="af-chart" data-chart-id="' + id + '"><div class="af-chart-head"><div><strong>' + esc(titre) + '</strong><span>' + esc(desc || '') + '</span></div></div>' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(titre) + '">' + grid +
+      (min < 0 ? '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + zeroY.toFixed(1) + '" y2="' + zeroY.toFixed(1) + '" class="af-chart-zero"/>' : '') +
+      bars;
+    labels.forEach(function (lb, i) { svg += '<text x="' + (L + i * groupW + groupW / 2).toFixed(1) + '" y="' + (H - 12) + '" class="af-chart-label" text-anchor="middle">' + esc(lb) + '</text>'; });
+    svg += '</svg>';
     svg += '<div class="af-chart-legend">' + series.map(function (s, si) {
       var last = dernierFini(s.values);
       var g = seriesGrowth(s);
@@ -294,7 +381,7 @@
   function chartProjection(titre, anneesHist, valsHist, anneesProj, valsProj, format) {
     var labels = anneesHist.concat(anneesProj);
     var allVals = valsHist.concat(valsProj).filter(fin);
-    if (allVals.length < 2) return '';
+    if (allVals.length < 2) return chartVide(titre, 'Historique publié et projection', 'Historique insuffisant pour projeter une courbe.');
     var W = 760, H = 210, L = 66, R = 20, T = 18, B = 32;
     var min = Math.min.apply(null, allVals), max = Math.max.apply(null, allVals);
     if (min === max) { min -= 1; max += 1; }
@@ -313,14 +400,21 @@
     valsProj.forEach(function (v, i) { if (fin(v)) projPts.push([x(valsHist.length + i), y(v)]); });
     var pathProj = projPts.length > 1 ? projPts.map(function (p, i) { return (i ? 'L' : 'M') + ' ' + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ') : '';
     var sepX = x(valsHist.length - 0.5);
-    var svg = '<div class="af-chart"><div class="af-chart-head"><div><strong>' + esc(titre) + '</strong>' +
+    var id = 'c' + (++CHART_SEQ);
+    var points = labels.map(function (lb, i) {
+      var v = i < valsHist.length ? valsHist[i] : valsProj[i - valsHist.length];
+      var items = fin(v) ? [{ label: i < valsHist.length ? 'Historique' : 'Projection', value: format(v), color: CHART_COLORS[0] }] : [];
+      return { x: x(i), label: lb, items: items };
+    });
+    CHART_DATA[id] = { W: W, H: H, T: T, B: B, points: points };
+    var svg = '<div class="af-chart" data-chart-id="' + id + '"><div class="af-chart-head"><div><strong>' + esc(titre) + '</strong>' +
       '<span>Trait plein : historique publié · pointillé : projection</span></div></div>' +
       '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(titre) + '">' + grid +
       '<line x1="' + sepX.toFixed(1) + '" x2="' + sepX.toFixed(1) + '" y1="' + T + '" y2="' + (H - B) + '" class="af-chart-zero"/>' +
       (pathHist ? '<path d="' + pathHist + '" class="af-chart-line af-chart-c0"/>' : '') +
       (pathProj ? '<path d="' + pathProj + '" class="af-chart-line af-chart-c0 af-chart-line-proj"/>' : '');
-    histPts.forEach(function (p, i) { svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" class="af-chart-dot af-chart-c0"><title>' + esc(String(labels[p[2]])) + ' : ' + esc(format(valsHist[p[2]])) + '</title></circle>'; });
-    projPts.slice(1).forEach(function (p, i) { svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" class="af-chart-dot af-chart-c0 af-chart-dot-proj"><title>' + esc(String(anneesProj[i])) + ' (projeté) : ' + esc(format(valsProj[i])) + '</title></circle>'; });
+    histPts.forEach(function (p) { svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" class="af-chart-dot af-chart-c0"/>'; });
+    projPts.slice(1).forEach(function (p) { svg += '<circle cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '" r="3" class="af-chart-dot af-chart-c0 af-chart-dot-proj"/>'; });
     labels.forEach(function (lb, i) { svg += '<text x="' + x(i).toFixed(1) + '" y="' + (H - 10) + '" class="af-chart-label" text-anchor="middle">' + esc(String(lb)) + '</text>'; });
     svg += '</svg></div>';
     return svg;
@@ -329,12 +423,12 @@
   function financialCharts(a){
     var labels=a.years.map(String);
     return '<div class="af-chart-grid">'+
-      chartSerie('Performance financière','Évolution des principaux agrégats publiés',labels,[
+      chartBarresVert('Performance financière','Évolution des principaux agrégats publiés',labels,[
         {label:ca(),values:a.rows.map(function(r){return r.ca;})},
         {label:'Résultat brut',values:a.rows.map(function(r){return r.rbe;})},
         {label:'Résultat net',values:a.rows.map(function(r){return r.rn;})}
       ],function(v){return mont(v);})+
-      chartSerie('Cash flow','Flux opérationnel, investissements et flux libre',labels,[
+      chartBarresVert('Cash flow','Flux opérationnel, investissements et flux libre',labels,[
         {label:'Flux opérationnel',values:a.rows.map(function(r){return r.cfo;})},
         {label:'Investissements',values:a.rows.map(function(r){return r.capex;})},
         {label:'Flux libre',values:a.rows.map(function(r){return r.fcf;})}
@@ -360,6 +454,115 @@
         {label:'Dette / EBITDA',values:a.ratios.map(function(r){return r.detteEbitda;})}
       ],function(v){return n2(v,2)+' x';})+
       '</div>';
+  }
+
+  /* ── Pop-up graphique au survol et au clic ─────────────────────── */
+
+  /* Boîte flottante réutilisée pour tous les graphiques : créée une seule
+     fois, repositionnée à chaque survol, plutôt qu'un tooltip HTML natif
+     (`<title>`) qui n'affiche qu'un seul point à la fois après un délai. */
+  var afTip = null;
+  function afTipEl() {
+    if (!afTip) { afTip = document.createElement('div'); afTip.className = 'af-chart-tip'; document.body.appendChild(afTip); }
+    return afTip;
+  }
+  function afChartHide() {
+    if (afTip) afTip.style.display = 'none';
+    var lines = document.querySelectorAll('.af-chart-hover-line');
+    for (var i = 0; i < lines.length; i++) lines[i].remove();
+  }
+  function afChartHover(e, chartEl) {
+    var data = CHART_DATA[chartEl.getAttribute('data-chart-id')];
+    var svg = chartEl.querySelector('svg');
+    if (!data || !svg) { afChartHide(); return; }
+    var rect = svg.getBoundingClientRect();
+    if (!rect.width) { afChartHide(); return; }
+    var svgX = (e.clientX - rect.left) * (data.W / rect.width);
+    var best = 0, bestD = Infinity;
+    data.points.forEach(function (p, i) { var d = Math.abs(p.x - svgX); if (d < bestD) { bestD = d; best = i; } });
+    var p = data.points[best];
+    if (!p || !p.items.length) { afChartHide(); return; }
+    var line = svg.querySelector('.af-chart-hover-line');
+    if (!line) {
+      line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('class', 'af-chart-hover-line');
+      svg.appendChild(line);
+    }
+    line.setAttribute('x1', p.x); line.setAttribute('x2', p.x);
+    line.setAttribute('y1', 0); line.setAttribute('y2', data.H);
+    var tip = afTipEl();
+    tip.innerHTML = '<div class="af-chart-tip-l">' + esc(String(p.label)) + '</div>' +
+      p.items.map(function (it) {
+        return '<div class="af-chart-tip-row"><i style="background:' + it.color + '"></i><span>' + esc(it.label) + '</span><b>' + esc(it.value) + '</b></div>';
+      }).join('');
+    tip.style.display = 'block';
+    var tw = tip.offsetWidth, th = tip.offsetHeight;
+    var left = e.clientX + 16, top = e.clientY + 16;
+    if (left + tw > window.innerWidth - 8) left = e.clientX - tw - 16;
+    if (top + th > window.innerHeight - 8) top = e.clientY - th - 16;
+    tip.style.left = Math.max(4, left) + 'px';
+    tip.style.top = Math.max(4, top) + 'px';
+  }
+
+  /* Pop-up générique : un graphique agrandi, ouvert au clic sur une ligne
+     de tableau plutôt que de multiplier les petits graphiques fixes pour
+     chaque poste (bilan, capitaux propres, actions, trimestres…). */
+  function afModal(titre, contenuHtml) {
+    var old = document.getElementById('afModalOverlay');
+    if (old) old.remove();
+    var overlay = document.createElement('div');
+    overlay.id = 'afModalOverlay';
+    overlay.className = 'af-modal-overlay';
+    overlay.innerHTML = '<div class="af-modal" role="dialog" aria-modal="true" aria-label="' + esc(titre) + '">' +
+      '<div class="af-modal-head"><strong>' + esc(titre) + '</strong><button type="button" class="af-modal-close" aria-label="Fermer">✕</button></div>' +
+      '<div class="af-modal-body">' + contenuHtml + '</div></div>';
+    /* Ajoutée à l'intérieur de la vue, pas à document.body : les
+       graphiques qu'elle contient dépendent des règles CSS et des
+       variables (--af-gold, --af-up…) portées par #view-analyse-
+       fondamentale, qui ne descendraient pas jusqu'à un enfant de body. */
+    (root() || document.body).appendChild(overlay);
+    function close() { afChartHide(); overlay.remove(); document.removeEventListener('keydown', onKey); }
+    overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+    overlay.querySelector('.af-modal-close').addEventListener('click', close);
+    function onKey(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', onKey);
+    overlay.querySelector('.af-modal-close').focus();
+  }
+
+  /* Cliquer une ligne des états financiers ouvre l'historique complet de
+     ce seul poste, y compris ceux qui n'ont pas de courbe dédiée dans les
+     graphiques du haut de l'onglet (bilan, capitaux propres, actions, BPA…). */
+  function onEtatsRowClick(tr) {
+    var a = S.analyse;
+    if (!a) return;
+    var k = tr.getAttribute('data-af-row'), lbl = tr.getAttribute('data-af-row-label');
+    var brut = tr.getAttribute('data-af-row-brut') === '1';
+    var labels = a.years.map(String);
+    var values = a.rows.map(function (r) { return r[k]; });
+    var fmt = brut ? function (v) { return n0(v); } : function (v) { return mont(v); };
+    afModal(lbl, chartBarresVert(lbl, 'Historique complet publié', labels, [{ label: lbl, values: values }], fmt));
+  }
+
+  /* Cliquer une ligne du tableau trimestres/semestres ouvre la
+     répartition infra-annuelle de cet exercice, pour le chiffre
+     d'affaires, le résultat brut d'exploitation et le résultat net. */
+  function onInterRowClick(tr) {
+    var it = S.inter;
+    if (!it) return;
+    var y = tr.getAttribute('data-af-year');
+    var periodesKeys = ['t1', 't2', 't3', 't4', 's1', 's2'];
+    var periodesLbl = { t1: 'T1', t2: 'T2', t3: 'T3', t4: 'T4', s1: 'S1', s2: 'S2' };
+    var body = FLUX_KEYS.map(function (k) {
+      var lbl = labelChampInter()[k];
+      var parAnnee = it.champs[k] && it.champs[k][y];
+      if (!parAnnee) return '';
+      var periodes = periodesKeys.filter(function (p) { return parAnnee[p]; });
+      if (periodes.length < 2) return '';
+      var labels = periodes.map(function (p) { return periodesLbl[p]; });
+      var values = periodes.map(function (p) { return parAnnee[p].valeur; });
+      return chartBarresVert(lbl, String(y), labels, [{ label: lbl, values: values }], mont);
+    }).join('');
+    afModal('Répartition infra-annuelle — ' + y, body || '<p class="af-note">Pas assez de trimestres ou de semestres publiés pour ' + esc(String(y)) + '.</p>');
   }
 
   /* ── Sélecteur de titres ──────────────────────────────────────── */
@@ -567,6 +770,12 @@
   function render() {
     var host = $('afPanel');
     if (!host) return;
+    /* Remis à zéro à chaque rendu complet : les graphiques du panneau
+       précédent quittent le DOM avec host.innerHTML, leurs entrées dans
+       CHART_DATA seraient sinon accumulées pour rien tout au long de la
+       session. */
+    CHART_DATA = {}; CHART_SEQ = 0;
+    afChartHide();
     var t = $('afTabs');
     if (t) t.innerHTML = TABS.map(function (x) {
       return (x.sep ? '<span class="af-tab-sep"></span>' : '') +
@@ -814,8 +1023,10 @@
         return;
       }
       var serie = a.rows.map(function (r) { return r[li.k]; });
-      html += '<tr' + (li.gras ? ' class="af-gras"' : '') + '><td>' + esc(li.l) + (li.memo ? memo(li.memo) : '') +
-        tcamBadge(serie, li.inverse) + '</td>' +
+      var trCls = ['af-row-click']; if (li.gras) trCls.push('af-gras');
+      html += '<tr class="' + trCls.join(' ') + '" data-af-row="' + li.k + '" data-af-row-label="' + esc(li.l) +
+        '" data-af-row-brut="' + (li.brut ? '1' : '0') + '" tabindex="0" title="Cliquer pour voir l\'historique complet en graphique"><td>' +
+        esc(li.l) + (li.memo ? memo(li.memo) : '') + tcamBadge(serie, li.inverse) + '</td>' +
         a.rows.map(function (r, i) {
           var v = r[li.k];
           var saisi = r['_saisi_' + li.k];
@@ -1064,13 +1275,13 @@
     html += note('Quand un cumul publié (semestre ou annuel) et une période déjà connue permettent de déduire la ' +
       'période manquante par simple soustraction, elle est calculée ici et signalée <span class="af-badge-deduit">déduit</span> ' +
       'plutôt que laissée vide. Seules les grandeurs du compte de résultat s\'y prêtent : un bilan est une photo à une ' +
-      'date, pas une somme de trimestres.');
+      'date, pas une somme de trimestres. Cliquer un exercice affiche sa répartition par trimestre ou semestre en graphique.');
     html += '<div class="af-scroll"><table class="af-table"><thead><tr><th>Exercice</th>' +
       ['t1', 't2', 't3', 't4', 's1', 's2', 'm9', 'annuel'].map(function (p) { return '<th class="r">' + esc(it.labels[p]) + '</th>'; }).join('') +
       '</tr></thead><tbody>' +
       it.annees.slice().reverse().map(function (y) {
         var v = it.champs.ca[y];
-        return '<tr><td>' + y + '</td>' + ['t1', 't2', 't3', 't4', 's1', 's2', 'm9', 'annuel'].map(function (p) {
+        return '<tr class="af-inter-row-click" data-af-year="' + y + '" tabindex="0" title="Cliquer pour voir la répartition par trimestre/semestre"><td>' + y + '</td>' + ['t1', 't2', 't3', 't4', 's1', 's2', 'm9', 'annuel'].map(function (p) {
           var cell = v[p];
           if (!cell) return '<td class="r af-vide">—</td>';
           return '<td class="r' + (cell.brut ? '' : ' af-saisi') + '">' + mont(cell.valeur) + '</td>';
@@ -2036,7 +2247,23 @@
       }
     });
 
+    /* Survol des graphiques : un seul écouteur délégué pour tous les
+       graphiques du panneau, plutôt qu'un par graphique — ils sont
+       recréés à chaque rendu, un écouteur par instance fuirait sans
+       jamais être retiré. */
+    r.addEventListener('mousemove', function (e) {
+      var chartEl = e.target.closest ? e.target.closest('.af-chart[data-chart-id]') : null;
+      if (chartEl) afChartHover(e, chartEl); else afChartHide();
+    });
+    r.addEventListener('mouseleave', afChartHide, true);
+
     r.addEventListener('click', function (e) {
+      var rowClick = e.target.closest ? e.target.closest('.af-row-click,.af-inter-row-click') : null;
+      if (rowClick) {
+        if (rowClick.classList.contains('af-row-click')) onEtatsRowClick(rowClick);
+        else onInterRowClick(rowClick);
+        return;
+      }
       var t = e.target.closest ? e.target.closest('[data-aftab],[data-afgoto],button') : null;
       if (!t) return;
       var v;
@@ -2093,6 +2320,17 @@
           notify('Tous les pairs sont de nouveau inclus.', 'success');
           break;
       }
+    });
+
+    /* Les lignes cliquables sont des <tr>, pas des boutons : sans ceci,
+       un clavier ne peut pas les activer malgré leur tabindex. */
+    r.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var rowClick = e.target.closest ? e.target.closest('.af-row-click,.af-inter-row-click') : null;
+      if (!rowClick) return;
+      e.preventDefault();
+      if (rowClick.classList.contains('af-row-click')) onEtatsRowClick(rowClick);
+      else onInterRowClick(rowClick);
     });
   }
 

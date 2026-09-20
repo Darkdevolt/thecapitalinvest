@@ -474,6 +474,17 @@
 .af-table tbody tr:last-child td { border-bottom: none; }
 .af-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, .015); }
 .af-table tbody tr:hover { background: var(--af-gold-soft); }
+
+/* Ligne cliquable : ouvre l'historique complet (états financiers) ou la
+   répartition infra-annuelle (trimestres/semestres) dans une pop-up. */
+.af-row-click, .af-inter-row-click { cursor: pointer; }
+.af-row-click:hover td:first-child, .af-inter-row-click:hover td:first-child { color: var(--af-gold); }
+.af-row-click:focus-visible, .af-inter-row-click:focus-visible { outline: 2px solid var(--af-gold); outline-offset: -2px; }
+.af-row-click td:first-child::after, .af-inter-row-click td:first-child::after {
+  content: '📈'; margin-left: 8px; font-size: 10px; opacity: 0; transition: opacity .12s;
+}
+.af-row-click:hover td:first-child::after, .af-inter-row-click:hover td:first-child::after,
+.af-row-click:focus-visible td:first-child::after, .af-inter-row-click:focus-visible td:first-child::after { opacity: .8; }
 .af-table td.r, .af-table th.r { text-align: right; }
 .af-table td:first-child { color: var(--af-text); white-space: nowrap; font-weight: 500; }
 .af-table .r { font-family: 'DM Mono', monospace; }
@@ -813,8 +824,16 @@
   display:block;margin-top:4px;font-size:10.5px;color:var(--af-faint)
 }
 #view-analyse-fondamentale .af-chart svg{
-  display:block;width:100%;height:auto;overflow:visible
+  display:block;width:100%;height:auto;overflow:visible;cursor:crosshair
 }
+#view-analyse-fondamentale .af-chart-empty{cursor:default}
+#view-analyse-fondamentale .af-chart-empty-msg{
+  padding:34px 10px;text-align:center;font-size:12px;color:var(--af-faint);font-style:italic
+}
+#view-analyse-fondamentale .af-chart-hover-line{
+  stroke:var(--af-gold);stroke-width:1;stroke-dasharray:3 3;opacity:.7;pointer-events:none
+}
+#view-analyse-fondamentale .af-bar-rect{transition:opacity .1s}
 #view-analyse-fondamentale .af-chart-grid{
   stroke:rgba(216,181,104,.09);stroke-width:1
 }
@@ -877,10 +896,14 @@
 
 
 /* ── Sparklines intégrées aux KPI et ratios ─────────────────────── */
+/* Empilé, pas côte à côte : un libellé long (« Résultat d'exploitation »)
+   dans une carte étroite refusait de rétrécir à côté d'une sparkline de
+   largeur fixe et venait la recouvrir. En colonne, il n'y a plus de
+   largeur à négocier entre les deux — le débordement est impossible. */
 #view-analyse-fondamentale .af-stat-top{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px
+  display:flex;flex-direction:column;align-items:flex-start;gap:7px;min-height:auto
 }
-#view-analyse-fondamentale .af-stat-l{margin-bottom:0}
+#view-analyse-fondamentale .af-stat-l{margin-bottom:0;white-space:normal}
 
 /* Encadré net : fond et bordure teintés selon la tendance (vert = hausse,
    rouge = baisse), pour qu'on la voie avant même de lire le tracé. */
@@ -921,4 +944,58 @@
   #view-analyse-fondamentale .af-spark{width:66px;flex-basis:66px}
   #view-analyse-fondamentale .af-table td:first-child .af-ratio-label{min-width:140px}
   #view-analyse-fondamentale .af-table td:first-child .af-spark{width:56px}
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   POP-UP GRAPHIQUE ET INFOBULLE DE SURVOL
+   La pop-up (.af-modal-overlay) est insérée à l'intérieur de
+   #view-analyse-fondamentale (voir afModal() dans af-app.js) : les
+   graphiques qu'elle affiche héritent ainsi normalement des règles et
+   variables --af-* définies plus haut, sans rien dupliquer ici. Seule
+   l'infobulle de survol (.af-chart-tip) reste posée sur document.body —
+   simple bloc de texte autonome, ses couleurs sont donc reprises en dur.
+   ═══════════════════════════════════════════════════════════════════ */
+.af-chart-tip{
+  position:fixed;z-index:10000;display:none;pointer-events:none;
+  min-width:150px;max-width:260px;padding:10px 12px;
+  background:rgba(20,17,11,.97);border:1px solid rgba(216,181,104,.4);
+  border-radius:8px;box-shadow:0 14px 34px -12px rgba(0,0,0,.7);
+  font-family:'DM Sans',system-ui,sans-serif;font-size:11.5px;color:#f4f0e6
+}
+.af-chart-tip-l{
+  font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(244,240,230,.55);font-weight:600;margin-bottom:6px
+}
+.af-chart-tip-row{display:flex;align-items:center;gap:7px;padding:2px 0}
+.af-chart-tip-row i{width:8px;height:8px;border-radius:50%;flex:none;display:inline-block}
+.af-chart-tip-row span{flex:1 1 auto;color:rgba(244,240,230,.76);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.af-chart-tip-row b{font-family:'DM Mono',monospace;font-weight:700;flex:none;margin-left:8px}
+
+#view-analyse-fondamentale .af-modal-overlay{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;padding:20px;
+  background:rgba(8,7,4,.72);backdrop-filter:blur(2px)
+}
+#view-analyse-fondamentale .af-modal{
+  width:100%;max-width:820px;max-height:88vh;overflow:auto;
+  background:var(--af-panel);border:1px solid var(--af-line-strong);border-radius:14px;
+  box-shadow:0 24px 60px -16px rgba(0,0,0,.8);color:var(--af-text)
+}
+#view-analyse-fondamentale .af-modal-head{
+  position:sticky;top:0;z-index:1;
+  display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:16px 18px;background:var(--af-panel);border-bottom:1px solid var(--af-line)
+}
+#view-analyse-fondamentale .af-modal-head strong{font-size:14.5px;font-weight:700}
+#view-analyse-fondamentale .af-modal-close{
+  width:30px;height:30px;flex:none;border-radius:8px;
+  background:var(--af-panel-2);border:1px solid var(--af-line);
+  color:var(--af-text);font-size:13px;cursor:pointer;transition:background .12s
+}
+#view-analyse-fondamentale .af-modal-close:hover{background:var(--af-down-soft)}
+#view-analyse-fondamentale .af-modal-body{padding:18px}
+@media(max-width:640px){
+  #view-analyse-fondamentale .af-modal-overlay{padding:10px}
+  #view-analyse-fondamentale .af-modal-head{padding:13px 14px}
+  #view-analyse-fondamentale .af-modal-body{padding:14px}
 }
