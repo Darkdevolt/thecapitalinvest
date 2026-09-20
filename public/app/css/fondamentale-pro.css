@@ -803,3 +803,31 @@
   #view-analyse-fondamentale .af-chart{padding:13px 10px 11px}
   #view-analyse-fondamentale .af-chart-head strong{font-size:12px}
 }
+
+
+/* ── Sparklines intégrées aux KPI et ratios ─────────────────────── */
+#view-analyse-fondamentale .af-stat-top{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:28px
+}
+#view-analyse-fondamentale .af-stat-l{margin-bottom:0}
+#view-analyse-fondamentale .af-spark{
+  display:block;width:92px;height:26px;flex:0 0 92px;opacity:.9
+}
+#view-analyse-fondamentale .af-spark svg{display:block;width:100%;height:100%;overflow:visible}
+#view-analyse-fondamentale .af-spark-line{
+  fill:none;stroke:var(--af-gold);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round
+}
+#view-analyse-fondamentale .af-spark-dot{fill:var(--af-gold)}
+#view-analyse-fondamentale .af-table td:first-child .af-ratio-label{
+  display:inline-flex;align-items:center;min-width:185px
+}
+#view-analyse-fondamentale .af-table td:first-child .af-spark{
+  display:inline-block;width:76px;height:22px;margin-left:10px;vertical-align:middle;opacity:.75
+}
+#view-analyse-fondamentale .af-table td:first-child .af-spark-line{stroke-width:1.5}
+@media(max-width:720px){
+  #view-analyse-fondamentale .af-stat-top{align-items:flex-start}
+  #view-analyse-fondamentale .af-spark{width:72px;flex-basis:72px}
+  #view-analyse-fondamentale .af-table td:first-child .af-ratio-label{min-width:150px}
+  #view-analyse-fondamentale .af-table td:first-child .af-spark{width:64px}
+}
