@@ -41,6 +41,20 @@
             '<div class="log" id="ann-log" style="margin-top:10px;">Aucune exécution dans cette session.</div>' +
             '</div></div>' +
 
+            '<div class="card accent"><div class="card-head"><span class="card-title">Déposer une annonce manuellement</span></div>' +
+            '<div class="card-body"><div class="note">Pour un document reçu autrement que par la récupération automatique (email, dépôt direct) : donnez un lien direct vers le PDF, il sera téléchargé et copié dans notre stockage comme les autres.</div>' +
+            '<div class="form-grid">' + TC.fields([
+                { id: 'ann-add-url', label: 'URL directe du PDF', wide: true, placeholder: 'https://www.brvm.org/…/document.pdf' },
+                { id: 'ann-add-cat', label: 'Catégorie', type: 'select', options: CATEGORIES.map(c => ({ v: c.categorie, l: c.label })) },
+                { id: 'ann-add-ticker', label: 'Ticker (facultatif)', upper: true, placeholder: 'SNTS' },
+                { id: 'ann-add-societe', label: 'Société (si pas de ticker)', placeholder: 'Sonatel' },
+                { id: 'ann-add-titre', label: 'Titre', wide: true, placeholder: 'Convocation à l\'assemblée générale…' },
+                { id: 'ann-add-date', label: 'Date de publication', type: 'date' }
+            ]) + '</div>' +
+            '<div class="actions"><button class="btn btn-primary" id="ann-add-save">Déposer</button>' +
+            '<button class="btn btn-outline btn-sm" id="ann-add-clear">Effacer</button>' +
+            '<span class="msg" id="ann-add-msg"></span></div></div></div>' +
+
             '<div class="card"><div class="card-head"><span class="card-title">Journal des passages</span>' +
             '<span class="card-tools"><button class="btn btn-outline btn-sm" id="ann-runs-reload">↺</button></span></div>' +
             '<div class="card-body tight"><div class="tw capped"><table><thead><tr>' +
@@ -151,6 +165,42 @@
         }
     }
 
+    function clearManual() {
+        TC.clear(['ann-add-url', 'ann-add-ticker', 'ann-add-societe', 'ann-add-titre', 'ann-add-date']);
+        TC.setVal('ann-add-cat', CATEGORIES[0].categorie);
+        TC.say('ann-add-msg', '');
+    }
+
+    async function saveManual() {
+        const sourceUrl = (TC.val('ann-add-url') || '').trim();
+        if (!/^https?:\/\//i.test(sourceUrl)) { TC.say('ann-add-msg', 'URL du PDF invalide.', 'err'); return; }
+        const categorie = TC.val('ann-add-cat');
+        const ticker = (TC.val('ann-add-ticker') || '').trim().toUpperCase();
+        const societeNom = (TC.val('ann-add-societe') || '').trim();
+        if (!ticker && !societeNom) { TC.say('ann-add-msg', 'Indiquez un ticker ou une société.', 'err'); return; }
+        const body = {
+            scope: 'announcements', action: 'add', source_url: sourceUrl, categorie,
+            ticker: ticker || null, societe_nom: societeNom || null,
+            titre: (TC.val('ann-add-titre') || '').trim() || null,
+            date_publication: TC.toISODate ? TC.toISODate(TC.val('ann-add-date')) : (TC.val('ann-add-date') || null)
+        };
+        TC.say('ann-add-msg', 'Téléchargement et enregistrement…', 'info');
+        TC.el('ann-add-save').disabled = true;
+        try {
+            await TC.api('/api/process-brvm', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body), timeout: 30000
+            });
+            TC.say('ann-add-msg', 'Document déposé.', 'ok');
+            clearManual();
+            await loadList();
+        } catch (e) {
+            TC.say('ann-add-msg', e.message, 'err');
+        } finally {
+            TC.el('ann-add-save').disabled = false;
+        }
+    }
+
     async function deleteDoc(id) {
         if (!confirm('Retirer ce document (base + fichier stocké) ?')) return;
         try {
@@ -180,6 +230,8 @@
             TC.on('ann-filter-ticker', 'input', loadList);
             TC.on('ann-runs-reload', 'click', loadRuns);
             TC.delegate('ann-body', '.ann-del', 'click', function (btn) { deleteDoc(btn.dataset.id); });
+            TC.on('ann-add-save', 'click', saveManual);
+            TC.on('ann-add-clear', 'click', clearManual);
             loadList();
             loadRuns();
         }

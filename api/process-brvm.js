@@ -910,6 +910,40 @@ export default async function handler(req, res) {
           if (!removed) return fail(res, 404, 'Document introuvable.', 'NOT_FOUND');
           return json(res, 200, { success: true, scope: 'announcements', action: 'delete', id: removed });
         }
+        // Ajout manuel d'une annonce (admin) : le scraper ne remonte que ce que
+        // brvm.org publie sous les six catégories suivies ; un communiqué reçu
+        // autrement (email, dépôt direct) se rattache ici, en réutilisant le
+        // même téléchargement + copie vers le stockage que la récupération
+        // automatique — le document reste hébergé chez nous, pas un simple lien.
+        if (body.action === 'add') {
+          const sourceUrl = String(body.source_url || '').trim();
+          const categorie = String(body.categorie || '').trim();
+          if (!sourceUrl || !/^https?:\/\//i.test(sourceUrl)) return fail(res, 400, 'URL du document invalide.', 'INVALID_URL');
+          if (!categorie) return fail(res, 400, 'Catégorie requise.', 'INVALID_CATEGORIE');
+          const known = await existingSourceUrls([sourceUrl]);
+          if (known.has(sourceUrl)) return fail(res, 409, 'Ce document est déjà enregistré.', 'DUPLICATE');
+          let ticker = String(body.ticker || '').trim().toUpperCase() || null;
+          const societeNom = String(body.societe_nom || '').trim() || null;
+          if (!ticker && societeNom) {
+            try {
+              const reference = await loadEnterpriseReference();
+              const match = matchInstrument({ nom: societeNom }, reference);
+              if (match.status === 'matched') ticker = match.record.ticker;
+            } catch (e) { /* rapprochement au mieux, pas bloquant */ }
+          }
+          try {
+            const stored = await downloadAndStoreAnnouncement({ source_url: sourceUrl, categorie, date_publication: body.date_publication || null });
+            const { data, error } = await supabaseAdmin.from('documents_emetteurs').upsert({
+              ticker, societe_nom: societeNom, categorie, titre: String(body.titre || '').trim() || null,
+              date_publication: body.date_publication || null, source_url: sourceUrl, ...stored
+            }, { onConflict: 'source_url' }).select().single();
+            if (error) throw error;
+            return json(res, 200, { success: true, scope: 'announcements', action: 'add', document: data });
+          } catch (error) {
+            console.error('[PROCESS-BRVM] announcements add', error);
+            return fail(res, 502, 'Téléchargement ou enregistrement impossible : ' + String(error?.message || error), 'ANNOUNCEMENT_ADD_ERROR');
+          }
+        }
         const startedAt = new Date().toISOString();
         try {
           const result = await runAnnouncementsScrape({

@@ -39,6 +39,33 @@
             '<div class="log" id="dcbr-log" style="margin-top:10px;">Aucune exécution dans cette session.</div>' +
             '</div></div>' +
 
+            '<div class="card accent"><div class="card-head"><span class="card-title">Ajouter ou corriger une fiche à la main</span></div>' +
+            '<div class="card-body"><div class="note">Utile quand une fiche manque, ou que le scraper a mal lu un champ. L\'identifiant sert de clé unique : laissez-le vide pour une fiche saisie à la main, il sera généré automatiquement.</div>' +
+            '<div class="form-grid">' + TC.fields([
+                { id: 'dcbr-f-source', label: 'Identifiant (URL source, ou vide)', wide: true, placeholder: 'https://dcbruemoa.org/fiche-technique/…' },
+                { id: 'dcbr-f-designation', label: 'Désignation', wide: true, placeholder: 'EMPRUNT OBLIGATAIRE... 6,80% 2024-2029' },
+                { id: 'dcbr-f-categorie', label: 'Catégorie', type: 'select', options: [{ v: 'cotee', l: 'Cotée' }, { v: 'non_cotee', l: 'Non cotée' }] },
+                { id: 'dcbr-f-symbole', label: 'Symbole' },
+                { id: 'dcbr-f-isin', label: 'ISIN' },
+                { id: 'dcbr-f-code', label: 'Code BRVM (rapprochement)', col: 'code_obligation' },
+                { id: 'dcbr-f-emetteur', label: 'Raison sociale émetteur', wide: true, col: 'raison_sociale_emetteur' },
+                { id: 'dcbr-f-vn', label: 'Valeur nominale', type: 'number', col: 'valeur_nominale' },
+                { id: 'dcbr-f-nb', label: 'Nombre de titres', type: 'number', step: '1', col: 'nombre_titres' },
+                { id: 'dcbr-f-prix-em', label: 'Prix d\'émission', type: 'number', col: 'prix_emission' },
+                { id: 'dcbr-f-jouissance', label: 'Date de jouissance', type: 'date', col: 'date_jouissance' },
+                { id: 'dcbr-f-taux-brut', label: 'Taux brut (%)', type: 'number', step: '0.01', col: 'taux_brut' },
+                { id: 'dcbr-f-taux-net', label: 'Taux net (%)', type: 'number', step: '0.01', col: 'taux_net' },
+                { id: 'dcbr-f-coupon-brut', label: 'Coupon brut', type: 'number', col: 'montant_coupon_brut' },
+                { id: 'dcbr-f-coupon-net', label: 'Coupon net', type: 'number', col: 'montant_coupon_net' },
+                { id: 'dcbr-f-modalite', label: 'Modalité de paiement', col: 'modalite_paiement' },
+                { id: 'dcbr-f-duree', label: 'Durée', col: 'duree' },
+                { id: 'dcbr-f-remboursement', label: 'Mode de remboursement', col: 'mode_remboursement' },
+                { id: 'dcbr-f-prix-remb', label: 'Prix de remboursement', type: 'number', col: 'prix_remboursement' }
+            ]) + '</div>' +
+            '<div class="actions"><button class="btn btn-primary" id="dcbr-f-save">Enregistrer</button>' +
+            '<button class="btn btn-outline btn-sm" id="dcbr-f-clear">Effacer</button>' +
+            '<span class="msg" id="dcbr-f-msg"></span></div></div></div>' +
+
             '<div class="card"><div class="card-head"><span class="card-title">Journal des passages</span>' +
             '<span class="card-tools"><button class="btn btn-outline btn-sm" id="dcbr-runs-reload">↺</button></span></div>' +
             '<div class="card-body tight"><div class="tw capped"><table><thead><tr>' +
@@ -54,8 +81,8 @@
             '<button class="btn btn-outline btn-sm" id="dcbr-reload">↺</button></span></div>' +
             '<div class="tw capped" id="dcbr-scope"><table><thead><tr>' +
             '<th>Désignation</th><th>ISIN</th><th>Symbole</th><th>Code BRVM</th><th class="r">Taux brut</th>' +
-            '<th class="r">Valeur nominale</th><th>Échéance jouissance</th><th>Catégorie</th><th></th>' +
-            '</tr></thead><tbody id="dcbr-body">' + TC.rowsLoading(8) + '</tbody></table></div></div>';
+            '<th class="r">Valeur nominale</th><th>Échéance jouissance</th><th>Catégorie</th><th></th><th></th>' +
+            '</tr></thead><tbody id="dcbr-body">' + TC.rowsLoading(9) + '</tbody></table></div></div>';
     }
 
     function log(text, level) {
@@ -127,7 +154,7 @@
         const tbody = TC.el('dcbr-body');
         TC.el('dcbr-count').textContent = list.length + ' ligne(s)';
         if (!list.length) {
-            tbody.innerHTML = TC.rowsEmpty(8, 'Aucune fiche enregistrée', 'Lancez une récupération ci-dessus.');
+            tbody.innerHTML = TC.rowsEmpty(9, 'Aucune fiche enregistrée', 'Lancez une récupération ci-dessus.');
             return;
         }
         tbody.innerHTML = list.map(function (r) {
@@ -140,7 +167,10 @@
                 '<td class="r td-mono">' + TC.fmt(r.valeur_nominale) + '</td>' +
                 '<td class="td-muted">' + TC.fmtDate(r.date_jouissance) + '</td>' +
                 '<td><span class="badge ' + (r.categorie === 'cotee' ? 'badge-green' : 'badge-orange') + '">' + TC.esc(r.categorie === 'cotee' ? 'Cotée' : 'Non cotée') + '</span></td>' +
-                '<td class="r"><a href="' + TC.esc(r.source_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">Fiche ↗</a></td></tr>';
+                '<td class="r">' + (/^https?:/i.test(r.source_url || '') ? '<a href="' + TC.esc(r.source_url) + '" target="_blank" rel="noopener noreferrer" class="btn btn-outline btn-sm">Fiche ↗</a>' : '<span class="td-muted">saisie manuelle</span>') + '</td>' +
+                '<td class="r" style="white-space:nowrap;">' +
+                '<button class="btn btn-outline btn-ico" data-edit="' + encodeURIComponent(r.source_url) + '">✎</button> ' +
+                '<button class="btn btn-danger btn-ico" data-del="' + encodeURIComponent(r.source_url) + '">✕</button></td></tr>';
         }).join('');
     }
 
@@ -155,10 +185,69 @@
     }
 
     async function load() {
-        TC.el('dcbr-body').innerHTML = TC.rowsLoading(8);
+        TC.el('dcbr-body').innerHTML = TC.rowsLoading(9);
         rows = await TC.getAll('obligations_caracteristiques', 'select=*&order=last_changed_at.desc');
         paintKpis();
         filter();
+    }
+
+    /* ── Saisie et correction manuelles ─────────────────────
+       source_url est la clé de conflit du scraper : une fiche saisie à
+       la main reçoit un identifiant synthétique (manual://…) si aucune
+       URL n'est donnée, pour ne jamais entrer en collision avec une
+       fiche réellement scrapée. */
+    const FORM_IDS = ['dcbr-f-source', 'dcbr-f-designation', 'dcbr-f-categorie', 'dcbr-f-symbole', 'dcbr-f-isin',
+        'dcbr-f-code', 'dcbr-f-emetteur', 'dcbr-f-vn', 'dcbr-f-nb', 'dcbr-f-prix-em', 'dcbr-f-jouissance',
+        'dcbr-f-taux-brut', 'dcbr-f-taux-net', 'dcbr-f-coupon-brut', 'dcbr-f-coupon-net', 'dcbr-f-modalite',
+        'dcbr-f-duree', 'dcbr-f-remboursement', 'dcbr-f-prix-remb'];
+
+    function clearForm() { TC.clear(FORM_IDS); TC.say('dcbr-f-msg', ''); }
+
+    function fillForm(r) {
+        TC.setVal('dcbr-f-source', r.source_url || '');
+        TC.setVal('dcbr-f-designation', r.designation);
+        TC.setVal('dcbr-f-categorie', r.categorie || 'cotee');
+        TC.setVal('dcbr-f-symbole', r.symbole);
+        TC.setVal('dcbr-f-isin', r.isin);
+        TC.setVal('dcbr-f-code', r.code_obligation);
+        TC.setVal('dcbr-f-emetteur', r.raison_sociale_emetteur);
+        TC.setVal('dcbr-f-vn', r.valeur_nominale);
+        TC.setVal('dcbr-f-nb', r.nombre_titres);
+        TC.setVal('dcbr-f-prix-em', r.prix_emission);
+        TC.setVal('dcbr-f-jouissance', TC.toISODate(r.date_jouissance) || '');
+        TC.setVal('dcbr-f-taux-brut', r.taux_brut);
+        TC.setVal('dcbr-f-taux-net', r.taux_net);
+        TC.setVal('dcbr-f-coupon-brut', r.montant_coupon_brut);
+        TC.setVal('dcbr-f-coupon-net', r.montant_coupon_net);
+        TC.setVal('dcbr-f-modalite', r.modalite_paiement);
+        TC.setVal('dcbr-f-duree', r.duree);
+        TC.setVal('dcbr-f-remboursement', r.mode_remboursement);
+        TC.setVal('dcbr-f-prix-remb', r.prix_remboursement);
+        document.getElementById('dcbr-f-source').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    async function saveForm() {
+        const designation = TC.val('dcbr-f-designation');
+        if (!designation) { TC.say('dcbr-f-msg', 'La désignation est obligatoire.', 'err'); return; }
+        const sourceUrl = TC.val('dcbr-f-source') ||
+            'manual://' + (TC.val('dcbr-f-code') || designation).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+        const body = {
+            source_url: sourceUrl, designation, categorie: TC.val('dcbr-f-categorie') || 'cotee',
+            symbole: TC.val('dcbr-f-symbole') || null, isin: TC.val('dcbr-f-isin') || null,
+            code_obligation: TC.val('dcbr-f-code') || null, raison_sociale_emetteur: TC.val('dcbr-f-emetteur') || null,
+            valeur_nominale: TC.num('dcbr-f-vn'), nombre_titres: TC.num('dcbr-f-nb'), prix_emission: TC.num('dcbr-f-prix-em'),
+            date_jouissance: TC.toISODate(TC.val('dcbr-f-jouissance')) || null,
+            taux_brut: TC.num('dcbr-f-taux-brut'), taux_net: TC.num('dcbr-f-taux-net'),
+            montant_coupon_brut: TC.num('dcbr-f-coupon-brut'), montant_coupon_net: TC.num('dcbr-f-coupon-net'),
+            modalite_paiement: TC.val('dcbr-f-modalite') || null, duree: TC.val('dcbr-f-duree') || null,
+            mode_remboursement: TC.val('dcbr-f-remboursement') || null, prix_remboursement: TC.num('dcbr-f-prix-remb')
+        };
+        try {
+            await TC.post('obligations_caracteristiques', body, 'source_url');
+            TC.say('dcbr-f-msg', designation + ' enregistrée.', 'ok');
+            clearForm();
+            load();
+        } catch (e) { TC.say('dcbr-f-msg', e.message, 'err'); }
     }
 
     async function loadRuns() {
@@ -203,6 +292,18 @@
             TC.on('dcbr-runs-reload', 'click', loadRuns);
             TC.on('dcbr-filter-cat', 'change', filter);
             TC.on('dcbr-filter-search', 'input', filter);
+            TC.on('dcbr-f-save', 'click', saveForm);
+            TC.on('dcbr-f-clear', 'click', clearForm);
+            TC.delegate('dcbr-body', '[data-edit]', 'click', n => {
+                const row = rows.find(r => r.source_url === decodeURIComponent(n.dataset.edit)); if (row) fillForm(row);
+            });
+            TC.delegate('dcbr-body', '[data-del]', 'click', async function (n) {
+                const url = decodeURIComponent(n.dataset.del);
+                const row = rows.find(r => r.source_url === url);
+                if (!row || !TC.confirmTwice('Supprimer la fiche ' + (row.designation || row.source_url) + ' ?')) return;
+                try { await TC.del('obligations_caracteristiques', 'source_url=eq.' + encodeURIComponent(url)); TC.toast('Supprimé', 'ok'); load(); }
+                catch (e) { TC.toast(e.message, 'err'); }
+            });
             load();
             loadRuns();
         }

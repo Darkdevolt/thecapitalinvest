@@ -135,8 +135,12 @@ for (const file of files) {
 // institute.js, parametres.js) ajoutés à la page ; cache-buster de
 // dividendes.js et financials.js pour leurs calendriers visuels et l'onglet
 // Documents (PDF). Changement délibéré et revu.
+// Bump 2026-09-20 (2) : ajout des modules obligations.js et coupons.js
+// (CRUD manuel marché obligataire + calendrier des coupons) ; cache-buster
+// de annonces.js, evenements-valeurs.js et dcbr.js pour leurs formulaires de
+// création manuelle. Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '203b99e52cf385d5843b1960ba4b8912a7d2a434';
+const expectedAdminBlobSha = 'fb359c6fcb2616abeb96610235b8e3f9b9825b76';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');

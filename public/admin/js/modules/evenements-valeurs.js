@@ -49,6 +49,30 @@
             '<div class="log" id="esv-log" style="margin-top:10px;">Aucune exécution dans cette session.</div>' +
             '</div></div>' +
 
+            '<div class="card accent"><div class="card-head"><span class="card-title">Créer un évènement manuellement</span></div>' +
+            '<div class="card-body"><div class="note">Pour un évènement absent de brvm.org/fr/esv ou connu avant sa publication officielle. Seuls les champs pertinents pour la catégorie choisie sont utiles, laissez les autres vides.</div>' +
+            '<div class="form-grid">' + TC.fields([
+                { id: 'esv-add-cat', label: 'Catégorie', type: 'select', options: CATEGORIES },
+                { id: 'esv-add-ticker', label: 'Ticker', upper: true, placeholder: 'SNTS' },
+                { id: 'esv-add-emetteur', label: 'Émetteur (BRVM)', placeholder: 'Sonatel' },
+                { id: 'esv-add-absorbe', label: 'Émetteur absorbé (fusion)' },
+                { id: 'esv-add-obligation', label: 'Obligation (coupon / radiation)' },
+                { id: 'esv-add-exercice', label: 'Exercice', type: 'number' },
+                { id: 'esv-add-montant', label: 'Montant net / dividende (FCFA)', type: 'number' },
+                { id: 'esv-add-parite', label: 'Parité' },
+                { id: 'esv-add-valeur-theorique', label: 'Valeur théorique (FCFA)', type: 'number' },
+                { id: 'esv-add-nature-droit', label: 'Nature du droit' },
+                { id: 'esv-add-periode-negociation', label: 'Période de négociation' },
+                { id: 'esv-add-date-evenement', label: 'Date de l\'évènement', type: 'date' },
+                { id: 'esv-add-date-ex', label: 'Date ex-dividende / ex-droit', type: 'date' },
+                { id: 'esv-add-date-paiement', label: 'Date de paiement', type: 'date' },
+                { id: 'esv-add-avis-url', label: 'Lien avis (PDF)', wide: true, placeholder: 'https://www.brvm.org/…' },
+                { id: 'esv-add-communique-url', label: 'Lien communiqué (PDF)', wide: true, placeholder: 'https://www.brvm.org/…' }
+            ]) + '</div>' +
+            '<div class="actions"><button class="btn btn-primary" id="esv-add-save">Créer</button>' +
+            '<button class="btn btn-outline btn-sm" id="esv-add-clear">Effacer</button>' +
+            '<span class="msg" id="esv-add-msg"></span></div></div></div>' +
+
             '<div class="card"><div class="card-head"><span class="card-title">Journal du suiveur</span>' +
             '<span class="card-tools"><button class="btn btn-outline btn-sm" id="esv-runs-reload">↺</button></span></div>' +
             '<div class="card-body tight"><div class="tw capped"><table><thead><tr>' +
@@ -260,6 +284,61 @@
         }
     }
 
+    const MANUAL_FIELD_IDS = [
+        'esv-add-ticker', 'esv-add-emetteur', 'esv-add-absorbe', 'esv-add-obligation', 'esv-add-exercice',
+        'esv-add-montant', 'esv-add-parite', 'esv-add-valeur-theorique', 'esv-add-nature-droit',
+        'esv-add-periode-negociation', 'esv-add-date-evenement', 'esv-add-date-ex', 'esv-add-date-paiement',
+        'esv-add-avis-url', 'esv-add-communique-url'
+    ];
+
+    function clearManual() {
+        TC.clear(MANUAL_FIELD_IDS);
+        TC.setVal('esv-add-cat', CATEGORIES[0].v);
+        TC.say('esv-add-msg', '');
+    }
+
+    async function saveManual() {
+        const categorie = TC.val('esv-add-cat');
+        const ticker = (TC.val('esv-add-ticker') || '').trim().toUpperCase();
+        const emetteur = (TC.val('esv-add-emetteur') || '').trim();
+        const absorbe = (TC.val('esv-add-absorbe') || '').trim();
+        if (!ticker && !emetteur && !absorbe) { TC.say('esv-add-msg', 'Indiquez au moins un ticker ou un émetteur.', 'err'); return; }
+        const toISO = v => TC.toISODate ? TC.toISODate(v) : (v || null);
+        const body = {
+            categorie,
+            ticker: ticker || null,
+            emetteur_brvm: emetteur || null,
+            emetteur_absorbe: absorbe || null,
+            obligation: (TC.val('esv-add-obligation') || '').trim() || null,
+            exercice: TC.int ? TC.int('esv-add-exercice') : (parseInt(TC.val('esv-add-exercice'), 10) || null),
+            montant_net: TC.num ? TC.num('esv-add-montant') : (Number(TC.val('esv-add-montant')) || null),
+            parite: (TC.val('esv-add-parite') || '').trim() || null,
+            valeur_theorique: TC.num ? TC.num('esv-add-valeur-theorique') : (Number(TC.val('esv-add-valeur-theorique')) || null),
+            nature_droit: (TC.val('esv-add-nature-droit') || '').trim() || null,
+            periode_negociation: (TC.val('esv-add-periode-negociation') || '').trim() || null,
+            date_evenement: toISO(TC.val('esv-add-date-evenement')),
+            date_ex: toISO(TC.val('esv-add-date-ex')),
+            date_paiement: toISO(TC.val('esv-add-date-paiement')),
+            avis_url: (TC.val('esv-add-avis-url') || '').trim() || null,
+            communique_url: (TC.val('esv-add-communique-url') || '').trim() || null,
+            natural_key: categorie + ':manual-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8),
+            first_seen_at: new Date().toISOString(),
+            last_seen_at: new Date().toISOString(),
+            last_changed_at: new Date().toISOString()
+        };
+        TC.el('esv-add-save').disabled = true;
+        try {
+            await TC.post('evenements_valeurs', body, 'natural_key');
+            TC.say('esv-add-msg', 'Évènement créé.', 'ok');
+            clearManual();
+            await load();
+        } catch (e) {
+            TC.say('esv-add-msg', e.message, 'err');
+        } finally {
+            TC.el('esv-add-save').disabled = false;
+        }
+    }
+
     async function assignTicker(id) {
         const row = rows.find(r => String(r.id) === id);
         if (!row) return;
@@ -302,6 +381,8 @@
             TC.on('esv-filter-unmatched', 'change', filter);
             TC.delegate('esv-body', '.esv-assign', 'click', n => assignTicker(n.dataset.id));
             TC.delegate('esv-body', '.esv-del', 'click', n => deleteRow(n.dataset.id));
+            TC.on('esv-add-save', 'click', saveManual);
+            TC.on('esv-add-clear', 'click', clearManual);
             load();
             loadRuns();
         }
