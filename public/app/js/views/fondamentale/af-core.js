@@ -769,7 +769,7 @@
         marquee: fin(maxP) && maxP - 0.25 > 0.08,
         dominante: maxK, dominanteLabel: maxK ? LABEL_PERIODE[maxK] : null,
         verdict: !fin(maxP) ? ND
-          : (maxP - 0.25 > 0.08 ? LABEL_PERIODE[maxK] + ' concentre en moyenne ' + Math.round(maxP * 100) + ' % du chiffre d\'affaires annuel : activité nettement saisonnière.'
+          : (maxP - 0.25 > 0.08 ? LABEL_PERIODE[maxK] + ' concentre en moyenne ' + Math.round(maxP * 100) + ' % du ' + (global.tcCaLabel ? global.tcCaLabel(ticker, 'min') : 'chiffre d\'affaires') + ' annuel : activité nettement saisonnière.'
             : 'Le chiffre d\'affaires se répartit assez régulièrement sur l\'année, sans trimestre nettement dominant.')
       };
     } else if (partsSem.s1.length || partsSem.s2.length) {
@@ -781,7 +781,7 @@
         dominante: fin(ecart) ? (ecart > 0 ? 's1' : 's2') : null,
         dominanteLabel: fin(ecart) ? (ecart > 0 ? 'S1' : 'S2') : null,
         verdict: !fin(ecart) ? ND
-          : (Math.abs(ecart) > 0.08 ? (ecart > 0 ? 'S1' : 'S2') + ' concentre en moyenne ' + Math.round((ecart > 0 ? partsS.s1 : partsS.s2) * 100) + ' % du chiffre d\'affaires annuel : activité plus soutenue sur ce semestre.'
+          : (Math.abs(ecart) > 0.08 ? (ecart > 0 ? 'S1' : 'S2') + ' concentre en moyenne ' + Math.round((ecart > 0 ? partsS.s1 : partsS.s2) * 100) + ' % du ' + (global.tcCaLabel ? global.tcCaLabel(ticker, 'min') : 'chiffre d\'affaires') + ' annuel : activité plus soutenue sur ce semestre.'
             : 'Le chiffre d\'affaires se répartit assez également entre les deux semestres.')
       };
     }

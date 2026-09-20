@@ -541,7 +541,7 @@ async function _openFicheInner(from, noHash, T) {
   H.push(fchSec('Fondamentaux', fins.length
     ? '<div class="fch-card" style="overflow-x:auto"><table class="fch-fin"><thead><tr><th>Exercice</th>'
       + fins.slice(0, 5).map(function (f) { return '<th>' + f.annee + '</th>'; }).join('') + '</tr></thead><tbody>'
-      + fchFinRow('Chiffre d\'affaires', fins, 'chiffre_affaires', fchMoney)
+      + fchFinRow(typeof window.tcCaLabel === 'function' ? window.tcCaLabel(T) : 'Chiffre d\'affaires', fins, 'chiffre_affaires', fchMoney)
       + fchFinRow('Résultat brut d\'expl.', fins, 'rbe', fchMoney)
       + fchFinRow('Résultat net', fins, 'resultat_net', fchMoney)
       + fchFinRow('Marge nette', fins, null, null, function (f) { var m = f.marge_nette != null ? (Number(f.marge_nette) <= 1.5 ? f.marge_nette * 100 : f.marge_nette) : (f.resultat_net && f.chiffre_affaires ? f.resultat_net / f.chiffre_affaires * 100 : NaN); return isFinite(m) ? Number(m).toFixed(1) + ' %' : '—'; })

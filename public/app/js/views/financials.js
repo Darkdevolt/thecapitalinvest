@@ -62,6 +62,12 @@ function finPeriodLabel(p) {
 // Trimestre « réel » (isolé), déduit par soustraction de deux cumuls publiés la
 // même année : T2 = S1 − T1, T3 = 9 mois − S1, T4 = annuel − 9 mois. Jamais stocké,
 // toujours signalé comme déduit ; seuls les postes de flux du compte de résultat s'y prêtent.
+// « Chiffre d'affaires », ou « Produit net bancaire » pour une banque (helper de score-maison.js).
+function finCa(ticker, forme) {
+  if (typeof window.tcCaLabel === 'function') return window.tcCaLabel(ticker, forme);
+  return forme === 'court' ? 'CA' : forme === 'min' ? "chiffre d'affaires" : "Chiffre d'affaires";
+}
+
 function finIsolatedCard(f, fins) {
   const periode = String(f?.periode || 'annuel');
   const rule = { S1: ['Q1', 'Trimestre 2 isolé', 'S1 − T1'], '9M': ['S1', 'Trimestre 3 isolé', '9 mois − S1'], annuel: ['9M', 'Trimestre 4 isolé', 'annuel − 9 mois'] }[periode];
@@ -74,7 +80,7 @@ function finIsolatedCard(f, fins) {
     return Number.isFinite(a) && Number.isFinite(b) ? a - b : null;
   };
   return finCard(`${rule[1]} (déduit : ${rule[2]})`, [
-    ["Chiffre d'affaires", finValue(diff('chiffre_affaires'))],
+    [finCa(f.ticker), finValue(diff('chiffre_affaires'))],
     ['RBE', finValue(diff('rbe'))],
     ['Résultat net', finValue(diff('resultat_net'))]
   ]);
@@ -229,7 +235,7 @@ function finLecture(f, prev) {
   const ca = Number(f.chiffre_affaires), caPrev = Number(prev?.chiffre_affaires);
   if (Number.isFinite(ca) && Number.isFinite(caPrev) && caPrev !== 0) {
     const g = (ca / caPrev - 1) * 100;
-    notes.push({ tone: g >= 0 ? 'positive' : 'negative', text: `Chiffre d'affaires ${g >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(g).toFixed(1)} % sur la période précédente.` });
+    notes.push({ tone: g >= 0 ? 'positive' : 'negative', text: `${finCa(f.ticker)} ${g >= 0 ? 'en hausse' : 'en baisse'} de ${Math.abs(g).toFixed(1)} % sur la période précédente.` });
   }
   const rn = Number(f.resultat_net), chiffreAffaires = Number(f.chiffre_affaires);
   if (Number.isFinite(rn) && Number.isFinite(chiffreAffaires) && chiffreAffaires !== 0) {
@@ -327,10 +333,10 @@ function renderFinancialTicker(ticker, fins) {
       <div class="fin-company-status">${financialValidationBadge(latest)}<span class="fin-open">Voir l'analyse →</span></div>
     </div>
     <div class="fin-key-grid">
-      ${finMetric("Chiffre d'affaires", finValue(latest.chiffre_affaires), `Exercice ${finEsc(latest.annee)}`)}
+      ${finMetric(finCa(ticker), finValue(latest.chiffre_affaires), `Exercice ${finEsc(latest.annee)}`)}
       ${finMetric('Résultat net', finValue(latest.resultat_net), growth === null ? confidence : `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% vs exercice précédent`)}
       <div class="pro-only">${finMetric('BPA', latest.bpa != null ? `${fmt(latest.bpa)} FCFA` : '—', 'Bénéfice par action')}</div>
-      ${finMetric('Marge nette', finRatio(latest.resultat_net, latest.chiffre_affaires), 'Résultat net / CA')}
+      ${finMetric('Marge nette', finRatio(latest.resultat_net, latest.chiffre_affaires), `Résultat net / ${finCa(ticker, 'court')}`)}
       ${finMetric('Dividende par action', latest.dpa != null ? `${fmt(latest.dpa)} FCFA` : '—', 'DPA disponible en base')}
     </div>
     <div class="fin-company-foot pro-only">${financialSourceLine(latest)}<button class="fin-detail-btn" onclick="event.stopPropagation();openFinDetail('${finEsc(ticker)}')">Explorer les états financiers</button></div>
@@ -364,7 +370,7 @@ function openFinDetail(ticker) {
     </div>
     <div class="fin-detail-trust">${financialValidationBadge(latest)}<span>${finStatus(latest)==='validated' ? 'Les données affichées sont validées.' : 'Certaines données sont encore en validation éditoriale.'}</span></div>
     ${researchHtml}
-    <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du chiffre d'affaires et du résultat net</div><div class="fin-section-note">${interimCount > 0 ? `Exercices annuels ci-dessous · ${interimCount} publication(s) infra-annuelle(s) (semestre/trimestre) dans le détail par période.` : 'Historique disponible dans la base The Capital. Aucune publication semestrielle ou trimestrielle enregistrée pour ce titre : le détail par période reste annuel.'}</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
+    <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du ${finCa(ticker, 'min')} et du résultat net</div><div class="fin-section-note">${interimCount > 0 ? `Exercices annuels ci-dessous · ${interimCount} publication(s) infra-annuelle(s) (semestre/trimestre) dans le détail par période.` : 'Historique disponible dans la base The Capital. Aucune publication semestrielle ou trimestrielle enregistrée pour ce titre : le détail par période reste annuel.'}</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
     ${policyHtml}
     <div id="finDetailPeriods"></div>`;
 
@@ -376,7 +382,7 @@ function openFinDetail(ticker) {
   const canvas = document.getElementById('chartFinEvolution');
   if (canvas && evolLabels.length > 1) {
     new Chart(canvas,{type:'bar',data:{labels:evolLabels,datasets:[
-      {label:"Chiffre d'affaires",data:evolCA,backgroundColor:'rgba(96,165,250,0.28)',borderColor:'rgba(96,165,250,0.65)',borderWidth:1,borderRadius:5},
+      {label:finCa(ticker),data:evolCA,backgroundColor:'rgba(96,165,250,0.28)',borderColor:'rgba(96,165,250,0.65)',borderWidth:1,borderRadius:5},
       {label:'Résultat net',data:evolData,backgroundColor:'rgba(184,150,78,0.30)',borderColor:'rgba(184,150,78,0.65)',borderWidth:1,borderRadius:5}
     ]},options:{...chartOpts,plugins:{...chartOpts.plugins,legend:{display:true},tooltip:{...chartOpts.plugins.tooltip,callbacks:{label:ctx=>' '+ctx.dataset.label+' : '+fmtM(ctx.parsed.y)}}}}});
   } else if (canvas) {
@@ -391,7 +397,7 @@ function openFinDetail(ticker) {
     const lecture = finLecture(f, prev);
     const sections = [
       finCard('Compte de résultat', [
-        ["Chiffre d'affaires",finValue(f.chiffre_affaires),finGrowth(f.chiffre_affaires,prev?.chiffre_affaires)],
+        [finCa(ticker),finValue(f.chiffre_affaires),finGrowth(f.chiffre_affaires,prev?.chiffre_affaires)],
         ['RBE',finValue(f.rbe ?? f.ebitda),finGrowth(f.rbe ?? f.ebitda,prev?.rbe ?? prev?.ebitda)],
         ['Résultat net',finValue(f.resultat_net),finGrowth(f.resultat_net,prev?.resultat_net)],
         ['BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],

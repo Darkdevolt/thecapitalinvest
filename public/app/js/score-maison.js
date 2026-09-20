@@ -54,6 +54,22 @@
   }
   function isFinancial(e) { return /financ|banque|assur/i.test(String((e && (e.secteur || e.sous_secteur)) || '')); }
 
+  // Nom du « chiffre d'affaires » d'un titre : pour une banque (secteur Services
+  // Financiers) la colonne chiffre_affaires porte le produit net bancaire (PNB).
+  //   tcCaLabel(t) -> « Produit net bancaire » | « Chiffre d'affaires »
+  //   tcCaLabel(t, 'min') -> minuscules pour une phrase ; tcCaLabel(t, 'court') -> « PNB » | « CA »
+  window.tcCaLabel = function (ticker, forme) {
+    var t = String(ticker || '').toUpperCase();
+    var e = entOf(t);
+    if (!e.ticker && Array.isArray(window.allEntreprises)) {
+      e = window.allEntreprises.find(function (x) { return x && String(x.ticker).toUpperCase() === t; }) || {};
+    }
+    var bank = isFinancial(e);
+    if (forme === 'court') return bank ? 'PNB' : 'CA';
+    if (forme === 'min') return bank ? 'produit net bancaire' : 'chiffre d\'affaires';
+    return bank ? 'Produit net bancaire' : 'Chiffre d\'affaires';
+  };
+
   // Dernier dividende brut connu : calendrier des dividendes ET colonne dpa des
   // états financiers ; on garde l'exercice le plus récent (calendrier en cas d'égalité).
   function lastDividend(t, fs) {

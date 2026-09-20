@@ -87,6 +87,11 @@
   function store(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { } }
   function read(k, d) { try { var v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
   function notify(m, k) { if (typeof global.toast === 'function') global.toast(m, k || 'info'); }
+  /* « Chiffre d'affaires », ou « Produit net bancaire » pour une banque (helper de score-maison.js). */
+  function ca(forme) {
+    if (typeof global.tcCaLabel === 'function') return global.tcCaLabel(S.ticker, forme);
+    return forme === 'court' ? 'CA' : forme === 'min' ? 'chiffre d\'affaires' : 'Chiffre d\'affaires';
+  }
 
   /* Le mémo n'est ajouté que si la notion existe vraiment dans la base :
      une icône qui ouvrirait un panneau vide serait pire que rien. */
@@ -452,10 +457,10 @@
 
     html += groupe('Dernier exercice publié · ' + ex.annee);
     html += '<div class="af-stats">' +
-      st('Chiffre d\'affaires', or(mont(ex.ca)), pcs(r.croissanceCa) ? 'variation de ' + pcs(r.croissanceCa) : '', 'ca') +
+      st(ca(), or(mont(ex.ca)), pcs(r.croissanceCa) ? 'variation de ' + pcs(r.croissanceCa) : '', 'ca') +
       st('Résultat brut d\'exploitation', or(mont(ex.rbe)), or(pc(r.margeBrute), '') + ' de marge', 'marge-exploitation') +
       st('Résultat net', or(mont(ex.rn)), or(pc(r.margeNette), '') + ' de marge', 'marge-nette') +
-      st('Flux de trésorerie libre', or(mont(ex.fcf)), or(pc(r.margeFcf), '') + ' du chiffre d\'affaires', 'fcf') +
+      st('Flux de trésorerie libre', or(mont(ex.fcf)), or(pc(r.margeFcf), '') + ' du ' + ca('min'), 'fcf') +
       st('Capitaux propres', or(mont(ex.cp)), or(pc(r.autonomie), '') + ' du bilan', 'autonomie') +
       st('Dette financière', or(mont(ex.dette)), 'levier de ' + or(n2(r.gearing), '—'), 'gearing') +
       '</div>';
@@ -505,10 +510,10 @@
       else if (r.conversionCash < 0.7) dire('mauvais', 'Seuls ' + pc(r.conversionCash, 0) + ' du résultat net se retrouvent en trésorerie. Une part des bénéfices reste immobilisée en créances ou en stocks, ou relève d\'écritures comptables.');
     }
     if (fin(cr.ca.value)) {
-      if (cr.ca.value >= 0.10) dire('bon', 'Le chiffre d\'affaires progresse de ' + pc(cr.ca.value) + ' par an sur ' + cr.ca.annees + ' ans, en hausse ' + cr.regularite.exercicesHausse + ' exercices sur ' + cr.regularite.exercices + '.');
-      else if (cr.ca.value < 0) dire('mauvais', 'Le chiffre d\'affaires recule de ' + pc(Math.abs(cr.ca.value)) + ' par an sur la période. Toute valorisation par croissance devient hasardeuse.');
+      if (cr.ca.value >= 0.10) dire('bon', 'Le ' + ca('min') + ' progresse de ' + pc(cr.ca.value) + ' par an sur ' + cr.ca.annees + ' ans, en hausse ' + cr.regularite.exercicesHausse + ' exercices sur ' + cr.regularite.exercices + '.');
+      else if (cr.ca.value < 0) dire('mauvais', 'Le ' + ca('min') + ' recule de ' + pc(Math.abs(cr.ca.value)) + ' par an sur la période. Toute valorisation par croissance devient hasardeuse.');
     } else if (cr.ca.raison) {
-      dire('vigilance', 'Le taux de croissance du chiffre d\'affaires n\'est pas calculable : ' + cr.ca.raison + '.');
+      dire('vigilance', 'Le taux de croissance du ' + ca('min') + ' n\'est pas calculable : ' + cr.ca.raison + '.');
     }
     if (fin(r.detteEbitda) && r.detteEbitda > 4) dire('mauvais', 'La dette représente ' + n2(r.detteEbitda) + ' années de résultat brut d\'exploitation. Au-delà de quatre, elle contraint sérieusement l\'investissement comme la distribution.');
     if (fin(r.payout)) {
@@ -537,7 +542,7 @@
   function paneEtats() {
     var a = S.analyse;
     var lignes = [
-      { k: 'ca', l: 'Chiffre d\'affaires', memo: 'ca', gras: true },
+      { k: 'ca', l: ca(), memo: 'ca', gras: true },
       { k: 'rbe', l: 'Résultat brut d\'exploitation', memo: 'marge-exploitation' },
       { k: 'ebit', l: 'Résultat d\'exploitation', saisi: true },
       { k: 'rn', l: 'Résultat net', gras: true },
@@ -633,7 +638,7 @@
         t: 'Valorisation au cours actuel', l: [
           ['per', 'Cours sur bénéfice', 'n2', 'per'],
           ['pbr', 'Cours sur actif net', 'n2', 'pbr'],
-          ['psr', 'Cours sur chiffre d\'affaires', 'n2'],
+          ['psr', 'Cours sur ' + ca('min'), 'n2'],
           ['evEbitda', 'Valeur d\'entreprise sur excédent brut', 'n2', 'ev-ebitda'],
           ['pfcf', 'Cours sur flux libre', 'n2'],
           ['rendement', 'Rendement du dividende', 'pc2', 'rendement', [0.04]],
@@ -677,7 +682,7 @@
     html += note('Le taux annuel moyen ne se calcule qu\'entre deux bornes strictement positives. Lorsqu\'un exercice ' +
       'est en perte, le taux n\'existe pas mathématiquement : la raison est affichée plutôt qu\'un chiffre trompeur.');
     html += '<div class="af-stats">';
-    [['ca', 'Chiffre d\'affaires'], ['rbe', 'Résultat brut'], ['rn', 'Résultat net'],
+    [['ca', ca()], ['rbe', 'Résultat brut'], ['rn', 'Résultat net'],
     ['fcf', 'Flux libre'], ['bpa', 'Bénéfice par action'], ['dpa', 'Dividende par action'],
     ['cp', 'Capitaux propres']].forEach(function (x) {
       var t = cr[x[0]];
@@ -691,7 +696,7 @@
     var r = cr.regularite;
     if (fin(r.value)) {
       html += groupe('Régularité');
-      html += note('Un chiffre d\'affaires qui progresse chaque année vaut mieux qu\'un chiffre d\'affaires qui double ' +
+      html += note('Un ' + ca('min') + ' qui progresse chaque année vaut mieux qu\'un ' + ca('min') + ' qui double ' +
         'puis s\'effondre, même à taux moyen identique.');
       html += '<div class="af-stats">' +
         st('Exercices en hausse', r.exercicesHausse + ' sur ' + r.exercices, pc(r.value, 0) + ' des exercices') +
@@ -700,7 +705,7 @@
     }
 
     if (cr.regCa) {
-      html += groupe('Tendance linéaire du chiffre d\'affaires');
+      html += groupe('Tendance linéaire du ' + ca('min'));
       html += '<div class="af-stats">' +
         st('Pente', or(mont(cr.regCa.slope)) + ' par an', 'progression moyenne en valeur absolue') +
         st('Qualité de l\'ajustement', or(pc(cr.regCa.r2, 0)), fin(cr.regCa.r2) ? (cr.regCa.r2 > 0.85 ? 'la croissance est presque parfaitement linéaire' : cr.regCa.r2 > 0.6 ? 'la tendance linéaire décrit correctement la série' : 'la série s\'écarte nettement d\'une droite') : '') +
@@ -720,7 +725,7 @@
       html += '<div class="af-scroll"><table class="af-table"><thead><tr><th></th>' +
         proj.annees.map(function (y) { return '<th class="r">' + y + '</th>'; }).join('') + '</tr></thead><tbody>' +
         ['ca', 'rn', 'fcf'].map(function (k) {
-          var lbl = { ca: 'Chiffre d\'affaires', rn: 'Résultat net', fcf: 'Flux libre' }[k];
+          var lbl = { ca: ca(), rn: 'Résultat net', fcf: 'Flux libre' }[k];
           return '<tr><td>' + lbl + '</td>' + proj[k].map(function (v) {
             return '<td class="r">' + or(mont(v), '—') + '</td>';
           }).join('') + '</tr>';
@@ -778,7 +783,7 @@
 
   /* ── Onglet Intermédiaire ─────────────────────────────────────── */
 
-  var LABEL_CHAMP_INTER = { ca: 'Chiffre d\'affaires', rbe: 'Résultat brut d\'exploitation', rn: 'Résultat net' };
+  function labelChampInter() { return { ca: ca(), rbe: 'Résultat brut d\'exploitation', rn: 'Résultat net' }; }
 
   /* Une valeur déduite (T2 = S1 − T1, par exemple) porte le même badge
      ambré que les données saisies manuellement ailleurs dans ce module :
@@ -811,7 +816,7 @@
           return '<td class="r' + (cell.brut ? '' : ' af-saisi') + '">' + mont(cell.valeur) + '</td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table></div>';
-    html += note('Grandeur affichée : chiffre d\'affaires. Le résultat brut d\'exploitation et le résultat net suivent la ' +
+    html += note('Grandeur affichée : ' + ca('min') + '. Le résultat brut d\'exploitation et le résultat net suivent la ' +
       'même reconstruction et servent aux comparaisons ci-dessous.');
 
     html += groupe('Comparaison à la même période l\'an dernier');
@@ -825,7 +830,7 @@
         html += '<div class="af-stats">' + FLUX_KEYS.map(function (c) {
           var f = cmp.champs[c];
           if (!f.valeur) return '';
-          return st(LABEL_CHAMP_INTER[c], mont(f.valeur.valeur),
+          return st(labelChampInter()[c], mont(f.valeur.valeur),
             fin(f.croissance) ? '<span class="' + (f.croissance >= 0 ? 'af-up' : 'af-down') + '">' + pcs(f.croissance) + '</span> vs ' + or(mont(f.precedent && f.precedent.valeur), '—')
               : (f.precedent ? '' : 'aucune période équivalente l\'an dernier'));
         }).join('') + '</div>';
@@ -845,7 +850,7 @@
         '</div>';
       html += '<div class="af-stats">' + FLUX_KEYS.filter(function (c) { return c !== 'ca'; }).map(function (c) {
         var f = it.ytd.champs[c];
-        return st(LABEL_CHAMP_INTER[c], or(mont(f.courant), '—'), fin(f.croissance) ? pcs(f.croissance) + ' vs même cumul l\'an dernier' : '');
+        return st(labelChampInter()[c], or(mont(f.courant), '—'), fin(f.croissance) ? pcs(f.croissance) + ' vs même cumul l\'an dernier' : '');
       }).join('') + '</div>';
     }
 
@@ -854,7 +859,7 @@
     if (!s) {
       html += note('Pas assez d\'exercices avec à la fois un détail infra-annuel et un annuel complet pour établir une saisonnalité.');
     } else {
-      html += note('Part moyenne du chiffre d\'affaires réalisée par ' + s.granularite + ', sur ' + s.exercices +
+      html += note('Part moyenne du ' + ca('min') + ' réalisée par ' + s.granularite + ', sur ' + s.exercices +
         ' exercice(s) où le rapprochement à l\'annuel est possible. La ligne pointillée marque le partage parfaitement ' +
         'égal (' + (s.granularite === 'trimestre' ? '25 % chacun' : '50 % chacun') + ') : au-dessus, ce ' + s.granularite + ' pèse plus que sa part théorique.');
       html += saisonBars(s);
@@ -1040,7 +1045,7 @@
     html += '<div class="af-form">' +
       champ('Cours sur bénéfice', 'num', 'perRef', fin(H.perRef) ? H.perRef : med.per, null, statLbl + ' : ' + or(n2(med.per), '—')) +
       champ('Cours sur actif net', 'num', 'pbrRef', fin(H.pbrRef) ? H.pbrRef : med.pbr, null, statLbl + ' : ' + or(n2(med.pbr), '—')) +
-      champ('Cours sur chiffre d\'affaires', 'num', 'psrRef', fin(H.psrRef) ? H.psrRef : med.psr, null, statLbl + ' : ' + or(n2(med.psr), '—')) +
+      champ('Cours sur ' + ca('min'), 'num', 'psrRef', fin(H.psrRef) ? H.psrRef : med.psr, null, statLbl + ' : ' + or(n2(med.psr), '—')) +
       champ('Valeur d\'entreprise sur excédent brut', 'num', 'evEbitdaRef', fin(H.evEbitdaRef) ? H.evEbitdaRef : med.evEbitda, null, statLbl + ' : ' + or(n2(med.evEbitda), '—')) +
       champ('Cours sur flux libre', 'num', 'pfcfRef', H.pfcfRef) +
       '</div>';
@@ -1508,7 +1513,7 @@
     sep('Croissance');
     ['ca', 'rbe', 'rn', 'fcf', 'dpa'].forEach(function (k) {
       var t = a.croissances[k];
-      var lbl = { ca: 'Chiffre d\'affaires', rbe: 'Résultat brut', rn: 'Résultat net', fcf: 'Flux libre', dpa: 'Dividende' }[k];
+      var lbl = { ca: ca(), rbe: 'Résultat brut', rn: 'Résultat net', fcf: 'Flux libre', dpa: 'Dividende' }[k];
       L.push('  ' + lbl.padEnd(24) + ' : ' + (fin(t.value) ? P(t.value) + ' par an sur ' + t.annees + ' ans' : 'non calculable — ' + t.raison));
     });
 
