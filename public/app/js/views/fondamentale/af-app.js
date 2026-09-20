@@ -125,6 +125,76 @@
     return bon ? 'af-up' : 'af-down';
   }
 
+
+  /* ── Visualisations financières ────────────────────────────────
+     Couche purement visuelle : toutes les valeurs proviennent de S.analyse.
+     Aucun calcul métier n'est modifié. */
+  function chartSerie(titre, desc, labels, series, format) {
+    var W = 760, H = 250, L = 58, R = 18, T = 28, B = 38;
+    var vals = [];
+    series.forEach(function(s){ s.values.forEach(function(v){ if(fin(v)) vals.push(v); }); });
+    if (!vals.length) return '';
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    if (min === max) { min -= 1; max += 1; }
+    var zero = min < 0 && max > 0 ? H - B - ((0-min)/(max-min))*(H-T-B) : null;
+    function x(i){ return L + (labels.length <= 1 ? 0 : i*(W-L-R)/(labels.length-1)); }
+    function y(v){ return H-B - ((v-min)/(max-min))*(H-T-B); }
+    function path(vs){
+      return vs.map(function(v,i){ return (i?'L':'M')+' '+x(i).toFixed(1)+' '+(fin(v)?y(v).toFixed(1):(H-B)); }).join(' ');
+    }
+    var grid='';
+    for(var g=0;g<4;g++){
+      var yy=T+g*(H-T-B)/3;
+      grid+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy.toFixed(1)+'" y2="'+yy.toFixed(1)+'" class="af-chart-grid"/>';
+    }
+    var svg='<div class="af-chart"><div class="af-chart-head"><div><strong>'+esc(titre)+'</strong><span>'+esc(desc||'')+'</span></div></div>'+
+      '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(titre)+'">'+grid;
+    if(zero!==null) svg+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+zero.toFixed(1)+'" y2="'+zero.toFixed(1)+'" class="af-chart-zero"/>';
+    series.forEach(function(s,si){
+      svg+='<path d="'+path(s.values)+'" class="af-chart-line af-chart-c'+(si%5)+'"/>';
+      s.values.forEach(function(v,i){ if(fin(v)) svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"><title>'+esc(s.label)+' · '+esc(labels[i])+': '+esc(format(v))+'</title></circle>'; });
+    });
+    labels.forEach(function(lb,i){ svg+='<text x="'+x(i).toFixed(1)+'" y="'+(H-14)+'" class="af-chart-label" text-anchor="middle">'+esc(lb)+'</text>'; });
+    svg+='</svg><div class="af-chart-legend">'+series.map(function(s,si){return '<span><i class="af-chart-key af-chart-c'+(si%5)+'"></i>'+esc(s.label)+'</span>';}).join('')+'</div></div>';
+    return svg;
+  }
+
+  function financialCharts(a){
+    var labels=a.years.map(String);
+    return '<div class="af-chart-grid">'+
+      chartSerie('Performance financière','Évolution des principaux agrégats publiés',labels,[
+        {label:ca(),values:a.rows.map(function(r){return r.ca;})},
+        {label:'Résultat brut',values:a.rows.map(function(r){return r.rbe;})},
+        {label:'Résultat net',values:a.rows.map(function(r){return r.rn;})}
+      ],function(v){return mont(v);})+
+      chartSerie('Cash flow','Flux opérationnel, investissements et flux libre',labels,[
+        {label:'Flux opérationnel',values:a.rows.map(function(r){return r.cfo;})},
+        {label:'Investissements',values:a.rows.map(function(r){return r.capex;})},
+        {label:'Flux libre',values:a.rows.map(function(r){return r.fcf;})}
+      ],function(v){return mont(v);})+
+      '</div>';
+  }
+
+  function ratioCharts(a){
+    var labels=a.years.map(String);
+    return '<div class="af-chart-grid">'+
+      chartSerie('Rentabilité','Évolution des rendements',labels,[
+        {label:'ROE',values:a.ratios.map(function(r){return fin(r.roe)?r.roe*100:NaN;})},
+        {label:'ROA',values:a.ratios.map(function(r){return fin(r.roa)?r.roa*100:NaN;})},
+        {label:'ROCE',values:a.ratios.map(function(r){return fin(r.roce)?r.roce*100:NaN;})}
+      ],function(v){return n2(v,1)+' %';})+
+      chartSerie('Marges','Évolution des marges bénéficiaires',labels,[
+        {label:'Marge RBE',values:a.ratios.map(function(r){return fin(r.margeBrute)?r.margeBrute*100:NaN;})},
+        {label:'Marge nette',values:a.ratios.map(function(r){return fin(r.margeNette)?r.margeNette*100:NaN;})},
+        {label:'Marge FCF',values:a.ratios.map(function(r){return fin(r.margeFcf)?r.margeFcf*100:NaN;})}
+      ],function(v){return n2(v,1)+' %';})+
+      chartSerie('Structure financière','Levier et dette dans le temps',labels,[
+        {label:'Gearing',values:a.ratios.map(function(r){return r.gearing;})},
+        {label:'Dette / EBITDA',values:a.ratios.map(function(r){return r.detteEbitda;})}
+      ],function(v){return n2(v,2)+' x';})+
+      '</div>';
+  }
+
   /* ── Sélecteur de titres ──────────────────────────────────────── */
 
   function tickers() {
@@ -562,6 +632,7 @@
     ];
 
     var html = groupe('États financiers annuels · ' + a.rows.length + ' exercices');
+    html += financialCharts(a);
     html += note('Les montants sont exprimés en francs CFA. Les valeurs sur fond ambré ont été saisies dans l\'onglet ' +
       'Données et ne proviennent pas des états publiés. Les cellules vides correspondent à des postes non publiés par la source.');
     html += '<div class="af-scroll"><table class="af-table af-etats"><thead><tr><th></th>' +
@@ -647,6 +718,7 @@
       }
     ];
 
+    var html = ratioCharts(a);
     var html = note('Chaque ratio est calculé pour tous les exercices disponibles. Les multiples de valorisation ' +
       'rapportent le <strong>cours d\'aujourd\'hui</strong> aux comptes de chaque exercice : ils servent à situer la ' +
       'valorisation actuelle par rapport à l\'histoire de la société, pas à reconstituer une valorisation passée.');
