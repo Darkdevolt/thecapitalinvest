@@ -77,9 +77,19 @@
   window.tcShareFactorAt = function (ticker, ymd) {
     var day = String(ymd || '').slice(0, 10), f = 1;
     window.tcCapitalOps(ticker).forEach(function (o) {
-      if (o.cours_bruts === true && day && day < String(o.date).slice(0, 10)) f /= Number(o.ratio);
+      if (o.cours_bruts === true && day && day < String(o.date).slice(0, 10) && !(o.deja_ajuste_avant && day < String(o.deja_ajuste_avant).slice(0, 10))) f /= Number(o.ratio);
     });
     return f;
+  };
+  /* Certaines séries de la base sont DÉJÀ ajustées d'une opération avant une date (deja_ajuste_avant) : les cours BOA d'avant
+     le 17/08/2021 valent la moitié des cours réels (base d'actions de 2024). Multiplicateur qui ramène un cours de la base
+     au cours réellement coté ce jour-là (1 si la série est brute) : sert à calculer un ajustement de dividende correct. */
+  window.tcRawScaleAt = function (ticker, ymd) {
+    var day = String(ymd || '').slice(0, 10), m = 1;
+    window.tcCapitalOps(ticker).forEach(function (o) {
+      if (o.cours_bruts === true && o.deja_ajuste_avant && day && day < String(o.deja_ajuste_avant).slice(0, 10) && day < String(o.date).slice(0, 10)) m *= Number(o.ratio);
+    });
+    return m;
   };
   var tcFinancialsStore = [];
   Object.defineProperty(window, 'allFinancials', {

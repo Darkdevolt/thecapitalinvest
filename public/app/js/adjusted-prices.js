@@ -39,7 +39,9 @@
     var out = src.map(function (r) {
       var o = {};
       for (var k in r) if (Object.prototype.hasOwnProperty.call(r, k)) o[k] = r[k];
-      o.cours_ajuste = close(r);
+      // cours réel de la séance (certaines séries de la base sont déjà ajustées d'une opération : cf. tcRawScaleAt, state.js)
+      o.cours_brut_reel = close(r) * (typeof window.tcRawScaleAt === 'function' ? window.tcRawScaleAt(ticker, ymd(r.date_seance)) : 1);
+      o.cours_ajuste = o.cours_brut_reel;
       return o;
     });
     var divs = dividendsFor(ticker);
@@ -50,7 +52,7 @@
       var prevClose = null;
       for (var i = 0; i < out.length; i++) {
         var day = ymd(out[i].date_seance);
-        if (day && day < d.ex) prevClose = close(out[i]);
+        if (day && day < d.ex) prevClose = out[i].cours_brut_reel;
         else if (day && day >= d.ex) break;
       }
       if (prevClose == null || !(prevClose > 0)) return;
@@ -71,7 +73,8 @@
   function applyShareFactor(ticker, out) {
     if (typeof window.tcShareFactorAt !== 'function') return out;
     out.forEach(function (r) {
-      var f = window.tcShareFactorAt(ticker, ymd(r.date_seance));
+      // cours réel (dividendes déduits) x facteur d'actions de la base / échelle déjà appliquée par la base
+      var f = window.tcShareFactorAt(ticker, ymd(r.date_seance)) / (typeof window.tcRawScaleAt === 'function' ? window.tcRawScaleAt(ticker, ymd(r.date_seance)) : 1);
       if (f !== 1) r.cours_ajuste = Number(r.cours_ajuste) * f;
     });
     return out;

@@ -131,6 +131,8 @@ async function loadCompleteFicheHistorique(ticker) {
 }
 function histClose(r) {
   if (ficheAdjusted && r && r.cours_ajuste != null && isFinite(Number(r.cours_ajuste))) return Number(r.cours_ajuste);
+  // Brut = cours réellement coté ce jour-là (la base contient, pour certains titres, des cours d'avant 2021 déjà ajustés : cf. tcRawScaleAt)
+  if (r && r.cours_brut_reel != null && isFinite(Number(r.cours_brut_reel))) return Number(r.cours_brut_reel);
   return Number(r && (r.cours_cloture != null ? r.cours_cloture : r.cours_normal != null ? r.cours_normal : r.cours));
 }
 
