@@ -17,6 +17,7 @@
     /* Dernier montant saisi à la main (brut ou net) : c'est lui qui fait foi,
        l'autre en est déduit, y compris quand on change le taux d'IRVM. */
     let lastEdited = 'brut';
+    let calDate = new Date();
     const sel = TC.selection('div');
 
     const STATUTS = [
@@ -36,6 +37,21 @@
             '<button class="btn btn-outline btn-sm" id="div-export">⬇ CSV</button></div></div>' +
 
             '<div class="kpis" id="div-kpis"></div>' +
+
+            '<div class="card"><div class="card-head"><span class="card-title">Calendrier des détachements</span>' +
+            '<span class="card-tools"><span class="card-count" id="div-cal-count"></span></span></div>' +
+            '<div class="card-body">' +
+            '<div class="tc-cal-nav">' +
+            '<button class="btn btn-outline btn-sm" id="div-cal-prev">← Mois précédent</button>' +
+            '<span class="tc-cal-title" id="div-cal-title"></span>' +
+            '<button class="btn btn-outline btn-sm" id="div-cal-today">Aujourd\'hui</button>' +
+            '<button class="btn btn-outline btn-sm" id="div-cal-next">Mois suivant →</button>' +
+            '</div>' +
+            '<div id="div-cal-grid" class="tc-cal-grid"></div>' +
+            '<div class="tc-cal-legend">' +
+            '<span><i style="background:rgba(184,150,78,.55)"></i>Détachement enregistré — cliquer pour modifier</span>' +
+            '</div>' +
+            '</div></div>' +
 
             '<div class="card" id="div-esv-card"><div class="card-head"><span class="card-title">Détachements détectés (Évènements Sur Valeurs)</span>' +
             '<span class="card-tools"><span class="card-count" id="div-esv-count"></span>' +
@@ -231,6 +247,44 @@
         flagRows();
         paintKpis();
         paint(rows);
+        renderCalendar();
+    }
+
+    /* Grille visuelle du mois affiché : jusqu'ici, "Calendrier des dividendes"
+       n'était que le titre de la page — aucune vue n'affichait les
+       détachements sous forme de calendrier, seulement le tableau
+       d'édition ci-dessous, qu'on garde pour la saisie. */
+    function calMove(delta) { calDate = new Date(calDate.getFullYear(), calDate.getMonth() + delta, 1); renderCalendar(); }
+    function renderCalendar() {
+        const grid = TC.el('div-cal-grid'); if (!grid) return;
+        const y = calDate.getFullYear(), m = calDate.getMonth();
+        const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
+        const titleEl = TC.el('div-cal-title'); if (titleEl) titleEl.textContent = first.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        const byDay = {};
+        rows.forEach(r => {
+            const iso = TC.toISODate(r.date_detachement || r.ex_date);
+            if (!iso || iso.slice(0, 4) !== String(y) || Number(iso.slice(5, 7)) !== m + 1) return;
+            (byDay[iso] = byDay[iso] || []).push(r);
+        });
+        const today = TC.today();
+        const names = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+        let html = names.map(n => '<div class="tc-cal-dow">' + n + '</div>').join('');
+        const offset = (first.getDay() + 6) % 7;
+        for (let i = 0; i < offset; i++) html += '<div class="tc-cal-day empty"></div>';
+        let count = 0;
+        for (let d = 1; d <= last.getDate(); d++) {
+            const iso = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+            const ev = byDay[iso] || [];
+            count += ev.length;
+            html += '<div class="tc-cal-day' + (TC.isWeekend(iso) ? ' weekend' : '') + (iso === today ? ' today' : '') + '">' +
+                '<span class="n">' + d + '</span>' +
+                ev.map(r => '<span class="tc-cal-event" data-cal-edit="' + r.id + '" style="cursor:pointer" title="' +
+                    TC.esc(r.ticker + ' · ' + (r.montant_net !== null && r.montant_net !== undefined ? TC.fmt(r.montant_net) + ' F net' : TC.fmt(r.montant) + ' F brut')) + '">' +
+                    TC.esc(r.ticker) + '</span>').join('') +
+                '</div>';
+        }
+        grid.innerHTML = html;
+        const countEl = TC.el('div-cal-count'); if (countEl) countEl.textContent = count + ' détachement(s) ce mois-ci';
     }
 
     function paintKpis() {
@@ -660,6 +714,12 @@
             TC.on('div-esv-reload', 'click', loadEsvDividends);
             TC.on('div-esv-run', 'click', runEsvNow);
             TC.delegate('div-esv-body', '[data-esv-reprendre]', 'click', n => reprendreEsv(Number(n.dataset.esvReprendre)));
+            TC.on('div-cal-prev', 'click', () => calMove(-1));
+            TC.on('div-cal-next', 'click', () => calMove(1));
+            TC.on('div-cal-today', 'click', () => { calDate = new Date(); renderCalendar(); });
+            TC.delegate('div-cal-grid', '[data-cal-edit]', 'click', n => {
+                const row = rows.find(r => String(r.id) === n.dataset.calEdit); if (row) edit(row);
+            });
             load().then(loadEsvDividends);
         }
     });
