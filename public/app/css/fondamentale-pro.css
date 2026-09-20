@@ -847,7 +847,7 @@
   fill:rgba(244,240,230,.55);font:9px 'DM Mono',monospace
 }
 #view-analyse-fondamentale .af-chart-line{
-  fill:none;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round
+  stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round
 }
 #view-analyse-fondamentale .af-chart-dot{stroke-width:1.5}
 #view-analyse-fondamentale .af-chart-line-proj{stroke-dasharray:5 4;opacity:.7}
@@ -857,6 +857,13 @@
 #view-analyse-fondamentale .af-chart-c2{stroke:#60a5fa;fill:#60a5fa}
 #view-analyse-fondamentale .af-chart-c3{stroke:#f3b555;fill:#f3b555}
 #view-analyse-fondamentale .af-chart-c4{stroke:#c084fc;fill:#c084fc}
+/* La ligne ne doit jamais être remplie : .af-chart-cN partage sa couleur
+   avec les points (qui, eux, doivent être pleins) via `fill`, et cette
+   règle passe après .af-chart-line dans la feuille — à spécificité égale
+   (id + 1 classe), c'est l'ordre qui tranche, et .af-chart-cN gagnait.
+   Le sélecteur d'élément ici (path.af-chart-line) élève la spécificité
+   pour que le trait reste un contour, jamais une forme pleine. */
+#view-analyse-fondamentale path.af-chart-line{fill:none}
 
 /* Légende = tableau de lecture : une ligne par série, avec sa dernière
    valeur et son taux de croissance annualisé — jamais du texte posé sur
