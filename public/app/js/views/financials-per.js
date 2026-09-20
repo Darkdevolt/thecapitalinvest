@@ -102,15 +102,19 @@
     return map;
   }
 
-  function median(values) {
+  // Moyenne par défaut ; médiane si l'utilisateur l'a choisie dans Fondamentale
+  // (réglage partagé, cf. tcStatPref dans score-maison.js).
+  function statLabel() { return typeof window.tcStatLabel === 'function' ? window.tcStatLabel() : 'moyenne'; }
+  function aggregate(values) {
     const a = values.filter(Number.isFinite).slice().sort((x, y) => x - y);
     if (!a.length) return null;
+    if (statLabel() === 'moyenne') return a.reduce((s, v) => s + v, 0) / a.length;
     const mid = Math.floor(a.length / 2);
     return a.length % 2 ? a[mid] : (a[mid - 1] + a[mid]) / 2;
   }
 
   // Une année sans au moins deux comparables calculables est omise plutôt
-  // qu'approximée sur un seul pair — pas de médiane à un chiffre déguisée.
+  // qu'approximée sur un seul pair — pas de statistique à un chiffre déguisée.
   async function sectorPerSeries(ticker, years) {
     const { peers, portee, label } = sectorPeers(ticker);
     if (peers.length < 2 || !years.length) return null;
@@ -118,7 +122,7 @@
     const byYear = {};
     years.forEach(year => {
       const vals = perByPeer.map(m => m[year]);
-      if (vals.filter(Number.isFinite).length >= 2) byYear[year] = median(vals);
+      if (vals.filter(Number.isFinite).length >= 2) byYear[year] = aggregate(vals);
     });
     return { byYear, portee, label, peerCount: peers.length };
   }
@@ -144,7 +148,7 @@
         <div>
           <div class="card-title">PER sectoriel — comparatif</div>
           <div style="font-size:11px;color:var(--dim);margin-top:4px">
-            Médiane du PER de ${sector.peerCount} société(s) du même ${label} (${finEsc(sector.label)}), même méthode année par année (1ère séance ≥ 02/01 ÷ BPA de l'exercice). Une année sans au moins deux comparables est omise, jamais approximée.
+            ${statLabel() === 'moyenne' ? 'Moyenne' : 'Médiane'} du PER de ${sector.peerCount} société(s) du même ${label} (${finEsc(sector.label)}), même méthode année par année (1ère séance ≥ 02/01 ÷ BPA de l'exercice). Une année sans au moins deux comparables est omise, jamais approximée.
           </div>
         </div>
       </div>
@@ -165,7 +169,7 @@
         labels: years,
         datasets: [
           { label: 'PER ' + ticker, data: tickerSeries, tension: 0.25, fill: false, spanGaps: true },
-          { label: 'PER médian ' + label, data: sectorSeries, tension: 0.25, fill: false, borderDash: [5, 4], spanGaps: true }
+          { label: 'PER ' + (statLabel() === 'moyenne' ? 'moyen ' : 'médian ') + label, data: sectorSeries, tension: 0.25, fill: false, borderDash: [5, 4], spanGaps: true }
         ]
       },
       options: {

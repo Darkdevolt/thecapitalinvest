@@ -196,9 +196,11 @@
     var peers = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])
       .filter(function (e) { return e && e.ticker && (e.secteur || '—') === secteur; })
       .map(function (e) { return snapshot(String(e.ticker).toUpperCase()); });
+    var agg = typeof window.tcAggregate === 'function' ? window.tcAggregate : median;
     return {
-      per: median(peers.map(function (p) { return p.per; }).filter(function (v) { return v != null && v > 0; })),
-      pbr: median(peers.map(function (p) { return p.pbr; }).filter(function (v) { return v != null && v > 0; }))
+      per: agg(peers.map(function (p) { return p.per; }).filter(function (v) { return v != null && v > 0; })),
+      pbr: agg(peers.map(function (p) { return p.pbr; }).filter(function (v) { return v != null && v > 0; })),
+      stat: typeof window.tcStatPref === 'function' ? window.tcStatPref() : 'mediane'
     };
   }
   function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
@@ -234,7 +236,7 @@
         return '<tr><td>' + c.l + '</td><td class="r">' + (c.pts == null ? '<span style="color:var(--dim)">non noté</span>' : c.pts.toFixed(1) + ' / ' + c.max) + '</td><td class="ou-note">' + esc(c.detail) + '</td></tr>';
       }).join('')
       + '</tbody></table>'
-      + '<p class="ou-note" style="margin-top:10px">Score The Capital : pondération valorisation 25 · rentabilité 25 · croissance 20 · rendement 15 · solidité 15. La note est ramenée sur 100 <b>en ne comptant que les critères réellement calculables</b> depuis la base (états financiers annuels + dernière cotation + médianes du secteur). Ce n\'est pas un conseil d\'investissement.</p>'
+      + '<p class="ou-note" style="margin-top:10px">Score The Capital : pondération valorisation 25 · rentabilité 25 · croissance 20 · rendement 15 · solidité 15. La note est ramenée sur 100 <b>en ne comptant que les critères réellement calculables</b> depuis la base (états financiers annuels + dernière cotation + moyennes du secteur, ou médianes si vous les avez choisies dans Fondamentale). Ce n\'est pas un conseil d\'investissement.</p>'
       + '</div></div>';
   }
 

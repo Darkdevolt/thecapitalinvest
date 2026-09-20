@@ -44,9 +44,13 @@ function fchDate(v) {
 }
 function fchSens(v) { return Number(v) > 0 ? 'pos' : Number(v) < 0 ? 'neg' : 'neu'; }
 function fchEsc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
+// Référence des pairs : moyenne par défaut, médiane si l'utilisateur l'a choisie
+// (réglage partagé avec Fondamentale, cf. tcStatPref dans score-maison.js).
+function fchStatLabel() { return typeof window.tcStatLabel === 'function' ? window.tcStatLabel() : 'moyenne'; }
 function fchMedian(arr) {
   var a = arr.filter(function (x) { return isFinite(x); }).sort(function (x, y) { return x - y; });
   if (!a.length) return NaN;
+  if (fchStatLabel() === 'moyenne') return a.reduce(function (s, x) { return s + x; }, 0) / a.length;
   var m = Math.floor(a.length / 2);
   return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2;
 }
@@ -228,7 +232,7 @@ function fchConclusion(ent, fins, r, bench, perf, divs) {
     else if (g <= -10) risques.push('Résultat net en baisse de ' + Math.abs(g).toFixed(0) + ' % sur le dernier exercice.');
   }
   if (isFinite(r.per) && isFinite(bench.per) && bench.count >= 2) {
-    if (r.per < bench.per * 0.8) forces.push('Valorisation attractive : PER ' + r.per.toFixed(1) + 'x vs médiane secteur ' + bench.per.toFixed(1) + 'x.');
+    if (r.per < bench.per * 0.8) forces.push('Valorisation attractive : PER ' + r.per.toFixed(1) + 'x vs ' + fchStatLabel() + ' secteur ' + bench.per.toFixed(1) + 'x.');
     else if (r.per > bench.per * 1.3) surveiller.push('Prime de valorisation : PER ' + r.per.toFixed(1) + 'x vs ' + bench.per.toFixed(1) + 'x pour le secteur.');
   }
   if (isFinite(r.rdt) && r.rdt >= 6) forces.push('Rendement du dividende élevé (' + r.rdt.toFixed(1) + ' %).');
@@ -558,7 +562,7 @@ async function _openFicheInner(from, noHash, T) {
       fchCell('Marge nette', isFinite(r.marge) ? r.marge.toFixed(1) + ' %' : '—')
     ]) + '</div>'
     + '<div class="fch-card"><div class="fch-sec-t" style="margin-bottom:10px">vs secteur' + (bench.count ? ' · ' + bench.count + ' pairs' : '') + '</div>'
-    + '<div class="fch-bench"><span class="h lab">Indicateur</span><span class="h tkr">' + fchEsc(T) + '</span><span class="h med">Médiane</span>'
+    + '<div class="fch-bench"><span class="h lab">Indicateur</span><span class="h tkr">' + fchEsc(T) + '</span><span class="h med">' + (fchStatLabel() === 'moyenne' ? 'Moyenne' : 'Médiane') + '</span>'
     + fchBenchRow('PER', r.per, bench.per, 'x', 2)
     + fchBenchRow('P/B', r.pbr, bench.pbr, 'x', 2)
     + fchBenchRow('Rendement', r.rdt, bench.rdt, ' %', 1)

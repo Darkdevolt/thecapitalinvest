@@ -5,7 +5,7 @@
 // les critères réellement calculables depuis la base (états financiers annuels
 // + dernière cotation + médianes du secteur). Aucun critère inventé.
 //   window.tcScoreFromMetrics(metrics, sectorMedians) -> { score, label, components }
-//   window.tcSectorMedians(secteur)                   -> { per, pbr }
+//   window.tcSectorMedians(secteur)                   -> { per, pbr, stat } (moyenne par défaut, médiane si choisie)
 //   window.tcScoreMaison(ticker)                      -> { ...score, ticker, nom, secteur, exercice }
 // Ce n'est pas un conseil d'investissement.
 // ============================================================================
@@ -24,6 +24,21 @@
     var i = Math.floor(x.length / 2);
     return x.length % 2 ? x[i] : (x[i - 1] + x[i]) / 2;
   }
+
+  function mean(a) {
+    var x = (a || []).filter(function (v) { return isFinite(v); });
+    return x.length ? x.reduce(function (s, v) { return s + v; }, 0) / x.length : null;
+  }
+  // Statistique d'agrégation des pairs (PER, P/B, rendement…) : la MOYENNE par défaut,
+  // la médiane seulement si l'utilisateur l'a choisie dans Fondamentale (même clé de
+  // stockage que le sélecteur Médiane / Moyenne de ce module, donc un seul réglage).
+  function statPref() {
+    try { return JSON.parse(localStorage.getItem('tc-af-stat')) === 'mediane' ? 'mediane' : 'moyenne'; }
+    catch (e) { return 'moyenne'; }
+  }
+  window.tcStatPref = statPref;
+  window.tcStatLabel = function () { return statPref() === 'mediane' ? 'médiane' : 'moyenne'; };
+  window.tcAggregate = function (a) { return statPref() === 'mediane' ? median(a) : mean(a); };
 
   function entOf(t) { return (window.entMap && window.entMap[t]) || {}; }
   function coursOf(t) {
@@ -108,8 +123,9 @@
       .filter(function (e) { return e && e.ticker && (e.secteur || '—') === secteur; })
       .map(function (e) { return metricsFor(String(e.ticker).toUpperCase()); });
     return {
-      per: median(peers.map(function (p) { return p.per; }).filter(function (v) { return v != null && v > 0; })),
-      pbr: median(peers.map(function (p) { return p.pbr; }).filter(function (v) { return v != null && v > 0; }))
+      per: window.tcAggregate(peers.map(function (p) { return p.per; }).filter(function (v) { return v != null && v > 0; })),
+      pbr: window.tcAggregate(peers.map(function (p) { return p.pbr; }).filter(function (v) { return v != null && v > 0; })),
+      stat: statPref()
     };
   };
 
@@ -119,21 +135,22 @@
     m = m || {}; med = med || {};
     var comps = [];
 
-    // Valorisation /25 — décote vs médiane secteur = bon
+    // Valorisation /25 — décote vs moyenne (ou médiane, selon le réglage) du secteur = bon
     (function () {
       var pts = null, detail = [], parts = 0;
+      var sl = med.stat === 'mediane' ? 'médiane' : 'moyenne';
       if (m.per != null && m.per > 0 && med.per) {
         var rp = m.per / med.per;
-        detail.push('PER ' + m.per.toFixed(1) + 'x vs médiane ' + med.per.toFixed(1) + 'x');
+        detail.push('PER ' + m.per.toFixed(1) + 'x vs ' + sl + ' ' + med.per.toFixed(1) + 'x');
         pts = (pts || 0) + clamp(1 - (rp - 1), 0, 1.5) / 1.5 * 12.5; parts++;
       }
       if (m.pbr != null && m.pbr > 0 && med.pbr) {
         var rb = m.pbr / med.pbr;
-        detail.push('P/B ' + m.pbr.toFixed(2) + 'x vs médiane ' + med.pbr.toFixed(2) + 'x');
+        detail.push('P/B ' + m.pbr.toFixed(2) + 'x vs ' + sl + ' ' + med.pbr.toFixed(2) + 'x');
         pts = (pts || 0) + clamp(1 - (rb - 1), 0, 1.5) / 1.5 * 12.5; parts++;
       }
       if (pts != null && parts === 1) pts *= 2; // un seul ratio dispo -> ramené sur 25
-      comps.push({ k: 'valo', l: 'Valorisation', max: 25, pts: pts, detail: detail.join(' · ') || 'PER / P&B ou médiane secteur indisponibles' });
+      comps.push({ k: 'valo', l: 'Valorisation', max: 25, pts: pts, detail: detail.join(' · ') || 'PER / P&B ou référence du secteur indisponibles' });
     })();
 
     // Rentabilité /25 — ROE (15) + marge nette (10)

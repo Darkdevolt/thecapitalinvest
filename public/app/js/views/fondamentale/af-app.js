@@ -71,7 +71,7 @@
        à un titre — exclure une société jugée non représentative (bénéfice
        proche de zéro faussant son PER, par exemple) vaut pour toutes les
        analyses où elle apparaîtrait comme pair. */
-    comparablesStat: 'mediane', comparablesExclus: []
+    comparablesStat: 'moyenne', comparablesExclus: []
   };
   global.AF = S;
 
@@ -364,7 +364,7 @@
     }).join('') + '</div>';
   }
 
-  var STATS = [{ id: 'mediane', l: 'Médiane' }, { id: 'moyenne', l: 'Moyenne' }];
+  var STATS = [{ id: 'moyenne', l: 'Moyenne' }, { id: 'mediane', l: 'Médiane' }];
   function statToggle() {
     return '<div class="af-portee" title="Statistique retenue pour agréger les pairs">' + STATS.map(function (s) {
       return '<button type="button" class="af-portee-btn' + (S.comparablesStat === s.id ? ' on' : '') + '" data-afstat="' + s.id + '">' + s.l + '</button>';
@@ -516,9 +516,10 @@
       else if (r.payout > 0.85) dire('vigilance', 'Le taux de distribution atteint ' + pc(r.payout, 0) + '. La marge de manœuvre est mince : un exercice difficile suffirait à contraindre une coupe.');
       else if (r.payout > 0 && r.payout < 0.5 && fin(r.rendement) && r.rendement > 0.04) dire('bon', 'Un rendement de ' + pc(r.rendement, 2) + ' avec un taux de distribution de seulement ' + pc(r.payout, 0) + ' : le dividende est confortablement couvert.');
     }
-    if (fin(r.per) && fin(m.per) && r.per > 0 && m.per > 0) {
-      var ecart = r.per / m.per - 1;
-      if (Math.abs(ecart) > 0.25) dire(ecart > 0 ? 'vigilance' : 'bon', 'Le PER de ' + n2(r.per) + ' se situe ' + pc(Math.abs(ecart), 0) + (ecart > 0 ? ' au-dessus' : ' en dessous') + ' de sa médiane historique de ' + n2(m.per) + '.');
+    var perHist = S.comparablesStat === 'mediane' ? m.perMediane : m.per;
+    if (fin(r.per) && fin(perHist) && r.per > 0 && perHist > 0) {
+      var ecart = r.per / perHist - 1;
+      if (Math.abs(ecart) > 0.25) dire(ecart > 0 ? 'vigilance' : 'bon', 'Le PER de ' + n2(r.per) + ' se situe ' + pc(Math.abs(ecart), 0) + (ecart > 0 ? ' au-dessus' : ' en dessous') + ' de sa ' + (S.comparablesStat === 'mediane' ? 'médiane' : 'moyenne') + ' historique de ' + n2(perHist) + '.');
     }
     var inv = S.resultats && S.resultats.inverse;
     if (inv && inv.ok && fin(inv.croissanceImplicite)) {
@@ -1730,7 +1731,7 @@
     if (!booted) {
       S.tab = read(LS.tab, 'synthese');
       S.poids = poidsInitiaux(Object.assign({}, V.POIDS_DEFAUT));
-      S.comparablesStat = read(LS.stat, 'mediane');
+      S.comparablesStat = read(LS.stat, 'moyenne');
       S.comparablesExclus = read(LS.exclus, []);
       bind();
       booted = true;

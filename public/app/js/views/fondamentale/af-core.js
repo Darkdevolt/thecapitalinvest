@@ -582,7 +582,8 @@
         roe: mean(ratiosList.map(function (r) { return r.roe; })),
         margeNette: mean(ratiosList.map(function (r) { return r.margeNette; })),
         margeBrute: mean(ratiosList.map(function (r) { return r.margeBrute; })),
-        per: median(ratiosList.map(function (r) { return r.per; })),
+        per: mean(ratiosList.map(function (r) { return r.per; })),
+        perMediane: median(ratiosList.map(function (r) { return r.per; })),
         payout: mean(ratiosList.map(function (r) { return r.payout; })),
         conversionCash: mean(ratiosList.map(function (r) { return r.conversionCash; })),
         capexCa: mean(ratiosList.map(function (r) { return r.capexCa; })),
@@ -867,7 +868,7 @@
     var exclus = {};
     (opts.exclus || []).forEach(function (t) { if (t) exclus[norm(t)] = 1; });
     var pairsRetenus = pairs.filter(function (a) { return !exclus[norm(a.data.ticker)]; });
-    var stat = opts.stat === 'moyenne' ? 'moyenne' : 'mediane';
+    var stat = opts.stat === 'mediane' ? 'mediane' : 'moyenne';
     var agrege = stat === 'moyenne' ? mean : median;
 
     function col(k) { return pairsRetenus.map(function (a) { return a.dernier[k]; }).filter(function (v) { return fin(v) && v > 0 && v < 500; }); }
