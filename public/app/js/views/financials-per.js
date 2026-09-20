@@ -43,6 +43,13 @@
     return history.find(row => row.date >= cutoff && row.date.startsWith(String(year))) || null;
   }
 
+  // Le BPA des états financiers est ramené à la base d'actions ACTUELLE (state.js) : le cours brut
+  // d'une séance passée doit l'être aussi (opérations sur le capital, ex. BOAB avant 03/09/2024).
+  // Le cours affiché reste le brut ; seul le PER est calculé sur les deux valeurs ajustées.
+  function shareFactor(ticker, date) {
+    return typeof window.tcShareFactorAt === 'function' ? window.tcShareFactorAt(ticker, date) : 1;
+  }
+
   function buildRows(fins, history) {
     return (Array.isArray(fins) ? fins : [])
       .filter(f => (!f.periode || f.periode === 'annuel') && Number.isFinite(Number(f.annee)))
@@ -57,7 +64,7 @@
           sessionDate: session?.date || null,
           close: session?.close ?? null,
           bpa: validBpa ? bpa : null,
-          per: session && validBpa ? session.close / bpa : null
+          per: session && validBpa ? (session.close * shareFactor(f.ticker, session.date)) / bpa : null
         };
       });
   }

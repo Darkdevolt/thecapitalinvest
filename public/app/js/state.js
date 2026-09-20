@@ -38,6 +38,55 @@
   window.allCours = [];
   window.allBoc = [];
   window.allAnalyses = [];
+  /* États financiers : BPA, DPA et nombre d'actions ramenés à la base d'actions ACTUELLE.
+     `facteur_actions` (colonne de financials, défaut 1) est le multiplicateur du BPA/DPA d'une ligne
+     après une attribution gratuite ou un fractionnement postérieur (BOAB avant sept. 2024 : 0,5) ;
+     le nombre d'actions est divisé par ce facteur. Les valeurs publiées restent lisibles dans
+     bpa_brut / dpa_brut / nombre_actions_brut : le PER historique confronte le cours BRUT de
+     l'époque au BPA BRUT (financials-per.js). L'accesseur couvre tous les chemins de chargement
+     (loader, backoffice, dashboard) ; l'opération est idempotente (marque tc_ajuste). */
+  window.tcAdjustFinancials = function (rows) {
+    if (!Array.isArray(rows)) return rows;
+    var arrondi = function (v) { return Math.round(v * 100) / 100; };
+    rows.forEach(function (r) {
+      if (!r || typeof r !== 'object' || r.tc_ajuste != null) return;
+      var f = Number(r.facteur_actions);
+      if (!(f > 0) || f === 1) return;
+      r.tc_ajuste = f;
+      if (r.bpa != null && r.bpa !== '' && isFinite(Number(r.bpa))) { r.bpa_brut = r.bpa; r.bpa = arrondi(Number(r.bpa) * f); }
+      if (r.dpa != null && r.dpa !== '' && isFinite(Number(r.dpa))) { r.dpa_brut = r.dpa; r.dpa = arrondi(Number(r.dpa) * f); }
+      ['nombre_actions', 'nb_actions'].forEach(function (k) {
+        if (r[k] != null && r[k] !== '' && isFinite(Number(r[k]))) { r[k + '_brut'] = r[k]; r[k] = Math.round(Number(r[k]) / f); }
+      });
+    });
+    return rows;
+  };
+  /* Opérations sur le nombre d'actions d'un titre (entreprises.operations_capital), triées par date. */
+  window.tcCapitalOps = function (ticker) {
+    var t = String(ticker || '').toUpperCase();
+    var e = (Array.isArray(window.allEntreprises) ? window.allEntreprises : [])
+      .find(function (x) { return x && String(x.ticker).toUpperCase() === t; });
+    var ops = e && Array.isArray(e.operations_capital) ? e.operations_capital : [];
+    return ops.filter(function (o) { return o && o.date && Number(o.ratio) > 0; })
+      .sort(function (a, b) { return String(a.date) < String(b.date) ? -1 : 1; });
+  };
+  /* Facteur d'ajustement d'un COURS brut du jour `ymd` (AAAA-MM-JJ) à la base d'actions actuelle :
+     produit des 1/ratio des opérations datées APRÈS ce jour (BOAB : 0,5 avant le 03/09/2024, 1 ensuite).
+     Seules les opérations marquées `cours_bruts: true` comptent : si l'historique des cours est un jour
+     chargé déjà ajusté, il ne faut pas l'ajuster deux fois (mettre l'indicateur à false). Sans opération : 1. */
+  window.tcShareFactorAt = function (ticker, ymd) {
+    var day = String(ymd || '').slice(0, 10), f = 1;
+    window.tcCapitalOps(ticker).forEach(function (o) {
+      if (o.cours_bruts === true && day && day < String(o.date).slice(0, 10)) f /= Number(o.ratio);
+    });
+    return f;
+  };
+  var tcFinancialsStore = [];
+  Object.defineProperty(window, 'allFinancials', {
+    configurable: true, enumerable: true,
+    get: function () { return tcFinancialsStore; },
+    set: function (v) { tcFinancialsStore = window.tcAdjustFinancials(v); }
+  });
   window.allFinancials = [];
   window.allEntreprises = [];
   window.allIndices = [];

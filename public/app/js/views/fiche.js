@@ -720,11 +720,100 @@ function renderFicheChart() {
   var ds = typeof mkDataset === 'function'
     ? mkDataset(vals)
     : { data: vals, borderColor: '#B8964E', borderWidth: 2, fill: true, backgroundColor: 'rgba(184,150,78,.10)', pointRadius: 0, tension: 0.3 };
+  var ticker = String(window._lastFicheTicker || '').toUpperCase();
+  var marks = ficheChartMarks(ticker, data, vals);
+  var datasets = [ds];
+  if (marks.dividends.length) {
+    // Pastilles vertes : séance de détachement de chaque dividende, posées sur la courbe affichée.
+    var divPts = data.map(function () { return null; });
+    marks.dividends.forEach(function (d) { divPts[d.index] = vals[d.index]; });
+    datasets.push({
+      label: 'Détachement du dividende', data: divPts, isDividend: true, showLine: false, fill: false,
+      pointRadius: 5, pointHoverRadius: 7, pointStyle: 'circle', pointBackgroundColor: '#3FB68B',
+      pointBorderColor: '#0F0D09', pointBorderWidth: 1.5, order: 0
+    });
+  }
+  var base = (typeof chartOpts !== 'undefined' ? chartOpts : { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } });
+  var tip = Object.assign({}, (base.plugins || {}).tooltip || {}, {
+    callbacks: {
+      label: function (ctx) {
+        if (ctx.dataset.isDividend) {
+          var d = marks.dividends.filter(function (x) { return x.index === ctx.dataIndex; })[0];
+          return d ? ' Dividende : ' + d.text : ' Détachement du dividende';
+        }
+        return ' ' + (ctx.dataset.label ? ctx.dataset.label + ': ' : '') + (typeof fmt === 'function' ? fmt(ctx.parsed.y, 2) : ctx.parsed.y);
+      }
+    }
+  });
+  var opts = Object.assign({}, base, { plugins: Object.assign({}, base.plugins || {}, { tooltip: tip }) });
+  var plugins = [];
+  if (marks.ops.length) {
+    // Trait vertical pointillé + libellé à la date d'une opération sur le nombre d'actions.
+    plugins.push({
+      id: 'tcCapitalOps',
+      afterDatasetsDraw: function (chart) {
+        var x = chart.scales.x, area = chart.chartArea, c = chart.ctx;
+        marks.ops.forEach(function (o, k) {
+          var px = x.getPixelForValue(o.index);
+          c.save();
+          c.strokeStyle = '#E0A030'; c.fillStyle = '#E0A030'; c.lineWidth = 1.2; c.setLineDash([5, 4]);
+          c.beginPath(); c.moveTo(px, area.top); c.lineTo(px, area.bottom); c.stroke();
+          c.setLineDash([]);
+          c.font = '10px DM Mono, monospace';
+          var w = c.measureText(o.text).width, tx = px + 6;
+          if (tx + w > area.right) tx = px - 6 - w;
+          c.fillText(o.text, tx, area.top + 12 + k * 13);
+          c.restore();
+        });
+      }
+    });
+  }
   ficheChartInst = new Chart(cv, {
     type: 'line',
-    data: { labels: labels, datasets: [ds] },
-    options: (typeof chartOpts !== 'undefined' ? chartOpts : { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } })
+    data: { labels: labels, datasets: datasets },
+    options: opts,
+    plugins: plugins
   });
+}
+
+// Repères du graphique de la fiche : opérations sur le nombre d'actions (fractionnement, attribution
+// gratuite) et détachements de dividende situés dans la période affichée. Rien n'est inventé : les
+// dates viennent de entreprises.operations_capital et du calendrier des dividendes.
+function ficheChartMarks(ticker, data, vals) {
+  var out = { ops: [], dividends: [] };
+  if (!ticker || !data.length) return out;
+  var days = data.map(function (d) { return String(d.date_seance || '').slice(0, 10); });
+  var first = days[0], last = days[days.length - 1];
+  // 1re séance dont la date est >= au jour cherché, dans la fenêtre (-1 si hors fenêtre).
+  var indexOf = function (day) {
+    if (!day || day < first || day > last) return -1;
+    for (var i = 0; i < days.length; i++) if (days[i] >= day) return i;
+    return -1;
+  };
+  var ops = typeof window.tcCapitalOps === 'function' ? window.tcCapitalOps(ticker) : [];
+  ops.forEach(function (o) {
+    var i = indexOf(String(o.date).slice(0, 10));
+    if (i < 0) return;
+    var r = Number(o.ratio), nouv = r - 1;
+    var txt = o.type === 'attribution_gratuite'
+      ? 'Attribution gratuite ' + (nouv >= 1 ? Math.round(nouv * 100) / 100 + ' pour 1' : '1 pour ' + Math.round(1 / nouv))
+      : (r > 1 ? 'Fractionnement ×' + r : 'Regroupement ×' + Math.round((1 / r) * 100) / 100);
+    var dt = String(o.date).slice(0, 10).split('-');
+    out.ops.push({ index: i, text: txt + ' · ' + dt[2] + '/' + dt[1] + '/' + dt[0] });
+  });
+  (Array.isArray(window.allDividendes) ? window.allDividendes : []).forEach(function (r) {
+    if (!r || String(r.ticker).toUpperCase() !== ticker || /annul|suspend/i.test(String(r.statut || ''))) return;
+    var ex = String(r.date_detachement || r.ex_date || '').slice(0, 10);
+    var i = indexOf(ex);
+    if (i < 0 || !isFinite(vals[i])) return;
+    var brut = Number(r.montant), net = Number(r.montant_net);
+    var parts = [];
+    if (isFinite(brut) && brut > 0) parts.push(fchNum(brut, brut % 1 ? 2 : 0) + ' F brut');
+    if (isFinite(net) && net > 0) parts.push(fchNum(net, net % 1 ? 2 : 0) + ' F net');
+    var dt = ex.split('-');
+    out.dividends.push({ index: i, text: (parts.join(' · ') || 'montant non renseigné') + ' — détachement le ' + dt[2] + '/' + dt[1] + '/' + dt[0] });
+  });
+  return out;
 }
 
 function setFichePeriod(n, btn) {

@@ -1,7 +1,8 @@
 // ============================================================================
 // COURS AJUSTÉS  (P0 roadmap — la table `historique` ne stocke que le brut)
 // window.tcAdjustedSeries(ticker, rows) : renvoie une COPIE des lignes avec un
-// champ `cours_ajuste` = clôture rétro-ajustée des détachements de dividende.
+// champ `cours_ajuste` = clôture rétro-ajustée des détachements de dividende ET des
+// opérations sur le nombre d'actions (attribution gratuite, fractionnement).
 // Méthode standard : facteur_i = (clôture_veille_ex − dividende) / clôture_veille_ex,
 // appliqué en produit cumulé à toutes les séances antérieures à l'ex-date.
 // Aucune donnée inventée : sans dividende connu, cours_ajuste = clôture brute.
@@ -42,7 +43,7 @@
       return o;
     });
     var divs = dividendsFor(ticker);
-    if (!divs.length || out.length < 2) return out;
+    if (!divs.length || out.length < 2) return applyShareFactor(ticker, out);
 
     // Pour chaque ex-date : clôture de la dernière séance STRICTEMENT avant l'ex-date.
     divs.forEach(function (d) {
@@ -61,6 +62,18 @@
         if (dj && dj < d.ex) out[j].cours_ajuste = Number(out[j].cours_ajuste) * factor;
       }
     });
-    return out;
+    return applyShareFactor(ticker, out);
   };
+
+  // Actions gratuites / fractionnements (entreprises.operations_capital, cf. state.js) : les cours
+  // d'avant l'opération sont ramenés à la base d'actions actuelle. Appliqué APRÈS les dividendes,
+  // dont le facteur se calcule sur des clôtures et un dividende de même base à l'époque.
+  function applyShareFactor(ticker, out) {
+    if (typeof window.tcShareFactorAt !== 'function') return out;
+    out.forEach(function (r) {
+      var f = window.tcShareFactorAt(ticker, ymd(r.date_seance));
+      if (f !== 1) r.cours_ajuste = Number(r.cours_ajuste) * f;
+    });
+    return out;
+  }
 })();
