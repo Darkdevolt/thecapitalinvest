@@ -922,7 +922,6 @@
 #view-analyse-fondamentale .af-spark-line{
   fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round
 }
-#view-analyse-fondamentale .af-spark-area{stroke:none;opacity:.2}
 #view-analyse-fondamentale .af-spark-txt{
   font-family:'DM Mono',monospace;font-size:10px;font-weight:700;line-height:1;
   white-space:nowrap;flex:0 0 auto

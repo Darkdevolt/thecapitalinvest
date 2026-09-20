@@ -352,10 +352,6 @@
       dirRaw = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
     }
     var dirColor = (dirRaw === '' || dirRaw === 'flat') ? 'flat' : (inverse ? (dirRaw === 'up' ? 'down' : 'up') : dirRaw);
-    /* Un seul contour fermé : on rejoint le tracé (dont le « M » de tête
-       devient un simple « L ») plutôt que de repartir d'un sous-tracé
-       séparé, sans quoi le polygone de remplissage a un coin manquant. */
-    var area = path ? ('M ' + x(firstIdx).toFixed(1) + ' ' + (H - P) + ' ' + path.replace(/^M /, 'L ') + 'L ' + x(lastIdx).toFixed(1) + ' ' + (H - P) + ' Z') : '';
     var dot = lastIdx >= 0 ? '<circle cx="'+x(lastIdx).toFixed(1)+'" cy="'+y(vs[lastIdx]).toFixed(1)+'" r="2.6" class="af-spark-dot af-spark-c-'+dirColor+'"><title>'+esc(format ? format(vs[lastIdx]) : vs[lastIdx])+'</title></circle>' : '';
     var arrow = dirRaw === 'up' ? '▲' : dirRaw === 'down' ? '▼' : '→';
     /* Le rouge et le vert seuls ne disent pas « de combien » : un chiffre
@@ -366,9 +362,11 @@
       var deltaP = (vs[lastIdx] - vs[firstIdx]) / Math.abs(vs[firstIdx]);
       pctTxt = (deltaP >= 0 ? '+' : '') + (deltaP * 100).toFixed(0) + ' %';
     }
+    /* Ligne seule, sans aire remplie sous la courbe : demandé explicitement
+       pour rester net — la couleur du trait et le texte suffisent à porter
+       la tendance. */
     return '<span class="af-spark-wrap af-spark-w-' + dirColor + '">' +
       '<span class="af-spark" aria-hidden="true"><svg viewBox="0 0 '+W+' '+H+'">' +
-      (area ? '<path d="' + area + '" class="af-spark-area af-spark-c-' + dirColor + '"/>' : '') +
       '<path d="'+path+'" class="af-spark-line af-spark-c-'+dirColor+'"/>'+dot+'</svg></span>' +
       '<span class="af-spark-txt af-spark-c-' + dirColor + '">' + arrow + (pctTxt ? ' ' + pctTxt : '') + '</span>' +
       '</span>';
