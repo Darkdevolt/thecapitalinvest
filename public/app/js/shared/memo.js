@@ -16,7 +16,7 @@
   if (global.TCMemo) return;
 
   var DATA = global.TCMemoData || {};
-  var panel = null, backdrop = null, lastFocus = null;
+  var panel = null, backdrop = null, lastFocus = null, showToken = 0;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) {
@@ -95,6 +95,15 @@
       '.tc-memo-list small{display:block;margin-top:3px;font-size:10.5px;color:rgba(233,227,214,.36);',
       'line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
 
+      '.tc-memo-term{border-bottom:1px dotted rgba(200,162,78,.7);cursor:help}',
+      '.tc-memo-term:hover,.tc-memo-term:focus{color:#c8a24e;outline:none}',
+      '.tc-memo-tip{position:fixed;z-index:11002;display:none;width:min(330px,calc(100vw - 16px));padding:12px 14px;',
+      'background:#17140e;border:1px solid rgba(200,162,78,.38);border-radius:8px;color:rgba(233,227,214,.86);',
+      'font:400 12px/1.6 "DM Sans",system-ui,sans-serif;box-shadow:0 12px 34px rgba(0,0,0,.5);pointer-events:none}',
+      '.tc-memo-tip p{margin:4px 0 0}.tc-memo-tip-t{font:600 13px/1.3 "DM Sans",sans-serif;color:#e9e3d6}',
+      '.tc-memo-tip-l{margin-top:9px;font:600 9px/1.4 "DM Mono",monospace;letter-spacing:.13em;text-transform:uppercase;color:#c8a24e}',
+      '.tc-memo-tip-f{font-family:"DM Mono",monospace;font-size:11px;color:rgba(233,227,214,.66)}',
+      '.tc-memo-tip-h{margin-top:10px;padding-top:7px;border-top:1px solid rgba(200,162,78,.14);font-size:10.5px;color:rgba(233,227,214,.4)}',
       /* Thème clair, si la vue hôte le demande */
       '.atx-light .tc-memo-i,.af-light .tc-memo-i{opacity:.45}',
       '@media(max-width:520px){.tc-memo-panel{width:100vw}}'
@@ -248,7 +257,9 @@
   function show() {
     backdrop.style.display = 'block';
     var raf = global.requestAnimationFrame || function (f) { return setTimeout(f, 16); };
+    var token = ++showToken;
     raf(function () {
+      if (token !== showToken) return; /* fermé entre-temps */
       backdrop.classList.add('on');
       panel.classList.add('on');
     });
@@ -258,6 +269,7 @@
 
   function close() {
     if (!panel) return;
+    showToken++;
     panel.classList.remove('on');
     backdrop.classList.remove('on');
     setTimeout(function () { if (backdrop) backdrop.style.display = 'none'; }, 240);
@@ -268,9 +280,83 @@
 
   function icon(key, label) {
     if (!DATA[key]) return '';
+    ensureStyle();
     var t = label || DATA[key].titre;
     return '<button type="button" class="tc-memo-i" data-memo="' + esc(key) + '" tabindex="0" ' +
-      'title="' + esc(t) + ' — cliquez pour le mémo" aria-label="Mémo : ' + esc(t) + '">i</button>';
+      'aria-label="Mémo : ' + esc(t) + '">i</button>';
+  }
+
+  /* ── Bulle au survol ──────────────────────────────────────────────
+     Sur toute icône ou tout terme portant data-memo, le survol (ou le
+     focus clavier) affiche une bulle : ce que c'est, comment ça se
+     calcule, ce qu'on peut en déduire. Le clic ouvre le mémo complet. */
+
+  var tip = null, tipTimer = null;
+
+  function tipEl() {
+    if (tip) return tip;
+    ensureStyle();
+    tip = document.createElement('div');
+    tip.className = 'tc-memo-tip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    return tip;
+  }
+
+  function shorten(s, n) {
+    s = String(s || '');
+    if (s.length <= n) return s;
+    var c = s.slice(0, n), k = c.lastIndexOf('. ');
+    return k > n * 0.5 ? c.slice(0, k + 1) : c.replace(/\s+\S*$/, '') + '…';
+  }
+
+  function tipHtml(key) {
+    var m = DATA[key];
+    if (!m) return '';
+    return '<div class="tc-memo-tip-t">' + esc(m.titre) + '</div>' +
+      '<p>' + esc(shorten(m.quoi, 240)) + '</p>' +
+      (m.formule ? '<div class="tc-memo-tip-l">Calcul</div><p class="tc-memo-tip-f">' + esc(shorten(m.formule, 200)) + '</p>' : '') +
+      (m.lecture ? '<div class="tc-memo-tip-l">Ce qu\'on peut en déduire</div><p>' + esc(shorten(m.lecture, 280)) + '</p>' : '') +
+      '<div class="tc-memo-tip-h">Cliquez pour le mémo complet</div>';
+  }
+
+  function showTip(el) {
+    var html = tipHtml(el.getAttribute('data-memo'));
+    if (!html) return;
+    var t = tipEl();
+    t.innerHTML = html;
+    t.style.visibility = 'hidden';
+    t.style.display = 'block';
+    var r = el.getBoundingClientRect(), w = t.offsetWidth, h = t.offsetHeight;
+    var left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), global.innerWidth - w - 8);
+    var top = r.bottom + 8;
+    if (top + h > global.innerHeight - 8) top = Math.max(8, r.top - h - 8);
+    t.style.left = left + 'px';
+    t.style.top = top + 'px';
+    t.style.visibility = 'visible';
+  }
+
+  function hideTip() { clearTimeout(tipTimer); if (tip) tip.style.display = 'none'; }
+
+  function memoTarget(e) { return e.target && e.target.closest ? e.target.closest('[data-memo]') : null; }
+
+  document.addEventListener('mouseover', function (e) {
+    var el = memoTarget(e);
+    if (!el) return;
+    clearTimeout(tipTimer);
+    tipTimer = setTimeout(function () { showTip(el); }, 120);
+  });
+  document.addEventListener('mouseout', function (e) { if (memoTarget(e)) hideTip(); });
+  document.addEventListener('focusin', function (e) { var el = memoTarget(e); if (el) showTip(el); });
+  document.addEventListener('focusout', function (e) { if (memoTarget(e)) hideTip(); });
+  global.addEventListener('scroll', hideTip, true);
+
+  /* Terme souligné en pointillés : « <span data-memo="payout">taux de distribution</span> » */
+  function term(key, label) {
+    var l = label == null ? (DATA[key] ? DATA[key].titre : key) : label;
+    if (!DATA[key]) return esc(l);
+    ensureStyle();
+    return '<span class="tc-memo-term" data-memo="' + esc(key) + '" tabindex="0">' + esc(l) + '</span>';
   }
 
   /* Délégation globale : tout élément portant data-memo devient cliquable,
@@ -284,6 +370,7 @@
   }, true);
 
   document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') hideTip();
     if (e.key === 'Escape' && panel && panel.classList.contains('on')) close();
   });
 
@@ -292,6 +379,7 @@
     index: openIndex,
     close: close,
     icon: icon,
+    term: term,
     has: function (k) { return !!DATA[k]; },
     data: DATA,
     /* Ajoute une notion sans toucher au fichier de base : utile si une

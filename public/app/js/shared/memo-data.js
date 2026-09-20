@@ -466,6 +466,139 @@
       formule: 'Application mécanique des règles d\'entrée et de sortie à l\'historique, en comptabilisant frais et décalages.',
       lecture: 'Son intérêt n\'est pas le rendement affiché mais l\'ordre de grandeur du taux de réussite, du facteur de profit et de la perte maximale. La comparaison à l\'achat-conservation est indispensable : beaucoup de stratégies actives font moins bien que ne rien faire.',
       limites: 'Le passé n\'est pas un échantillon de l\'avenir. Multiplier les essais sur les mêmes données finit toujours par produire une stratégie brillante et sans valeur. Un résultat obtenu sur un seul titre et une seule période ne prouve rien.'
+    },
+    /* ─────────────────────────────────────────────────────────────
+       DIVIDENDES — SOUTENABILITÉ, RÉSERVES, COUSSINS, RISQUE BANCAIRE
+       ───────────────────────────────────────────────────────────── */
+
+    'dps-brut-net': {
+      titre: 'Dividende par action, brut et net',
+      quoi: 'Le brut est le dividende voté par l\'assemblée. Le net est ce que l\'actionnaire encaisse après l\'impôt sur le revenu des valeurs mobilières (IRVM), retenu à la source.',
+      formule: 'Net = brut × (1 − taux d\'IRVM). Brut = net ÷ (1 − taux d\'IRVM).',
+      lecture: 'Le rendement et le taux de distribution se calculent sur le brut : c\'est la vraie décision de la société. Le revenu réel de l\'investisseur est le net.',
+      limites: 'Le taux d\'IRVM dépend du pays de la société (10 % au Sénégal, 12 % en Côte d\'Ivoire ; d\'autres taux restent à vérifier). La BRVM ne publie que le net : le brut est reconstitué.',
+      brvm: 'Une même société peut avoir un brut différent de celui qu\'affichent certaines sources qui recopient le net. Le recoupement avec les états financiers (DPA) lève le doute.'
+    },
+    'couverture-dividende': {
+      titre: 'Couverture du dividende',
+      quoi: 'Combien de fois le bénéfice de l\'exercice couvre le dividende versé.',
+      formule: 'Bénéfice par action ÷ dividende par action (l\'inverse du taux de distribution).',
+      lecture: 'Au-dessus de 1,5 fois, le dividende est confortablement financé par le résultat courant. Entre 1 et 1,2 fois, il n\'y a plus de marge : un mauvais exercice suffit à le remettre en cause. Sous 1 fois, la société puise dans ses réserves.',
+      limites: 'Le bénéfice comptable n\'est pas de la trésorerie. Une banque peut avoir un bénéfice couvrant son dividende tout en voyant son coût du risque exploser l\'année suivante : regardez aussi la couverture avant risque.'
+    },
+    'croissance-dps': {
+      titre: 'Croissance du dividende (TCAM)',
+      quoi: 'Le rythme annuel moyen auquel le dividende par action a progressé sur 3 ou 5 exercices.',
+      formule: '(dernier dividende ÷ dividende d\'il y a n exercices) puissance 1/n, moins 1. Les dividendes antérieurs à une attribution gratuite sont ramenés à la base d\'actions actuelle.',
+      lecture: 'Une croissance régulière signale une politique de distribution qui suit les résultats. Une croissance forte avec un taux de distribution qui monte ne peut pas durer : elle consomme la marge de sécurité.',
+      limites: 'Deux dates seulement : un exercice exceptionnel au début ou à la fin fausse le résultat. Comparez-la à la croissance du bénéfice par action.'
+    },
+    'regularite-dividende': {
+      titre: 'Régularité du dividende',
+      quoi: 'Le nombre d\'exercices consécutifs, jusqu\'au dernier, pour lesquels un dividende a été versé.',
+      formule: 'Compte des années successives avec un dividende strictement positif, en s\'arrêtant à la première interruption.',
+      lecture: 'Une longue série montre une culture de distribution. Une interruption, même ancienne, signale que la société coupe quand les résultats se dégradent.',
+      limites: 'Elle ne mesure pas le montant : un dividende symbolique compte autant qu\'un dividende élevé. Elle dépend aussi de la profondeur de l\'historique disponible dans la base.'
+    },
+    'rendement-prospectif': {
+      titre: 'Rendement prospectif',
+      quoi: 'Le rendement que donnerait le prochain dividende annoncé, rapporté au cours actuel.',
+      formule: 'Prochain dividende brut annoncé ÷ dernier cours.',
+      lecture: 'Il montre ce que rapportera l\'achat aujourd\'hui, alors que le rendement courant regarde le dividende déjà versé. Un écart marqué entre les deux dit si la distribution monte ou baisse.',
+      limites: 'Il n\'existe que si un détachement futur figure au calendrier. Le montant annoncé peut être modifié par l\'assemblée générale.'
+    },
+    'reserves': {
+      titre: 'Réserves accumulées',
+      quoi: 'Les bénéfices des années passées que la société a gardés plutôt que distribués, avec les primes d\'émission et le report à nouveau.',
+      formule: 'Primes liées au capital + réserves + report à nouveau (soit les fonds propres, moins le capital social, moins le résultat de l\'exercice).',
+      lecture: 'C\'est le matelas qui permet de maintenir un dividende les années où le résultat baisse. Plus il est épais par rapport au dividende annuel, moins une mauvaise année menace la distribution.',
+      limites: 'Une partie n\'est pas distribuable : la réserve légale est obligatoire et certaines réserves sont réglementées. Les réserves peuvent aussi être incorporées au capital (attribution d\'actions gratuites), elles ne disparaissent pas mais changent de nature.',
+      brvm: 'Les banques de l\'UMOA doivent conserver des fonds propres pour respecter les ratios prudentiels fixés par la BCEAO : leurs réserves servent d\'abord à cela, ensuite à la distribution.'
+    },
+    'reserves-annees': {
+      titre: 'Réserves en années de dividendes',
+      quoi: 'Pendant combien d\'années les réserves accumulées pourraient financer le dividende actuel sans aucun bénéfice.',
+      formule: 'Réserves accumulées ÷ dividendes totaux versés au titre de l\'exercice (DPS brut × nombre d\'actions).',
+      lecture: 'Plus de 3 ans : un coussin large. Moins de 1 an : la distribution repose presque entièrement sur le résultat de l\'année. C\'est un indicateur de résistance, pas de prévision.',
+      limites: 'Toutes les réserves ne sont pas distribuables, et une banque ne peut pas les dépenser sans toucher à ses ratios réglementaires : le chiffre est un maximum théorique.'
+    },
+    'coussin-fp': {
+      titre: 'Coussin de fonds propres',
+      quoi: 'La part du total du bilan financée par les fonds propres : ce qui absorbe les pertes avant que les déposants soient touchés.',
+      formule: 'Fonds propres ÷ total du bilan.',
+      lecture: 'Plus il est haut, plus la banque encaisse de pertes sans fragiliser ses dépôts. Une baisse d\'année en année alors que le bilan grossit signale un levier qui monte.',
+      limites: 'Ce n\'est pas le ratio de solvabilité réglementaire, qui rapporte les fonds propres aux actifs pondérés des risques et n\'est pas publié dans les états financiers. Il reste un indicateur de levier comptable.'
+    },
+    'coussin-apres-distribution': {
+      titre: 'Coussin après distribution',
+      quoi: 'Le coussin de fonds propres tel qu\'il serait si le dividende de l\'exercice était payé sur les fonds propres actuels, sans bénéfice de l\'année suivante.',
+      formule: '(Fonds propres − dividendes totaux) ÷ total du bilan.',
+      lecture: 'L\'écart avec le coussin avant distribution montre ce que le dividende « coûte » en solidité. Si le coussin remonte l\'année suivante, c\'est que la banque remet en réserve plus qu\'elle ne distribue.',
+      limites: 'Photo à un instant donné : la banque reconstitue ses fonds propres avec son résultat, et le bilan varie. À lire avec le taux de distribution.'
+    },
+    'cout-du-risque': {
+      titre: 'Coût du risque',
+      quoi: 'Ce que la banque provisionne chaque année pour les crédits qu\'elle pense ne pas récupérer, net des reprises de provisions.',
+      formule: 'Résultat brut d\'exploitation − résultat d\'exploitation (les deux sont publiés ; un négatif signifie qu\'il y a eu plus de reprises que de dotations).',
+      lecture: 'C\'est la ligne qui fait le plus varier le bénéfice d\'une banque. Rapporté au produit net bancaire, un coût du risque élevé (au-delà de 15 % environ) ou qui double en un an annonce un bénéfice en baisse, donc un dividende sous pression.',
+      limites: 'Une année à faible coût du risque peut cacher des provisions insuffisantes : la normalisation arrive souvent d\'un coup. Un coût très élevé peut aussi être un nettoyage ponctuel du bilan.',
+      brvm: 'Dans les états financiers des banques de l\'UMOA, le coût du risque figure entre le résultat brut d\'exploitation et le résultat d\'exploitation.'
+    },
+    'pnb': {
+      titre: 'Produit net bancaire (PNB)',
+      quoi: 'Le « chiffre d\'affaires » d\'une banque : ses intérêts et commissions encaissés, moins les intérêts qu\'elle paie sur les dépôts et les autres charges directes.',
+      formule: 'Intérêts et produits assimilés − intérêts et charges assimilées + commissions nettes + résultat des opérations de marché + autres produits d\'exploitation bancaire.',
+      lecture: 'La croissance du PNB dit si la banque grandit. Comparé aux frais généraux (coefficient d\'exploitation) et au coût du risque, il montre où passe la marge.',
+      limites: 'Un PNB en hausse peut venir de gains ponctuels sur titres. Il ne dit rien de la qualité du portefeuille de crédits.'
+    },
+    'rbe': {
+      titre: 'Résultat brut d\'exploitation (banque)',
+      quoi: 'Ce que la banque gagne avant de provisionner ses crédits douteux et avant impôt : sa capacité bénéficiaire « normale ».',
+      formule: 'Produit net bancaire − charges générales d\'exploitation − dotations aux amortissements.',
+      lecture: 'C\'est le bénéfice avant l\'aléa du risque de crédit. Stable et large, il donne à la banque de quoi absorber une hausse du coût du risque sans toucher au dividende.',
+      limites: 'Il ne tient pas compte des pertes sur crédits, qui sont la vraie menace : à lire toujours avec le coût du risque.'
+    },
+    'couverture-avant-risque': {
+      titre: 'Couverture du dividende avant risque',
+      quoi: 'Combien de fois le résultat brut d\'exploitation (avant coût du risque) couvre le dividende total.',
+      formule: 'Résultat brut d\'exploitation ÷ dividendes totaux versés.',
+      lecture: 'Au-dessus de 2 fois, la banque a de la marge pour absorber une hausse du coût du risque. Vers 1 fois, le moindre sinistre de crédit se paie directement sur le dividende.',
+      limites: 'Avant impôt : l\'impôt sur les bénéfices réduit la marge réelle. C\'est une mesure de résistance, pas une prévision de résultat.'
+    },
+    'marge-securite-risque': {
+      titre: 'Marge de sécurité face au risque',
+      quoi: 'Combien de fois le coût du risque actuel pourrait être supporté avant que le résultat brut d\'exploitation ne couvre plus le dividende.',
+      formule: '(Résultat brut d\'exploitation − dividendes totaux) ÷ coût du risque de l\'exercice. Calcul avant impôt.',
+      lecture: 'Un chiffre élevé signifie que le coût du risque devrait fortement augmenter pour menacer le dividende. Sous 1, une simple répétition du coût du risque actuel suffirait à découvrir le dividende.',
+      limites: 'Non calculable quand le coût du risque est nul ou négatif. C\'est un test de résistance simple, sans fiscalité ni évolution du PNB.'
+    },
+    'tresorerie-dividende': {
+      titre: 'Trésorerie face au dividende',
+      quoi: 'Combien d\'années de dividendes la trésorerie disponible permettrait de financer.',
+      formule: 'Trésorerie à l\'actif ÷ dividendes totaux versés.',
+      lecture: 'Un dividende adossé à une trésorerie confortable n\'a pas besoin de dette pour être payé, même un mauvais exercice.',
+      limites: 'La trésorerie sert aussi à l\'exploitation et aux investissements ; la dette éventuelle à rembourser n\'apparaît pas ici.'
+    },
+    'fcf-dividendes': {
+      titre: 'Flux de trésorerie libre et dividendes',
+      quoi: 'La comparaison entre l\'argent réellement dégagé par l\'activité après investissements et l\'argent versé aux actionnaires.',
+      formule: 'Flux d\'exploitation − investissements, comparé au dividende total (DPS brut × nombre d\'actions).',
+      lecture: 'Un dividende durablement supérieur au flux libre est financé par la dette ou par la trésorerie accumulée : il ne peut pas croître indéfiniment.',
+      limites: 'Non calculable pour les banques (pas de tableau de flux dans les données) : on y utilise le résultat et les réserves.'
+    },
+    'retraitement-actions': {
+      titre: 'Dividendes retraités des opérations sur le capital',
+      quoi: 'Quand une société distribue des actions gratuites ou fractionne son capital, chaque action « ancienne » devient plusieurs actions. Les dividendes passés sont ramenés à la nouvelle base pour rester comparables.',
+      formule: 'Dividende historique ÷ ratio de l\'opération (par exemple 1 action gratuite pour 1 : ratio 2, dividende divisé par 2).',
+      lecture: 'Sans ce retraitement, le dividende semble s\'effondrer l\'année de l\'opération alors que l\'actionnaire n\'a rien perdu : il a simplement deux fois plus d\'actions.',
+      limites: 'Les montants publiés à l\'époque restent la référence légale ; seul l\'affichage est retraité.'
+    },
+    'soutenabilite-dividende': {
+      titre: 'Soutenabilité du dividende',
+      quoi: 'La capacité de la société à maintenir son dividende, jugée sur le bénéfice, les réserves, les fonds propres et, pour une banque, le risque de crédit.',
+      formule: 'Aucune formule unique : la lecture rassemble le taux de distribution, la couverture, les réserves en années de dividendes, le coussin de fonds propres, le coût du risque et le flux de trésorerie libre.',
+      lecture: 'Les alertes sont comptées : aucune, le dividende est solide ; une, à surveiller ; deux ou plus, fragile. Les seuils sont des repères usuels, pas des règles.',
+      limites: 'Un verdict n\'est pas une recommandation. Il ne remplace pas la lecture des rapports, en particulier pour comprendre l\'origine d\'un coût du risque exceptionnel.'
     }
   };
 
