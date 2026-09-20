@@ -52,6 +52,7 @@
             '<button class="subtab active" data-sub="liste">Consulter</button>' +
             '<button class="subtab" data-sub="saisie">Saisir un exercice</button>' +
             '<button class="subtab" data-sub="excel">Importer un classeur</button>' +
+            '<button class="subtab" data-sub="docs">Documents (PDF)</button>' +
             '</div>' +
 
             '<div class="subpane active" id="fsub-liste">' +
@@ -98,7 +99,104 @@
             '<button class="btn btn-primary" id="fin-import-run">Importer les lignes conformes</button>' +
             '<button class="btn btn-outline btn-sm" id="fin-import-cancel">Annuler</button>' +
             '<span class="msg" id="fin-import-msg"></span></div>' +
-            '<div id="fin-import-preview"></div></div></div>';
+            '<div id="fin-import-preview"></div></div></div>' +
+
+            '<div class="subpane" id="fsub-docs">' +
+            '<div class="card accent"><div class="card-head"><span class="card-title">Déposer un document</span></div>' +
+            '<div class="card-body">' +
+            '<div class="note">Le document déposé est rattaché au ticker, à l\'exercice et à la période choisis. Publié, il devient consultable depuis la fiche de la valeur dans l\'application.</div>' +
+            '<div class="form-grid">' + TC.fields([
+                { id: 'doc-ticker', label: 'Ticker', upper: true, placeholder: 'SNTS' },
+                { id: 'doc-annee', label: 'Exercice', type: 'number', step: '1', placeholder: String(new Date().getFullYear() - 1) },
+                { id: 'doc-periode', label: 'Période', type: 'select', options: TC.PERIODES_FIN },
+                { id: 'doc-type', label: 'Type de document', type: 'select', options: [
+                    { v: 'etats_financiers', l: 'États financiers' }, { v: 'rapport_annuel', l: 'Rapport annuel' },
+                    { v: 'rapport_semestriel', l: 'Rapport semestriel' }, { v: 'communique', l: 'Communiqué' },
+                    { v: 'note_information', l: 'Note d\'information' }, { v: 'autre', l: 'Autre' }
+                ] },
+                { id: 'doc-titre', label: 'Titre (facultatif)', placeholder: 'Rapport annuel 2025' }
+            ]) + '</div>' +
+            '<div class="actions">' +
+            '<input type="file" id="doc-fichier" accept="application/pdf">' +
+            '<label style="display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted);"><input type="checkbox" id="doc-brouillon"> Ne pas publier</label>' +
+            '<button class="btn btn-primary" id="doc-deposer">Déposer</button>' +
+            '<span class="msg" id="doc-msg"></span></div></div></div>' +
+
+            '<div class="card"><div class="card-head"><span class="card-title">Documents déposés</span>' +
+            '<span class="card-tools"><button class="btn btn-outline btn-sm" id="doc-reload">↺</button></span></div>' +
+            '<div class="tw" id="doc-liste"><table><tbody>' + TC.rowsLoading(6) + '</tbody></table></div></div>' +
+            '</div></div>';
+    }
+
+    /* ── Documents (PDF) : rapports annuels, communiqués… ──
+       Rattachés au ticker et à l'exercice, publiés ou en brouillon,
+       stockés hors de PostgREST (dépôt signé) via /api/financials-upload. ── */
+
+    function docContext() {
+        return {
+            ticker: String(TC.val('doc-ticker') || '').toUpperCase(),
+            annee: TC.int('doc-annee'),
+            periode: TC.val('doc-periode') || 'annuel'
+        };
+    }
+
+    async function apiDocs(methode, corps, requete) {
+        await TC.ensureToken();
+        const headers = { Accept: 'application/json', Authorization: 'Bearer ' + TC.session.token };
+        if (corps) headers['Content-Type'] = 'application/json';
+        const r = await fetch('/api/financials-upload' + (requete || ''), {
+            method: methode, headers, body: corps ? JSON.stringify(corps) : undefined, cache: 'no-store'
+        });
+        const d = await r.json().catch(() => ({}));
+        if (!r.ok || d.success === false) throw new Error(d.error || ('HTTP ' + r.status));
+        return d.data;
+    }
+
+    async function listerDocs() {
+        const host = TC.el('doc-liste');
+        if (!host) return;
+        const ticker = String(TC.val('doc-ticker') || '').toUpperCase();
+        host.innerHTML = TC.rowsLoading(6);
+        const shell = body => '<table><thead><tr><th>Ticker</th><th>Exercice</th><th>Type</th><th>Fichier</th><th>Visible</th><th></th></tr></thead><tbody>' + body + '</tbody></table>';
+        try {
+            const docs = await apiDocs('GET', null, ticker ? '?ticker=' + encodeURIComponent(ticker) : '');
+            if (!docs || !docs.length) { host.innerHTML = shell(TC.rowsEmpty(6, 'Aucun document', ticker ? 'Rien de déposé pour ' + ticker + '.' : 'Aucun document déposé pour le moment.')); return; }
+            host.innerHTML = shell(docs.map(d => '<tr><td class="td-key">' + TC.esc(d.ticker) + '</td><td>' + TC.esc(d.annee) + ' · ' + TC.esc(d.periode) + '</td>' +
+                '<td>' + TC.esc(String(d.type_document || '').replace(/_/g, ' ')) + '</td>' +
+                '<td><a href="' + TC.esc(d.fichier_url) + '" target="_blank" rel="noopener">' + TC.esc(d.fichier_nom) + '</a>' +
+                (d.taille_octets ? ' <span class="td-muted">' + Math.round(d.taille_octets / 1024) + ' Ko</span>' : '') + '</td>' +
+                '<td><span class="badge ' + (d.publie ? 'badge-green' : 'badge-grey') + '">' + (d.publie ? 'oui' : 'non') + '</span></td>' +
+                '<td><button type="button" class="btn btn-danger btn-ico" data-doc-del="' + d.id + '">✕</button></td></tr>').join(''));
+        } catch (e) {
+            host.innerHTML = shell(TC.rowsEmpty(6, 'Liste indisponible', e.message + ' La table financials_documents existe-t-elle ?'));
+        }
+    }
+
+    async function deposerDoc() {
+        const input = TC.el('doc-fichier');
+        const fichier = input && input.files && input.files[0];
+        const c = docContext();
+        if (!fichier) return TC.say('doc-msg', 'Choisissez un fichier PDF.', 'err');
+        if (!/\.pdf$/i.test(fichier.name)) return TC.say('doc-msg', 'Seuls les fichiers PDF sont acceptés.', 'err');
+        if (!c.ticker || !c.annee) return TC.say('doc-msg', 'Renseignez le ticker et l\'exercice.', 'err');
+        const meta = {
+            ticker: c.ticker, annee: c.annee, periode: c.periode,
+            type_document: TC.val('doc-type') || 'etats_financiers',
+            titre: TC.val('doc-titre') || null,
+            publie: !TC.el('doc-brouillon').checked
+        };
+        try {
+            TC.say('doc-msg', 'Préparation du dépôt…', 'info');
+            const prep = await apiDocs('POST', Object.assign({ action: 'prepare', filename: fichier.name }, meta));
+            TC.say('doc-msg', 'Téléversement (' + Math.round(fichier.size / 1024) + ' Ko)…', 'info');
+            const up = await fetch(prep.signedUrl, { method: 'PUT', headers: { 'Content-Type': 'application/pdf', 'x-upsert': 'true' }, body: fichier });
+            if (!up.ok) throw new Error('Téléversement refusé (HTTP ' + up.status + ')');
+            TC.say('doc-msg', 'Enregistrement…', 'info');
+            await apiDocs('POST', Object.assign({ action: 'finalize', path: prep.path, filename: fichier.name, taille: fichier.size }, meta));
+            TC.say('doc-msg', 'Document déposé.', 'ok');
+            input.value = '';
+            listerDocs();
+        } catch (e) { TC.say('doc-msg', 'Échec : ' + e.message, 'err'); }
     }
 
     /* ── Chargement et affichage ─────────────────────────── */
@@ -538,6 +636,18 @@
                 try { await TC.del('financials', 'id=eq.' + row.id); TC.toast('Supprimé', 'ok'); load(); }
                 catch (e) { TC.toast(e.message, 'err'); }
             });
+
+            const docTicker = TC.el('doc-ticker');
+            if (docTicker) docTicker.setAttribute('list', 'tickers-list');
+            TC.on('doc-deposer', 'click', deposerDoc);
+            TC.on('doc-reload', 'click', listerDocs);
+            TC.on('doc-ticker', 'change', listerDocs);
+            TC.delegate('doc-liste', '[data-doc-del]', 'click', async function (n) {
+                if (!TC.confirmTwice('Supprimer définitivement ce document ?')) return;
+                try { await apiDocs('DELETE', null, '?id=' + encodeURIComponent(n.dataset.docDel)); TC.toast('Document supprimé', 'ok'); listerDocs(); }
+                catch (e) { TC.toast(e.message, 'err'); }
+            });
+            listerDocs();
 
             load();
         }
