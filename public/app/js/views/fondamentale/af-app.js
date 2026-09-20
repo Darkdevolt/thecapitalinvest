@@ -124,13 +124,45 @@
     var bon = inverse ? v <= seuil : v >= seuil;
     return bon ? 'af-up' : 'af-down';
   }
+  /* Indicateur de hausse/baisse par rapport à l'exercice précédent, affiché
+     à côté d'une valeur — indépendant de tout seuil de qualité : sert
+     uniquement à répondre à « est-ce que ça monte ou ça baisse ? ». */
+  function trend(vals, i, inverse) {
+    if (i <= 0 || !vals) return '';
+    var cur = vals[i], prev = vals[i - 1];
+    if (!fin(cur) || !fin(prev)) return '';
+    var delta = cur - prev;
+    if (delta === 0) return '<span class="af-trend af-trend-flat" title="Stable par rapport à l\'exercice précédent">→</span>';
+    var up = delta > 0;
+    var cls = inverse ? (up ? 'af-trend-down' : 'af-trend-up') : (up ? 'af-trend-up' : 'af-trend-down');
+    var pctTxt = prev !== 0 ? ' (' + (up ? '+' : '') + ((delta / Math.abs(prev)) * 100).toFixed(1) + ' %)' : '';
+    return '<span class="af-trend ' + cls + '" title="' + (up ? 'En hausse' : 'En baisse') + esc(pctTxt) + ' par rapport à l\'exercice précédent">' +
+      (up ? '▲' : '▼') + '</span>';
+  }
 
 
   /* ── Visualisations financières ────────────────────────────────
      Couche purement visuelle : toutes les valeurs proviennent de S.analyse.
      Aucun calcul métier n'est modifié. */
+
+  /* Variation entre le premier et le dernier point de la série principale
+     d'un graphique, affichée en tête : la première chose qui doit sauter
+     aux yeux est si la courbe est globalement en hausse ou en baisse. */
+  function chartDelta(s0) {
+    if (!s0) return '';
+    var idx = [];
+    s0.values.forEach(function (v, i) { if (fin(v)) idx.push(i); });
+    if (idx.length < 2) return '';
+    var first = s0.values[idx[0]], last = s0.values[idx[idx.length - 1]];
+    if (!first) return '';
+    var delta = (last - first) / Math.abs(first);
+    var up = delta >= 0;
+    return '<span class="af-chart-delta ' + (up ? 'af-up' : 'af-down') + '">' + (up ? '▲ +' : '▼ ') +
+      (up ? '' : '−') + Math.abs(delta * 100).toFixed(1) + ' %</span>';
+  }
+
   function chartSerie(titre, desc, labels, series, format) {
-    var W = 760, H = 250, L = 58, R = 18, T = 28, B = 38;
+    var W = 760, H = 260, L = 66, R = 44, T = 22, B = 38;
     var vals = [];
     series.forEach(function(s){ s.values.forEach(function(v){ if(fin(v)) vals.push(v); }); });
     if (!vals.length) return '';
@@ -142,42 +174,75 @@
     function path(vs){
       return vs.map(function(v,i){ return (i?'L':'M')+' '+x(i).toFixed(1)+' '+(fin(v)?y(v).toFixed(1):(H-B)); }).join(' ');
     }
-    var grid='';
-    for(var g=0;g<4;g++){
-      var yy=T+g*(H-T-B)/3;
-      grid+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+yy.toFixed(1)+'" y2="'+yy.toFixed(1)+'" class="af-chart-grid"/>';
-    }
-    var svg='<div class="af-chart"><div class="af-chart-head"><div><strong>'+esc(titre)+'</strong><span>'+esc(desc||'')+'</span></div></div>'+
+    /* Trois repères chiffrés (haut / milieu / bas) : sans eux, une courbe
+       qui monte ou descend ne dit rien de l'ordre de grandeur réel. */
+    var grid = '', ticks = [max, min + (max - min) / 2, min];
+    ticks.forEach(function (t, g) {
+      var yy = T + g * (H - T - B) / 2;
+      grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy.toFixed(1) + '" y2="' + yy.toFixed(1) + '" class="af-chart-grid"/>';
+      grid += '<text x="' + (L - 8) + '" y="' + (yy + 3).toFixed(1) + '" class="af-chart-ylabel" text-anchor="end">' + esc(format(t)) + '</text>';
+    });
+    var svg='<div class="af-chart"><div class="af-chart-head"><div><strong>'+esc(titre)+'</strong><span>'+esc(desc||'')+'</span></div>'+
+      chartDelta(series[0])+'</div>'+
       '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+esc(titre)+'">'+grid;
     if(zero!==null) svg+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+zero.toFixed(1)+'" y2="'+zero.toFixed(1)+'" class="af-chart-zero"/>';
     series.forEach(function(s,si){
       svg+='<path d="'+path(s.values)+'" class="af-chart-line af-chart-c'+(si%5)+'"/>';
-      s.values.forEach(function(v,i){ if(fin(v)) svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"><title>'+esc(s.label)+' · '+esc(labels[i])+': '+esc(format(v))+'</title></circle>'; });
+      var lastIdx = -1;
+      s.values.forEach(function(v,i){
+        if (!fin(v)) return;
+        lastIdx = i;
+        svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"><title>'+esc(s.label)+' · '+esc(labels[i])+': '+esc(format(v))+'</title></circle>';
+      });
+      /* Étiquette de la dernière valeur, posée directement sur le graphique :
+         le chiffre le plus utile ne doit pas dépendre d'un survol à la souris. */
+      if (lastIdx >= 0) svg += '<text x="' + (x(lastIdx) + 7).toFixed(1) + '" y="' + (y(s.values[lastIdx]) + 3.5).toFixed(1) +
+        '" class="af-chart-endlabel af-chart-c' + (si % 5) + '">' + esc(format(s.values[lastIdx])) + '</text>';
     });
     labels.forEach(function(lb,i){ svg+='<text x="'+x(i).toFixed(1)+'" y="'+(H-14)+'" class="af-chart-label" text-anchor="middle">'+esc(lb)+'</text>'; });
     svg+='</svg><div class="af-chart-legend">'+series.map(function(s,si){return '<span><i class="af-chart-key af-chart-c'+(si%5)+'"></i>'+esc(s.label)+'</span>';}).join('')+'</div></div>';
     return svg;
   }
 
-  function sparkline(values, format) {
+  /* Mini-graphique encadré : la couleur du tracé indique si la série est
+     globalement en hausse (vert) ou en baisse (rouge) entre son premier et
+     son dernier point ; `inverse` retourne cette lecture pour les grandeurs
+     où une baisse est le signe positif (endettement, PER…). */
+  function sparkline(values, format, inverse) {
     var vs = (values || []).map(function(v){ return fin(v) ? v : NaN; });
     var valid = vs.filter(fin);
     if (valid.length < 2) return '';
-    var W = 92, H = 26, P = 2;
+    var W = 92, H = 30, P = 3;
     var min = Math.min.apply(null, valid), max = Math.max.apply(null, valid);
     if (min === max) { min -= 1; max += 1; }
     function x(i){ return P + (vs.length <= 1 ? 0 : i * (W - P*2) / (vs.length-1)); }
     function y(v){ return H-P - ((v-min)/(max-min))*(H-P*2); }
-    var path = '', last = null;
+    var path = '', last = null, firstIdx = -1, lastIdx = -1;
     vs.forEach(function(v,i){
       if (!fin(v)) { last = null; return; }
+      if (firstIdx < 0) firstIdx = i;
+      lastIdx = i;
       path += (last === null ? 'M' : 'L') + ' ' + x(i).toFixed(1) + ' ' + y(v).toFixed(1) + ' ';
       last = v;
     });
-    var lastIdx = -1;
-    for (var i=vs.length-1;i>=0;i--) { if(fin(vs[i])) { lastIdx=i; break; } }
-    var dot = lastIdx >= 0 ? '<circle cx="'+x(lastIdx).toFixed(1)+'" cy="'+y(vs[lastIdx]).toFixed(1)+'" r="2.2" class="af-spark-dot"><title>'+esc(format ? format(vs[lastIdx]) : vs[lastIdx])+'</title></circle>' : '';
-    return '<span class="af-spark" aria-hidden="true"><svg viewBox="0 0 '+W+' '+H+'"><path d="'+path+'" class="af-spark-line"/>'+dot+'</svg></span>';
+    var dirRaw = '';
+    if (firstIdx >= 0 && lastIdx > firstIdx) {
+      var d = vs[lastIdx] - vs[firstIdx];
+      dirRaw = d > 0 ? 'up' : d < 0 ? 'down' : 'flat';
+    }
+    var dirColor = (dirRaw === '' || dirRaw === 'flat') ? 'flat' : (inverse ? (dirRaw === 'up' ? 'down' : 'up') : dirRaw);
+    /* Un seul contour fermé : on rejoint le tracé (dont le « M » de tête
+       devient un simple « L ») plutôt que de repartir d'un sous-tracé
+       séparé, sans quoi le polygone de remplissage a un coin manquant. */
+    var area = path ? ('M ' + x(firstIdx).toFixed(1) + ' ' + (H - P) + ' ' + path.replace(/^M /, 'L ') + 'L ' + x(lastIdx).toFixed(1) + ' ' + (H - P) + ' Z') : '';
+    var dot = lastIdx >= 0 ? '<circle cx="'+x(lastIdx).toFixed(1)+'" cy="'+y(vs[lastIdx]).toFixed(1)+'" r="2.6" class="af-spark-dot af-spark-c-'+dirColor+'"><title>'+esc(format ? format(vs[lastIdx]) : vs[lastIdx])+'</title></circle>' : '';
+    var arrow = dirRaw === 'up' ? '▲' : dirRaw === 'down' ? '▼' : '';
+    return '<span class="af-spark-wrap af-spark-w-' + dirColor + '">' +
+      '<span class="af-spark" aria-hidden="true"><svg viewBox="0 0 '+W+' '+H+'">' +
+      (area ? '<path d="' + area + '" class="af-spark-area af-spark-c-' + dirColor + '"/>' : '') +
+      '<path d="'+path+'" class="af-spark-line af-spark-c-'+dirColor+'"/>'+dot+'</svg></span>' +
+      (arrow ? '<span class="af-spark-arrow af-spark-c-' + dirColor + '">' + arrow + '</span>' : '') +
+      '</span>';
   }
 
   function financialCharts(a){
@@ -553,7 +618,7 @@
       st('Résultat net', or(mont(ex.rn)), or(pc(r.margeNette), '') + ' de marge', 'marge-nette', a.rows.map(function(x){return x.rn;}), mont) +
       st('Flux de trésorerie libre', or(mont(ex.fcf)), or(pc(r.margeFcf), '') + ' du ' + ca('min'), 'fcf', a.rows.map(function(x){return x.fcf;}), mont) +
       st('Capitaux propres', or(mont(ex.cp)), or(pc(r.autonomie), '') + ' du bilan', 'autonomie', a.rows.map(function(x){return x.cp;}), mont) +
-      st('Dette financière', or(mont(ex.dette)), 'levier de ' + or(n2(r.gearing), '—'), 'gearing', a.rows.map(function(x){return x.dette;}), mont) +
+      st('Dette financière', or(mont(ex.dette)), 'levier de ' + or(n2(r.gearing), '—'), 'gearing', a.rows.map(function(x){return x.dette;}), mont, true) +
       '</div>';
 
     html += groupe('Signaux de lecture');
@@ -578,9 +643,9 @@
     return html;
   }
 
-  function st(l, v, s, cle, values, format) {
+  function st(l, v, s, cle, values, format, inverse) {
     return '<div class="af-stat"><div class="af-stat-top"><div class="af-stat-l">' + esc(l) + (cle ? memo(cle) : '') + '</div>' +
-      sparkline(values, format) + '</div><div class="af-stat-v">' + v + '</div>' +
+      sparkline(values, format, inverse) + '</div><div class="af-stat-v">' + v + '</div>' +
       (s ? '<div class="af-stat-s">' + s + '</div>' : '') + '</div>';
   }
 
@@ -641,7 +706,7 @@
       { sep: 'Bilan' },
       { k: 'actif', l: 'Total du bilan' },
       { k: 'cp', l: 'Capitaux propres', gras: true },
-      { k: 'dette', l: 'Dettes financières', memo: 'gearing' },
+      { k: 'dette', l: 'Dettes financières', memo: 'gearing', inverse: true },
       { k: 'treso', l: 'Trésorerie', saisi: true, memo: 'dette-nette' },
       { sep: 'Flux de trésorerie' },
       { k: 'cfo', l: 'Flux opérationnel' },
@@ -665,12 +730,14 @@
         html += '<tr class="af-sep"><td colspan="' + (a.years.length + 1) + '">' + esc(li.sep) + '</td></tr>';
         return;
       }
+      var serie = a.rows.map(function (r) { return r[li.k]; });
       html += '<tr' + (li.gras ? ' class="af-gras"' : '') + '><td>' + esc(li.l) + (li.memo ? memo(li.memo) : '') + '</td>' +
-        a.rows.map(function (r) {
+        a.rows.map(function (r, i) {
           var v = r[li.k];
           var saisi = r['_saisi_' + li.k];
           var txt = fin(v) ? (li.brut ? n0(v) : mont(v)) : '—';
-          return '<td class="r' + (saisi ? ' af-saisi' : '') + (fin(v) ? '' : ' af-vide') + '">' + txt + '</td>';
+          var badge = i === a.rows.length - 1 ? trend(serie, i, li.inverse) : '';
+          return '<td class="r' + (saisi ? ' af-saisi' : '') + (fin(v) ? '' : ' af-vide') + '">' + txt + badge + '</td>';
         }).join('') + '</tr>';
     });
     html += '</tbody></table></div>';
@@ -751,18 +818,24 @@
         a.years.map(function (y) { return '<th class="r">' + y + '</th>'; }).join('') + '</tr></thead><tbody>';
       b.l.forEach(function (row) {
         var k = row[0], lbl = row[1], fmt = row[2], mk = row[3], seuil = row[4];
+        var serie = a.ratios.map(function(x){ return x[k]; });
         html += '<tr><td><span class="af-ratio-label">' + esc(lbl) + (mk ? memo(mk) : '') + '</span>' +
-          sparkline(a.ratios.map(function(x){ return x[k]; }), function(v){ return fmt === 'pc' || fmt === 'pc2' ? pc(v, fmt === 'pc2' ? 2 : 1) : n2(v); }) +
+          sparkline(serie, function(v){ return fmt === 'pc' || fmt === 'pc2' ? pc(v, fmt === 'pc2' ? 2 : 1) : n2(v); }, seuil && seuil[1]) +
           '</td>' +
           a.ratios.map(function (r, i) {
             var v = r[k];
             var txt = !fin(v) ? '—'
               : fmt === 'pc' ? pc(v) : fmt === 'pc2' ? pc(v, 2) : fmt === 'n0' ? n0(v) : n2(v);
-            /* Seul le dernier exercice est colorisé bon/mauvais : sur
-               l'historique complet, la couleur guiderait l'œil vers des
-               années qui ne représentent plus la situation actuelle. */
-            var cls = seuil && i === a.ratios.length - 1 ? ' ' + tone(v, seuil[0], seuil[1]) : '';
-            return '<td class="r' + (fin(v) ? '' : ' af-vide') + cls + '">' + txt + '</td>';
+            /* Seul le dernier exercice porte un jugement bon/mauvais fondé
+               sur un seuil : sur l'historique complet, la couleur guiderait
+               l'œil vers des années qui ne représentent plus la situation
+               actuelle. La flèche de tendance, elle, ne juge pas — elle
+               indique juste si le dernier exercice est en hausse ou en
+               baisse par rapport au précédent, sur toutes les lignes. */
+            var isLast = i === a.ratios.length - 1;
+            var cls = seuil && isLast ? ' ' + tone(v, seuil[0], seuil[1]) : '';
+            var badge = isLast ? trend(serie, i, seuil && seuil[1]) : '';
+            return '<td class="r' + (fin(v) ? '' : ' af-vide') + cls + '">' + txt + badge + '</td>';
           }).join('') + '</tr>';
       });
       html += '</tbody></table></div>';
@@ -784,7 +857,7 @@
       var t = cr[x[0]];
       html += '<div class="af-stat"><div class="af-stat-l">' + x[1] + '</div>' +
         '<div class="af-stat-v ' + (fin(t.value) ? (t.value >= 0 ? 'af-up' : 'af-down') : '') + '">' +
-        (fin(t.value) ? pcs(t.value) : '<span class="af-nd">—</span>') + '</div>' +
+        (fin(t.value) ? (t.value >= 0 ? '▲ ' : '▼ ') + pcs(t.value) : '<span class="af-nd">—</span>') + '</div>' +
         '<div class="af-stat-s">' + (fin(t.value) ? 'par an sur ' + t.annees + ' exercices' : esc(t.raison)) + '</div></div>';
     });
     html += '</div>';
@@ -795,7 +868,10 @@
       html += note('Un ' + ca('min') + ' qui progresse chaque année vaut mieux qu\'un ' + ca('min') + ' qui double ' +
         'puis s\'effondre, même à taux moyen identique.');
       html += '<div class="af-stats">' +
-        st('Exercices en hausse', r.exercicesHausse + ' sur ' + r.exercices, pc(r.value, 0) + ' des exercices') +
+        '<div class="af-stat"><div class="af-stat-l">Exercices en hausse</div>' +
+        '<div class="af-stat-v">' + r.exercicesHausse + ' <small>sur ' + r.exercices + '</small></div>' +
+        '<div class="af-bar af-bar-sm"><div style="width:' + Math.round(r.value * 100) + '%"></div></div>' +
+        '<div class="af-stat-s">' + pc(r.value, 0) + ' des exercices</div></div>' +
         st('Dispersion des variations', or(n2(r.dispersion)), fin(r.dispersion) ? (r.dispersion < 0.5 ? 'croissance très régulière' : r.dispersion < 1.2 ? 'croissance modérément régulière' : 'croissance heurtée') : '') +
         '</div>';
     }
@@ -1037,6 +1113,32 @@
 
   /* ── Onglet Valorisation ──────────────────────────────────────── */
 
+  /* Barres horizontales, toutes à la même échelle que le cours actuel :
+     une colonne de chiffres ne permet pas de voir d'un coup d'œil combien
+     de méthodes situent la société au-dessus ou en dessous de son cours. */
+  function valuationBars(syn) {
+    var cours = syn.cours;
+    var lignes = syn.lignes.filter(function (l) { return fin(l.valeur) && l.valeur > 0; });
+    if (!lignes.length) return '';
+    var max = Math.max.apply(null, lignes.map(function (l) { return l.valeur; }).concat(fin(cours) ? [cours] : []));
+    if (!max) return '';
+    function ligne(label, val, cls, off) {
+      var w = Math.max(2, val / max * 100);
+      return '<div class="af-vbar-row' + (off ? ' af-off' : '') + '">' +
+        '<div class="af-vbar-label">' + esc(label) + '</div>' +
+        '<div class="af-vbar-track"><div class="af-vbar-fill ' + cls + '" style="width:' + w.toFixed(1) + '%"></div></div>' +
+        '<div class="af-vbar-val">' + n0(val) + '</div></div>';
+    }
+    var html = '<div class="af-vbars">';
+    if (fin(cours)) html += ligne('Cours actuel', cours, 'af-vbar-cours');
+    lignes.forEach(function (l) {
+      var cls = fin(cours) ? (l.valeur >= cours ? 'af-vbar-up' : 'af-vbar-down') : 'af-vbar-neutre';
+      html += ligne(METHODE_LABELS[l.cle], l.valeur, cls, !l.retenue);
+    });
+    html += '</div>';
+    return html;
+  }
+
   function paneValorisation() {
     var H = S.hypotheses, R = S.resultats, w = S.wacc, a = S.analyse;
     if (!R) return vide('Valorisation indisponible', 'Les hypothèses n\'ont pas pu être établies.');
@@ -1196,6 +1298,15 @@
       html += note('Fourchette des ' + syn.retenues + ' méthodes retenues : <strong>' + n0(syn.fourchette.bas) + '</strong> à <strong>' + n0(syn.fourchette.haut) + '</strong> FCFA.');
     }
     if (syn.avertissement) html += '<div class="af-warn">' + esc(syn.avertissement) + '</div>';
+
+    var vbars = valuationBars(syn);
+    if (vbars) {
+      html += groupe('Comparaison visuelle des méthodes', 'dcf');
+      html += note('Chaque barre est la valeur par action obtenue par une méthode, à la même échelle que le cours ' +
+        'actuel (en or). En <span class="af-up">vert</span>, les méthodes au-dessus du cours ; en <span class="af-down">rouge</span>, ' +
+        'celles en dessous. Les méthodes désactivées apparaissent grisées.');
+      html += vbars;
+    }
 
     html += groupe('Pondération par méthode');
     html += note((V.estFinancier(a.data.secteur || a.data.sousSecteur)
