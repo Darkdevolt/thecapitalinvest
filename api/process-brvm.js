@@ -1047,32 +1047,52 @@ export default async function handler(req, res) {
         return json(res, 200, { success: true, scope: 'reporting', action: 'publish', data });
       }
 
-      // Déclencheur d'import automatique (pg_cron Supabase, toutes les 30 min
+      // Déclencheur d'import automatique (pg_cron Supabase, toutes les 15 min
       // en séance). Ne fait rien si le mode n'est pas « auto » — l'interrupteur
-      // reste maître. Importe les obligations (non bloquant) puis les actions.
+      // reste maître. Importe les obligations (non bloquant) et les actions.
+      //
+      // Les deux imports tournent désormais en parallèle plutôt qu'en série.
+      // Avant ce correctif, `await scrapeBrvmObligations()` s'exécutait en
+      // entier (jusqu'à ses 25 s de délai propres en cas de lenteur de
+      // brvm.org) avant même que le scraping des cours ne démarre — deux
+      // tâches indépendantes, écrivant dans des tables différentes, mais
+      // qui se partageaient en série le budget d'exécution de 60 s de cette
+      // fonction (voir `export const config = { maxDuration: 60 }` en tête
+      // de fichier). Constaté en prod le 2026-09-21 : la page cours-obligations
+      // de brvm.org, plus lente et plus instable que cours-actions, dépassait
+      // son propre délai et amputait d'autant le temps restant pour la séance
+      // — la partie réellement critique (prix, jamais rattrapable après coup
+      // sans ressaisie). Les deux tâches sont indépendantes (aucune ne dépend
+      // du résultat de l'autre) et chacune journalise déjà son propre échec
+      // sans faire échouer l'autre : les exécuter en parallèle ne change rien
+      // au comportement observable, seulement le budget de temps disponible
+      // pour la séance en cas de lenteur de brvm.org sur l'un des deux flux.
       if (machine && body && body.scope === 'auto') {
         const cfg = await getSetting();
         if (cfg.mode !== 'auto') {
           return json(res, 200, { success: true, skipped: true, reason: 'automatic_processing_disabled' });
         }
         const oblStartedAt = new Date().toISOString();
-        try {
-          const s = await scrapeBrvmObligations();
-          const now = new Date().toISOString();
-          await supabaseAdmin.from('obligations').upsert(s.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
-          await supabaseAdmin.from('obligations_marche').upsert({ ...s.marche, updated_at: now }, { onConflict: 'date_seance' });
-          await safeObligationsRunLog({
-            started_at: oblStartedAt, finished_at: new Date().toISOString(), status: 'success',
-            result: { date_seance: s.date_seance, lignes: s.rows.length, marche: s.marche, source: 'auto' }
-          });
-        } catch (e) {
-          console.warn('[PROCESS-BRVM] auto obligations non bloquant :', e && e.message);
-          await safeObligationsRunLog({
-            started_at: oblStartedAt, finished_at: new Date().toISOString(),
-            status: 'error', error: String(e?.message || e), result: { source: 'auto' }
-          });
-        }
-        return await runPipelineWithLogging(res, cfg.mode);
+        const obligationsTask = (async () => {
+          try {
+            const s = await scrapeBrvmObligations();
+            const now = new Date().toISOString();
+            await supabaseAdmin.from('obligations').upsert(s.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
+            await supabaseAdmin.from('obligations_marche').upsert({ ...s.marche, updated_at: now }, { onConflict: 'date_seance' });
+            await safeObligationsRunLog({
+              started_at: oblStartedAt, finished_at: new Date().toISOString(), status: 'success',
+              result: { date_seance: s.date_seance, lignes: s.rows.length, marche: s.marche, source: 'auto' }
+            });
+          } catch (e) {
+            console.warn('[PROCESS-BRVM] auto obligations non bloquant :', e && e.message);
+            await safeObligationsRunLog({
+              started_at: oblStartedAt, finished_at: new Date().toISOString(),
+              status: 'error', error: String(e?.message || e), result: { source: 'auto' }
+            });
+          }
+        })();
+        const [, response] = await Promise.all([obligationsTask, runPipelineWithLogging(res, cfg.mode)]);
+        return response;
       }
     }
 
