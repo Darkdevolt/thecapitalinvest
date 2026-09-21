@@ -70,18 +70,24 @@
     return bank ? 'Produit net bancaire' : 'Chiffre d\'affaires';
   };
 
-  // Dernier dividende brut connu : calendrier des dividendes ET colonne dpa des
-  // états financiers ; on garde l'exercice le plus récent (calendrier en cas d'égalité).
+  // Dernier dividende NET connu (celui que la BRVM publie et sur lequel elle
+  // calcule elle-même son rendement : l'IRVM est retenu à la source, le
+  // montant net est celui réellement perçu par l'actionnaire). Calendrier des
+  // dividendes en priorité (montant_net, avec repli sur le brut si le net
+  // n'est pas encore renseigné) ; colonne dpa des états financiers seulement
+  // en dernier recours, faute de mieux — elle est brute, sans distinction.
+  // On garde l'exercice le plus récent (calendrier en cas d'égalité).
   function lastDividend(t, fs) {
     var best = null;
     fs.forEach(function (f) {
       var ex = num(f.annee), v = num(f.dpa);
-      if (ex != null && v != null && (!best || ex > best.ex)) best = { ex: ex, v: v };
+      if (ex != null && v != null && (!best || ex > best.ex)) best = { ex: ex, v: v, net: false };
     });
     (Array.isArray(window.allDividendes) ? window.allDividendes : []).forEach(function (r) {
       if (!r || String(r.ticker).toUpperCase() !== t || /annul|suspend/i.test(String(r.statut || ''))) return;
-      var ex = num(r.exercice != null ? r.exercice : r.annee), v = num(r.montant);
-      if (ex != null && v != null && (!best || ex >= best.ex)) best = { ex: ex, v: v };
+      var ex = num(r.exercice != null ? r.exercice : r.annee);
+      var vNet = num(r.montant_net), v = vNet != null ? vNet : num(r.montant);
+      if (ex != null && v != null && (!best || ex >= best.ex)) best = { ex: ex, v: v, net: vNet != null };
     });
     return best;
   }
@@ -101,11 +107,15 @@
     if (roe == null && rn != null && fp > 0) roe = rn / fp * 100;
     var marge = f ? num(f.marge_nette) : null;
     if (marge == null && rn != null && ca > 0) marge = rn / ca * 100;
-    var yld = f ? firstNum(f.dividend_yield, f.rendement_dividende) : null, yldEx = null;
-    if (yld == null) {
-      var ld = lastDividend(t, fs);
-      if (ld && cp > 0) { yld = ld.v / cp * 100; yldEx = ld.ex; }
-    }
+    // Rendement toujours recalculé sur le dernier cours coté, comme la BRVM :
+    // une colonne stockée (dividend_yield / rendement_dividende) fige le
+    // rendement au cours du jour où elle a été saisie, qui n'a plus rien à
+    // voir avec le cours actuel quelques semaines plus tard. On ne s'y replie
+    // que si aucun cours ou aucun dividende ne permet un calcul en direct.
+    var yld = null, yldEx = null;
+    var ld = lastDividend(t, fs);
+    if (ld && cp > 0) { yld = ld.v / cp * 100; yldEx = ld.ex; }
+    else if (f) { yld = firstNum(f.dividend_yield, f.rendement_dividende); }
     // Dette nette : pour un établissement financier les dépôts sont une dette
     // d'exploitation, le ratio n'a pas de sens (absent → critère non noté).
     var financial = isFinancial(e), dette = null;

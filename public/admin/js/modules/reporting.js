@@ -346,15 +346,32 @@
             if (!k) return;
             if (!finByT[k] || Number(r.annee) > Number(finByT[k].annee)) finByT[k] = r;
         });
+        /* Dernier dividende NET connu par titre (méthode BRVM : l'IRVM est retenu
+           à la source, le rendement de marché se lit net) — divs est trié par
+           date_detachement croissante, donc une simple écrasement conserve la
+           plus récente occurrence de chaque ticker. */
+        const netDivByT = {};
+        (divs || []).forEach(function (d) {
+            const k = String(d.ticker || '').toUpperCase();
+            const v = TC.toNumber(d.montant_net != null ? d.montant_net : d.montant);
+            if (k && v !== null) netDivByT[k] = v;
+        });
         const perList = [], yldList = [], roeList = [];
         values.forEach(function (e) {
             const f = finByT[String(e.ticker).toUpperCase()];
             if (!f) return;
             const bpa = TC.toNumber(f.bpa);
             if (bpa && bpa > 0 && e.last) perList.push(e.last / bpa);
-            let y = TC.toNumber(f.dividend_yield);
-            if (y !== null && y <= 1.5) y *= 100;
-            if ((y === null || y === 0) && TC.toNumber(f.dpa) && e.last) y = (TC.toNumber(f.dpa) / e.last) * 100;
+            // Toujours recalculé sur le cours de la période plutôt que lu dans la
+            // colonne stockée (figée au jour de sa saisie) : seule cette colonne
+            // sert de repli, quand ni le calendrier ni le cours ne permettent un calcul en direct.
+            const netDiv = netDivByT[String(e.ticker).toUpperCase()];
+            let y = null;
+            if (netDiv && e.last) y = (netDiv / e.last) * 100;
+            else {
+                y = TC.toNumber(f.dividend_yield);
+                if (y !== null && y <= 1.5) y *= 100;
+            }
             if (y !== null && y > 0) yldList.push(y);
             let roe = TC.toNumber(f.roe);
             if (roe !== null && roe <= 1.5) roe *= 100;

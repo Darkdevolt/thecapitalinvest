@@ -94,10 +94,15 @@
     for(let i=h.length-1;i>=0;i--){ const x=h[i]; if(!(x.dps>0))break; if(prev!=null&&prev-x.year!==1)break; c++; prev=x.year; }
     return c;
   }
+  // Net d'abord (celui que la BRVM publie et sur lequel elle calcule son
+  // propre rendement, l'IRVM étant retenu à la source) ; brut seulement si le
+  // net n'est pas encore annoncé pour ce détachement à venir.
   function forwardDps(t){
     const today=todayKey();
     const future=divs().filter(r=>ticker(r.ticker)===t&&!cancelled(r)).map(r=>({r,d:ymd(r.date_detachement??r.ex_date)})).filter(x=>x.d&&x.d>=today).sort((a,b)=>a.d.localeCompare(b.d));
-    return future.length?num(future[0].r.montant):null;
+    if(!future.length) return null;
+    const r=future[0].r, net=num(r.montant_net);
+    return net!=null?net:num(r.montant);
   }
 
   let charts={}, selectedTicker='';
@@ -147,14 +152,16 @@
     return {avg:mean(yields),med:median(yields),max:yields.length?Math.max(...yields):null,count:rows.length,avgGrowth:mean(g)};
   }
 
-  // Une ligne par titre : dernier exercice distribué. Rendement courant = dernier DPS brut / dernier cours ;
-  // à défaut de cours, rendement enregistré à l'époque.
+  // Une ligne par titre : dernier exercice distribué. Rendement courant = dernier DIVIDENDE NET / dernier
+  // cours (méthode BRVM : le montant publié et le rendement affiché au marché sont nets d'IRVM, retenu à
+  // la source) ; à défaut de net renseigné, repli sur le brut, puis sur le rendement enregistré à l'époque.
   function datasetRows(){
     const hm=historyByTicker();
     return Object.keys(hm).map(t=>{
       const h=hm[t], last=h[h.length-1]; if(!last) return null;
       const price=priceOf(t), fd=forwardDps(t), p=payoutAt(t,last), f=finFor(t,last.year);
-      const yNow=last.dps>0&&price>0?last.dps/price*100:null;
+      const dpsForYield=last.net!=null?last.net:last.dps;
+      const yNow=dpsForYield>0&&price>0?dpsForYield/price*100:null;
       return {t,name:nameOf(t),sector:sectorOf(t),year:last.year,dps:last.dps,net:last.net,y:yNow!=null?yNow:last.yield,g3:growth(h,3),g5:growth(h,5),payout:p,coverage:coverageOf(p),fcf:fcf(f),streak:streak(h),price,forwardYield:fd!=null&&price>0?fd/price*100:null,h};
     }).filter(Boolean);
   }
@@ -174,7 +181,7 @@
       </div></div></div>
       <div class="di-tabs"><button class="di-tab active" data-tab="overview">Overview</button><button class="di-tab" data-tab="screener">Screener</button><button class="di-tab" data-tab="calendar">Calendrier</button><button class="di-tab" data-tab="compare">Comparer</button><button class="di-tab" data-tab="sustain">Soutenabilité</button><button class="di-tab" data-tab="calculator">Calculateur</button></div>
       <div id="diOverview">
-        <div class="di-grid"><div class="card"><div class="card-header"><div><div class="di-card-title">Dividend Yield vs Growth</div><div class="di-card-meta">Chaque bulle représente une société · axes : rendement courant (DPS brut / cours) et croissance du DPS sur 3 exercices</div></div></div><div class="card-body"><div class="di-chart tall"><canvas id="diScatter"></canvas></div></div></div>
+        <div class="di-grid"><div class="card"><div class="card-header"><div><div class="di-card-title">Dividend Yield vs Growth</div><div class="di-card-meta">Chaque bulle représente une société · axes : rendement courant (DPS net / cours, méthode BRVM) et croissance du DPS sur 3 exercices</div></div></div><div class="card-body"><div class="di-chart tall"><canvas id="diScatter"></canvas></div></div></div>
         <div class="card"><div class="card-header"><div><div class="di-card-title">Profil du titre</div><div class="di-card-meta" id="diProfileMeta">Sélectionnez une société</div></div></div><div class="card-body"><div id="diProfilePills"></div><div class="di-chart"><canvas id="diProfileChart"></canvas></div></div></div></div>
         <div class="di-grid equal"><div class="card"><div class="card-header"><div class="di-card-title">Dividend Yield historique</div></div><div class="card-body"><div class="di-chart"><canvas id="diYieldHistory"></canvas></div></div></div>
         <div class="card"><div class="card-header"><div class="di-card-title">Payout & Dividend Coverage</div></div><div class="card-body"><div class="di-chart"><canvas id="diPayoutHistory"></canvas></div></div></div></div>
