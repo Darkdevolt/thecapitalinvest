@@ -451,6 +451,25 @@ async function safeDcbrRunLog(payload) {
   }
 }
 
+/**
+ * Écrit une extraction obligataire. Les erreurs d'upsert sont remontées (un
+ * passage n'est journalisé « success » que si les données sont réellement
+ * écrites). En repli BFIN, `obligations_marche` n'est pas touché : cette
+ * source ne donne ni valeur des transactions ni capitalisations, et un upsert
+ * de null écraserait les agrégats déjà connus pour la séance.
+ */
+async function persistObligations(scraped) {
+  const now = new Date().toISOString();
+  const { error: e1 } = await supabaseAdmin.from('obligations')
+    .upsert(scraped.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
+  if (e1) throw e1;
+  if (!scraped.fallback) {
+    const { error: e2 } = await supabaseAdmin.from('obligations_marche')
+      .upsert({ ...scraped.marche, updated_at: now }, { onConflict: 'date_seance' });
+    if (e2) throw e2;
+  }
+}
+
 async function safeObligationsRunLog(payload) {
   try {
     const { error } = await supabaseAdmin.from('obligations_scrape_runs').insert(payload);
@@ -883,14 +902,9 @@ export default async function handler(req, res) {
           });
           return json(res, 502, { success: false, error: 'Source BRVM obligations illisible.', code: 'BRVM_SOURCE_ERROR' });
         }
-        const now = new Date().toISOString();
-        const rows = scraped.rows.map(r => ({ ...r, updated_at: now }));
+        const rows = scraped.rows;
         try {
-          const { error: e1 } = await supabaseAdmin.from('obligations').upsert(rows, { onConflict: 'code' });
-          if (e1) throw e1;
-          const { error: e2 } = await supabaseAdmin
-            .from('obligations_marche').upsert({ ...scraped.marche, updated_at: now }, { onConflict: 'date_seance' });
-          if (e2) throw e2;
+          await persistObligations(scraped);
         } catch (e) {
           await safeObligationsRunLog({
             started_at: startedAt, finished_at: new Date().toISOString(),
@@ -902,7 +916,10 @@ export default async function handler(req, res) {
         }
         await safeObligationsRunLog({
           started_at: startedAt, finished_at: new Date().toISOString(), status: 'success',
-          result: { date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche },
+          result: {
+            date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche,
+            source: scraped.fallback ? 'bfin' : 'brvm'
+          },
           triggered_by: admin?.id || null
         });
         return json(res, 200, {
@@ -1090,12 +1107,13 @@ export default async function handler(req, res) {
         const obligationsTask = (async () => {
           try {
             const s = await scrapeBrvmObligations();
-            const now = new Date().toISOString();
-            await supabaseAdmin.from('obligations').upsert(s.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
-            await supabaseAdmin.from('obligations_marche').upsert({ ...s.marche, updated_at: now }, { onConflict: 'date_seance' });
+            await persistObligations(s);
             await safeObligationsRunLog({
               started_at: oblStartedAt, finished_at: new Date().toISOString(), status: 'success',
-              result: { date_seance: s.date_seance, lignes: s.rows.length, marche: s.marche, source: 'auto' }
+              result: {
+                date_seance: s.date_seance, lignes: s.rows.length, marche: s.marche, source: 'auto',
+                fallback: Boolean(s.fallback)
+              }
             });
           } catch (e) {
             console.warn('[PROCESS-BRVM] auto obligations non bloquant :', e && e.message);
