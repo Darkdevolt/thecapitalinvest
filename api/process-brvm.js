@@ -526,6 +526,20 @@ async function runEsvSync({ sinceYears, maxPages, categories, downloadDocs }) {
         }
       }
 
+      // La BRVM a déjà publié au moins un avis coupon avec une date ex
+      // postérieure à la date de paiement. Le schéma applique volontairement
+      // une contrainte date_ex <= date_paiement. On conserve la donnée brute
+      // dans raw mais neutralisons uniquement le champ incohérent afin qu'un
+      // avis isolé ne bloque pas toute la synchronisation ESV.
+      const rawRow = { ...row };
+      let datePaiement = row.date_paiement || null;
+      let dateEx = row.date_ex || null;
+      if (datePaiement && dateEx && dateEx > datePaiement) {
+        rawRow.data_quality_warning = 'date_ex_after_date_paiement';
+        rawRow.original_date_ex = dateEx;
+        dateEx = null;
+      }
+
       const fields = {
         categorie: row.categorie,
         emetteur_brvm: row.emetteur || null,
@@ -533,8 +547,8 @@ async function runEsvSync({ sinceYears, maxPages, categories, downloadDocs }) {
         ticker,
         obligation: row.obligation || null,
         exercice: row.exercice ? parseInt(row.exercice, 10) : null,
-        date_paiement: row.date_paiement || null,
-        date_ex: row.date_ex || null,
+        date_paiement: datePaiement,
+        date_ex: dateEx,
         date_evenement: row.date_evenement || null,
         montant_net: row.montant_net ?? null,
         parite: row.parite || null,
@@ -546,7 +560,7 @@ async function runEsvSync({ sinceYears, maxPages, categories, downloadDocs }) {
         avis_stored_url: avisStoredUrl,
         communique_url: row.communique_url || null,
         communique_stored_url: communiqueStoredUrl,
-        raw: row
+        raw: rawRow
       };
 
       const changed = existing
