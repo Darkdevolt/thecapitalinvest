@@ -28,6 +28,7 @@ import { scrapeBrvm } from '../lib/brvm-scraper.js';
 import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
 import { scrapeAnnouncements, CATEGORIES as ANNOUNCEMENT_CATEGORIES } from '../lib/brvm-announcements-scraper.js';
 import { scrapeEsv, CATEGORIES as ESV_CATEGORIES } from '../lib/brvm-esv-scraper.js';
+import { scrapeRapports } from '../lib/brvm-rapports-scraper.js';
 import { listDcbrFiches, fetchDcbrFicheDetails } from '../lib/dcbr-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
@@ -476,6 +477,63 @@ async function safeObligationsRunLog(payload) {
     if (error) throw error;
   } catch (e) {
     console.warn('[PROCESS-BRVM] journal obligations_scrape_runs indisponible :', e?.message || e);
+  }
+}
+
+/* ── Rapports des sociétés cotées (états financiers, rapports d'activités) ──
+   Même stockage que les annonces (documents_emetteurs + bucket), avec en plus
+   la période couverte (exercice, periode) pour savoir quels comptes publiés
+   ne sont pas encore chiffrés dans `financials` (veille Telegram). Bornée par
+   `limit` et par un budget de temps : chaque passage reprend là où le
+   précédent s'est arrêté (source_url unique), rien n'est dupliqué. */
+const RAPPORTS_TIME_BUDGET_MS = 40000;
+
+async function runRapportsSync({ sinceYears, limit, maxPages }) {
+  const started = Date.now();
+  const { rows, errors: scrapeErrors } = await scrapeRapports({ sinceYears, maxPages });
+  const known = await existingSourceUrls(rows.map(r => r.source_url));
+  // Les plus récents d'abord : un nouveau rapport passe avant l'historique.
+  const fresh = rows.filter(r => !known.has(r.source_url))
+    .sort((a, b) => String(b.date_publication || '').localeCompare(String(a.date_publication || '')));
+  const batch = fresh.slice(0, limit);
+
+  let imported = 0;
+  const writeErrors = [];
+  const importedDocs = [];
+  let next = 0;
+  async function worker() {
+    while (next < batch.length && Date.now() - started < RAPPORTS_TIME_BUDGET_MS) {
+      const row = batch[next++];
+      try {
+        const stored = await downloadAndStoreAnnouncement(row);
+        const { error } = await supabaseAdmin.from('documents_emetteurs').upsert({
+          ticker: row.ticker, societe_nom: row.societe_nom, categorie: row.categorie, titre: row.titre,
+          date_publication: row.date_publication, source_url: row.source_url,
+          exercice: row.annee || null, periode: row.periode || null, ...stored
+        }, { onConflict: 'source_url', ignoreDuplicates: true });
+        if (error) throw error;
+        imported++;
+        importedDocs.push({ ticker: row.ticker, titre: row.titre, periode: row.periode, exercice: row.annee });
+      } catch (error) {
+        writeErrors.push({ source_url: row.source_url, error: String(error?.message || error) });
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: 4 }, worker));
+
+  return {
+    found: rows.length, already_stored: rows.length - fresh.length, imported,
+    remaining: Math.max(0, fresh.length - imported), has_more: fresh.length > imported,
+    imported_docs: importedDocs.slice(0, 30), scrape_errors: scrapeErrors, write_errors: writeErrors
+  };
+}
+
+async function safeRapportsRunLog(payload) {
+  try {
+    const { error } = await supabaseAdmin.from('rapports_scrape_runs').insert(payload);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[PROCESS-BRVM] journal rapports_scrape_runs indisponible :', e?.message || e);
   }
 }
 
@@ -995,6 +1053,36 @@ export default async function handler(req, res) {
             status: 'error', error: String(error?.message || error), triggered_by: admin?.id || null
           });
           return json(res, 502, { success: false, error: 'Récupération des annonces impossible.', code: 'ANNOUNCEMENTS_SCRAPE_ERROR' });
+        }
+      }
+
+      // Rapports des sociétés cotées : POST { scope:'rapports', sinceYears?,
+      // limit?, maxPages? } (admin ou machine — pg_cron quotidien). Archive
+      // les états financiers et rapports d'activités publiés sur brvm.org.
+      if (body && body.scope === 'rapports') {
+        const startedAt = new Date().toISOString();
+        try {
+          const result = await runRapportsSync({
+            sinceYears: Math.min(10, Number(body.sinceYears) || 2),
+            limit: Math.min(60, Number(body.limit) || 20),
+            maxPages: Math.min(12, Number(body.maxPages) || (machine ? 3 : 12))
+          });
+          await safeRapportsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: result.write_errors.length || result.scrape_errors.length ? 'partial' : 'success',
+            error: result.write_errors.length || result.scrape_errors.length
+              ? `${result.write_errors.length} document(s) non enregistré(s), ${result.scrape_errors.length} émetteur(s) illisible(s)`
+              : null,
+            result, triggered_by: admin?.id || null
+          });
+          return json(res, 200, { success: true, scope: 'rapports', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] rapports', error);
+          await safeRapportsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: 'error', error: String(error?.message || error), triggered_by: admin?.id || null
+          });
+          return json(res, 502, { success: false, error: 'Récupération des rapports impossible.', code: 'RAPPORTS_SCRAPE_ERROR' });
         }
       }
 
