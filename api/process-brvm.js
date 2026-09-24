@@ -341,7 +341,9 @@ async function existingSourceUrls(urls) {
 }
 
 async function downloadAndStoreAnnouncement(row) {
-  const response = await fetch(row.source_url, { headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' } });
+  const response = await fetch(row.source_url, {
+    headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' }, signal: AbortSignal.timeout(15000)
+  });
   if (!response.ok) throw new Error(`PDF HTTP ${response.status}`);
   const buffer = Buffer.from(await response.arrayBuffer());
   const filename = annSafeName(basenameOf(row.source_url));
@@ -499,11 +501,18 @@ async function safeObligationsRunLog(payload) {
    ne sont pas encore chiffrés dans `financials` (veille Telegram). Bornée par
    `limit` et par un budget de temps : chaque passage reprend là où le
    précédent s'est arrêté (source_url unique), rien n'est dupliqué. */
-const RAPPORTS_TIME_BUDGET_MS = 40000;
+const RAPPORTS_TIME_BUDGET_MS = 38000;
+// Lecture des listes d'émetteurs bornée à 22 s ; le point de départ tourne
+// toutes les 10 min pour que des passages successifs couvrent tout le monde.
+const RAPPORTS_SCRAPE_BUDGET_MS = 22000;
 
 async function runRapportsSync({ sinceYears, limit, maxPages }) {
   const started = Date.now();
-  const { rows, errors: scrapeErrors } = await scrapeRapports({ sinceYears, maxPages });
+  const { rows, errors: scrapeErrors, skipped } = await scrapeRapports({
+    sinceYears, maxPages, concurrency: 6,
+    deadline: started + RAPPORTS_SCRAPE_BUDGET_MS,
+    startOffset: Math.floor(started / 600000) * 6
+  });
   const known = await existingSourceUrls(rows.map(r => r.source_url));
   // Les plus récents d'abord : un nouveau rapport passe avant l'historique.
   const fresh = rows.filter(r => !known.has(r.source_url))
@@ -537,7 +546,8 @@ async function runRapportsSync({ sinceYears, limit, maxPages }) {
   return {
     found: rows.length, already_stored: rows.length - fresh.length, imported,
     remaining: Math.max(0, fresh.length - imported), has_more: fresh.length > imported,
-    imported_docs: importedDocs.slice(0, 30), scrape_errors: scrapeErrors, write_errors: writeErrors
+    imported_docs: importedDocs.slice(0, 30), scrape_errors: scrapeErrors, write_errors: writeErrors,
+    emetteurs_reportes: skipped.length
   };
 }
 
