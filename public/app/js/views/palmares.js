@@ -58,20 +58,25 @@
     if (histIndex) return Promise.resolve(histIndex);
     if (typeof window.apiGet !== 'function') { histIndex = {}; return Promise.resolve(histIndex); }
     var since = new Date(Date.now() - 400 * 24 * 3600 * 1000).toISOString().slice(0, 10);
-    var all = [];
-    var page = function (offset) {
+    var fetchPage = function (offset) {
       return window.apiGet('/marche?type=historique&limit=1000&offset=' + offset + '&date_from=' + since, { cache: 'no-store' })
-        .then(function (rows) {
-          var arr = Array.isArray(rows) ? rows : (rows && rows.data) || [];
-          all = all.concat(arr);
-          // 400 jours représentent environ 13 000 lignes tous titres confondus
-          // (constaté : ~270 séances × 47 valeurs) ; la marge évite de tronquer
-          // silencieusement l'historique le plus ancien dont « 3 mois » a besoin.
-          if (arr.length === 1000 && offset < 15000) return page(offset + 1000);
-          return all;
-        });
+        .then(function (rows) { return Array.isArray(rows) ? rows : (rows && rows.data) || []; });
     };
-    return page(0).then(function (rows) {
+    // 400 jours représentent environ 13 000 lignes tous titres confondus
+    // (constaté : ~270 séances × 47 valeurs). La première page dit s'il y a
+    // une suite ; les pages suivantes partent alors en parallèle (au lieu de
+    // 14 allers-retours l'un après l'autre, soit 10 à 20 s d'attente).
+    var page = function () {
+      return fetchPage(0).then(function (first) {
+        if (first.length < 1000) return first;
+        var offsets = [];
+        for (var o = 1000; o <= 15000; o += 1000) offsets.push(o);
+        return Promise.all(offsets.map(fetchPage)).then(function (pages) {
+          return pages.reduce(function (acc, p) { return acc.concat(p); }, first);
+        });
+      });
+    };
+    return page().then(function (rows) {
       histIndex = buildIndexFrom(rows);
       return histIndex;
     }).catch(function () { histIndex = {}; return histIndex; });

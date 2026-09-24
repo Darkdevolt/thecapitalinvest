@@ -189,6 +189,42 @@
 
   function renderSectorHeatmap(){const bySector={},byTicker={};(window.allCours||[]).forEach(c=>{if(c?.ticker&&!byTicker[c.ticker])byTicker[c.ticker]=c;});Object.values(byTicker).forEach(c=>{const sector=getSector(c.ticker)||'Autre';if(!bySector[sector])bySector[sector]={total:0,count:0};const v=parseFloat(c.variation)||0;bySector[sector].total+=v;bySector[sector].count++;});const container=document.getElementById('sectorHeatmap');if(!container)return;const sectors=Object.entries(bySector).map(([name,data])=>({name,avg:data.total/data.count,count:data.count})).sort((a,b)=>Math.abs(b.avg)-Math.abs(a.avg));if(!sectors.length){container.innerHTML='<div class="empty-state">Aucune donnée sectorielle</div>';return;}container.innerHTML=sectors.map(s=>{const cls=s.avg>0?'heatmap-up':s.avg<0?'heatmap-down':'heatmap-neutral',color=s.avg>0?'var(--green)':s.avg<0?'var(--red)':'var(--dim)';return `<div class="heatmap-cell ${cls}" style="border-left-color:${color}"><div class="hm-name">${escapeHtml(s.name)}</div><div class="hm-value" style="color:${color}">${s.avg>0?'+':''}${s.avg.toFixed(2)}%</div><div class="hm-count">${s.count} titre${s.count>1?'s':''}</div></div>`;}).join('');}
 
+  // ─── ACTUALITÉS ───
+  // Fil unique : publications des émetteurs (états financiers, rapports,
+  // communiqués, AG…), évènements sur valeurs (dividendes, coupons, OST) et
+  // recommandations. Les deux premières sources sont chargées à la demande
+  // (/api/marche) puis gardées en mémoire ; un élément paru depuis la
+  // dernière visite (localStorage) porte le badge « Nouveau ».
+  const NEWS_SEEN_KEY='tc_news_last_seen';
+  const NEWS_LABELS={convocation_ag:'Assemblée générale',projet_resolution:'Résolutions AG',notation_financiere:'Notation',communique:'Communiqué',changement_dirigeants:'Dirigeants',franchissement_seuil:'Franchissement de seuil',etats_financiers:'États financiers',rapport_activites:"Rapport d'activités",dividende:'Dividende',coupon:'Coupon',augmentation_capital:'Augmentation de capital',reduction_capital:'Réduction de capital',fractionnement:'Fractionnement',consolidation:'Regroupement',fusion_absorption:'Fusion',radiation:'Radiation'};
+  let _newsCache=null,_newsLoading=null;
+  function newsLastSeen(){try{return localStorage.getItem(NEWS_SEEN_KEY)||'';}catch(e){return '';}}
+  function loadNewsSources(){
+    if(_newsCache)return Promise.resolve(_newsCache);
+    if(_newsLoading)return _newsLoading;
+    const get=q=>typeof window.apiGet==='function'?window.apiGet('/marche?'+q,{cache:'no-store'}).then(r=>Array.isArray(r)?r:(r&&r.data)||[]).catch(()=>[]):Promise.resolve([]);
+    _newsLoading=Promise.all([get('type=documents_emetteurs&limit=40'),get('type=evenements_valeurs&limit=60')]).then(([docs,evs])=>{_newsCache={docs,evs};_newsLoading=null;return _newsCache;});
+    return _newsLoading;
+  }
+  function buildNewsItems(src){
+    const items=[];
+    (src.docs||[]).forEach(d=>{
+      const titre=String(d.titre||'').replace(/^[^:]{2,60}:\s*/,'');
+      items.push({kind:'doc',date:String(d.date_publication||d.created_at||'').slice(0,10),stamp:String(d.created_at||d.date_publication||''),ticker:d.ticker||'',badge:NEWS_LABELS[d.categorie]||'Publication',badgeClass:'news',title:(d.ticker?'':((d.societe_nom||'')+' · '))+(titre||'Publication émetteur'),url:d.fichier_url||d.source_url||''});
+    });
+    // Les coupons d'obligations (surtout souveraines) noieraient le fil : ils restent dans « Évènements sur valeurs ».
+    (src.evs||[]).filter(e=>e.categorie!=='coupon').forEach(e=>{
+      const who=e.ticker||e.obligation||e.emetteur_brvm||'';
+      let title=(NEWS_LABELS[e.categorie]||'Évènement')+' '+who;
+      if(e.montant_net!=null)title+=' : '+fmt(e.montant_net)+' FCFA net';
+      if(e.date_paiement)title+=', payé le '+fmtDate(e.date_paiement);
+      items.push({kind:'esv',date:String(e.first_seen_at||e.created_at||e.date_evenement||'').slice(0,10),stamp:String(e.first_seen_at||e.created_at||''),ticker:e.ticker||'',badge:NEWS_LABELS[e.categorie]||'Évènement',badgeClass:e.categorie==='dividende'?'acheter':'news',title,url:e.avis_stored_url||e.avis_url||''});
+    });
+    (window.allAnalyses||[]).forEach(a=>{
+      items.push({kind:'analyse',date:String(a.date_analyse||'').slice(0,10),stamp:String(a.created_at||a.date_analyse||''),ticker:a.ticker||'',badge:a.recommandation||'Analyse',badgeClass:String(a.recommandation||'news').toLowerCase(),title:(a.titre||'Analyse')+(a.objectif?' · objectif '+fmt(a.objectif)+' FCFA':''),url:''});
+    });
+    return items.filter(x=>x.date).sort((a,b)=>b.date.localeCompare(a.date)||b.stamp.localeCompare(a.stamp));
+  }
   function renderNewsFeed(){
     let container=document.getElementById('newsFeed');
     if(!container){
@@ -197,14 +233,30 @@
       const section=document.createElement('section');
       section.className='dashboard-news card';
       section.setAttribute('aria-label','Dernières actualités');
-      section.innerHTML='<div class="dashboard-news-head"><div><div class="eyebrow">ACTUALITÉS MARCHÉ</div><div class="card-title">Dernières actualités</div></div><button type="button" class="news-refresh" onclick="renderNewsFeed()">Actualiser</button></div><div id="newsFeed" class="dashboard-news-grid"><div class="news-skeleton"></div><div class="news-skeleton"></div><div class="news-skeleton"></div></div>';
+      section.innerHTML='<div class="dashboard-news-head"><div><div class="eyebrow">ACTUALITÉS MARCHÉ</div><div class="card-title">Dernières actualités <span id="newsUnread" class="badge acheter" style="display:none;margin-left:8px"></span></div></div><button type="button" class="news-refresh" onclick="window.refreshNewsFeed()">Actualiser</button></div><div id="newsFeed" class="dashboard-news-grid"><div class="news-skeleton"></div><div class="news-skeleton"></div><div class="news-skeleton"></div></div>';
       stats.parentElement.insertBefore(section,stats);
       container=section.querySelector('#newsFeed');
     }
-    const recent=(window.allAnalyses||[]).slice().sort((a,b)=>new Date(b.date_analyse||0)-new Date(a.date_analyse||0)).slice(0,3);
-    if(!recent.length){container.innerHTML='<div class="empty-state">Aucune actualité disponible pour le moment</div>';return;}
-    container.innerHTML=recent.map(a=>{const badgeClass=(a.recommandation||'news').toLowerCase(),badgeText=a.recommandation||'NEWS',ticker=a.ticker||'';return `<article class="news-item" ${ticker?`onclick="openFiche('${escapeHtml(ticker)}')"`:''}><span class="badge ${escapeHtml(badgeClass)}">${escapeHtml(badgeText)}</span><div class="news-title">${escapeHtml(a.titre||'Actualité marché')}</div><div class="news-meta">${escapeHtml(ticker||'Marché BRVM')} • ${fmtDate(a.date_analyse)}${a.objectif?` • Objectif ${fmt(a.objectif)} FCFA`:''}</div></article>`;}).join('');
+    loadNewsSources().then(src=>{
+      const el=document.getElementById('newsFeed');if(!el)return;
+      const items=buildNewsItems(src),seen=newsLastSeen();
+      const recent=items.slice(0,6);
+      if(!recent.length){el.innerHTML='<div class="empty-state">Aucune actualité disponible pour le moment</div>';return;}
+      const isNew=x=>seen?x.stamp>seen:false;
+      const unread=items.filter(isNew).length;
+      const badge=document.getElementById('newsUnread');
+      if(badge){badge.style.display=unread?'':'none';badge.textContent=unread+(unread>1?' nouvelles':' nouvelle');}
+      el.innerHTML=recent.map((x,i)=>{
+        const click=x.url?`onclick="window.open('${escapeHtml(x.url)}','_blank','noopener')"`:(x.ticker?`onclick="openFiche('${escapeHtml(x.ticker)}')"`:'');
+        return `<article class="news-item" ${click} style="cursor:${click?'pointer':'default'}"><span class="badge ${escapeHtml(x.badgeClass)}">${escapeHtml(x.badge)}</span>${isNew(x)?' <span class="badge acheter">Nouveau</span>':''}<div class="news-title">${escapeHtml(x.title)}</div><div class="news-meta">${escapeHtml(x.ticker||'Marché BRVM')} • ${fmtDate(x.date)}</div></article>`;
+      }).join('');
+      // Mémorise la visite : les éléments vus ne seront plus « nouveaux » la prochaine fois.
+      const newest=items.reduce((m,x)=>x.stamp>m?x.stamp:m,'');
+      try{if(newest)localStorage.setItem(NEWS_SEEN_KEY,newest);}catch(e){}
+    });
   }
+  window.refreshNewsFeed=function(){_newsCache=null;renderNewsFeed();};
+  window.renderNewsFeed=renderNewsFeed;
 
   // ─── TOP MOVERS ───
   function renderMoversControls(){

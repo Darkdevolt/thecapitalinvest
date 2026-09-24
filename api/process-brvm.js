@@ -24,7 +24,7 @@
  */
 import { createHash } from 'crypto';
 import { supabaseAdmin } from '../lib/supabase.js';
-import { scrapeBrvm } from '../lib/brvm-scraper.js';
+import { scrapeBrvm, fetchHtml } from '../lib/brvm-scraper.js';
 import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
 import { scrapeAnnouncements, CATEGORIES as ANNOUNCEMENT_CATEGORIES } from '../lib/brvm-announcements-scraper.js';
 import { scrapeEsv, CATEGORIES as ESV_CATEGORIES } from '../lib/brvm-esv-scraper.js';
@@ -535,6 +535,56 @@ async function safeRapportsRunLog(payload) {
   } catch (e) {
     console.warn('[PROCESS-BRVM] journal rapports_scrape_runs indisponible :', e?.message || e);
   }
+}
+
+/* ── Bulletins Officiels de la Cote (BOC) ──
+   La BRVM publie chaque séance boc_AAAAMMJJ_N.pdf sur
+   brvm.org/fr/bulletins-officiels-de-la-cote. On copie dans le bucket
+   boc_pdfs (même emplacement que l'import manuel de l'admin) chaque
+   bulletin absent de la table boc ; une séance déjà enregistrée n'est
+   jamais remplacée. */
+const BOC_LIST_URL = 'https://www.brvm.org/fr/bulletins-officiels-de-la-cote';
+const BOC_BUCKET = 'boc_pdfs';
+
+async function runBocSync({ limit }) {
+  const html = await fetchHtml(BOC_LIST_URL, { timeoutMs: 25000 });
+  const seen = new Map();
+  for (const m of html.matchAll(/href="([^"]*\/boc_(20\d{2})(\d{2})(\d{2})_(\d+)\.pdf)"/gi)) {
+    const date = `${m[2]}-${m[3]}-${m[4]}`;
+    const url = m[1].startsWith('http') ? m[1] : 'https://www.brvm.org' + m[1];
+    // Plusieurs versions d'un même jour : la plus haute (dernier rectificatif) l'emporte.
+    const prev = seen.get(date);
+    if (!prev || Number(m[5]) > prev.n) seen.set(date, { url, n: Number(m[5]) });
+  }
+  const dates = [...seen.keys()].sort().reverse();
+  if (!dates.length) return { found: 0, imported: 0, errors: [] };
+  const { data: known, error } = await supabaseAdmin.from('boc').select('date_seance').in('date_seance', dates);
+  if (error) throw error;
+  const have = new Set((known || []).map(r => String(r.date_seance).slice(0, 10)));
+  const todo = dates.filter(d => !have.has(d)).slice(0, limit);
+  const errors = [];
+  let imported = 0;
+  for (const date of todo) {
+    const { url } = seen.get(date);
+    try {
+      const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' } });
+      if (!resp.ok) throw new Error(`PDF HTTP ${resp.status}`);
+      const buffer = Buffer.from(await resp.arrayBuffer());
+      const filename = annSafeName(basenameOf(url));
+      const path = `${date}/${Date.now()}_${filename}`;
+      const { error: upErr } = await supabaseAdmin.storage.from(BOC_BUCKET).upload(path, buffer, { contentType: 'application/pdf', upsert: false });
+      if (upErr) throw upErr;
+      const { error: insErr } = await supabaseAdmin.from('boc').insert({
+        date_seance: date, fichier_nom: filename,
+        fichier_url: `${appConfig.supabaseUrl}/storage/v1/object/public/${BOC_BUCKET}/${path}`
+      });
+      if (insErr) throw insErr;
+      imported++;
+    } catch (e) {
+      errors.push({ date, error: String(e?.message || e) });
+    }
+  }
+  return { found: dates.length, already_stored: have.size, imported, errors };
 }
 
 async function safeAnnouncementsRunLog(payload) {
@@ -1053,6 +1103,17 @@ export default async function handler(req, res) {
             status: 'error', error: String(error?.message || error), triggered_by: admin?.id || null
           });
           return json(res, 502, { success: false, error: 'Récupération des annonces impossible.', code: 'ANNOUNCEMENTS_SCRAPE_ERROR' });
+        }
+      }
+
+      // BOC : POST { scope:'boc', limit? } (admin ou machine — pg_cron quotidien).
+      if (body && body.scope === 'boc') {
+        try {
+          const result = await runBocSync({ limit: Math.min(30, Number(body.limit) || 10) });
+          return json(res, 200, { success: true, scope: 'boc', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] boc', error);
+          return json(res, 502, { success: false, error: 'Récupération des BOC impossible.', code: 'BOC_SYNC_ERROR' });
         }
       }
 

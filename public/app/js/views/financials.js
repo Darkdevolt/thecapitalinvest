@@ -316,7 +316,10 @@ function filterFin() {
 
 function renderFinancialTicker(ticker, fins) {
   const latest = fins[0];
-  const prev = fins[1];
+  // Comparaison à la même période de l'exercice précédent (T1 vs T1, S1 vs S1,
+  // annuel vs annuel) : comparer un trimestre à l'exercice complet précédent
+  // affichait de fausses chutes de -75 %.
+  const prev = finPreviousPeriod(fins, latest);
   const ent = (Array.isArray(allEntreprises) ? allEntreprises : []).find(e => String(e?.ticker||'').toUpperCase()===ticker) || {};
   const company = finEsc(ent.nom || ent.raison_sociale || ticker);
   const rn = Number(latest?.resultat_net);
@@ -333,8 +336,8 @@ function renderFinancialTicker(ticker, fins) {
       <div class="fin-company-status">${financialValidationBadge(latest)}<span class="fin-open">Voir l'analyse →</span></div>
     </div>
     <div class="fin-key-grid">
-      ${finMetric(finCa(ticker), finValue(latest.chiffre_affaires), `Exercice ${finEsc(latest.annee)}`)}
-      ${finMetric('Résultat net', finValue(latest.resultat_net), growth === null ? confidence : `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% vs exercice précédent`)}
+      ${finMetric(finCa(ticker), finValue(latest.chiffre_affaires), `${annual ? 'Exercice' : period} ${finEsc(latest.annee)}`)}
+      ${finMetric('Résultat net', finValue(latest.resultat_net), growth === null ? confidence : `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% vs ${annual ? 'exercice' : period} ${finEsc(prev.annee)}`)}
       <div class="pro-only">${finMetric('BPA', latest.bpa != null ? `${fmt(latest.bpa)} FCFA` : '—', 'Bénéfice par action')}</div>
       ${finMetric('Marge nette', finRatio(latest.resultat_net, latest.chiffre_affaires), `Résultat net / ${finCa(ticker, 'court')}`)}
       ${finMetric('Dividende par action', latest.dpa != null ? `${fmt(latest.dpa)} FCFA` : '—', 'DPA disponible en base')}
