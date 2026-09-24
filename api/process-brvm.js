@@ -320,11 +320,24 @@ function basenameOf(url) {
   catch { return 'document.pdf'; }
 }
 
+/* Lecture par paquets d'un filtre in.(...) : des centaines de valeurs dans
+   une seule requête dépassent la longueur d'URL admise par l'API Supabase
+   (« Bad Request »), constaté au premier passage du scope 'rapports' le
+   2026-09-24. */
+async function selectIn(table, columns, column, values, size = 40) {
+  const unique = [...new Set(values.filter(v => v != null))];
+  const out = [];
+  for (let i = 0; i < unique.length; i += size) {
+    const { data, error } = await supabaseAdmin.from(table).select(columns).in(column, unique.slice(i, i + size));
+    if (error) throw error;
+    out.push(...(data || []));
+  }
+  return out;
+}
+
 async function existingSourceUrls(urls) {
-  if (!urls.length) return new Set();
-  const { data, error } = await supabaseAdmin.from('documents_emetteurs').select('source_url').in('source_url', urls);
-  if (error) throw error;
-  return new Set((data || []).map(r => r.source_url));
+  const rows = await selectIn('documents_emetteurs', 'source_url', 'source_url', urls);
+  return new Set(rows.map(r => r.source_url));
 }
 
 async function downloadAndStoreAnnouncement(row) {
@@ -614,9 +627,7 @@ async function runEsvSync({ sinceYears, maxPages, categories, downloadDocs }) {
   const keyed = rows.map(row => ({ ...row, natural_key: esvNaturalKey(row) }));
   const uniqueRows = [...new Map(keyed.map(row => [row.natural_key, row])).values()];
 
-  const { data: existingRows, error: existingError } = await supabaseAdmin
-    .from('evenements_valeurs').select('*').in('natural_key', uniqueRows.map(r => r.natural_key));
-  if (existingError) throw existingError;
+  const existingRows = await selectIn('evenements_valeurs', '*', 'natural_key', uniqueRows.map(r => r.natural_key));
   const existingByKey = new Map((existingRows || []).map(r => [r.natural_key, r]));
 
   let created = 0, updated = 0, unchanged = 0;
@@ -793,10 +804,8 @@ async function runDcbrSync({ categories, maxPages, limit }) {
     hasMoreListing[categorie] = listing.hasMore;
     totalFound += listing.links.length;
 
-    const { data: known, error: knownError } = await supabaseAdmin
-      .from('obligations_caracteristiques').select('source_url').in('source_url', listing.links.map(l => l.url));
-    if (knownError) throw knownError;
-    const knownUrls = new Set((known || []).map(r => r.source_url));
+    const known = await selectIn('obligations_caracteristiques', 'source_url', 'source_url', listing.links.map(l => l.url));
+    const knownUrls = new Set(known.map(r => r.source_url));
     const fresh = listing.links.filter(l => !knownUrls.has(l.url));
     alreadyStored += listing.links.length - fresh.length;
     freshByCategorie[categorie] = fresh;
