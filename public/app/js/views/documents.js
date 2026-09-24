@@ -15,7 +15,9 @@
     { value: 'notation_financiere', label: 'Notations financières' },
     { value: 'communique', label: 'Communiqués' },
     { value: 'changement_dirigeants', label: 'Changements de dirigeants' },
-    { value: 'franchissement_seuil', label: 'Franchissements de seuil' }
+    { value: 'franchissement_seuil', label: 'Franchissements de seuil' },
+    { value: 'etats_financiers', label: 'États financiers' },
+    { value: 'rapport_activites', label: "Rapports d'activités" }
   ];
   var labelOf = function (c) { var m = CATEGORIES.filter(function (x) { return x.value === c; })[0]; return m ? m.label : c; };
 

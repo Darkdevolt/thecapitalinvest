@@ -24,10 +24,11 @@
  */
 import { createHash } from 'crypto';
 import { supabaseAdmin } from '../lib/supabase.js';
-import { scrapeBrvm } from '../lib/brvm-scraper.js';
+import { scrapeBrvm, fetchHtml } from '../lib/brvm-scraper.js';
 import { scrapeBrvmObligations } from '../lib/brvm-obligations-scraper.js';
 import { scrapeAnnouncements, CATEGORIES as ANNOUNCEMENT_CATEGORIES } from '../lib/brvm-announcements-scraper.js';
 import { scrapeEsv, CATEGORIES as ESV_CATEGORIES } from '../lib/brvm-esv-scraper.js';
+import { scrapeRapports } from '../lib/brvm-rapports-scraper.js';
 import { listDcbrFiches, fetchDcbrFicheDetails } from '../lib/dcbr-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
@@ -451,6 +452,25 @@ async function safeDcbrRunLog(payload) {
   }
 }
 
+/**
+ * Écrit une extraction obligataire. Les erreurs d'upsert sont remontées (un
+ * passage n'est journalisé « success » que si les données sont réellement
+ * écrites). En repli BFIN, `obligations_marche` n'est pas touché : cette
+ * source ne donne ni valeur des transactions ni capitalisations, et un upsert
+ * de null écraserait les agrégats déjà connus pour la séance.
+ */
+async function persistObligations(scraped) {
+  const now = new Date().toISOString();
+  const { error: e1 } = await supabaseAdmin.from('obligations')
+    .upsert(scraped.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
+  if (e1) throw e1;
+  if (!scraped.fallback) {
+    const { error: e2 } = await supabaseAdmin.from('obligations_marche')
+      .upsert({ ...scraped.marche, updated_at: now }, { onConflict: 'date_seance' });
+    if (e2) throw e2;
+  }
+}
+
 async function safeObligationsRunLog(payload) {
   try {
     const { error } = await supabaseAdmin.from('obligations_scrape_runs').insert(payload);
@@ -458,6 +478,113 @@ async function safeObligationsRunLog(payload) {
   } catch (e) {
     console.warn('[PROCESS-BRVM] journal obligations_scrape_runs indisponible :', e?.message || e);
   }
+}
+
+/* ── Rapports des sociétés cotées (états financiers, rapports d'activités) ──
+   Même stockage que les annonces (documents_emetteurs + bucket), avec en plus
+   la période couverte (exercice, periode) pour savoir quels comptes publiés
+   ne sont pas encore chiffrés dans `financials` (veille Telegram). Bornée par
+   `limit` et par un budget de temps : chaque passage reprend là où le
+   précédent s'est arrêté (source_url unique), rien n'est dupliqué. */
+const RAPPORTS_TIME_BUDGET_MS = 40000;
+
+async function runRapportsSync({ sinceYears, limit, maxPages }) {
+  const started = Date.now();
+  const { rows, errors: scrapeErrors } = await scrapeRapports({ sinceYears, maxPages });
+  const known = await existingSourceUrls(rows.map(r => r.source_url));
+  // Les plus récents d'abord : un nouveau rapport passe avant l'historique.
+  const fresh = rows.filter(r => !known.has(r.source_url))
+    .sort((a, b) => String(b.date_publication || '').localeCompare(String(a.date_publication || '')));
+  const batch = fresh.slice(0, limit);
+
+  let imported = 0;
+  const writeErrors = [];
+  const importedDocs = [];
+  let next = 0;
+  async function worker() {
+    while (next < batch.length && Date.now() - started < RAPPORTS_TIME_BUDGET_MS) {
+      const row = batch[next++];
+      try {
+        const stored = await downloadAndStoreAnnouncement(row);
+        const { error } = await supabaseAdmin.from('documents_emetteurs').upsert({
+          ticker: row.ticker, societe_nom: row.societe_nom, categorie: row.categorie, titre: row.titre,
+          date_publication: row.date_publication, source_url: row.source_url,
+          exercice: row.annee || null, periode: row.periode || null, ...stored
+        }, { onConflict: 'source_url', ignoreDuplicates: true });
+        if (error) throw error;
+        imported++;
+        importedDocs.push({ ticker: row.ticker, titre: row.titre, periode: row.periode, exercice: row.annee });
+      } catch (error) {
+        writeErrors.push({ source_url: row.source_url, error: String(error?.message || error) });
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: 4 }, worker));
+
+  return {
+    found: rows.length, already_stored: rows.length - fresh.length, imported,
+    remaining: Math.max(0, fresh.length - imported), has_more: fresh.length > imported,
+    imported_docs: importedDocs.slice(0, 30), scrape_errors: scrapeErrors, write_errors: writeErrors
+  };
+}
+
+async function safeRapportsRunLog(payload) {
+  try {
+    const { error } = await supabaseAdmin.from('rapports_scrape_runs').insert(payload);
+    if (error) throw error;
+  } catch (e) {
+    console.warn('[PROCESS-BRVM] journal rapports_scrape_runs indisponible :', e?.message || e);
+  }
+}
+
+/* ── Bulletins Officiels de la Cote (BOC) ──
+   La BRVM publie chaque séance boc_AAAAMMJJ_N.pdf sur
+   brvm.org/fr/bulletins-officiels-de-la-cote. On copie dans le bucket
+   boc_pdfs (même emplacement que l'import manuel de l'admin) chaque
+   bulletin absent de la table boc ; une séance déjà enregistrée n'est
+   jamais remplacée. */
+const BOC_LIST_URL = 'https://www.brvm.org/fr/bulletins-officiels-de-la-cote';
+const BOC_BUCKET = 'boc_pdfs';
+
+async function runBocSync({ limit }) {
+  const html = await fetchHtml(BOC_LIST_URL, { timeoutMs: 25000 });
+  const seen = new Map();
+  for (const m of html.matchAll(/href="([^"]*\/boc_(20\d{2})(\d{2})(\d{2})_(\d+)\.pdf)"/gi)) {
+    const date = `${m[2]}-${m[3]}-${m[4]}`;
+    const url = m[1].startsWith('http') ? m[1] : 'https://www.brvm.org' + m[1];
+    // Plusieurs versions d'un même jour : la plus haute (dernier rectificatif) l'emporte.
+    const prev = seen.get(date);
+    if (!prev || Number(m[5]) > prev.n) seen.set(date, { url, n: Number(m[5]) });
+  }
+  const dates = [...seen.keys()].sort().reverse();
+  if (!dates.length) return { found: 0, imported: 0, errors: [] };
+  const { data: known, error } = await supabaseAdmin.from('boc').select('date_seance').in('date_seance', dates);
+  if (error) throw error;
+  const have = new Set((known || []).map(r => String(r.date_seance).slice(0, 10)));
+  const todo = dates.filter(d => !have.has(d)).slice(0, limit);
+  const errors = [];
+  let imported = 0;
+  for (const date of todo) {
+    const { url } = seen.get(date);
+    try {
+      const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' } });
+      if (!resp.ok) throw new Error(`PDF HTTP ${resp.status}`);
+      const buffer = Buffer.from(await resp.arrayBuffer());
+      const filename = annSafeName(basenameOf(url));
+      const path = `${date}/${Date.now()}_${filename}`;
+      const { error: upErr } = await supabaseAdmin.storage.from(BOC_BUCKET).upload(path, buffer, { contentType: 'application/pdf', upsert: false });
+      if (upErr) throw upErr;
+      const { error: insErr } = await supabaseAdmin.from('boc').insert({
+        date_seance: date, fichier_nom: filename,
+        fichier_url: `${appConfig.supabaseUrl}/storage/v1/object/public/${BOC_BUCKET}/${path}`
+      });
+      if (insErr) throw insErr;
+      imported++;
+    } catch (e) {
+      errors.push({ date, error: String(e?.message || e) });
+    }
+  }
+  return { found: dates.length, already_stored: have.size, imported, errors };
 }
 
 async function safeAnnouncementsRunLog(payload) {
@@ -802,7 +929,20 @@ async function runPipeline(res, mode) {
       mapping, date_seance: payload.date_seance
     });
   }
-  if (mapping.ambiguous.length || mapping.unmatched.length) {
+  /* Un titre inconnu du référentiel (typiquement une nouvelle introduction en
+     bourse : BBGC le 2026-09-24) bloquait toute la séance, en silence — le
+     retour 422 n'était pas journalisé, donc aucune alerte Telegram. Désormais
+     les titres reconnus sont publiés et les inconnus sont signalés (voir
+     result.mapping.unmatched, relu par le déclencheur d'alerte). Seul un
+     rapprochement ambigu, qui risquerait d'écrire un cours sur le mauvais
+     titre, reste bloquant — et il est journalisé. */
+  if (mapping.ambiguous.length) {
+    await safeRunLog({
+      started_at: startedAt, finished_at: new Date().toISOString(),
+      status: 'blocked_mapping',
+      result: { date_seance: payload.date_seance, mapping },
+      error: 'Rapprochement ambigu : ' + mapping.ambiguous.map(a => a.source_ticker || a.source_name).join(', ')
+    });
     return json(res, 422, {
       success: false, blocked: true, reason: 'INSTRUMENT_MAPPING_REVIEW_REQUIRED',
       date_seance: payload.date_seance, mapping, matched_rows: rows.length
@@ -883,14 +1023,9 @@ export default async function handler(req, res) {
           });
           return json(res, 502, { success: false, error: 'Source BRVM obligations illisible.', code: 'BRVM_SOURCE_ERROR' });
         }
-        const now = new Date().toISOString();
-        const rows = scraped.rows.map(r => ({ ...r, updated_at: now }));
+        const rows = scraped.rows;
         try {
-          const { error: e1 } = await supabaseAdmin.from('obligations').upsert(rows, { onConflict: 'code' });
-          if (e1) throw e1;
-          const { error: e2 } = await supabaseAdmin
-            .from('obligations_marche').upsert({ ...scraped.marche, updated_at: now }, { onConflict: 'date_seance' });
-          if (e2) throw e2;
+          await persistObligations(scraped);
         } catch (e) {
           await safeObligationsRunLog({
             started_at: startedAt, finished_at: new Date().toISOString(),
@@ -902,7 +1037,10 @@ export default async function handler(req, res) {
         }
         await safeObligationsRunLog({
           started_at: startedAt, finished_at: new Date().toISOString(), status: 'success',
-          result: { date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche },
+          result: {
+            date_seance: scraped.date_seance, lignes: rows.length, marche: scraped.marche,
+            source: scraped.fallback ? 'bfin' : 'brvm'
+          },
           triggered_by: admin?.id || null
         });
         return json(res, 200, {
@@ -978,6 +1116,47 @@ export default async function handler(req, res) {
             status: 'error', error: String(error?.message || error), triggered_by: admin?.id || null
           });
           return json(res, 502, { success: false, error: 'Récupération des annonces impossible.', code: 'ANNOUNCEMENTS_SCRAPE_ERROR' });
+        }
+      }
+
+      // BOC : POST { scope:'boc', limit? } (admin ou machine — pg_cron quotidien).
+      if (body && body.scope === 'boc') {
+        try {
+          const result = await runBocSync({ limit: Math.min(30, Number(body.limit) || 10) });
+          return json(res, 200, { success: true, scope: 'boc', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] boc', error);
+          return json(res, 502, { success: false, error: 'Récupération des BOC impossible.', code: 'BOC_SYNC_ERROR' });
+        }
+      }
+
+      // Rapports des sociétés cotées : POST { scope:'rapports', sinceYears?,
+      // limit?, maxPages? } (admin ou machine — pg_cron quotidien). Archive
+      // les états financiers et rapports d'activités publiés sur brvm.org.
+      if (body && body.scope === 'rapports') {
+        const startedAt = new Date().toISOString();
+        try {
+          const result = await runRapportsSync({
+            sinceYears: Math.min(10, Number(body.sinceYears) || 2),
+            limit: Math.min(60, Number(body.limit) || 20),
+            maxPages: Math.min(12, Number(body.maxPages) || (machine ? 3 : 12))
+          });
+          await safeRapportsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: result.write_errors.length || result.scrape_errors.length ? 'partial' : 'success',
+            error: result.write_errors.length || result.scrape_errors.length
+              ? `${result.write_errors.length} document(s) non enregistré(s), ${result.scrape_errors.length} émetteur(s) illisible(s)`
+              : null,
+            result, triggered_by: admin?.id || null
+          });
+          return json(res, 200, { success: true, scope: 'rapports', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] rapports', error);
+          await safeRapportsRunLog({
+            started_at: startedAt, finished_at: new Date().toISOString(),
+            status: 'error', error: String(error?.message || error), triggered_by: admin?.id || null
+          });
+          return json(res, 502, { success: false, error: 'Récupération des rapports impossible.', code: 'RAPPORTS_SCRAPE_ERROR' });
         }
       }
 
@@ -1090,12 +1269,13 @@ export default async function handler(req, res) {
         const obligationsTask = (async () => {
           try {
             const s = await scrapeBrvmObligations();
-            const now = new Date().toISOString();
-            await supabaseAdmin.from('obligations').upsert(s.rows.map(r => ({ ...r, updated_at: now })), { onConflict: 'code' });
-            await supabaseAdmin.from('obligations_marche').upsert({ ...s.marche, updated_at: now }, { onConflict: 'date_seance' });
+            await persistObligations(s);
             await safeObligationsRunLog({
               started_at: oblStartedAt, finished_at: new Date().toISOString(), status: 'success',
-              result: { date_seance: s.date_seance, lignes: s.rows.length, marche: s.marche, source: 'auto' }
+              result: {
+                date_seance: s.date_seance, lignes: s.rows.length, marche: s.marche, source: 'auto',
+                fallback: Boolean(s.fallback)
+              }
             });
           } catch (e) {
             console.warn('[PROCESS-BRVM] auto obligations non bloquant :', e && e.message);

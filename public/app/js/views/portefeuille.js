@@ -173,7 +173,7 @@
   }
 
   const modules = [
-    '/app/js/views/portefeuille/portefeuille-utils.js?v=5',
+    '/app/js/views/portefeuille/portefeuille-utils.js?v=6',
     '/app/js/views/portefeuille/portefeuille-prices.js?v=5',
     '/app/js/views/portefeuille/portefeuille-history.js?v=5',
     '/app/js/views/portefeuille/portefeuille-charts.js?v=5',
