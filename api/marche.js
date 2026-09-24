@@ -308,6 +308,21 @@ export default async function handler(req, res) {
       }
     }
 
+    /* Supabase (PostgREST) plafonne chaque réponse à 1 000 lignes, quel que
+       soit .limit() : lecture par pages de 1 000 jusqu'à `max`. Sans cela les
+       états financiers (970 lignes au 25/09/2026) auraient été tronqués en
+       silence dès le 1 001e enregistrement. */
+    const readAll = async (build, max = 10000) => {
+      const rows = [];
+      for (let from = 0; from < max; from += 1000) {
+        const { data, error } = await build().range(from, Math.min(from + 999, max - 1));
+        if (error) return { data: null, error };
+        rows.push(...(data || []));
+        if (!data || data.length < 1000) break;
+      }
+      return { data: rows, error: null };
+    };
+
     let result;
     switch (type) {
       case 'cours': result = await latestCours(); break;
@@ -315,11 +330,11 @@ export default async function handler(req, res) {
       case 'indices_historique': result = await historiqueIndices(limit, dateFrom, dateTo); break;
       case 'historique': result = await historique(ticker, limit, dateFrom, dateTo, offset); break;
       case 'entreprises': result = await entreprises(search); break;
-      case 'financials': result = await db.from('financials').select('*').order('validation_status', { ascending: true }).order('annee', { ascending: false }).limit(2000); break;
+      case 'financials': result = await readAll(() => db.from('financials').select('*').order('validation_status', { ascending: true }).order('annee', { ascending: false }).order('id', { ascending: true })); break;
       case 'analyses': result = await db.from('analyses').select('*').order('date_analyse', { ascending: false }).limit(500); break;
-      case 'dividendes': result = await db.from('dividendes_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000); break;
-      case 'coupons': result = await db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).limit(2000); break;
-      case 'obligations': result = await db.from('obligations').select('*').order('code', { ascending: true }).limit(2000); break;
+      case 'dividendes': result = await readAll(() => db.from('dividendes_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
+      case 'coupons': result = await readAll(() => db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
+      case 'obligations': result = await readAll(() => db.from('obligations').select('*').order('code', { ascending: true })); break;
       case 'obligations_marche': result = await db.from('obligations_marche').select('*').order('date_seance', { ascending: false }).limit(limit || 90); break;
       case 'documents_emetteurs': {
         let q = db.from('documents_emetteurs').select('*')
