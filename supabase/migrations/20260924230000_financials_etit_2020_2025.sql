@@ -1,0 +1,32 @@
+-- Ecobank Transnational (ETIT), historique 2020-2025 : 19 périodes. Les rapports
+-- donnent N (USD, FCFA) puis N-1 (USD, FCFA) : colonne FCFA en millions reprise.
+-- Pour 2020 S1, 2021 9M et 2022 9M, la conversion FCFA du rapport d'origine est
+-- incohérente avec les autres lignes ; le comparatif retraité du rapport suivant
+-- (cohérent) est retenu. Statut 'draft'.
+insert into public.financials (ticker,annee,periode,chiffre_affaires,rbe,resultat_exploitation,resultat_activites_ordinaires,resultat_net,total_actif,source,source_url,date_publication,date_arrete,devise,unite,validation_status,statut_audit,validation_notes)
+select v.ticker,v.annee::int,v.periode,v.ca::numeric,v.rbe::numeric,v.re::numeric,v.rao::numeric,v.rn::numeric,v.ta::numeric,v.source,
+  replace(v.source_url,'~','https://www.brvm.org/sites/default/files/'),v.dp::date,v.da::date,'XOF','FCFA','draft',
+  case when v.periode='annuel' then null else 'non_audite' end,
+  v.note || ' (source_url ; les rapports ETI présentent USD et FCFA côte à côte, seule la colonne FCFA est reprise ; PNB en chiffre d''affaires, résultat avant impôt en RAO, résultat net consolidé) ; relu le 2026-09-24 ; à valider.'
+from (values
+('ETIT',2020,'Q1',233826000000,null,null,53747000000,40187000000,13900676000000,'ETI TOGO : Rapport d''activité du 1er trimestre 2020 (BRVM)','~20200424_-_rapport_dactivite_du_1er_trimestre_2020_-_etit_tg.pdf','2020-04-24','2020-03-31','Colonne FCFA (N) du rapport'),
+('ETIT',2020,'S1',459216000000,null,null,101446000000,76772000000,null,'ETI TG : Rapport d''activités au 1er semestre 2021 (BRVM)','~20210726_-_rapport_dactivites_au_1er_semestre_2021_-_eti_tg.pdf','2021-07-26','2020-06-30','Colonne FCFA (N-1, comparatif retraité) du rapport de l''exercice suivant'),
+('ETIT',2020,'9M',708863000000,null,null,53029000000,15809000000,null,'ETI TOGO : Rapport d''activité au 3ème trimestre 2021 (BRVM)','~20211206_-_rapport_dactivite_au_3eme_trimestre_2021_-_eti_tg.pdf','2021-12-06','2020-09-30','Colonne FCFA (N-1, comparatif retraité) du rapport de l''exercice suivant'),
+('ETIT',2021,'Q1',222720000000,null,null,59508000000,46185000000,null,'ETI TG : Rapport d''activité au 1er trimestre 2021 (BRVM)','~20210428_-_rapport_dactivite_au_1er_trimestre_2021_-_eti_tg_1.pdf','2021-04-28','2021-03-31','Colonne FCFA (N) du rapport'),
+('ETIT',2021,'S1',448679000000,null,null,114318000000,83809000000,null,'ETI TG : Rapport d''activités au 1er semestre 2021 (BRVM)','~20210726_-_rapport_dactivites_au_1er_semestre_2021_-_eti_tg.pdf','2021-07-26','2021-06-30','Colonne FCFA (N) du rapport'),
+('ETIT',2021,'9M',693709000000,null,null,193097000000,140454000000,null,'ETI TOGO : Rapport d''activité audité du 3ème trimestre 2022 (BRVM)','~20221209_-_rapport_dactivite_audite_-_3eme_trimestre_2022_-_eti_tg.pdf','2022-12-09','2021-09-30','Colonne FCFA (N-1, comparatif retraité) du rapport de l''exercice suivant'),
+('ETIT',2021,'annuel',974058000000,null,null,265036000000,198151000000,15962697000000,'ETI TOGO : États financiers audités exercice 2021 (BRVM)','~20220330_-_etats_financiers_audites_exercice_2021_-_etit.pdf','2022-03-30','2021-12-31','Colonne FCFA (N) du rapport'),
+('ETIT',2022,'Q1',254855000000,null,null,73099000000,53801000000,null,'ETI TOGO : Rapport d''activité du 1er trimestre 2022 (BRVM)','~20220425_-_rapport_dactivite_-_1er_trimestre_2022_-_etit.pdf','2022-04-25','2022-03-31','Colonne FCFA (N) du rapport'),
+('ETIT',2022,'S1',545943000000,null,null,156805000000,111265000000,null,'ETI TOGO : Rapport d''activités au 1er semestre 2022 (BRVM)','~20220726_-_rapport_dactivites_au_1er_semestre_2022_-_eti_tg.pdf','2022-07-26','2022-06-30','Colonne FCFA (N) du rapport'),
+('ETIT',2022,'9M',836518000000,null,null,247386000000,172184000000,null,'Ecobank Transnational Incorporated : Rapport d''activités - 3ème trimestre 2023 (BRVM)','~20231130_-_rapport_dactivites_-_3eme_trimestre_2023_-_ecobank_ci.pdf','2023-11-30','2022-09-30','Colonne FCFA (N-1, comparatif retraité) du rapport de l''exercice suivant'),
+('ETIT',2023,'Q1',295314000000,null,null,76455000000,53542000000,null,'ETI TOGO : Rapport d''activité du 1er trimestre 2023 (BRVM)','~20230428_-_rapport_dactivite_-_1er_trimestre_2023_-_eti_tg.pdf','2023-04-28','2023-03-31','Colonne FCFA (N) du rapport'),
+('ETIT',2023,'S1',629215000000,null,null,186899000000,130830000000,null,'ETI TOGO : Rapport d''activités du 1er semestre 2023 certifié par les Commissaires Aux Comptes (BRVM)','~rapport_dactivites_-_1er_semestre_2023_certifie_par_les_cac_-_eti_tg.pdf',null,'2023-06-30','Colonne FCFA (N) du rapport'),
+('ETIT',2023,'9M',919328000000,null,null,272457000000,190097000000,null,'Ecobank Transnational Incorporated : Rapport d''activités - 3ème trimestre 2023 (BRVM)','~20231130_-_rapport_dactivites_-_3eme_trimestre_2023_-_ecobank_ci.pdf','2023-11-30','2023-09-30','Colonne FCFA (N) du rapport'),
+('ETIT',2023,'annuel',1251677000000,null,null,null,246811000000,16164541000000,'ETI TOGO : Etats financiers - Exercice 2023 (BRVM)','~20240502_-_etats_financiers_-_exercice_2023_-_eti_tg.pdf','2024-05-02','2023-12-31','Colonne FCFA (N) du rapport'),
+('ETIT',2024,'Q1',299667000000,null,null,90725000000,63453000000,null,'Ecobank Transnational Incorporated TOGO : Rapport d''activités - 1er trimestre 2024 (BRVM)','~20240421_-_rapport_dactivites_-_1er_trimestre_2024_-_eti_tg.pdf','2024-04-21','2024-03-31','Colonne FCFA (N) du rapport'),
+('ETIT',2024,'S1',602720000000,null,null,196521000000,137814000000,null,'ETI TG : Rapport d''activités - 1er semestre 2024 (BRVM)','~20240730_-_rapport_dactivites_-_1er_semestre_2024_-_eti_tg.pdf','2024-07-30','2024-06-30','Colonne FCFA (N) du rapport'),
+('ETIT',2024,'9M',898105000000,null,null,296536000000,205860000000,null,'ETI TOGO : Rapport d''activités - 3ème trimestre 2024 (BRVM)','~20241029_-_rapport_dactivites_-_3eme_trimestre_2024_-_eti_tg.pdf','2024-10-29','2024-09-30','Colonne FCFA (N) du rapport'),
+('ETIT',2025,'S1',671278000000,null,null,239574000000,167593000000,null,'ETI TOGO : 1er semestre 2025 (BRVM)','~20250729_-_rapport_dactivites_-_1er_semestre_2025_-_eti_tg.pdf','2025-07-29','2025-06-30','Colonne FCFA (N) du rapport'),
+('ETIT',2025,'9M',1029249000000,null,null,385777000000,267019000000,null,'ETI TG : Rapport d''activités - 3ème trimestre 2025 (BRVM)','~20251028_-_rapport_dactivites_-_3eme_trimestre_2025_-_eti_tg.pdf','2025-10-28','2025-09-30','Colonne FCFA (N) du rapport')
+) as v(ticker,annee,periode,ca,rbe,re,rao,rn,ta,source,source_url,dp,da,note)
+on conflict (ticker,annee,periode) do nothing;
