@@ -929,7 +929,20 @@ async function runPipeline(res, mode) {
       mapping, date_seance: payload.date_seance
     });
   }
-  if (mapping.ambiguous.length || mapping.unmatched.length) {
+  /* Un titre inconnu du référentiel (typiquement une nouvelle introduction en
+     bourse : BBGC le 2026-09-24) bloquait toute la séance, en silence — le
+     retour 422 n'était pas journalisé, donc aucune alerte Telegram. Désormais
+     les titres reconnus sont publiés et les inconnus sont signalés (voir
+     result.mapping.unmatched, relu par le déclencheur d'alerte). Seul un
+     rapprochement ambigu, qui risquerait d'écrire un cours sur le mauvais
+     titre, reste bloquant — et il est journalisé. */
+  if (mapping.ambiguous.length) {
+    await safeRunLog({
+      started_at: startedAt, finished_at: new Date().toISOString(),
+      status: 'blocked_mapping',
+      result: { date_seance: payload.date_seance, mapping },
+      error: 'Rapprochement ambigu : ' + mapping.ambiguous.map(a => a.source_ticker || a.source_name).join(', ')
+    });
     return json(res, 422, {
       success: false, blocked: true, reason: 'INSTRUMENT_MAPPING_REVIEW_REQUIRED',
       date_seance: payload.date_seance, mapping, matched_rows: rows.length
