@@ -561,38 +561,88 @@ async function safeRapportsRunLog(payload) {
 }
 
 /* ── Bulletins Officiels de la Cote (BOC) ──
-   La BRVM publie chaque séance boc_AAAAMMJJ_N.pdf sur
-   brvm.org/fr/bulletins-officiels-de-la-cote. On copie dans le bucket
-   boc_pdfs (même emplacement que l'import manuel de l'admin) chaque
-   bulletin absent de la table boc ; une séance déjà enregistrée n'est
-   jamais remplacée. */
-const BOC_LIST_URL = 'https://www.brvm.org/fr/bulletins-officiels-de-la-cote';
+   Deux sources, de la plus rapide à la plus lente :
+   1. bfin.brvm.org/boc/boc_jour.aspx — page légère (≈2 s), BOC_AAAAMMJJ.pdf,
+      le bulletin du jour y apparaît en fin d'après-midi ;
+   2. brvm.org/fr/bulletins-officiels-de-la-cote — boc_AAAAMMJJ_N.pdf, très
+      lente pendant la séance ; consultée seulement pour les dates que la
+      première source n'a pas (ou si elle est indisponible).
+   On copie dans le bucket boc_pdfs (même emplacement que l'import manuel de
+   l'admin) chaque bulletin absent de la table boc ; une séance déjà
+   enregistrée n'est jamais remplacée. Un bulletin pèse ~20 Mo (≈15-20 s de
+   téléchargement) : budget de temps pour rester sous les 60 s de Vercel. */
+const BOC_SOURCES = [
+  { list: 'https://bfin.brvm.org/boc/boc_jour.aspx', base: 'https://bfin.brvm.org/boc/',
+    re: /href="([^"]*BOC_(20\d{2})(\d{2})(\d{2})(?:_(\d+))?\.pdf)"/gi, timeoutMs: 15000 },
+  { list: 'https://www.brvm.org/fr/bulletins-officiels-de-la-cote', base: 'https://www.brvm.org',
+    re: /href="([^"]*\/boc_(20\d{2})(\d{2})(\d{2})_(\d+)\.pdf)"/gi, timeoutMs: 25000 }
+];
 const BOC_BUCKET = 'boc_pdfs';
+const BOC_TIME_BUDGET_MS = 28000;
 
-async function runBocSync({ limit }) {
-  const html = await fetchHtml(BOC_LIST_URL, { timeoutMs: 25000 });
+function bocUrl(href, base) {
+  if (/^https?:/i.test(href)) return href;
+  return href.startsWith('/') ? new URL(href, base).href : base + href;
+}
+
+async function listBocSource(src) {
+  const html = await fetchHtml(src.list, { timeoutMs: src.timeoutMs });
   const seen = new Map();
-  for (const m of html.matchAll(/href="([^"]*\/boc_(20\d{2})(\d{2})(\d{2})_(\d+)\.pdf)"/gi)) {
+  for (const m of html.matchAll(src.re)) {
     const date = `${m[2]}-${m[3]}-${m[4]}`;
-    const url = m[1].startsWith('http') ? m[1] : 'https://www.brvm.org' + m[1];
+    const n = Number(m[5] || 0);
     // Plusieurs versions d'un même jour : la plus haute (dernier rectificatif) l'emporte.
     const prev = seen.get(date);
-    if (!prev || Number(m[5]) > prev.n) seen.set(date, { url, n: Number(m[5]) });
+    if (!prev || n > prev.n) seen.set(date, { url: bocUrl(m[1], src.base), n });
+  }
+  return seen;
+}
+
+async function runBocSync({ limit }) {
+  const started = Date.now();
+  const seen = new Map();
+  const sourceErrors = [];
+  let have = null;
+  for (const [i, src] of BOC_SOURCES.entries()) {
+    try {
+      for (const [date, v] of await listBocSource(src)) if (!seen.has(date)) seen.set(date, v);
+    } catch (e) {
+      sourceErrors.push({ source: src.list, error: String(e?.message || e) });
+    }
+    // La source rapide suffit dès qu'elle répond : brvm.org n'est lue qu'en secours.
+    if (i === 0 && seen.size) {
+      const dates = [...seen.keys()];
+      const { data, error } = await supabaseAdmin.from('boc').select('date_seance').in('date_seance', dates);
+      if (error) throw error;
+      have = new Set((data || []).map(r => String(r.date_seance).slice(0, 10)));
+      break;
+    }
   }
   const dates = [...seen.keys()].sort().reverse();
-  if (!dates.length) return { found: 0, imported: 0, errors: [] };
-  const { data: known, error } = await supabaseAdmin.from('boc').select('date_seance').in('date_seance', dates);
-  if (error) throw error;
-  const have = new Set((known || []).map(r => String(r.date_seance).slice(0, 10)));
+  if (!dates.length) {
+    if (sourceErrors.length) throw new Error(`BOC indisponible : ${sourceErrors.map(e => e.error).join(' ; ')}`);
+    return { found: 0, imported: 0, errors: [] };
+  }
+  if (!have) {
+    const { data, error } = await supabaseAdmin.from('boc').select('date_seance').in('date_seance', dates);
+    if (error) throw error;
+    have = new Set((data || []).map(r => String(r.date_seance).slice(0, 10)));
+  }
   const todo = dates.filter(d => !have.has(d)).slice(0, limit);
   const errors = [];
   let imported = 0;
+  const importedDates = [];
   for (const date of todo) {
+    if (Date.now() - started > BOC_TIME_BUDGET_MS) break;
     const { url } = seen.get(date);
     try {
-      const resp = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' } });
+      const resp = await fetch(url, {
+        headers: { 'User-Agent': 'Mozilla/5.0 TheCapitalInvest scraper' },
+        signal: AbortSignal.timeout(Math.max(10000, 55000 - (Date.now() - started) - 8000))
+      });
       if (!resp.ok) throw new Error(`PDF HTTP ${resp.status}`);
       const buffer = Buffer.from(await resp.arrayBuffer());
+      if (buffer.subarray(0, 5).toString() !== '%PDF-') throw new Error('réponse non PDF');
       const filename = annSafeName(basenameOf(url));
       const path = `${date}/${Date.now()}_${filename}`;
       const { error: upErr } = await supabaseAdmin.storage.from(BOC_BUCKET).upload(path, buffer, { contentType: 'application/pdf', upsert: false });
@@ -603,11 +653,14 @@ async function runBocSync({ limit }) {
       });
       if (insErr) throw insErr;
       imported++;
+      importedDates.push(date);
     } catch (e) {
       errors.push({ date, error: String(e?.message || e) });
     }
   }
-  return { found: dates.length, already_stored: have.size, imported, errors };
+  const remaining = dates.filter(d => !have.has(d)).length - imported;
+  return { found: dates.length, already_stored: have.size, imported, imported_dates: importedDates,
+    remaining, has_more: remaining > 0, errors, source_errors: sourceErrors };
 }
 
 async function safeAnnouncementsRunLog(payload) {
