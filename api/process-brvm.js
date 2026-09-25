@@ -32,6 +32,8 @@ import { scrapeRapports } from '../lib/brvm-rapports-scraper.js';
 import { listDcbrFiches, fetchDcbrFicheDetails } from '../lib/dcbr-scraper.js';
 import { matchInstrument, normalizeTicker } from '../lib/market-instrument-matcher.js';
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
+import { looksLikeGithubOidc, verifyGithubOidc } from '../lib/github-oidc.js';
+import { ingestBoc, bocTelegramText, bocPublicUrl } from '../lib/boc-extract.js';
 import { json, fail, readBody, requestUrl } from '../lib/http.js';
 import appConfig from '../lib/config.js';
 
@@ -663,6 +665,76 @@ async function runBocSync({ limit }) {
     remaining, has_more: remaining > 0, errors, source_errors: sourceErrors };
 }
 
+/* ── Lecture automatique des BOC (tableaux de résultats des émetteurs) ──
+   action 'pending' : BOC des 10 derniers jours pas encore analysés (ou en
+   échec, 3 essais au plus) ; action 'ingest' : intègre les candidats lus
+   par scripts/boc_extract.py (voir lib/boc-extract.js), journalise dans
+   boc_extractions et envoie le récapitulatif Telegram. */
+const BOC_OIDC = {
+  audience: 'thecapitalinvest-boc',
+  repository: 'Darkdevolt/thecapitalinvest',
+  ref: 'refs/heads/main',
+  workflow: '.github/workflows/boc-extract.yml'
+};
+
+async function runBocExtract(body) {
+  if (body.action === 'pending') {
+    const since = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
+    const { data: bocs, error } = await supabaseAdmin.from('boc')
+      .select('date_seance, fichier_url').gte('date_seance', since).order('date_seance', { ascending: false });
+    if (error) throw error;
+    const dates = (bocs || []).map(b => String(b.date_seance).slice(0, 10));
+    const { data: done, error: e2 } = dates.length
+      ? await supabaseAdmin.from('boc_extractions').select('date_seance, status, attempts').in('date_seance', dates)
+      : { data: [] };
+    if (e2) throw e2;
+    const state = new Map((done || []).map(d => [String(d.date_seance).slice(0, 10), d]));
+    const pending = (bocs || []).filter(b => {
+      const st = state.get(String(b.date_seance).slice(0, 10));
+      return !st || (st.status !== 'done' && (st.attempts || 0) < 3);
+    }).slice(0, 3).map(b => ({ date_seance: String(b.date_seance).slice(0, 10), fichier_url: b.fichier_url }));
+    return { pending };
+  }
+  if (body.action === 'ingest') {
+    const bocDate = String(body.date_seance || '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(bocDate)) throw new Error('date_seance invalide');
+    const candidates = Array.isArray(body.candidates) ? body.candidates.slice(0, 60) : [];
+    const { data: prev } = await supabaseAdmin.from('boc_extractions').select('attempts').eq('date_seance', bocDate).maybeSingle();
+    const attempts = (prev?.attempts || 0) + 1;
+    let result;
+    try {
+      result = await ingestBoc(supabaseAdmin, {
+        bocDate, pagesTotal: Number(body.pages_total) || null, pagesScanned: Number(body.pages_scanned) || null, candidates
+      });
+    } catch (error) {
+      await supabaseAdmin.from('boc_extractions').upsert({
+        date_seance: bocDate, status: 'error', attempts, error: String(error?.message || error), updated_at: new Date().toISOString()
+      }, { onConflict: 'date_seance' });
+      throw error;
+    }
+    const message = bocTelegramText({
+      bocDate, pagesTotal: body.pages_total, pagesScanned: body.pages_scanned,
+      inserted: result.inserted, promotions: result.promoted, report: result.report
+    });
+    const { error: logErr } = await supabaseAdmin.from('boc_extractions').upsert({
+      date_seance: bocDate, status: 'done', attempts, error: null,
+      pages_total: Number(body.pages_total) || null, pages_scanned: Number(body.pages_scanned) || null,
+      candidates: candidates.length, inserted: result.inserted.length, promoted: result.promoted.length,
+      result: { ...result, source_url: bocPublicUrl(bocDate) }, message, updated_at: new Date().toISOString()
+    }, { onConflict: 'date_seance' });
+    if (logErr) console.warn('[PROCESS-BRVM] journal boc_extractions :', logErr.message);
+    // Telegram seulement si le BOC apporte quelque chose (ou signale un problème).
+    const worth = result.inserted.length || result.promoted.length || result.errors.length ||
+      result.report.some(r => ['mismatch', 'review_needed'].includes(r.status));
+    if (worth) {
+      const { error: tgErr } = await supabaseAdmin.rpc('tc_send_telegram', { msg: message });
+      if (tgErr) console.warn('[PROCESS-BRVM] Telegram BOC :', tgErr.message);
+    }
+    return { date_seance: bocDate, message, ...result };
+  }
+  throw new Error('action inconnue');
+}
+
 async function safeAnnouncementsRunLog(payload) {
   try {
     const { error } = await supabaseAdmin.from('announcements_scrape_runs').insert(payload);
@@ -1068,6 +1140,28 @@ export default async function handler(req, res) {
     return fail(res, 405, 'Méthode non autorisée.', 'METHOD_NOT_ALLOWED');
   }
   if (!supabaseAdmin) return fail(res, 503, 'Service temporairement indisponible.', 'SERVICE_UNAVAILABLE');
+
+  // Lecture automatique des BOC par GitHub Actions (scripts/boc_extract.py) :
+  // authentifiée par le jeton OIDC que GitHub signe pour ce workflow précis
+  // de ce dépôt, sur main — aucun secret partagé. Ce chemin ne donne accès
+  // qu'au scope boc_extract.
+  const bearer = String(req.headers?.authorization || '').replace(/^Bearer\s+/i, '');
+  if (req.method === 'POST' && looksLikeGithubOidc(bearer)) {
+    try {
+      await verifyGithubOidc(bearer, BOC_OIDC);
+    } catch (error) {
+      console.warn('[PROCESS-BRVM] jeton GitHub refusé :', error?.message || error);
+      return fail(res, 401, 'Jeton GitHub refusé.', 'OIDC_REJECTED');
+    }
+    const body = await readBody(req).catch(() => ({}));
+    if (body?.scope !== 'boc_extract') return fail(res, 403, 'Scope non autorisé.', 'SCOPE_FORBIDDEN');
+    try {
+      return json(res, 200, { success: true, scope: 'boc_extract', ...(await runBocExtract(body)) });
+    } catch (error) {
+      console.error('[PROCESS-BRVM] boc_extract', error);
+      return json(res, 502, { success: false, error: String(error?.message || error), code: 'BOC_EXTRACT_ERROR' });
+    }
+  }
 
   const machine = isMachineRequest(req);
   let admin = null;
