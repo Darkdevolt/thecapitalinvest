@@ -1,245 +1,131 @@
 /**
- * Bulletin de marché automatique (séance ou semaine), envoyé en image JPEG
- * sur Telegram. Déclenché par pg_cron (Supabase), pas par un humain — le
- * secret machine est donc la seule autorisation attendue.
+ * Bulletin de marché automatique (séance ou semaine), prêt à publier.
  *
- * Volontairement indépendant de la version « pro » que l'admin construit à
- * la main (public/admin/js/modules/reporting.js, ~1300 lignes, dessinée en
- * SVG puis rastérisée via le <canvas> du NAVIGATEUR) : ce générateur-là ne
- * peut pas tourner côté serveur tel quel. Celui-ci reprend le même principe
- * (agrégation depuis `historique`/`indices`, rendu en SVG) mais en JS pur
- * sans dépendance au DOM, rastérisé par `sharp` plutôt qu'un navigateur
- * headless — plus léger, sans Chromium à embarquer sur le plan Vercel actuel.
+ * GET /api/telegram-report?periode=seance|hebdo[&date=AAAA-MM-JJ][&envoi=0]
+ *   - pg_cron (secret machine) : après chaque séance, et le vendredi pour la semaine ;
+ *   - administrateur : régénérer un bulletin à la main (envoi=0 : sans Telegram).
+ *
+ * Produit (lib/report-visuals.js) :
+ *   story.png      1080×1920  TikTok, Reels, Stories, statut WhatsApp
+ *   carre.png      1080×1080  post LinkedIn / X / Facebook
+ *   slide-1..6.png 1080×1350  carrousel Instagram
+ *   carrousel.pdf  6 pages    « document » LinkedIn
+ * + les textes TikTok et LinkedIn (lib/report-captions.js).
+ * Tout est rangé dans le bucket public `bulletins` (reporting/<periode>/<date>/)
+ * puis envoyé sur Telegram : un album de fichiers non compressés, et un
+ * message par texte à copier.
  */
-import sharp from 'sharp';
 import { supabaseAdmin } from '../lib/supabase.js';
-import { isMachineRequest, handlePreflight } from '../lib/middleware.js';
+import { isMachineRequest, authenticateAdmin, handlePreflight } from '../lib/middleware.js';
 import { json, fail, requestUrl } from '../lib/http.js';
 import appConfig from '../lib/config.js';
+import { collectBulletin } from '../lib/report-data.js';
+import { renderBulletin } from '../lib/report-visuals.js';
+import { captionsIA } from '../lib/report-captions.js';
 
-export const config = { maxDuration: 30 };
+export const config = { maxDuration: 60 };
 
-const C = {
-  bg: '#FFFFFF', line: '#E6DECC', ink: '#1C1813',
-  gold: '#8C6D2E', muted: '#8A8172', green: '#1F9B57', red: '#CC3B3B'
-};
+const BUCKET = 'bulletins';
 
-function esc(s) {
-  return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+async function ranger(prefix, fichiers) {
+  const liens = {};
+  for (const [nom, buf, type] of fichiers) {
+    const path = `${prefix}/${nom}`;
+    const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, buf, { contentType: type, upsert: true, cacheControl: '300' });
+    if (error) throw new Error(`Stockage ${path} : ${error.message}`);
+    liens[nom] = supabaseAdmin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl;
+  }
+  return liens;
 }
 
-function pct(v, digits = 2) {
-  return Number.isFinite(v) ? (v >= 0 ? '+' : '') + v.toFixed(digits) + ' %' : '—';
+/* Identifiants : variables Vercel, sinon Vault Supabase (même bot que les rapports SQL). */
+let TG = null;
+async function identifiantsTelegram() {
+  if (TG) return TG;
+  if (appConfig.telegramBotToken && appConfig.telegramChatId) return (TG = { token: appConfig.telegramBotToken, chat: appConfig.telegramChatId });
+  const { data, error } = await supabaseAdmin.rpc('tc_telegram_credentials');
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row?.bot_token || !row?.chat_id) return null;
+  return (TG = { token: row.bot_token, chat: row.chat_id });
 }
 
-function mondayOf(d) {
-  const day = d.getUTCDay(); // 0 = dimanche
-  const delta = (day + 6) % 7; // lundi = 0
-  const m = new Date(d);
-  m.setUTCDate(d.getUTCDate() - delta);
-  return m;
-}
-
-function isoDate(d) { return d.toISOString().slice(0, 10); }
-
-/**
- * Réplique la logique d'agrégation de collect() côté admin
- * (public/admin/js/modules/reporting.js), en requêtes Supabase directes
- * plutôt qu'en appels REST depuis le navigateur — même principe, sans DOM.
- */
-async function collectWindow(from, to, periode) {
-  const [{ data: quotes, error: e1 }, { data: indices, error: e2 }, { data: refs, error: e3 }] = await Promise.all([
-    supabaseAdmin.from('historique')
-      .select('ticker,date_seance,cours_cloture,cloture,volume,variation,valeur_totale')
-      .gte('date_seance', from).lte('date_seance', to).order('date_seance', { ascending: true }),
-    supabaseAdmin.from('indices')
-      .select('indice,date_seance,valeur,variation_pct')
-      .gte('date_seance', from).lte('date_seance', to).order('date_seance', { ascending: true }),
-    supabaseAdmin.from('entreprises').select('ticker,nom')
-  ]);
-  if (e1) throw e1;
-  if (e2) throw e2;
-  if (e3) throw e3;
-
-  const names = {};
-  (refs || []).forEach(r => { names[String(r.ticker).toUpperCase()] = r.nom || ''; });
-
-  const close = r => {
-    const v = r.cours_cloture !== null && r.cours_cloture !== undefined ? r.cours_cloture : r.cloture;
-    const n = Number(v);
-    return Number.isFinite(n) ? n : null;
-  };
-  const rows = (quotes || []).filter(r => close(r) !== null);
-  if (!rows.length) return null;
-
-  const byTicker = {};
-  rows.forEach(r => {
-    const key = String(r.ticker).toUpperCase();
-    const e = byTicker[key] || (byTicker[key] = {
-      ticker: r.ticker, nom: names[key] || '', first: null, last: null,
-      volume: 0, valeur: 0, published: null
-    });
-    const c = close(r);
-    if (e.first === null) e.first = c;
-    e.last = c;
-    e.volume += Number(r.volume) || 0;
-    e.valeur += Number(r.valeur_totale) || 0;
-    if (periode === 'seance') e.published = Number(r.variation);
-  });
-
-  const values = Object.values(byTicker).map(e => {
-    if (periode === 'seance') {
-      e.perf = Number.isFinite(e.published) ? e.published : null;
-    } else if (e.first && e.first > 0 && e.last !== null) {
-      e.perf = ((e.last - e.first) / e.first) * 100;
-    } else {
-      e.perf = null;
-    }
-    return e;
-  }).filter(e => e.perf !== null);
-
-  const hausses = values.slice().sort((a, b) => b.perf - a.perf).slice(0, 5);
-  const baisses = values.slice().sort((a, b) => a.perf - b.perf).slice(0, 5);
-  const volumes = values.slice().sort((a, b) => b.valeur - a.valeur).slice(0, 5);
-
-  const idxMap = {};
-  (indices || []).forEach(r => {
-    const key = String(r.indice || '').toUpperCase();
-    const e = idxMap[key] || (idxMap[key] = { indice: r.indice, first: null, last: null, lastPct: null });
-    const v = Number(r.valeur);
-    if (!Number.isFinite(v)) return;
-    if (e.first === null) e.first = v;
-    e.last = v;
-    e.lastPct = Number(r.variation_pct);
-  });
-  const idxList = Object.values(idxMap).map(e => {
-    e.perf = periode === 'seance'
-      ? (Number.isFinite(e.lastPct) ? e.lastPct : null)
-      : (e.first && e.first > 0 ? ((e.last - e.first) / e.first) * 100 : null);
-    return e;
-  });
-
-  const up = values.filter(e => e.perf > 0).length;
-  const down = values.filter(e => e.perf < 0).length;
-  const flat = values.length - up - down;
-
-  return { values, hausses, baisses, volumes, indices: idxList, up, down, flat, count: values.length };
-}
-
-/** Rendu SVG pur (aucune dépendance DOM) — même esprit visuel que l'outil admin, en plus sobre. */
-function buildSvg(data, meta) {
-  const W = 1080, H = 1350, pad = 66;
-  const parts = [];
-  let y = 0;
-
-  const line = (t, x, ty, o = {}) => {
-    parts.push(
-      '<text x="' + x + '" y="' + ty + '" fill="' + (o.fill || C.ink) + '" ' +
-      'font-family="DejaVu Sans, Arial, sans-serif" font-size="' + (o.size || 18) + '" ' +
-      'font-weight="' + (o.weight || 400) + '"' + (o.anchor ? ' text-anchor="' + o.anchor + '"' : '') + '>' +
-      esc(t) + '</text>'
-    );
-  };
-
-  parts.push('<rect width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>');
-  parts.push('<rect x="0" y="0" width="' + W + '" height="10" fill="' + C.gold + '"/>');
-
-  y = 96;
-  line('THE CAPITAL', pad, y, { size: 22, weight: 700, fill: C.gold });
-  y += 46;
-  line(meta.titre, pad, y, { size: 36, weight: 700 });
-  y += 32;
-  line(meta.sousTitre, pad, y, { size: 16, fill: C.muted });
-  y += 44;
-  parts.push('<line x1="' + pad + '" y1="' + y + '" x2="' + (W - pad) + '" y2="' + y + '" stroke="' + C.line + '"/>');
-  y += 50;
-
-  line('INDICES', pad, y, { size: 14, weight: 700, fill: C.gold });
-  y += 36;
-  if (!data.indices.length) { line('Aucune donnée d\'indice sur la période.', pad, y, { size: 15, fill: C.muted }); y += 30; }
-  data.indices.forEach(idx => {
-    line(idx.indice, pad, y, { size: 18 });
-    line(pct(idx.perf), W - pad, y, { size: 18, anchor: 'end', weight: 700, fill: idx.perf >= 0 ? C.green : C.red });
-    y += 34;
-  });
-  y += 16;
-
-  line(data.up + ' hausse(s)  ·  ' + data.down + ' baisse(s)  ·  ' + data.flat + ' stable(s)  sur ' + data.count + ' valeur(s)',
-    pad, y, { size: 15, fill: C.muted });
-  y += 54;
-
-  const section = (title, color, list, fmtRight) => {
-    line(title, pad, y, { size: 14, weight: 700, fill: color });
-    y += 36;
-    if (!list.length) { line('—', pad, y, { size: 15, fill: C.muted }); y += 30; }
-    list.forEach(e => {
-      const label = e.ticker + (e.nom ? '  ' + e.nom : '');
-      line(label.length > 44 ? label.slice(0, 44) + '…' : label, pad, y, { size: 16 });
-      line(fmtRight(e), W - pad, y, { size: 16, anchor: 'end', weight: 700, fill: color });
-      y += 32;
-    });
-    y += 22;
-  };
-
-  section('PLUS FORTES HAUSSES', C.green, data.hausses, e => pct(e.perf));
-  section('PLUS FORTES BAISSES', C.red, data.baisses, e => pct(e.perf));
-  section('PLUS FORTE ACTIVITÉ', C.gold, data.volumes, e => Math.round(e.valeur).toLocaleString('fr-FR') + ' FCFA');
-
-  parts.push(
-    '<text x="' + pad + '" y="' + (H - 40) + '" font-size="12" fill="' + C.muted + '" font-family="DejaVu Sans, Arial, sans-serif">' +
-    '© The Capital — thecapitalinvest.com</text>'
-  );
-
-  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + W + ' ' + H + '" width="' + W + '" height="' + H + '">' +
-    parts.join('') + '</svg>';
-}
-
-async function sendTelegramPhoto(jpegBuffer, caption) {
-  const form = new FormData();
-  form.append('chat_id', appConfig.telegramChatId);
-  form.append('caption', caption);
-  form.append('photo', new Blob([jpegBuffer], { type: 'image/jpeg' }), 'bulletin.jpg');
-  const res = await fetch('https://api.telegram.org/bot' + appConfig.telegramBotToken + '/sendPhoto', {
-    method: 'POST', body: form
-  });
+async function telegram(methode, form) {
+  const res = await fetch(`https://api.telegram.org/bot${TG.token}/${methode}`, { method: 'POST', body: form, signal: AbortSignal.timeout(30000) });
   const body = await res.json().catch(() => ({}));
-  if (!res.ok || !body.ok) throw new Error('Telegram sendPhoto: ' + JSON.stringify(body));
+  if (!res.ok || !body.ok) throw new Error(`Telegram ${methode} : ${body.description || res.status}`);
   return body;
+}
+
+async function envoyerTelegram(fichiers, legende, textes) {
+  const form = new FormData();
+  form.append('chat_id', TG.chat);
+  form.append('media', JSON.stringify(fichiers.map(([nom], i) => Object.assign(
+    { type: 'document', media: `attach://f${i}` },
+    i === fichiers.length - 1 ? { caption: legende } : {}
+  ))));
+  fichiers.forEach(([nom, buf, type], i) => form.append(`f${i}`, new Blob([buf], { type }), nom));
+  await telegram('sendMediaGroup', form);
+  for (const t of textes) {
+    const f = new FormData();
+    f.append('chat_id', TG.chat);
+    f.append('text', t.slice(0, 4096));
+    f.append('disable_web_page_preview', 'true');
+    await telegram('sendMessage', f);
+  }
 }
 
 export default async function handler(req, res) {
   if (handlePreflight(req, res, { methods: 'GET,OPTIONS' })) return;
-  if (!isMachineRequest(req)) return fail(res, 403, 'Accès réservé.', 'FORBIDDEN');
-  if (!appConfig.telegramBotToken || !appConfig.telegramChatId) {
-    return json(res, 200, { success: true, skipped: true, reason: 'telegram_not_configured' });
+  if (req.method !== 'GET') return fail(res, 405, 'Méthode non autorisée.', 'METHOD_NOT_ALLOWED');
+  if (!isMachineRequest(req)) {
+    const admin = await authenticateAdmin(req, res);
+    if (!admin) return;
   }
+  if (!supabaseAdmin) return fail(res, 503, 'Service temporairement indisponible.', 'SERVICE_UNAVAILABLE');
 
   try {
     const url = requestUrl(req);
     const periode = url.searchParams.get('periode') === 'hebdo' ? 'hebdo' : 'seance';
+    const dateParam = url.searchParams.get('date');
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(dateParam || '') ? dateParam : new Date().toISOString().slice(0, 10);
+    const envoi = url.searchParams.get('envoi') !== '0';
 
-    const today = new Date();
-    let from, to, titre, sousTitre;
-    if (periode === 'hebdo') {
-      from = isoDate(mondayOf(today));
-      to = isoDate(today);
-      titre = 'La semaine en bref';
-      sousTitre = 'Du ' + from + ' au ' + to;
-    } else {
-      from = to = isoDate(today);
-      titre = 'La séance en bref';
-      sousTitre = to;
+    const d = await collectBulletin({ periode, date });
+    // Pas de séance ce jour-là (férié, week-end, import pas encore fait) : rien à publier.
+    if (!d || (periode === 'seance' && !d.seances.includes(date))) {
+      return json(res, 200, { success: true, skipped: true, reason: 'no_data', periode, date });
     }
 
-    const data = await collectWindow(from, to, periode);
-    if (!data) return json(res, 200, { success: true, skipped: true, reason: 'no_data', from, to });
+    const visuels = await renderBulletin(d);
+    const textes = await captionsIA(d);
 
-    const svg = buildSvg(data, { titre, sousTitre });
-    const jpeg = await sharp(Buffer.from(svg)).jpeg({ quality: 92 }).toBuffer();
+    const fichiers = [
+      ['story-tiktok-1080x1920.png', visuels.story, 'image/png'],
+      ['post-carre-1080x1080.png', visuels.carre, 'image/png'],
+      ['carrousel-linkedin.pdf', visuels.pdf, 'application/pdf'],
+      ...visuels.slides.map((p, i) => [`carrousel-${i + 1}-1080x1350.png`, p, 'image/png'])
+    ];
+    const prefix = `reporting/${periode}/${d.to}`;
+    const liens = await ranger(prefix, [
+      ...fichiers,
+      ['textes.json', Buffer.from(JSON.stringify(textes, null, 2)), 'application/json']
+    ]);
 
-    await sendTelegramPhoto(jpeg, titre + ' — ' + sousTitre);
+    let telegramEnvoye = false;
+    if (envoi && await identifiantsTelegram()) {
+      const legende = `${visuels.meta.titreCourt} — ${visuels.meta.sousTitre}\nStory 9:16 · Carré 1:1 · Carrousel 4:5 (PNG + PDF LinkedIn)`;
+      await envoyerTelegram(fichiers, legende, [
+        '🎵 TEXTE TIKTOK / REELS\n\n' + textes.tiktok,
+        '💼 TEXTE LINKEDIN\n\n' + textes.linkedin + (textes.source === 'gabarit' && textes.erreurIA ? `\n\n(IA indisponible : ${textes.erreurIA} — texte généré à partir des chiffres)` : '')
+      ]);
+      telegramEnvoye = true;
+    }
 
-    return json(res, 200, { success: true, periode, from, to });
+    return json(res, 200, {
+      success: true, periode, from: d.from, to: d.to, telegram: telegramEnvoye,
+      textes: { source: textes.source, erreurIA: textes.erreurIA || null },
+      fichiers: liens
+    });
   } catch (error) {
     console.error('[TELEGRAM-REPORT]', error);
     return fail(res, 500, 'Génération du bulletin impossible.', 'REPORT_ERROR', error);
