@@ -11,7 +11,7 @@
  *   slide-1..6.png 1080×1350  carrousel Instagram
  *   carrousel.pdf  6 pages    « document » LinkedIn
  * + les textes TikTok et LinkedIn (lib/report-captions.js).
- * Tout est rangé dans le bucket public `bulletins` (reporting/<periode>/<date>/)
+ * Tout est rangé dans le bucket public `reportings` (reporting/<periode>/<date>/)
  * puis envoyé sur Telegram : un album de fichiers non compressés, et un
  * message par texte à copier.
  */
@@ -25,7 +25,7 @@ import { captionsIA } from '../lib/report-captions.js';
 
 export const config = { maxDuration: 60 };
 
-const BUCKET = 'bulletins';
+const BUCKET = 'reportings';
 
 async function ranger(prefix, fichiers) {
   const liens = {};
