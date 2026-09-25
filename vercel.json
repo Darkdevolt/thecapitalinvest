@@ -50,6 +50,12 @@
       "destination": "/api/scrape-brvm"
     }
   ],
+  "functions": {
+    "api/telegram-report.js": {
+      "maxDuration": 60,
+      "includeFiles": "{lib/fonts/**,public/assets/the-capital-logo.png}"
+    }
+  },
   "crons": [
     {
       "path": "/api/process-brvm?scope=esv",

@@ -13,7 +13,10 @@
     "check": "node scripts/check-assets.mjs"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@supabase/supabase-js": "^2.39.0",
+    "pdf-lib": "^1.17.1",
+    "satori": "^0.12.2",
     "sharp": "^0.33.5"
   },
   "license": "ISC"
