@@ -53,7 +53,7 @@
   "functions": {
     "api/telegram-report.js": {
       "maxDuration": 60,
-      "includeFiles": "{lib/fonts/**,public/assets/the-capital-logo.png}"
+      "includeFiles": "{lib/fonts/**,lib/assets/**}"
     }
   },
   "crons": [
