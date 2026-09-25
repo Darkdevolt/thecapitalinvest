@@ -692,7 +692,12 @@ async function runBocExtract(body) {
     const pending = (bocs || []).filter(b => {
       const st = state.get(String(b.date_seance).slice(0, 10));
       return !st || (st.status !== 'done' && (st.attempts || 0) < 3);
-    }).slice(0, 3).map(b => ({ date_seance: String(b.date_seance).slice(0, 10), fichier_url: b.fichier_url }));
+    }).slice(0, 3).map(b => {
+      const date = String(b.date_seance).slice(0, 10);
+      // Édition bfin.brvm.org d'abord : celle de brvm.org (anciennes copies en
+      // base) est parfois publiée sans les annexes des émetteurs.
+      return { date_seance: date, fichier_url: bocPublicUrl(date), urls: [bocPublicUrl(date), b.fichier_url].filter(Boolean) };
+    });
     return { pending };
   }
   if (body.action === 'ingest') {
@@ -704,7 +709,7 @@ async function runBocExtract(body) {
     let result;
     try {
       result = await ingestBoc(supabaseAdmin, {
-        bocDate, pagesTotal: Number(body.pages_total) || null, pagesScanned: Number(body.pages_scanned) || null, candidates
+        bocDate, pagesTotal: Number(body.pages_total) || null, pagesScanned: Number.isFinite(Number(body.pages_scanned)) ? Number(body.pages_scanned) : null, candidates
       });
     } catch (error) {
       await supabaseAdmin.from('boc_extractions').upsert({
@@ -718,7 +723,7 @@ async function runBocExtract(body) {
     });
     const { error: logErr } = await supabaseAdmin.from('boc_extractions').upsert({
       date_seance: bocDate, status: 'done', attempts, error: null,
-      pages_total: Number(body.pages_total) || null, pages_scanned: Number(body.pages_scanned) || null,
+      pages_total: Number(body.pages_total) || null, pages_scanned: Number.isFinite(Number(body.pages_scanned)) ? Number(body.pages_scanned) : null,
       candidates: candidates.length, inserted: result.inserted.length, promoted: result.promoted.length,
       result: { ...result, source_url: bocPublicUrl(bocDate) }, message, updated_at: new Date().toISOString()
     }, { onConflict: 'date_seance' });

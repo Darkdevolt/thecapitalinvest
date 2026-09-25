@@ -428,7 +428,18 @@ def main():
         if not pdf:
             fd, pdf = tempfile.mkstemp(suffix='.pdf')
             os.close(fd)
-            download(job['fichier_url'], pdf)
+            urls = job.get('urls') or [job['fichier_url']]
+            for n, url in enumerate(urls):
+                try:
+                    download(url, pdf)
+                    with open(pdf, 'rb') as f:
+                        if f.read(5) != b'%PDF-':
+                            raise ValueError('réponse non PDF')
+                    break
+                except Exception as e:  # noqa: BLE001
+                    if n == len(urls) - 1:
+                        raise
+                    print(f'{url} indisponible ({e}), source suivante', file=sys.stderr)
         pages, total, scanned = read_boc(pdf, cache=args.ocr_cache)
         cands = extract_candidates(pages)
         print(f"BOC {job['date_seance']} : {len(cands)} tableau(x) de résultats repéré(s) "
