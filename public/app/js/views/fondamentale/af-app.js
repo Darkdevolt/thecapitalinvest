@@ -1324,12 +1324,13 @@
     }
 
     html += groupe('Saisonnalité de l\'activité');
+    (it.incoherences || []).forEach(function (x) { html += '<div class="af-warn">' + esc(x.txt) + '</div>'; });
     var s = it.saisonnalite;
     if (!s) {
       html += note('Pas assez d\'exercices avec à la fois un détail infra-annuel et un annuel complet pour établir une saisonnalité.');
     } else {
       html += note('Part moyenne du ' + ca('min') + ' réalisée par ' + s.granularite + ', sur ' + s.exercices +
-        ' exercice(s) où le rapprochement à l\'annuel est possible. La ligne pointillée marque le partage parfaitement ' +
+        ' exercice(s) au découpage complet et rapproché de l\'annuel. La ligne pointillée marque le partage parfaitement ' +
         'égal (' + (s.granularite === 'trimestre' ? '25 % chacun' : '50 % chacun') + ') : au-dessus, ce ' + s.granularite + ' pèse plus que sa part théorique.');
       html += saisonBars(s);
       html += '<div class="af-warn" style="' + (s.marquee ? '' : 'background:var(--af-panel-2);border-left-color:var(--af-line-strong)') + '">' + esc(s.verdict) + '</div>';
