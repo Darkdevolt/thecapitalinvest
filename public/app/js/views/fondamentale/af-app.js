@@ -2440,6 +2440,16 @@
     fillSelect();
     render();
   };
+  /* Ouvre l'analyse d'un titre sur un onglet donné (depuis la section Matières premières). */
+  global.afOuvrir = function (ticker, tab) {
+    if (tab) { S.tab = tab; store(LS.tab, tab); }
+    if (typeof global.nav === 'function') global.nav('analyse-fondamentale');
+    setTimeout(function () {
+      if (!booted) global.afInit();
+      var sel = $('afTicker'); if (sel) sel.value = String(ticker || '').toUpperCase();
+      load(ticker);
+    }, 60);
+  };
   /* Nom historique conservé : d'autres vues l'appellent encore. */
   global.loadFundAnalysis = function () { global.afInit(); };
 

@@ -193,8 +193,24 @@
     };
   }
 
+  /* Titres cotés dont le chiffre d'affaires dépend de la matière `cle`
+     (table LIENS, puis sous-secteur pour un titre qui n'y figure pas). */
+  function titresLies(cle) {
+    var ents = Array.isArray(global.allEntreprises) ? global.allEntreprises : [];
+    var vus = {}, out = [];
+    Object.keys(LIENS).forEach(function (t) {
+      LIENS[t].forEach(function (l, rang) { if (l.serie === cle) { vus[t] = 1; out.push({ ticker: t, principal: rang === 0, note: l.note }); } });
+    });
+    ents.forEach(function (e) {
+      var t = String(e && e.ticker || '').toUpperCase();
+      if (!t || vus[t]) return;
+      liens(t, e.sous_secteur).forEach(function (l, rang) { if (l.serie === cle) { vus[t] = 1; out.push({ ticker: t, principal: rang === 0, note: l.note }); } });
+    });
+    return out;
+  }
+
   global.AFMatieres = {
-    SERIES: SERIES, liens: liens, charger: charger, charge: charge,
+    SERIES: SERIES, liens: liens, titresLies: titresLies, charger: charger, charge: charge,
     serieFcfa: serieFcfa, agreger: agreger, stats: stats, lienCa: lienCa, signal: signal
   };
 })(typeof window !== 'undefined' ? window : globalThis);
