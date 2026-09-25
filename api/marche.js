@@ -335,6 +335,7 @@ export default async function handler(req, res) {
       case 'dividendes': result = await readAll(() => db.from('dividendes_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
       case 'coupons': result = await readAll(() => db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
       case 'obligations': result = await readAll(() => db.from('obligations').select('*').order('code', { ascending: true })); break;
+      case 'commodities': result = await readAll(() => db.from('commodity_prices').select('serie,date,valeur,unite').gte('date', '2015-01-01').order('serie', { ascending: true }).order('date', { ascending: true })); break;
       case 'obligations_marche': result = await db.from('obligations_marche').select('*').order('date_seance', { ascending: false }).limit(limit || 90); break;
       case 'documents_emetteurs': {
         let q = db.from('documents_emetteurs').select('*')

@@ -671,8 +671,11 @@
       if (!p) break;
       somme += p.valeur; n = i;
     }
+    /* Un cumul publié plus long que les trimestres déterminés prime : 9 mois
+       connus sans T1 isolé (S1 + 9M publiés) se comparent sur 9 mois, pas sur 6. */
+    if (n < 3 && v.m9) return { n: 3, valeur: v.m9.valeur, label: '9 mois' };
+    if (n < 2 && v.s1) return { n: 2, valeur: v.s1.valeur, label: 'S1' };
     if (n > 0) return { n: n, valeur: somme, label: n === 1 ? 'T1' : 'T1–T' + n };
-    if (v.s1) return { n: 2, valeur: v.s1.valeur, label: 'S1' };
     return null;
   }
 
@@ -734,6 +737,7 @@
         function cumul(vv, n) {
           if (!vv) return NaN;
           if (n === 2 && vv.s1) return vv.s1.valeur;
+          if (n === 3 && vv.m9) return vv.m9.valeur;
           var s = 0;
           for (var i = 1; i <= n; i++) { if (!vv['t' + i]) return NaN; s += vv['t' + i].valeur; }
           return s;
@@ -750,13 +754,28 @@
        des exercices où le rapprochement à l'annuel est possible — publié
        ou déduit, peu importe, la part relative est la même identité
        comptable dans les deux cas. */
+    /* Seuls les exercices au découpage COMPLET comptent (les quatre
+       trimestres, ou les deux semestres) : avec T1 seul, la « part
+       dominante » se lisait sur un trimestre sur quatre. Un chiffre
+       d'affaires négatif (publié ou déduit) trahit une période mal
+       étiquetée (un T3 isolé saisi comme cumul 9 mois, ou l'inverse) :
+       l'exercice est écarté et signalé plutôt que de fausser la moyenne. */
+    var incoherences = [];
+    annees.forEach(function (y) {
+      var v = champs.ca[y] || {};
+      ['t1', 't2', 't3', 't4', 's1', 's2', 'm9'].forEach(function (p) {
+        if (v[p] && v[p].valeur < 0) incoherences.push({ annee: y, periode: p, txt: 'Exercice ' + y + ' : ' + LABEL_PERIODE[p] + (v[p].brut ? '' : ' déduit') + ' négatif (' + (global.tcCaLabel ? global.tcCaLabel(ticker, 'court') : 'CA') + ') — une période est probablement mal étiquetée (trimestre isolé contre cumul).' });
+      });
+    });
+    var anneeIncoherente = {};
+    incoherences.forEach(function (x) { anneeIncoherente[x.annee] = 1; });
     var partsTrim = { t1: [], t2: [], t3: [], t4: [] };
     var partsSem = { s1: [], s2: [] };
     annees.forEach(function (y) {
       var v = champs.ca[y];
-      if (!v || !v.annuel || !pos(v.annuel.valeur)) return;
-      ['t1', 't2', 't3', 't4'].forEach(function (p) { if (v[p]) partsTrim[p].push(v[p].valeur / v.annuel.valeur); });
-      ['s1', 's2'].forEach(function (p) { if (v[p]) partsSem[p].push(v[p].valeur / v.annuel.valeur); });
+      if (!v || !v.annuel || !pos(v.annuel.valeur) || anneeIncoherente[y]) return;
+      if (v.t1 && v.t2 && v.t3 && v.t4) ['t1', 't2', 't3', 't4'].forEach(function (p) { partsTrim[p].push(v[p].valeur / v.annuel.valeur); });
+      if (v.s1 && v.s2) ['s1', 's2'].forEach(function (p) { partsSem[p].push(v[p].valeur / v.annuel.valeur); });
     });
     var nAnneesTrim = Math.max(partsTrim.t1.length, partsTrim.t2.length, partsTrim.t3.length, partsTrim.t4.length);
     var saisonnalite = null;
@@ -794,6 +813,7 @@
       comparaisons: comparaisons,
       ytd: ytd,
       saisonnalite: saisonnalite,
+      incoherences: incoherences,
       labels: LABEL_PERIODE
     };
   }

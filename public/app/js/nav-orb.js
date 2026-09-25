@@ -18,6 +18,7 @@
       { label: 'Marché BRVM', desc: 'Cotations et lecture de la séance.', route: 'marche', href: '/app/app.html#marche' },
       { label: 'Palmarès', desc: 'Hausses, baisses et échanges par période.', route: 'palmares', href: '/app/app.html#palmares' },
       { label: 'Obligations', desc: 'Marché obligataire, rendements, courbe des taux.', route: 'obligations', href: '/app/app.html#obligations' },
+      { label: 'Matières premières', desc: 'Palme, caoutchouc, sucre, Brent, cacao : cours en FCFA et impact sur les titres liés.', route: 'matieres-premieres', href: '/app/app.html#matieres-premieres' },
       { label: 'BOC', desc: 'Bulletin Officiel de la Cote et informations officielles.', route: 'boc', href: '/app/app.html#boc' }
     ]},
     { cat: 'Analyse', icon: '◎', items: [
