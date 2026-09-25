@@ -82,6 +82,19 @@ def column_date(text):
         k = compact(m.group(1))
         y = int(m.group(2))
         return (y if y > 1900 else 2000 + y), MONTHS.get(k[:4], MONTHS.get(k[:3]))
+    # « 1er trimestre 2026 », « 1er semestre 2025 », « Exercice 2025 », « 9 mois 2026 »…
+    m = re.search(r'(?:1er|premier|1|t1)\s*trimestre\s*(20\d{2})|^\s*t1\s*(20\d{2})', t)
+    if m:
+        return int(m.group(1) or m.group(2)), 3
+    m = re.search(r'(?:(?:1er|premier|1)\s*)?semestre\s*(20\d{2})|^\s*s1\s*(20\d{2})', t)
+    if m:
+        return int(m.group(1) or m.group(2)), 6
+    m = re.search(r'(?:9|neuf)\s*mois\s*(20\d{2})', t)
+    if m:
+        return int(m.group(1)), 9
+    m = re.search(r'exercice\s*(20\d{2})', t)
+    if m:
+        return int(m.group(1)), 12
     m = re.fullmatch(r'\s*(?:exercice\s*|au\s*)?(20[12]\d)\s*', t)
     if m:
         return int(m.group(1)), None
@@ -144,7 +157,7 @@ def split_numeric_tokens(items):
     """Un élément OCR « 30171 38124 » ou « 823 897 768 574 » est découpé en nombres."""
     out = []
     for x0, y0, x1, y1, t in items:
-        if parse_num(t) is not None or not re.fullmatch(r'[\d\s,.()+\-−]+', t.strip()):
+        if parse_num(t) is not None or column_date(t) or not re.fullmatch(r'[\d\s,.()+\-−]+', t.strip()):
             out.append((x0, y0, x1, y1, t))
             continue
         parts = re.findall(r'[(\-−]?\d{1,3}(?:[  ]\d{3})*(?:,\d+)?\)?', t)
@@ -213,7 +226,19 @@ def analyse_page(items, page_text):
     # Colonnes datées : en-têtes reconnues comme dates, rangées par x.
     cols = []
     for x0, y0, x1, y1, t in items:
+        # « Var Juin.25-Juin.26 » : colonne de variation, pas une date.
+        if 'var' in t.lower() or len(re.findall(r'20\d{2}|\.\d{2}\b', t)) > 1 and '-' in t:
+            continue
         d = column_date(t)
+        if d and d[1] is None:
+            # En-tête sur deux lignes : « 1er semestre » / « 2026 ».
+            h = y1 - y0
+            for ax0, ay0, ax1, ay1, at in items:
+                if 0 < y0 - ay1 < h * 1.6 and abs((ax0 + ax1) / 2 - (x0 + x1) / 2) < max(x1 - x0, ax1 - ax0):
+                    d2 = column_date(f'{at} {t}')
+                    if d2 and d2[1] is not None:
+                        d = d2
+                        break
         if d and len(t) <= 24:
             cols.append({'x': (x0 + x1) / 2, 'y': (y0 + y1) / 2, 'year': d[0], 'month': d[1], 'text': t.strip()})
     labels = []
@@ -293,6 +318,7 @@ def analyse_page(items, page_text):
     hits = []
     for key, mult in (('milliardsdefcfa', 1e9), ('milliardsfcfa', 1e9), ('enmilliards', 1e9), ('mdfcfa', 1e9),
                       ('millionsdefcfa', 1e6), ('millionsfcfa', 1e6), ('enmillions', 1e6), ('mfcfa', 1e6), ('mfca', 1e6),
+                      ('milliondefcfa', 1e6), ('enmillion', 1e6), ('enfcfa', 1),
                       ('milliersdefcfa', 1e3), ('enmilliers', 1e3), ('kfcfa', 1e3)):
         i = c.find(key)
         if i >= 0:
