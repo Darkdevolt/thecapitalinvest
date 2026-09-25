@@ -1,0 +1,50 @@
+# Lecture automatique des Bulletins Officiels de la Cote (BOC) de la BRVM.
+#
+# Le BOC du jour est récupéré par Supabase (crons tc-boc-veille-*, toutes les
+# 45 min de 16h00 à 22h45, depuis bfin.brvm.org/boc/boc_jour.aspx). Ce
+# workflow passe 10 minutes après chaque veille : s'il y a un BOC pas encore
+# analysé, il le lit (texte + OCR des pages scannées), repère les tableaux de
+# résultats des émetteurs et les envoie à l'API, qui recoupe avec la base,
+# insère (sans jamais écraser) et envoie le récapitulatif Telegram.
+#
+# Authentification : jeton OIDC GitHub (aucun secret à configurer).
+name: boc-extract
+
+on:
+  schedule:
+    - cron: '10,55 16,19,22 * * 1-5'
+    - cron: '40 17,20 * * 1-5'
+    - cron: '25 18,21 * * 1-5'
+    - cron: '45 7 * * 2-6'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: boc-extract
+  cancel-in-progress: false
+
+jobs:
+  extract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: BOC en attente ?
+        id: check
+        run: python3 scripts/boc_extract.py --check
+
+      - name: Dépendances (PDF + OCR)
+        if: steps.check.outputs.pending != '0'
+        run: pip install --quiet pymupdf==1.28.2 rapidocr-onnxruntime==1.4.4
+
+      - name: Lecture et intégration
+        if: steps.check.outputs.pending != '0'
+        run: python3 scripts/boc_extract.py
