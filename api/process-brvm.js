@@ -34,6 +34,7 @@ import { matchInstrument, normalizeTicker } from '../lib/market-instrument-match
 import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/middleware.js';
 import { looksLikeGithubOidc, verifyGithubOidc } from '../lib/github-oidc.js';
 import { ingestBoc, bocTelegramText, bocPublicUrl } from '../lib/boc-extract.js';
+import { syncCommodities } from '../lib/commodities.js';
 import { json, fail, readBody, requestUrl } from '../lib/http.js';
 import appConfig from '../lib/config.js';
 
@@ -1287,6 +1288,19 @@ export default async function handler(req, res) {
             status: 'error', error: String(error?.message || error), triggered_by: admin?.id || null
           });
           return json(res, 502, { success: false, error: 'Récupération des annonces impossible.', code: 'ANNOUNCEMENTS_SCRAPE_ERROR' });
+        }
+      }
+
+      // Matières premières : POST { scope:'commodities', since? } (admin ou
+      // machine — pg_cron hebdomadaire). Prix mensuels FMI via FRED.
+      if (body && body.scope === 'commodities') {
+        try {
+          const since = /^\d{4}-\d{2}-\d{2}$/.test(String(body.since || '')) ? body.since : undefined;
+          const result = await syncCommodities(supabaseAdmin, { since });
+          return json(res, 200, { success: true, scope: 'commodities', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] commodities', error);
+          return json(res, 502, { success: false, error: 'Récupération des matières premières impossible.', code: 'COMMODITIES_SYNC_ERROR' });
         }
       }
 

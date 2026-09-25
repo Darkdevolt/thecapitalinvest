@@ -211,7 +211,7 @@
       '<div class="af-chart-empty-msg">' + esc(message || 'Historique insuffisant pour tracer un graphique.') + '</div></div>';
   }
 
-  function chartSerie(titre, desc, labels, series, format) {
+  function chartSerie(titre, desc, labels, series, format, pas) {
     var W = 760, H = 250, L = 66, R = 20, T = 20, B = 34;
     var vals = [];
     series.forEach(function(s){ s.values.forEach(function(v){ if(fin(v)) vals.push(v); }); });
@@ -249,7 +249,8 @@
       svg+='<path d="'+path(s.values)+'" class="af-chart-line af-chart-c'+(si%5)+'"/>';
       s.values.forEach(function(v,i){ if(fin(v)) svg+='<circle cx="'+x(i).toFixed(1)+'" cy="'+y(v).toFixed(1)+'" r="3.2" class="af-chart-dot af-chart-c'+(si%5)+'"/>'; });
     });
-    labels.forEach(function(lb,i){ svg+='<text x="'+x(i).toFixed(1)+'" y="'+(H-12)+'" class="af-chart-label" text-anchor="middle">'+esc(lb)+'</text>'; });
+    /* `pas` : sur une série mensuelle, une étiquette d'axe sur `pas` seulement (le survol garde chaque point). */
+    labels.forEach(function(lb,i){ if (pas && i % pas) return; svg+='<text x="'+x(i).toFixed(1)+'" y="'+(H-12)+'" class="af-chart-label" text-anchor="middle">'+esc(pas ? String(lb).slice(0, 4) : lb)+'</text>'; });
     svg+='</svg>';
     /* La légende, pas le graphique, porte les chiffres : un nom de série,
        sa dernière valeur, et son taux de croissance annualisé, chacun sur
@@ -257,7 +258,7 @@
        chevauche dès que deux lignes se rapprochent. */
     svg += '<div class="af-chart-legend">' + series.map(function (s, si) {
       var last = dernierFini(s.values);
-      var g = seriesGrowth(s);
+      var g = s.sansTendance ? null : seriesGrowth(s);
       return '<span class="af-chart-leg-row"><i class="af-chart-key af-chart-c' + (si % 5) + '"></i>' +
         '<span class="af-chart-leg-l">' + esc(s.label) + '</span>' +
         (last != null ? '<span class="af-chart-leg-v">' + esc(format(last)) + '</span>' : '') +
@@ -314,7 +315,7 @@
     svg += '</svg>';
     svg += '<div class="af-chart-legend">' + series.map(function (s, si) {
       var last = dernierFini(s.values);
-      var g = seriesGrowth(s);
+      var g = s.sansTendance ? null : seriesGrowth(s);
       return '<span class="af-chart-leg-row"><i class="af-chart-key af-chart-c' + (si % 5) + '"></i>' +
         '<span class="af-chart-leg-l">' + esc(s.label) + '</span>' +
         (last != null ? '<span class="af-chart-leg-v">' + esc(format(last)) + '</span>' : '') +
@@ -758,6 +759,7 @@
     { id: 'ratios', l: 'Ratios', t: 'Rentabilité, structure financière, flux et valorisation, sur tous les exercices.' },
     { id: 'croissance', l: 'Croissance', t: 'Taux de croissance annuel moyen, régularité et projection.' },
     { id: 'intermediaire', l: 'Intermédiaire', t: 'Trimestres et semestres : comparaison à la même période l\'an dernier, cumul depuis le début de l\'exercice, saisonnalité.' },
+    { id: 'matieres', l: 'Matières premières', t: 'Cours mondiaux des matières premières qui font le chiffre d\'affaires (FMI), convertis en FCFA, et lien mesuré avec l\'activité.' },
     { id: 'valorisation', l: 'Valorisation', sep: true, t: 'Hypothèses et calcul de la valeur cible (DCF, multiples, dividendes...).' },
     { id: 'sensibilite', l: 'Sensibilité', t: 'Matrice de sensibilité de la valorisation et scénarios pessimiste/central/optimiste.' },
     { id: 'comparables', l: 'Comparables', t: 'Comparaison aux pairs du secteur ou du marché.' },
@@ -775,7 +777,10 @@
     CHART_DATA = {}; CHART_SEQ = 0;
     afChartHide();
     var t = $('afTabs');
-    if (t) t.innerHTML = TABS.map(function (x) {
+    /* L'onglet « Matières premières » n'apparaît que pour les sociétés dont
+       le chiffre d'affaires dépend d'un cours mondial. */
+    if (S.tab === 'matieres' && !liensMatieres().length) S.tab = 'intermediaire';
+    if (t) t.innerHTML = TABS.filter(function (x) { return x.id !== 'matieres' || liensMatieres().length; }).map(function (x) {
       return (x.sep ? '<span class="af-tab-sep"></span>' : '') +
         '<button type="button" class="af-tab' + (x.id === S.tab ? ' on' : '') + '" data-aftab="' + x.id + '" title="' + esc(x.t || '') + '">' + x.l + '</button>';
     }).join('');
@@ -789,7 +794,7 @@
     }
     var fn = {
       synthese: paneSynthese, etats: paneEtats, ratios: paneRatios, croissance: paneCroissance,
-      intermediaire: paneIntermediaire,
+      intermediaire: paneIntermediaire, matieres: paneMatieres,
       valorisation: paneValorisation, sensibilite: paneSensibilite, comparables: paneComparables,
       qualite: paneQualite, donnees: paneDonnees
     }[S.tab] || paneSynthese;
@@ -1336,6 +1341,77 @@
       html += '<div class="af-warn" style="' + (s.marquee ? '' : 'background:var(--af-panel-2);border-left-color:var(--af-line-strong)') + '">' + esc(s.verdict) + '</div>';
     }
 
+    return html;
+  }
+
+  /* ── Matières premières ───────────────────────────────────────────
+     Cours mondiaux (FMI, via FRED) convertis en FCFA, et lien mesuré
+     entre ce cours et le chiffre d'affaires de la société. */
+  function liensMatieres() {
+    var M = global.AFMatieres;
+    if (!M || !S.ticker) return [];
+    return M.liens(S.ticker, S.analyse && S.analyse.data ? S.analyse.data.sousSecteur : '');
+  }
+
+  function paneMatieres() {
+    var M = global.AFMatieres, liens = liensMatieres();
+    if (!liens.length) return vide('Pas de matière première déterminante', 'Le chiffre d\'affaires de cette société ne dépend pas directement d\'un cours mondial suivi ici.');
+    if (!M.charge()) {
+      M.charger().then(function () { if (S.tab === 'matieres') render(); })
+        .catch(function () { var h = $('afPanel'); if (h && S.tab === 'matieres') h.innerHTML = vide('Cours indisponibles', 'Les prix des matières premières n\'ont pas pu être chargés. Réessayez dans un instant.'); });
+      return vide('Chargement des cours…', 'Récupération des prix mensuels des matières premières.');
+    }
+    var html = '';
+    var fcfa = function (v) { return fin(v) ? n0(v) : '—'; };
+    liens.forEach(function (l) {
+      var def = M.SERIES[l.serie], pts = M.serieFcfa(l.serie), stt = M.stats(pts);
+      html += groupe(def.libelle);
+      if (l.note) html += note(esc(l.note));
+      if (!stt) { html += note('Aucun cours disponible pour cette matière.'); return; }
+      var moisTxt = new Date(stt.mois + '-01T00:00:00').toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+      html += '<div class="af-stats">' +
+        st('Cours de ' + moisTxt, fcfa(stt.dernier) + ' ' + def.unite, n2(stt.dernierUsd, 1) + ' ' + def.usd) +
+        st('Sur un mois', '<span class="' + tone(stt.var1m, 0) + '">' + or(pcs(stt.var1m), '—') + '</span>', '') +
+        st('Sur un an', '<span class="' + tone(stt.var12m, 0) + '">' + or(pcs(stt.var12m), '—') + '</span>', 'en dollars : ' + or(pcs(stt.var12mUsd), '—')) +
+        st('Moyenne sur 5 ans', fcfa(stt.moy5) + ' ' + def.unite, 'fourchette ' + fcfa(stt.min5) + ' – ' + fcfa(stt.max5) +
+          (fin(stt.rang5) ? ' · cours actuel au-dessus de ' + pc(stt.rang5, 0) + ' des mois' : '')) +
+        '</div>';
+      var recents = pts.filter(function (p) { return p.mois >= String(new Date().getFullYear() - 6); });
+      html += chartSerie(def.libelle + ' en ' + def.unite, 'Moyenne mensuelle, convertie au cours euro/dollar du mois (1 € = 655,957 FCFA)',
+        recents.map(function (p) { return p.mois; }), [{ label: def.libelle, sansTendance: true, values: recents.map(function (p) { return p.fcfa; }) }],
+        function (v) { return fcfa(v); }, 12);
+
+      var lien = M.lienCa(S.ticker, l.serie);
+      var base = lien.trimestriel.n >= 4 ? lien.trimestriel : lien.annuel;
+      var baseNom = base === lien.trimestriel ? 'trimestre contre même trimestre' : 'année contre année';
+      html += '<div class="af-cat">Lien avec le ' + ca('min') + '</div>';
+      if (base.n < 3 || !fin(base.r)) {
+        html += note('Pas assez de périodes publiées (' + base.n + ') pour mesurer le lien entre ce cours et le ' + ca('min') + '.');
+      } else {
+        html += '<div class="af-stats">' +
+          st('Corrélation des variations', n2(base.r, 2), 'lien ' + base.lecture + ' · ' + base.n + ' périodes (' + baseNom + ')') +
+          st('Sensibilité', fin(base.pente) ? n2(base.pente, 2) : '—', fin(base.pente) ? '+10 % sur le cours ≈ ' + pcs(base.pente * 0.10) + ' de ' + ca('court') : '') +
+          (lien.annuel.n >= 3 && base !== lien.annuel ? st('Même mesure, année contre année', n2(lien.annuel.r, 2), 'lien ' + lien.annuel.lecture + ' · ' + lien.annuel.n + ' exercices') : '') +
+          '</div>';
+        var paires = base === lien.trimestriel ? lien.pairesT : lien.pairesA;
+        html += chartBarresVert('Variation sur un an : cours contre ' + ca('min'), baseNom,
+          paires.map(function (p) { return p.label; }),
+          [{ label: 'Cours ' + def.court + ' (FCFA)', sansTendance: true, values: paires.map(function (p) { return p.x; }) },
+           { label: ca('court'), sansTendance: true, values: paires.map(function (p) { return p.y; }) }],
+          function (v) { return pcs(v, 0) || '—'; });
+      }
+      var sig = M.signal(S.ticker, l.serie, lien);
+      if (sig) {
+        var txt = 'Cours moyen du ' + sig.label + (sig.moisConnus < 3 ? ' (' + sig.moisConnus + ' mois connu' + (sig.moisConnus > 1 ? 's' : '') + ')' : '') +
+          ' : ' + pcs(sig.dPrix) + ' par rapport à la même période un an plus tôt.';
+        if (fin(sig.dCaIndicatif)) txt += ' Avec la sensibilité mesurée (base ' + sig.base + '), cela oriente le ' + ca('min') + ' de la période vers ' + pcs(sig.dCaIndicatif) + ' sur un an, toutes choses égales par ailleurs (volumes, change, prix administrés).';
+        else txt += ' Le lien mesuré avec le ' + ca('min') + ' est trop faible pour en tirer une indication chiffrée.';
+        html += '<div class="af-warn" style="background:var(--af-panel-2);border-left-color:var(--af-line-strong)">' + esc(txt) + '</div>';
+      }
+    });
+    html += note('Source : FMI, Primary Commodity Prices (moyennes mensuelles), via la Réserve fédérale de Saint-Louis (FRED) ; parité euro/dollar de la Réserve fédérale. ' +
+      'Mise à jour chaque semaine ; le FMI publie un mois écoulé au début du mois suivant. Le lien est mesuré sur les variations d\'une année sur l\'autre, ' +
+      'ce qui neutralise la saisonnalité propre à chaque trimestre. Indication statistique, pas une prévision.');
     return html;
   }
 
