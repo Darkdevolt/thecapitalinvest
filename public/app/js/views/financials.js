@@ -99,6 +99,24 @@ function finPreviousPeriod(fins, f) {
 
 // Taux de distribution : la colonne payout_ratio est déjà calculée côté
 // admin (public/admin/js/financials/financials-schema.js) ; même repli que
+// BPA sur douze mois glissants d'une période intermédiaire : exercice précédent
+// + période en cours − même période un an plus tôt. Un P/E calculé sur un BPA
+// semestriel (ou trimestriel) doublait (ou quadruplait) le multiple affiché.
+function finBpaDouzeMois(fins, f) {
+  const bpa = Number(f?.bpa);
+  if (!f || !Number.isFinite(bpa)) return null;
+  if (!f.periode || f.periode === 'annuel') return { v: bpa, ttm: false };
+  const y = Number(f.annee);
+  const an = fins.find(x => Number(x.annee) === y - 1 && (!x.periode || x.periode === 'annuel'));
+  const pp = fins.find(x => Number(x.annee) === y - 1 && x.periode === f.periode);
+  const a = Number(an?.bpa), p = Number(pp?.bpa);
+  return Number.isFinite(a) && Number.isFinite(p) ? { v: a + bpa - p, ttm: true } : null;
+}
+function finPer(fins, f, cp) {
+  const b = finBpaDouzeMois(fins, f);
+  if (!b || !(b.v > 0) || !Number.isFinite(cp)) return '—';
+  return (cp / b.v).toFixed(1) + 'x' + (b.ttm ? ' (BPA 12 mois glissants ' + fmt(b.v) + ' FCFA)' : '');
+}
 // dividend-screener.js quand elle est vide (dpa/bpa, sinon dpa×actions/RN).
 function finPayoutRatio(f) {
   const stored = Number(f?.payout_ratio);
@@ -338,7 +356,7 @@ function renderFinancialTicker(ticker, fins) {
     <div class="fin-key-grid">
       ${finMetric(finCa(ticker), finValue(latest.chiffre_affaires), `${annual ? 'Exercice' : period} ${finEsc(latest.annee)}`)}
       ${finMetric('Résultat net', finValue(latest.resultat_net), growth === null ? confidence : `${growth >= 0 ? '+' : ''}${growth.toFixed(1)}% vs ${annual ? 'exercice' : period} ${finEsc(prev.annee)}`)}
-      <div class="pro-only">${finMetric('BPA', latest.bpa != null ? `${fmt(latest.bpa)} FCFA` : '—', 'Bénéfice par action')}</div>
+      <div class="pro-only">${finMetric(annual ? 'BPA' : `BPA ${period}`, latest.bpa != null ? `${fmt(latest.bpa)} FCFA` : '—', annual ? 'Bénéfice par action' : 'Bénéfice par action de la période, non annualisé')}</div>
       ${finMetric('Marge nette', finRatio(latest.resultat_net, latest.chiffre_affaires), `Résultat net / ${finCa(ticker, 'court')}`)}
       ${finMetric('Dividende par action', latest.dpa != null ? `${fmt(latest.dpa)} FCFA` : '—', 'DPA disponible en base')}
     </div>
@@ -403,7 +421,7 @@ function openFinDetail(ticker) {
         [finCa(ticker),finValue(f.chiffre_affaires),finGrowth(f.chiffre_affaires,prev?.chiffre_affaires)],
         ['RBE',finValue(f.rbe ?? f.ebitda),finGrowth(f.rbe ?? f.ebitda,prev?.rbe ?? prev?.ebitda)],
         ['Résultat net',finValue(f.resultat_net),finGrowth(f.resultat_net,prev?.resultat_net)],
-        [f.tc_ajuste?'BPA (retraité)':'BPA',f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],
+        [(f.tc_ajuste?'BPA (retraité)':'BPA')+(!f.periode||f.periode==='annuel'?'':' de la période'),f.bpa!=null?fmt(f.bpa)+' FCFA': '—',finGrowth(f.bpa,prev?.bpa)],
         [f.tc_ajuste?'DPA (retraité)':'DPA',f.dpa!=null?fmt(f.dpa)+' FCFA': '—',finGrowth(f.dpa,prev?.dpa)]
       ]),
       finCard('Bilan', [
@@ -412,7 +430,7 @@ function openFinDetail(ticker) {
         ['Dettes financières',finValue(f.dettes_financieres),finGrowth(f.dettes_financieres,prev?.dettes_financieres)]
       ]),
       finCard('Flux de trésorerie', [['Cash-flow opérationnel',finValue(f.cash_flow_operationnel)],['CAPEX',finValue(f.capex)]]),
-      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',f.bpa!=null&&Number(f.bpa)>0&&Number.isFinite(cp)?(cp/Number(f.bpa)).toFixed(1)+'x': '—']]),
+      finCard('Ratios clés', [['Marge nette',finRatio(f.resultat_net,f.chiffre_affaires)],['ROE',finRatio(f.resultat_net,f.fonds_propres)],['ROA',finRatio(f.resultat_net,f.total_actif)],['Dette / fonds propres',f.dettes_financieres!=null&&f.fonds_propres?((Number(f.dettes_financieres)/Number(f.fonds_propres)).toFixed(2)+'x'): '—'],['P/E',finPer(fins,f,cp)]]),
       finCard('Dividende', [['Rendement du dividende',f.dpa!=null&&cp>0?((Number(f.dpa)/cp)*100).toFixed(2)+'%': '—'],['Taux de distribution (payout)',finPayoutRatio(f)!=null?finPayoutRatio(f).toFixed(1)+'%': '—',finGrowth(finPayoutRatio(f),finPayoutRatio(prev))]]),
       finIsolatedCard(f, fins)
     ].join('');
