@@ -1,5 +1,7 @@
 import config from '../lib/config.js';
 import { json, fail, applyCors } from '../lib/http.js';
+import { handleAuthFlow } from '../lib/auth-flows.js';
+import { rateLimited } from '../lib/middleware.js';
 
 export default async function handler(req, res) {
   applyCors(req, res, { scope: 'public', methods: 'POST,OPTIONS' });
@@ -16,6 +18,13 @@ export default async function handler(req, res) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { body = null; }
   }
+  /* Inscription, code de confirmation et mot de passe oublié (lib/auth-flows.js). */
+  const action = String(body?.action || '').toLowerCase();
+  if (action && action !== 'login') {
+    if (action !== 'status' && rateLimited(req, res, 'auth-flow')) return;
+    return handleAuthFlow(req, res, action, body);
+  }
+
   const email = String(body?.email || '').trim().toLowerCase();
   const password = String(body?.password || '');
   if (!email || !password) return fail(res, 400, 'Email et mot de passe requis.', 'AUTH_INPUT_INVALID');

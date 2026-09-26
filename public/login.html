@@ -378,6 +378,20 @@ body{
       }
 
       showMessage('Envoi du lien de réinitialisation…', 'ok');
+      /* E-mail envoyé par le serveur The Capital (Brevo/Resend) ; repli sur Supabase s'il n'est pas configuré. */
+      fetch('/api/auth-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'recover', email: email })
+      }).then(function(r){
+        if (r.status === 503) throw new Error('fallback');
+        if (!r.ok) return r.json().then(function(d){ showMessage((d && d.error) || 'Envoi impossible pour le moment.', 'err'); });
+        showMessage('Si un compte existe pour ' + email + ', un lien de réinitialisation vient d’être envoyé.', 'ok');
+      }).catch(function(){ supabaseRecover(email); });
+    }
+  );
+
+  function supabaseRecover(email){
       fetch(
         'https://otsiwiwlnowxeolbbgvm.supabase.co/auth/v1/recover',
         {
@@ -388,7 +402,7 @@ body{
           },
           body: JSON.stringify({
             email: email,
-            redirect_to: location.origin + '/login.html?reset=1'
+            redirect_to: location.origin + '/reset-password.html'
           })
         }
       ).then(function(){
@@ -399,9 +413,7 @@ body{
       }).catch(function(){
         showMessage('Impossible d’envoyer le lien pour le moment. Réessayez plus tard.', 'err');
       });
-
-    }
-  );
+  }
 
 })();
 </script>

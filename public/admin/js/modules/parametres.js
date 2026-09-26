@@ -32,6 +32,7 @@
         { id: 'opt-banner-until', label: 'Afficher jusqu’au', type: 'date', hint: 'Vide = sans limite.' },
         { id: 'opt-banner-link', label: 'Lien (facultatif)', placeholder: '/pricing.html ou https://…', wide: true }
       ]) + '</div><div id="opt-preview" style="margin-top:8px"></div></div></div></div>' +
+      '<div class="card"><div class="card-head"><span class="card-title">Envoi des e-mails</span></div><div class="card-body" id="opt-mailer">…</div></div>' +
       '<div class="card"><div class="card-head"><span class="card-title">Support client</span></div><div class="card-body"><div class="form-grid" style="padding:0">' + TC.fields([
         { id: 'opt-support-email', label: 'E-mail du support', type: 'email' },
         { id: 'opt-support-wa', label: 'WhatsApp du support', placeholder: '+225 …' }
@@ -52,11 +53,18 @@
     TC.setVal('opt-support-email', c.support_email || '');
     TC.setVal('opt-support-wa', c.support_whatsapp || '');
     if (!isMaster()) TC.qsa('#panel-parametres input, #panel-parametres textarea, #panel-parametres select').forEach(n => { n.disabled = true; });
-    paintState(); preview();
+    paintState(); preview(); paintMailer();
     TC.el('opt-other-count').textContent = other.length + ' paramètre(s)';
     TC.el('opt-other').innerHTML = other.length ? other.map(r => '<tr><td><strong>' + esc(r.key) + '</strong></td><td><code style="font-size:11px">' + esc(JSON.stringify(r.value)).slice(0, 400) + '</code></td><td class="td-mono td-muted">' + TC.fmtDate(r.updated_at) + '</td></tr>').join('') : TC.rowsEmpty(3, 'Aucun autre paramètre', '');
   }
 
+  let mailer = null;
+  function paintMailer() {
+    const box = TC.el('opt-mailer'); if (!box) return;
+    box.innerHTML = mailer && mailer.ready
+      ? '<span class="badge badge-green">Actif</span> Les e-mails (code d’inscription, bienvenue, mot de passe oublié, paiement validé, fin d’essai, messages aux clients) partent par <strong>' + esc(mailer.provider === 'brevo' ? 'Brevo' : 'Resend') + '</strong> depuis <strong>' + esc(mailer.from) + '</strong>.'
+      : '<span class="badge badge-orange">Non configuré</span> <div class="note warn" style="margin-top:10px"><strong>Les e-mails passent encore par le service de Supabase</strong> (quelques envois par heure seulement, souvent en indésirables). Pour des e-mails fiables et gratuits : créez un compte <strong>Brevo</strong> (300 e-mails/jour gratuits), vérifiez votre adresse d’expédition, puis ajoutez dans Vercel les variables <code>BREVO_API_KEY</code> et <code>MAIL_FROM</code>.</div>';
+  }
   function paintState() {
     const c = cfg || {}, parts = [];
     parts.push(c.maintenance ? '<span class="badge badge-red">Maintenance active</span>' : '<span class="badge badge-green">Application ouverte</span>');
@@ -87,7 +95,7 @@
   async function load() {
     try {
       const res = await TC.api(API, { timeout: 15000 });
-      cfg = res.data?.config || {}; other = res.data?.other || []; updatedAt = res.data?.updated_at || null;
+      cfg = res.data?.config || {}; other = res.data?.other || []; updatedAt = res.data?.updated_at || null; mailer = res.data?.mailer || null;
       fill();
     } catch (e) { TC.el('opt-state').innerHTML = '<strong>Options indisponibles.</strong> ' + esc(e.message); TC.el('opt-state').className = 'note err'; }
   }
