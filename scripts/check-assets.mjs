@@ -139,8 +139,13 @@ for (const file of files) {
 // (CRUD manuel marché obligataire + calendrier des coupons) ; cache-buster
 // de annonces.js, evenements-valeurs.js et dcbr.js pour leurs formulaires de
 // création manuelle. Changement délibéré et revu.
+// Bump 2026-09-26 : gestion des comptes clients et options de l'application
+// (utilisateurs.js réécrit en fiche client complète ; nouveaux modules
+// formules.js, paiements.js, support.js ; parametres.js éditable ; helper RPC
+// dans core/api.js). Demandé et validé par le propriétaire (« feu vert pour
+// tout »). Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = 'fb359c6fcb2616abeb96610235b8e3f9b9825b76';
+const expectedAdminBlobSha = 'cb0a82f16e047cc952aa675baec3de6611afb781';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
