@@ -509,10 +509,10 @@ const RAPPORTS_TIME_BUDGET_MS = 38000;
 // toutes les 10 min pour que des passages successifs couvrent tout le monde.
 const RAPPORTS_SCRAPE_BUDGET_MS = 22000;
 
-async function runRapportsSync({ sinceYears, limit, maxPages }) {
+async function runRapportsSync({ sinceYears, limit, maxPages, slugs }) {
   const started = Date.now();
   const { rows, errors: scrapeErrors, skipped } = await scrapeRapports({
-    sinceYears, maxPages, concurrency: 6,
+    slugs, sinceYears, maxPages, concurrency: 6,
     deadline: started + RAPPORTS_SCRAPE_BUDGET_MS,
     startOffset: Math.floor(started / 600000) * 6
   });
@@ -1324,7 +1324,10 @@ export default async function handler(req, res) {
           const result = await runRapportsSync({
             sinceYears: Math.min(10, Number(body.sinceYears) || 2),
             limit: Math.min(60, Number(body.limit) || 20),
-            maxPages: Math.min(12, Number(body.maxPages) || (machine ? 3 : 12))
+            maxPages: Math.min(12, Number(body.maxPages) || (machine ? 3 : 12)),
+            // Rattrapage de l'historique : quelques émetteurs par appel, pour laisser
+            // le temps aux téléchargements (la lecture de tous les émetteurs prend le budget).
+            slugs: Array.isArray(body.slugs) ? body.slugs.slice(0, 10).map(String) : undefined
           });
           await safeRapportsRunLog({
             started_at: startedAt, finished_at: new Date().toISOString(),
