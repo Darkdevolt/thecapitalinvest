@@ -94,11 +94,17 @@
   }
 
   async function decide(p, decision) {
+    const note = TC.val('pr-note') || null;
     if (decision === 'approved' && !confirm('Valider ce paiement et activer l’abonnement du client ?')) return;
     try {
-      await TC.rpc('review_payment_proof', { p_proof_id: p.id, p_reviewer_id: TC.session.user.id, p_decision: decision, p_reviewer_note: TC.val('pr-note') || null });
+      await TC.rpc('review_payment_proof', { p_proof_id: p.id, p_reviewer_id: TC.session.user.id, p_decision: decision, p_reviewer_note: note });
       TC.modal.close();
       TC.toast(decision === 'approved' ? 'Paiement validé, abonnement activé' : decision === 'rejected' ? 'Reçu rejeté' : 'Précisions demandées', 'ok');
+      /* Le client est prévenu par e-mail (si un service d'e-mails est configuré). */
+      const o = orderOf(p);
+      TC.api('/api/user-data?mode=admin-users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, timeout: 15000,
+        body: JSON.stringify({ action: 'notify', user_id: p.user_id, kind: decision === 'approved' ? 'subscription_active' : decision === 'rejected' ? 'payment_rejected' : 'payment_info', plan_name: PLANS[o.plan_code] || o.plan_code, note }) })
+        .then(r => { if (r.data?.sent) TC.toast('Client prévenu par e-mail', 'ok'); }).catch(() => {});
       load();
     } catch (e) { TC.modal.msg(e.message, 'err'); }
   }

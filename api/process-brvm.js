@@ -35,6 +35,7 @@ import { authenticateAdmin, isMachineRequest, handlePreflight } from '../lib/mid
 import { looksLikeGithubOidc, verifyGithubOidc } from '../lib/github-oidc.js';
 import { ingestBoc, bocTelegramText, bocPublicUrl } from '../lib/boc-extract.js';
 import { syncCommodities } from '../lib/commodities.js';
+import { sendTrialReminders } from '../lib/auth-flows.js';
 import { json, fail, readBody, requestUrl } from '../lib/http.js';
 import appConfig from '../lib/config.js';
 
@@ -1301,6 +1302,17 @@ export default async function handler(req, res) {
         } catch (error) {
           console.error('[PROCESS-BRVM] commodities', error);
           return json(res, 502, { success: false, error: 'Récupération des matières premières impossible.', code: 'COMMODITIES_SYNC_ERROR' });
+        }
+      }
+
+      // Rappels de fin d'essai : POST { scope:'trial-reminders' } (machine — pg_cron quotidien).
+      if (body && body.scope === 'trial-reminders') {
+        try {
+          const result = await sendTrialReminders();
+          return json(res, 200, { success: true, scope: 'trial-reminders', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] trial-reminders', error);
+          return json(res, 500, { success: false, error: 'Rappels impossibles.', code: 'TRIAL_REMINDERS_ERROR' });
         }
       }
 

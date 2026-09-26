@@ -169,6 +169,7 @@
         (m ? '<div class="cl-actions"><button class="btn btn-outline btn-sm" data-trial="7">Essai +7 j</button><button class="btn btn-outline btn-sm" data-trial="14">+14 j</button><button class="btn btn-outline btn-sm" data-trial="30">+30 j</button><button class="btn btn-outline btn-sm" data-trial="0">Terminer l’essai</button><button class="btn btn-primary btn-sm" data-goto="abonnements">Gérer l’abonnement →</button></div>' : '') +
         '</div></div></div>' +
         (m ? '<div class="card danger-zone" style="margin-top:16px"><div class="card-head"><span class="card-title">Sécurité du compte</span></div><div class="card-body"><div class="cl-actions" style="margin-top:0">' +
+          '<button class="btn btn-primary btn-sm" data-act="email">✉ Envoyer un e-mail</button>' +
           '<button class="btn btn-outline btn-sm" data-act="reset_password">Envoyer une réinitialisation du mot de passe</button>' +
           '<button class="btn btn-outline btn-sm" data-act="magic_link">Créer un lien de connexion</button>' +
           (a.suspended ? '<button class="btn btn-green btn-sm" data-act="unsuspend">Réactiver le compte</button>' : '<button class="btn btn-orange btn-sm" data-act="suspend">Suspendre le compte</button>') +
@@ -234,6 +235,15 @@
         if (!note) return TC.toast('La note est vide.', 'err');
         await post({ action: 'note', user_id: u.id, note });
         tab = 'notes'; TC.toast('Note ajoutée', 'ok'); refresh(); return;
+      }
+      if (kind === 'email') {
+        TC.modal.open({ title: 'Écrire à ' + (u.nom || u.email), subtitle: u.email + ' · la réponse du client arrivera sur votre adresse', saveLabel: 'Envoyer',
+          body: '<div class="form-grid">' + TC.fields([{ id: 'clm-subject', label: 'Objet', wide: true }, { id: 'clm-body', label: 'Message', type: 'textarea', rows: 8, wide: true }]) + '</div><div class="note">L’e-mail part avec la mise en forme The Capital. Une copie est gardée dans les notes du client.</div>',
+          async onSave() {
+            try { await post({ action: 'email', user_id: u.id, subject: TC.val('clm-subject'), message: TC.val('clm-body') }); TC.modal.close(); TC.toast('E-mail envoyé', 'ok'); refresh(); }
+            catch (e) { TC.modal.msg(e.message, 'err'); }
+          } });
+        return;
       }
       if (kind === 'reset_password' || kind === 'magic_link') {
         const r = await post({ action: kind, user_id: u.id });
