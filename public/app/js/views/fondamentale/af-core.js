@@ -184,17 +184,19 @@
       margeBrute: div(r.rbe, r.ca),
       margeExploitation: div(fin(r.ebit) ? r.ebit : r.rbe, r.ca),
       margeNette: div(r.rn, r.ca),
-      roe: div(r.rn, r.cp),
+      /* Capitaux propres négatifs : ROE, gearing, levier et P/B n'ont pas de sens (une perte
+         divisée par des fonds propres négatifs donnerait un « ROE » positif). */
+      roe: pos(r.cp) ? div(r.rn, r.cp) : NaN,
       roa: div(r.rn, r.actif),
       roce: div(fin(r.ebit) ? r.ebit : r.rbe, fin(r.cp) && fin(r.dette) ? r.cp + r.dette : NaN),
       /* Structure */
-      gearing: div(r.dette, r.cp),
+      gearing: pos(r.cp) ? div(r.dette, r.cp) : NaN,
       autonomie: div(r.cp, r.actif),
       detteActif: div(r.dette, r.actif),
       detteNette: detteNette,
       detteNetteExacte: detteNetteExacte,
       detteEbitda: div(detteNette, r.rbe),
-      levier: div(r.actif, r.cp),
+      levier: pos(r.cp) ? div(r.actif, r.cp) : NaN,
       /* Efficacité */
       rotationActifs: div(r.ca, r.actif),
       /* Flux */
@@ -213,7 +215,7 @@
       marketCap: mc,
       ev: ev,
       per: div(price, r.bpa),
-      pbr: div(price, div(r.cp, act)),
+      pbr: pos(r.cp) ? div(price, div(r.cp, act)) : NaN,
       psr: div(mc, r.ca),
       pfcf: div(mc, r.fcf),
       evEbitda: div(ev, r.rbe),
@@ -519,7 +521,7 @@
       if (fin(r.rn) && fin(r.ca) && r.ca > 0 && Math.abs(r.rn) > r.ca)
         alertes.push({ niveau: 'grave', txt: pre + 'le résultat net dépasse le chiffre d\'affaires en valeur absolue.' });
       if (fin(r.cp) && r.cp < 0)
-        alertes.push({ niveau: 'grave', txt: pre + 'les capitaux propres sont négatifs.' });
+        alertes.push({ niveau: 'moyen', txt: pre + 'capitaux propres négatifs (pertes cumulées supérieures aux apports) : situation financière fragile, ROE et levier non significatifs.' });
       if (fin(r.cp) && fin(r.actif) && r.cp > r.actif)
         alertes.push({ niveau: 'grave', txt: pre + 'les capitaux propres dépassent le total du bilan.' });
       if (fin(r.rbe) && fin(r.rn) && r.rn > r.rbe && r.rbe > 0)
