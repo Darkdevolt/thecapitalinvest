@@ -148,6 +148,14 @@
         }
     };
 
+    /** Appel d'une fonction SQL exposée (RPC) avec la session de l'administrateur. */
+    TC.rpc = async function (name, body) {
+        const r = await request(E.REST + '/rpc/' + name, { method: 'POST', body: JSON.stringify(body || {}) });
+        const payload = await r.json().catch(() => null);
+        if (!r.ok) throw new Error((payload && (payload.message || payload.hint)) || ('HTTP ' + r.status));
+        return payload;
+    };
+
     /** Nombre exact de lignes, sans rapatrier les données. */
     TC.count = async function (table, filter) {
         try {
