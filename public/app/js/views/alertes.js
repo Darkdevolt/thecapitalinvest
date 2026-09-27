@@ -103,11 +103,14 @@
       var cond = a.condition || (a.type_alerte === 'HAUSSE' ? 'above' : a.type_alerte === 'BAISSE' ? 'below' : a.type_alerte);
       var hit = isFinite(c.cp) && (cond === 'above' ? c.cp >= seuil : c.cp <= seuil);
       var dist = (isFinite(c.cp) && seuil) ? ((c.cp - seuil) / seuil) * 100 : null;
+      var sentAt = a.triggered_at ? new Date(a.triggered_at) : null;
+      if (sentAt && !a.active) hit = true;
       var st = hit ? 'hit' : a.active ? 'on' : 'off';
       return '<div class="row"><div>'
         + '<div class="tk" onclick="openFiche && openFiche(\'' + esc(t) + '\',\'alertes\')">' + esc(t) + '</div>'
         + '<div class="alr-desc">Cours ' + (cond === 'above' ? '≥' : '≤') + ' <b style="color:var(--cream)">' + nf(seuil) + '</b> FCFA'
-        + (isFinite(c.cp) ? ' · actuel ' + nf(c.cp) + (dist != null ? ' (' + (dist > 0 ? '+' : '') + dist.toFixed(1) + '%)' : '') : '') + '</div></div>'
+        + (isFinite(c.cp) ? ' · actuel ' + nf(c.cp) + (dist != null ? ' (' + (dist > 0 ? '+' : '') + dist.toFixed(1) + '%)' : '') : '')
+        + (sentAt && !a.active ? '<br>🔔 E-mail envoyé le ' + sentAt.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' }) + ' à ' + sentAt.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) + (a.triggered_price ? ' (cours ' + nf(a.triggered_price) + ')' : '') + ' · « activer » pour la réarmer' : '') + '</div></div>'
         + '<div class="alr-a"><span class="alr-badge ' + st + '">' + (hit ? '🔔 atteinte' : a.active ? 'active' : 'en pause') + '</span>'
         + '<span style="display:flex;gap:6px;margin-top:4px">'
         + '<button class="mini" data-al-toggle="' + esc(a.id) + '">' + (a.active ? 'pause' : 'activer') + '</button>'
@@ -126,6 +129,7 @@
       + wlHtml
       + '<div class="add"><select id="wlAdd">' + optns + '</select><button type="button" id="wlAddBtn">Suivre</button></div></div></div>'
       + '<div class="card"><div class="card-h"><span class="t">Alertes de prix · ' + al.length + '</span></div><div class="card-b">'
+      + '<div class="alr-desc" style="padding:8px 6px 4px">Vous recevez un e-mail dès qu’une alerte est atteinte (vérification toutes les 15 min pendant la séance, puis à la clôture). L’alerte se met ensuite en pause.</div>'
       + alHtml
       + '<div class="add"><select id="alTk">' + optns + '</select>'
       + '<select id="alCond"><option value="above">≥ seuil</option><option value="below">≤ seuil</option></select>'
