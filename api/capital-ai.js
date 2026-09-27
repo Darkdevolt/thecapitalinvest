@@ -38,6 +38,35 @@ const SYSTEM_PROMPT = (contexte, donnees) => [
   `Consignes d'affichage de l'application : ${contexte || 'aucune.'}`
 ].join(' ') + '\n\nDONNÉES THE CAPITAL :\n' + (donnees || 'aucune donnée disponible pour cette question.');
 
+/* Modèles « flash » disponibles pour la clé, du plus récent au plus ancien,
+   les versions « lite » en dernier. Liste mise en cache 6 h par instance. */
+const STATIC_FALLBACKS = ['gemini-flash-latest', 'gemini-flash-lite-latest'];
+let fallbackCache = null, fallbackAt = 0;
+async function geminiFallbacks(key) {
+  if (fallbackCache && Date.now() - fallbackAt < 6 * 3600e3) return fallbackCache;
+  try {
+    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200', {
+      headers: { 'x-goog-api-key': key },
+      signal: AbortSignal.timeout(5000)
+    });
+    const data = await r.json();
+    const version = n => Number((n.match(/gemini-(\d+(?:\.\d+)?)/) || [])[1]) || 0;
+    const names = (data?.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => String(m.name || '').replace(/^models\//, ''))
+      .filter(n => /^gemini-[\d.]+-flash(-lite)?$/.test(n))
+      .sort((a, b) => (a.includes('lite') - b.includes('lite')) || version(b) - version(a));
+    if (names.length) {
+      fallbackCache = [...names, ...STATIC_FALLBACKS];
+      fallbackAt = Date.now();
+      return fallbackCache;
+    }
+  } catch (e) {
+    console.warn('[CAPITAL-AI] liste des modèles indisponible', e?.message || e);
+  }
+  return STATIC_FALLBACKS;
+}
+
 export default async function handler(req, res) {
   if (handlePreflight(req, res, { methods: 'POST,OPTIONS' })) return;
   if (req.method !== 'POST') return fail(res, 405, 'Méthode non autorisée.', 'METHOD_NOT_ALLOWED');
@@ -84,8 +113,10 @@ export default async function handler(req, res) {
         signal: controller.signal
       });
       /* Modèle saturé (503), quota du modèle atteint (429), erreur passagère (500)
-         ou modèle retiré (404) : on essaie le modèle gratuit suivant. */
-      const chain = [...new Set([model, 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'])];
+         ou modèle retiré (404) : on essaie le modèle gratuit suivant. Les secours
+         viennent de la liste publiée par Google, car les noms codés en dur
+         finissent par être retirés. */
+      const chain = [...new Set([model, ...await geminiFallbacks(geminiKey)])].slice(0, 5);
       let response, used = model;
       for (const m of chain) {
         used = m;
