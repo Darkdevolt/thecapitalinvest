@@ -36,6 +36,7 @@ import { looksLikeGithubOidc, verifyGithubOidc } from '../lib/github-oidc.js';
 import { ingestBoc, bocTelegramText, bocPublicUrl } from '../lib/boc-extract.js';
 import { syncCommodities } from '../lib/commodities.js';
 import { sendTrialReminders } from '../lib/auth-flows.js';
+import { runPriceAlerts } from '../lib/price-alerts.js';
 import { json, fail, readBody, requestUrl } from '../lib/http.js';
 import appConfig from '../lib/config.js';
 
@@ -1302,6 +1303,17 @@ export default async function handler(req, res) {
         } catch (error) {
           console.error('[PROCESS-BRVM] commodities', error);
           return json(res, 502, { success: false, error: 'Récupération des matières premières impossible.', code: 'COMMODITIES_SYNC_ERROR' });
+        }
+      }
+
+      // Alertes de prix : POST { scope:'price-alerts' } (machine — pg_cron toutes les 15 min en séance).
+      if (body && body.scope === 'price-alerts') {
+        try {
+          const result = await runPriceAlerts();
+          return json(res, 200, { success: true, scope: 'price-alerts', ...result });
+        } catch (error) {
+          console.error('[PROCESS-BRVM] price-alerts', error);
+          return json(res, 500, { success: false, error: 'Vérification des alertes impossible.', code: 'PRICE_ALERTS_ERROR' });
         }
       }
 
