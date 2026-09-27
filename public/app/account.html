@@ -134,7 +134,7 @@ async function loadSubscription(){
     var name=document.getElementById('plan-name'),status=document.getElementById('plan-status'),detail=document.getElementById('plan-detail'),expiry=document.getElementById('plan-expiry'),start=document.getElementById('plan-start'),provider=document.getElementById('plan-provider'),main=document.getElementById('subscription-main-action'),change=document.getElementById('subscription-change-action'),note=document.getElementById('subscription-note');
     if(!s){
       name.textContent='Free';status.textContent='COMPTE GRATUIT';detail.textContent='Aucun abonnement actif';expiry.textContent='—';start.textContent='—';provider.textContent='—';
-      main.textContent='Choisir une formule';main.href='/payment.html';change.style.display='none';note.style.display='block';note.textContent='Vous n’avez aucun abonnement actif. Choisissez une formule pour activer votre accès premium.';
+      main.textContent='Choisir une formule';main.href='/payment.html?plan=investor&period=monthly';change.style.display='none';note.style.display='block';note.textContent='Vous n’avez aucun abonnement actif. Choisissez une formule pour activer votre accès premium.';
       return;
     }
     var label=String(s.plan_code||'').replace(/^./,function(x){return x.toUpperCase()});

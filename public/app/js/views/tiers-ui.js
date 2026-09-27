@@ -42,7 +42,8 @@
   };
 
   var TIER_LABEL = { investor: 'Investor', pro: 'Professional', elite: 'Elite' };
-  var UPGRADE_HREF = { investor: '/register.html?plan=investor&period=monthly', pro: '/register.html?plan=pro&period=monthly' };
+  // Compte déjà ouvert : on va directement au paiement, jamais à l'inscription.
+  var UPGRADE_HREF = { investor: '/payment.html?plan=investor&period=monthly', pro: '/payment.html?plan=pro&period=monthly' };
 
   function esc(v) { var e = d.createElement('div'); e.textContent = v == null ? '' : String(v); return e.innerHTML; }
   function locked(id, entry) { return !!entry && typeof w.TC === 'object' && !w.TC.can(entry.feature); }
