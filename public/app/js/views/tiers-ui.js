@@ -43,7 +43,7 @@
 
   var TIER_LABEL = { investor: 'Investor', pro: 'Professional', elite: 'Elite' };
   // Compte déjà ouvert : on va directement au paiement, jamais à l'inscription.
-  var UPGRADE_HREF = { investor: '/payment.html?plan=investor&period=monthly', pro: '/payment.html?plan=pro&period=monthly' };
+  function upgradeHref(tier) { return '/payment.html?plan=' + encodeURIComponent(tier || 'investor') + '&period=monthly'; }
 
   function esc(v) { var e = d.createElement('div'); e.textContent = v == null ? '' : String(v); return e.innerHTML; }
   function locked(id, entry) { return !!entry && typeof w.TC === 'object' && !w.TC.can(entry.feature); }
@@ -78,7 +78,7 @@
       '<div class="tc-pw-tier">Formule ' + esc(tier) + '</div>' +
       '<h2>' + esc(entry.label) + '</h2>' +
       '<p>' + esc(entry.desc || ('Ce module fait partie de la formule ' + tier + '.')) + '</p>' +
-      '<a class="tc-pw-btn" href="' + esc(UPGRADE_HREF[entry.tier] || '/index.html#offres') + '">Passer à ' + esc(tier) + '</a>' +
+      '<a class="tc-pw-btn" href="' + esc(upgradeHref(entry.tier)) + '">Passer à ' + esc(tier) + '</a>' +
       '</div>';
   }
 
@@ -86,7 +86,7 @@
     var tier = TIER_LABEL[entry.tier] || entry.tier;
     return '<div class="tc-preview-bar"><div><strong>Aperçu limité</strong>' +
       '<span>La vue complète de ' + esc(entry.label) + ' fait partie de la formule ' + esc(tier) + '.</span></div>' +
-      '<a href="' + esc(UPGRADE_HREF[entry.tier] || '/index.html#offres') + '">Passer à ' + esc(tier) + '</a></div>';
+      '<a href="' + esc(upgradeHref(entry.tier)) + '">Passer à ' + esc(tier) + '</a></div>';
   }
 
   function applyHardLock(id, entry) {
