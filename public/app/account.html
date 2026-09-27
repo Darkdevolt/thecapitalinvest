@@ -105,10 +105,24 @@ var meta=user.user_metadata||{};
 document.getElementById('user-name').textContent=meta.full_name||meta.name||[meta.first_name,meta.last_name].filter(Boolean).join(' ')||(user.email?user.email.split('@')[0]:'')||'Utilisateur';
 document.getElementById('user-email').textContent=user.email||'—';
 document.getElementById('user-created').textContent=user.created_at?new Date(user.created_at).toLocaleDateString('fr-FR'):'—';
-var savedTheme=localStorage.getItem(KEY)||'dark';document.getElementById('theme-select').value=savedTheme;setTheme(savedTheme);
-document.getElementById('theme-select').addEventListener('change',function(){setTheme(this.value)});
-var cur=localStorage.getItem('tc_currency')||'XOF';document.getElementById('currency-select').value=cur;document.getElementById('currency-select').addEventListener('change',function(){localStorage.setItem('tc_currency',this.value)});
-['market-notifications','portfolio-notifications'].forEach(function(id){var el=document.getElementById(id);var k='tc_'+id;var saved=localStorage.getItem(k);if(saved!==null)el.checked=saved==='1';el.addEventListener('change',function(){localStorage.setItem(k,this.checked?'1':'0')})});
+var pref={theme:'dark',currency:'XOF',market_notifications:true,portfolio_notifications:true,display_mode:'simple'};
+async function loadPreferences(){
+  var token=sessionToken();if(!token)return;
+  try{var r=await fetch('/api/user-data?mode=preferences',{headers:{Authorization:'Bearer '+token}}),j=await r.json();if(r.ok&&j.data&&j.data.preferences)pref=Object.assign(pref,j.data.preferences)}catch(e){}
+  document.getElementById('theme-select').value=pref.theme;setTheme(pref.theme);
+  document.getElementById('currency-select').value=pref.currency;
+  document.getElementById('market-notifications').checked=pref.market_notifications!==false;
+  document.getElementById('portfolio-notifications').checked=pref.portfolio_notifications!==false;
+}
+async function savePreferences(){
+  var token=sessionToken();if(!token)return;
+  pref.theme=document.getElementById('theme-select').value;pref.currency=document.getElementById('currency-select').value;pref.market_notifications=document.getElementById('market-notifications').checked;pref.portfolio_notifications=document.getElementById('portfolio-notifications').checked;
+  try{await fetch('/api/user-data?mode=preferences',{method:'PUT',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},body:JSON.stringify(pref)})}catch(e){}
+}
+document.getElementById('theme-select').addEventListener('change',function(){setTheme(this.value);savePreferences()});
+document.getElementById('currency-select').addEventListener('change',savePreferences);
+['market-notifications','portfolio-notifications'].forEach(function(id){document.getElementById(id).addEventListener('change',savePreferences)});
+loadPreferences();
 function sessionToken(){try{var s=JSON.parse(localStorage.getItem('tc_session')||'null');return s&&s.access_token?s.access_token:''}catch(e){return''}}
 function fmtDate(v){return v?new Date(v).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'}):'—'}
 async function loadSubscription(){
