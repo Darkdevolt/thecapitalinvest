@@ -48,6 +48,10 @@
     {
       "source": "/api/sync-brvm",
       "destination": "/api/scrape-brvm"
+    },
+    {
+      "source": "/api/wave-checkout",
+      "destination": "/api/user-data?mode=wave-checkout"
     }
   ],
   "functions": {
