@@ -125,8 +125,9 @@ async function loadSubscription(){
     }
     var label=String(s.plan_code||'').replace(/^./,function(x){return x.toUpperCase()});
     name.textContent=label;status.textContent=s.status==='active'?'ACTIF':String(s.status||'').toUpperCase();detail.textContent='Formule '+label;expiry.textContent=fmtDate(s.current_period_end);start.textContent=fmtDate(s.current_period_start||s.started_at);provider.textContent=s.provider||'Wave';
-    main.textContent='Renouveler '+label;main.href='/payment.html?plan='+encodeURIComponent(s.plan_code)+'&period=monthly';
-    change.textContent='Changer de formule';change.href='/payment.html?plan='+encodeURIComponent(s.plan_code)+'&period=monthly';
+    var lastPaid=(j.data&&j.data.recent_orders||[]).find(function(o){return o.status==='successful'});var renewalPeriod=lastPaid&&lastPaid.billing_period?lastPaid.billing_period:'monthly';
+    main.textContent='Renouveler '+label;main.href='/payment.html?plan='+encodeURIComponent(s.plan_code)+'&period='+encodeURIComponent(renewalPeriod);
+    change.textContent='Changer de formule';change.href='/payment.html';
     note.style.display='block';note.textContent='Le paiement est actuellement effectué manuellement via Wave. Il n’y a pas de prélèvement automatique : vous gardez la main sur chaque renouvellement.';
   }catch(e){console.warn('Subscription load:',e)}
 }
