@@ -10,9 +10,12 @@ import { authenticate, rateLimited, handlePreflight } from '../lib/middleware.js
 import { ok, fail, readBody, BodyError } from '../lib/http.js';
 import { buildAiContext } from '../lib/ai-context.js';
 
+/* Jusqu'à 4 modèles essayés en cas de saturation : laisser le temps de répondre. */
+export const config = { maxDuration: 60 };
+
 const MAX_QUESTION = 2000;
 const MAX_CONTEXT = 12000;
-const PROVIDER_TIMEOUT_MS = 25000;
+const PROVIDER_TIMEOUT_MS = 45000;
 
 const SYSTEM_PROMPT = (contexte, donnees) => [
   "Tu es The Capital AI, assistant d'intelligence financière spécialisé sur la BRVM et l'UEMOA.",
@@ -80,18 +83,25 @@ export default async function handler(req, res) {
         }),
         signal: controller.signal
       });
-      let response = await ask(model);
-      /* Modèle retiré ou alias inconnu : repli sur un modèle Flash stable. */
-      if (response.status === 404 && model !== 'gemini-2.5-flash') response = await ask('gemini-2.5-flash');
+      /* Modèle saturé (503), quota du modèle atteint (429), erreur passagère (500)
+         ou modèle retiré (404) : on essaie le modèle gratuit suivant. */
+      const chain = [...new Set([model, 'gemini-2.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.0-flash'])];
+      let response, used = model;
+      for (const m of chain) {
+        used = m;
+        response = await ask(m);
+        if (![404, 429, 500, 503].includes(response.status)) break;
+        console.warn('[CAPITAL-AI] gemini', m, response.status, '→ modèle suivant');
+      }
       const data = await response.json().catch(() => null);
       if (!response.ok) {
         console.error('[CAPITAL-AI] gemini', response.status, data?.error?.message || '');
-        if (response.status === 429) return fail(res, 429, 'Beaucoup de questions en ce moment : réessayez dans une minute.', 'AI_RATE_LIMITED');
+        if (response.status === 429 || response.status === 503) return fail(res, 503, 'L’assistant est très sollicité en ce moment : réessayez dans une minute.', 'AI_BUSY');
         return fail(res, 502, 'Le moteur IA est temporairement indisponible.', 'AI_PROVIDER_ERROR');
       }
       const text = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
       if (!text) return fail(res, 502, 'Réponse IA vide.', 'AI_EMPTY_RESPONSE');
-      return ok(res, { answer: text, model, tickers: donnees.tickers, generatedAt: new Date().toISOString() });
+      return ok(res, { answer: text, model: used, tickers: donnees.tickers, generatedAt: new Date().toISOString() });
     }
 
     const response = await fetch('https://api.openai.com/v1/responses', {
