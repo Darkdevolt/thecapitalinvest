@@ -10,6 +10,7 @@ import { ok, fail, json, readBody, requestUrl, BodyError } from '../lib/http.js'
 import { validators } from '../lib/validate.js';
 import { handleAdminBilling, handleAdminInstitute } from '../lib/admin-billing.js';
 import { handleAdminUsers, handleAdminSettings, handlePublicConfig } from '../lib/admin-users.js';
+import { handleWaveCheckout } from '../lib/wave-checkout.js';
 
 const TABLES = { alerts: 'alertes_cours', watchlist: 'watchlist' };
 const TICKER_RE = /^[A-Z0-9]{2,12}$/;
@@ -22,6 +23,7 @@ export default async function handler(req,res){
   if(mode==='admin-billing'){
     const admin=req.method==='GET'?await authenticateAdmin(req,res):await authenticateMasterAdmin(req,res);if(!admin)return;return handleAdminBilling(req,res,admin);
   }
+  if(mode==='wave-checkout')return handleWaveCheckout(req,res);
   if(mode==='public-config'){if(req.method!=='GET')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');return handlePublicConfig(req,res);}
   if(mode==='admin-users'){
     const admin=req.method==='GET'?await authenticateAdmin(req,res):await authenticateMasterAdmin(req,res);if(!admin)return;return handleAdminUsers(req,res,admin);
