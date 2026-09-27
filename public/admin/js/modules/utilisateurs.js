@@ -52,7 +52,7 @@
     analyses: 'Analyse', annonces_emetteurs: 'Annonce', boc: 'BOC', obligations: 'Obligation', reportings: 'Reporting'
   };
   const FIELDS = {
-    nom: 'Nom', email: 'E-mail', plan: 'Offre', plan_code: 'Formule', plan_expire_at: 'Échéance', status: 'Statut', current_period_end: 'Fin d’accès',
+    nom: 'Nom', email: 'E-mail', plan: 'Offre', provider: 'Source', provider_reference: 'Référence', plan_code: 'Formule', plan_expire_at: 'Échéance', status: 'Statut', current_period_end: 'Fin d’accès',
     current_period_start: 'Début', trial_ends_at: 'Fin d’essai', trial_started_at: 'Début d’essai', is_admin: 'Administrateur', reason: 'Motif',
     subject: 'Objet', email_sent: 'E-mail envoyé', amount: 'Montant', billing_period: 'Période', reference: 'Référence', note: 'Note',
     monthly_price: 'Prix mensuel', quarterly_price: 'Prix trimestriel', annual_price: 'Prix annuel', active: 'Active', name: 'Nom',
@@ -534,6 +534,8 @@
 
   /* Ouvrir une fiche depuis un autre module (journal, paiements, abonnements). */
   TC.openClient = function (id) {
+    /* Déjà sur la page Clients : le module n'est pas remonté, ouvrir directement. */
+    if (TC.el('cl-detail')) { tab = 'profil'; openClient(id); return; }
     TC.__pendingClient = id;
     if (TC.module('utilisateurs')) TC.go('utilisateurs');
   };
