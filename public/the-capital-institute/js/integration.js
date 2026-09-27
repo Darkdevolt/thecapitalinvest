@@ -1,7 +1,8 @@
 /* THE CAPITAL INSTITUTE — product integration layer */
 (function(){'use strict';
 var MAIN_URL='/';
-var LS='tci-progression-v1';
+/* Même clé que app.js : une progression par compte (voir TCI.cle). */
+function lsKey(){if(window.TCI&&window.TCI.cle)return window.TCI.cle;try{var s=JSON.parse(localStorage.getItem('tc_session')||'null');return 'tci-progression-v1:'+((s&&s.user&&s.user.id)||'invite')}catch(e){return 'tci-progression-v1:invite'}}
 var ENV=null;
 var enrolled=false;
 var enrollmentState='unknown'; // unknown | active | inactive | unavailable
@@ -44,20 +45,25 @@ async function checkEnrollment(){
   enrolled=Array.isArray(d)&&d.length>0&&(!d[0].current_period_end||new Date(d[0].current_period_end)>new Date());
   enrollmentState=enrolled?'active':'inactive';
 }
-function readLocal(){try{return JSON.parse(localStorage.getItem(LS)||'{}')}catch(e){return {}}}
-function writeLocal(p){try{localStorage.setItem(LS,JSON.stringify(p))}catch(e){}}
+function readLocal(){try{return JSON.parse(localStorage.getItem(lsKey())||'{}')}catch(e){return {}}}
+function writeLocal(p){try{localStorage.setItem(lsKey(),JSON.stringify(p))}catch(e){}}
 async function pullProgress(){
   if(!enrolled||!uid())return;
   var result=await api('/rest/v1/institute_progress?user_id=eq.'+encodeURIComponent(uid())+'&select=completed_lessons,completed_courses,xp,streak_days,last_activity_at,badges&limit=1');
   if(!result.ok||!Array.isArray(result.data)||!result.data[0]){if(!result.ok)console.warn('[TCI] Progression distante indisponible:',result.kind,result.status||'');return}
   var p=readLocal(),db=result.data[0],lessons={};
   (db.completed_lessons||[]).forEach(function(id){lessons[id]=true});
+  /* app.js garde la progression en mémoire : lui confier la fusion, sinon il l'écraserait à la prochaine sauvegarde. */
+  if(window.TCI&&typeof window.TCI.fusionner==='function'){window.TCI.fusionner(db.completed_lessons||[]);return}
   p.lecons=Object.assign({},lessons,p.lecons||{});p.debut=p.debut||new Date().toISOString();writeLocal(p);
 }
 async function pushProgress(force){
   if(!enrolled||!uid())return;
   var p=readLocal(),ids=Object.keys(p.lecons||{}).filter(function(k){return p.lecons[k]});
-  var payload={user_id:uid(),completed_lessons:ids,completed_courses:[],xp:ids.length*100,streak_days:0,last_activity_at:new Date().toISOString(),badges:ids.length>=1?['premiere_lecon']:[],updated_at:new Date().toISOString()};
+  /* Parcours terminé = toutes ses leçons faites (suivi visible dans l'administration). */
+  var done={};ids.forEach(function(k){done[k]=true});
+  var courses=((window.TCI&&window.TCI.CUR)||[]).filter(function(c){return c.lecons&&c.lecons.length&&c.lecons.every(function(l){return done[l.id]})}).map(function(c){return c.id});
+  var payload={user_id:uid(),completed_lessons:ids,completed_courses:courses,xp:ids.length*100+courses.length*500,streak_days:0,last_activity_at:new Date().toISOString(),badges:ids.length>=1?['premiere_lecon']:[],updated_at:new Date().toISOString()};
   var signature=JSON.stringify(payload);if(!force&&signature===lastSync)return;lastSync=signature;
   var result=await api('/rest/v1/institute_progress?on_conflict=user_id',{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
   if(!result.ok)console.warn('[TCI] Synchronisation progression échouée:',result.kind,result.status||'');

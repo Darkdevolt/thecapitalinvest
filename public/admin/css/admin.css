@@ -488,3 +488,10 @@ input[type="date"] { color-scheme: dark; }
 .card-tools input:focus, .card-tools select:focus { border-color: var(--gold); }
 .card-tools input::placeholder { color: rgba(245,240,232,.3); }
 .card-tools select option { background: var(--card); }
+
+/* Reçus de paiement affichés dans l'administration (lien signé). */
+.receipt-view { margin: 14px 0 4px; }
+.receipt-view img { display: block; max-width: 100%; max-height: 62vh; margin: 0 auto; border-radius: 8px; border: 1px solid var(--border); background: #fff; }
+.receipt-view iframe { width: 100%; height: 62vh; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
+/* Journal : détail avant → après. */
+.audit-detail { font-size: 12px; line-height: 1.5; color: var(--cream); max-width: 520px; white-space: normal; word-break: break-word; }

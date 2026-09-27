@@ -15,7 +15,20 @@
   var QST = global.TCI_QUESTIONS || {};
   var OUT = global.TCI_OUTILS || [];
 
-  var LS = 'tci-progression-v1';
+  /* Une progression par compte : la clé contient l'identifiant du membre
+     connecté, pour que deux comptes utilisant le même navigateur ne
+     partagent jamais leurs leçons. Visiteur non connecté : clé « invite ». */
+  var LEGACY_LS = 'tci-progression-v1';
+  function membre() {
+    try { var s = JSON.parse(localStorage.getItem('tc_session') || 'null'); return (s && s.user && s.user.id) || ''; } catch (e) { return ''; }
+  }
+  var MEMBRE = membre();
+  var LS = LEGACY_LS + ':' + (MEMBRE || 'invite');
+  try {
+    /* Ancienne clé commune : rattachée une seule fois au premier compte qui l'ouvre, puis supprimée. */
+    if (MEMBRE && !localStorage.getItem(LS) && localStorage.getItem(LEGACY_LS)) localStorage.setItem(LS, localStorage.getItem(LEGACY_LS));
+    if (MEMBRE) localStorage.removeItem(LEGACY_LS);
+  } catch (e) { }
 
   var P = { lecons: {}, quiz: {}, notes: {}, debut: null };
   var vue = { nom: 'accueil', parcours: null, lecon: null, outil: null };
@@ -612,5 +625,12 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer);
   else demarrer();
 
-  global.TCI = { P: P, CUR: CUR, aller: aller, avancement: avancementGlobal };
+  global.TCI = {
+    P: P, CUR: CUR, aller: aller, avancement: avancementGlobal, cle: LS, membre: MEMBRE,
+    /* Progression relue depuis le serveur (integration.js) : fusion puis réaffichage. */
+    fusionner: function (lecons) {
+      (lecons || []).forEach(function (id) { P.lecons[id] = true; });
+      sauver(); rendre();
+    }
+  };
 })(typeof window !== 'undefined' ? window : globalThis);

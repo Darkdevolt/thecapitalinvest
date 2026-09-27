@@ -367,8 +367,17 @@
     /* ── Routes serveur /api ─────────────────────────────── */
 
     TC.api = async function (path, options) {
-        const opts = options || {};
+        const opts = Object.assign({}, options || {});
         const h = Object.assign({ Accept: 'application/json' }, opts.headers || {});
+        /* Un objet passé en body est envoyé en JSON : sans cela fetch envoyait
+           « [object Object] » et le serveur refusait l'action (abonnements). */
+        if (opts.body && typeof opts.body === 'object' && !(opts.body instanceof FormData) && !(opts.body instanceof Blob) && !(opts.body instanceof URLSearchParams)) {
+            opts.body = JSON.stringify(opts.body);
+            if (!Object.keys(h).some(k => k.toLowerCase() === 'content-type')) h['Content-Type'] = 'application/json';
+        }
+        /* Jeton rafraîchi avant l'appel : une session ouverte depuis longtemps
+           faisait échouer les actions en 401. */
+        try { await TC.ensureToken(); } catch (e) { }
         if (TC.session.token) h.Authorization = 'Bearer ' + TC.session.token;
         const controller = new AbortController();
         const timer = setTimeout(() => controller.abort(), opts.timeout || 60000);
