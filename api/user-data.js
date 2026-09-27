@@ -33,6 +33,18 @@ export default async function handler(req,res){
     const admin=req.method==='GET'?await authenticateAdmin(req,res):await authenticateMasterAdmin(req,res);if(!admin)return;return handleAdminInstitute(req,res,admin);
   }
   const user=await authenticate(req,res);if(!user)return;const userId=user.sub;
+  if(mode==='subscription'){
+    if(req.method!=='GET')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
+    try{
+      const [{data:subs,error:se},{data:orders,error:oe}]=await Promise.all([
+        supabaseAdmin.from('subscriptions').select('id,plan_code,status,started_at,current_period_start,current_period_end,canceled_at,cancel_reason,provider,created_at,updated_at').eq('user_id',userId).order('created_at',{ascending:false}).limit(10),
+        supabaseAdmin.from('payment_orders').select('id,plan_code,billing_period,amount,currency,provider,status,paid_at,expires_at,created_at,updated_at').eq('user_id',userId).order('created_at',{ascending:false}).limit(10)
+      ]);
+      if(se)throw se;if(oe)throw oe;
+      const active=(subs||[]).find(s=>s.status==='active' && (!s.current_period_end || new Date(s.current_period_end).getTime()>Date.now())) || null;
+      return ok(res,{subscription:active,subscriptions:subs||[],recent_orders:orders||[]});
+    }catch(error){return fail(res,500,'Impossible de charger votre abonnement.','SUBSCRIPTION_ERROR',error);}
+  }
   if(mode==='payment-alert'){
     if(req.method!=='POST')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
     let body;try{body=await readBody(req);}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY');}
