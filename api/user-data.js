@@ -32,7 +32,29 @@ export default async function handler(req,res){
   if(mode==='admin-institute'){
     const admin=req.method==='GET'?await authenticateAdmin(req,res):await authenticateMasterAdmin(req,res);if(!admin)return;return handleAdminInstitute(req,res,admin);
   }
-  const user=await authenticate(req,res);if(!user)return;const userId=user.sub;const table=TABLES[mode];if(!table)return fail(res,400,'Mode invalide (attendu : alerts ou watchlist).','INVALID_MODE');
+  const user=await authenticate(req,res);if(!user)return;const userId=user.sub;
+  if(mode==='payment-alert'){
+    if(req.method!=='POST')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
+    let body;try{body=await readBody(req);}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY');}
+    const proofId=String(body?.proof_id||'');
+    if(!validators.uuid(proofId))return fail(res,400,'Reçu invalide.','INVALID_PROOF_ID');
+    const {data:p,error:pe}=await supabaseAdmin.from('payment_proofs').select('id,user_id,payment_order_id,transaction_reference,claimed_amount,status,created_at').eq('id',proofId).eq('user_id',userId).maybeSingle();
+    if(pe)throw pe;if(!p)return fail(res,404,'Reçu introuvable.','NOT_FOUND');
+    if(p.status!=='pending')return ok(res,{sent:false,reason:'ALREADY_PROCESSED'});
+    const [{data:u,error:ue},{data:o,error:oe}]=await Promise.all([
+      supabaseAdmin.from('users').select('email,nom').eq('id',userId).maybeSingle(),
+      supabaseAdmin.from('payment_orders').select('id,plan_code,billing_period,amount,currency').eq('id',p.payment_order_id).eq('user_id',userId).maybeSingle()
+    ]);
+    if(ue)throw ue;if(oe)throw oe;if(!u?.email||!o)return fail(res,404,'Commande ou client introuvable.','NOT_FOUND');
+    const PLAN_NAMES={investor:'Investor',pro:'Pro',elite:'Elite',institute:'Institute'};
+    const planName=PLAN_NAMES[o.plan_code]||o.plan_code||'The Capital';
+    const mismatch=Number(o.amount)!==Number(p.claimed_amount);
+    if(!mailerReady())return ok(res,{sent:false,reason:'MAILER_UNAVAILABLE'});
+    const m=MAILS.paymentSubmittedToAdmin(u.nom,u.email,planName,o.billing_period,o.amount,p.claimed_amount,p.transaction_reference,o.id,p.id,mismatch);
+    const sent=await sendMail({to:MASTER,name:'The Capital — Administration',subject:m.subject,content:m.content});
+    return ok(res,{sent:sent.sent});
+  }
+  const table=TABLES[mode];if(!table)return fail(res,400,'Mode invalide (attendu : alerts ou watchlist).','INVALID_MODE');
   try{
     if(req.method==='GET'){const {data,error}=await supabaseAdmin.from(table).select('*').eq('user_id',userId).order('created_at',{ascending:false});if(error)throw error;const rows=data||[];return ok(res,mode==='alerts'?rows.map(toApiAlert):rows);}
     if(req.method==='POST'){let body;try{body=await readBody(req);}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY',e);}const ticker=String(body?.ticker||'').trim().toUpperCase();if(!TICKER_RE.test(ticker))return fail(res,400,'Ticker invalide.','INVALID_TICKER');let row;if(mode==='alerts'){const alertType=normalizeAlertType(body?.condition??body?.type_alerte);if(!alertType)return fail(res,400,"Condition d'alerte invalide.",'INVALID_CONDITION');const threshold=Number(body?.price??body?.seuil);if(!Number.isFinite(threshold)||threshold<=0)return fail(res,400,"Seuil d'alerte invalide.",'INVALID_THRESHOLD');row={user_id:userId,ticker,type_alerte:alertType,seuil:threshold,active:body?.active!==false,note:body?.note??null};}else row={user_id:userId,ticker,note:body?.note??null};const {data,error}=await supabaseAdmin.from(table).insert(row).select('*').single();if(error)throw error;return json(res,201,{success:true,data:mode==='alerts'?toApiAlert(data):data});}
