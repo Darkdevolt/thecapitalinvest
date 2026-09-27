@@ -239,6 +239,9 @@
     function injectEdit() {
         const form = document.querySelector('#modal-body .form-grid');
         if (!form || document.getElementById('mf-unite')) return;
+        /* Uniquement dans la fenêtre d'édition des états financiers : le sélecteur
+           s'ajoutait à toutes les fenêtres (accès clients, paiements…). */
+        if (!Array.from(MONETARY).some(function (k) { return document.getElementById('mf-' + k); })) return;
         form.insertAdjacentHTML('afterbegin', unitField('mf-unite', true));
         document.getElementById('mf-unite').value = 'unite';
     }

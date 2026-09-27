@@ -324,8 +324,26 @@
 
   /* ── Actions ─────────────────────────────────────────── */
   const post = body => TC.api(API, { method: 'POST', body, timeout: 20000 });
-  const billing = body => TC.api(BILLING, { method: 'POST', body, timeout: 20000 });
-  const refresh = () => openClient(current.user.id);
+  /* Réponse du serveur appliquée tout de suite à la fiche (la relecture complète
+     prend plusieurs secondes : sans cela, rien ne semblait changer). */
+  const billing = body => TC.api(BILLING, { method: 'POST', body, timeout: 20000 }).then(r => { applySub(r.data); return r; });
+  function applySub(s) {
+    if (!current || !s || !s.id || !s.plan_code || s.user_id !== current.user.id) return;
+    const list = current.subscriptions || (current.subscriptions = []);
+    const i = list.findIndex(x => x.id === s.id);
+    if (i >= 0) list[i] = s; else list.unshift(s);
+    if (s.plan_code !== 'institute') {
+      const on = s.status === 'active';
+      current.user.plan = on ? s.plan_code : 'free';
+      current.user.plan_expire_at = on ? s.current_period_end : null;
+    }
+    paintDetail();
+  }
+  const refresh = () => {
+    const box = TC.el('cl-detail');
+    if (box && current) box.classList.add('cl-refreshing');
+    return openClient(current.user.id).finally(() => { const b = TC.el('cl-detail'); if (b) b.classList.remove('cl-refreshing'); });
+  };
 
   async function act(kind) {
     const u = current.user;

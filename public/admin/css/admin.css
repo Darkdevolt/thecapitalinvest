@@ -495,3 +495,7 @@ input[type="date"] { color-scheme: dark; }
 .receipt-view iframe { width: 100%; height: 62vh; border: 1px solid var(--border); border-radius: 8px; background: #fff; }
 /* Journal : détail avant → après. */
 .audit-detail { font-size: 12px; line-height: 1.5; color: var(--cream); max-width: 520px; white-space: normal; word-break: break-word; }
+/* Fiche client en cours de relecture après une action. */
+#cl-detail { position: relative; }
+#cl-detail.cl-refreshing #cl-pane { opacity: .6; transition: opacity .15s; }
+#cl-detail.cl-refreshing::after { content: 'Mise à jour…'; position: fixed; top: 76px; right: 24px; z-index: 50; padding: 7px 12px; border-radius: 6px; background: var(--gold); color: #0A0804; font: 600 11px var(--sans); letter-spacing: .04em; box-shadow: 0 6px 18px rgba(0,0,0,.35); }
