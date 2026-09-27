@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Connexion — The Capital</title>
+<meta name="robots" content="noindex,nofollow">
+<style>
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 10%,#1b150b 0,#0A0804 48%,#070503 100%);color:#F5F0E8;font-family:"DM Sans",Arial,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:24px}
+img{width:210px;max-width:70%;margin-bottom:22px}
+.msg{font-size:14px;color:rgba(245,240,232,.7);line-height:1.6;max-width:420px}
+.msg.err{color:#F87171}
+a{color:#D4AF6A}
+.spin{width:26px;height:26px;border:2px solid rgba(184,150,78,.25);border-top-color:#B8964E;border-radius:50%;animation:s .8s linear infinite;margin:0 auto 16px}
+@keyframes s{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<img src="/assets/the-capital-logo.png" alt="The Capital">
+<div class="spin" id="spin"></div>
+<div class="msg" id="msg">Connexion en cours…</div>
+<script src="/js/env.js"></script>
+<script>
+/* Retour de Supabase après « Continuer avec Google / Apple », ou d'un lien
+   d'e-mail Supabase arrivé sur l'accueil (index.html renvoie ici).
+   Le fragment #access_token=… est transformé en session The Capital. */
+(function () {
+  'use strict';
+  var E = window.TC_ENV;
+  var h = new URLSearchParams(location.hash.replace(/^#/, ''));
+  var q = new URLSearchParams(location.search);
+  function fail(t) {
+    document.getElementById('spin').style.display = 'none';
+    var m = document.getElementById('msg'); m.className = 'msg err';
+    m.innerHTML = t + '<br><br><a href="/login.html">Retour à la connexion</a>';
+  }
+  var type = h.get('type') || q.get('type');
+  if (type === 'recovery') return location.replace('/reset-password.html' + location.hash);
+  var err = h.get('error_description') || q.get('error_description');
+  if (err) {
+    return fail(/expired|invalid/i.test(err) ? 'Ce lien a expiré ou a déjà été utilisé.' : 'Connexion impossible : ' + err.replace(/\+/g, ' '));
+  }
+  var token = h.get('access_token');
+  if (!token) return location.replace('/login.html');
+  history.replaceState(null, '', location.pathname);
+
+  fetch(E.SUPABASE_URL + '/auth/v1/user', { headers: { apikey: E.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + token } })
+    .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function (user) {
+      var expiresIn = Number(h.get('expires_in')) || 3600;
+      var session = {
+        access_token: token,
+        refresh_token: h.get('refresh_token') || '',
+        token_type: h.get('token_type') || 'bearer',
+        expires_in: expiresIn,
+        expires_at: Number(h.get('expires_at')) || Math.floor(Date.now() / 1000) + expiresIn,
+        user: user
+      };
+      localStorage.setItem(E.SESSION_KEY, JSON.stringify(session));
+      var plan = '', period = 'monthly';
+      try { plan = (localStorage.getItem('tc_pending_plan') || '').toLowerCase(); period = localStorage.getItem('tc_pending_period') || 'monthly'; } catch (_) {}
+      var paid = ['investor', 'pro', 'elite'].indexOf(plan) >= 0;
+      try { localStorage.removeItem('tc_pending_plan'); localStorage.removeItem('tc_pending_period'); } catch (_) {}
+      document.getElementById('msg').textContent = 'Bienvenue' + (user.user_metadata && (user.user_metadata.given_name || user.user_metadata.full_name) ? ' ' + (user.user_metadata.given_name || user.user_metadata.full_name) : '') + '. Ouverture de votre espace…';
+      location.replace(paid ? '/payment.html?plan=' + encodeURIComponent(plan) + '&period=' + encodeURIComponent(period) : '/app/app.html');
+    })
+    .catch(function () { fail('La connexion n’a pas pu être finalisée. Réessayez.'); });
+})();
+</script>
+</body>
+</html>
