@@ -33,6 +33,23 @@ export default async function handler(req,res){
     const admin=req.method==='GET'?await authenticateAdmin(req,res):await authenticateMasterAdmin(req,res);if(!admin)return;return handleAdminInstitute(req,res,admin);
   }
   const user=await authenticate(req,res);if(!user)return;const userId=user.sub;
+  if(mode==='preferences'){
+    try{
+      if(req.method==='GET'){
+        const {data,error}=await supabaseAdmin.from('user_preferences').select('display_mode,theme,currency,market_notifications,portfolio_notifications,updated_at').eq('user_id',userId).maybeSingle();
+        if(error)throw error;
+        return ok(res,{preferences:data||{display_mode:'simple',theme:'dark',currency:'XOF',market_notifications:true,portfolio_notifications:true}});
+      }
+      if(req.method==='PUT'){
+        let body;try{body=await readBody(req)}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY')}
+        const theme=body?.theme==='light'?'light':'dark',currency=['XOF','EUR','USD'].includes(body?.currency)?body.currency:'XOF',display_mode=body?.display_mode==='pro'?'pro':'simple';
+        const row={user_id:userId,display_mode,theme,currency,market_notifications:body?.market_notifications!==false,portfolio_notifications:body?.portfolio_notifications!==false,updated_at:new Date().toISOString()};
+        const {data,error}=await supabaseAdmin.from('user_preferences').upsert(row,{onConflict:'user_id'}).select('display_mode,theme,currency,market_notifications,portfolio_notifications,updated_at').single();
+        if(error)throw error;return ok(res,{preferences:data});
+      }
+      return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
+    }catch(error){return fail(res,500,'Impossible de charger ou sauvegarder vos préférences.','PREFERENCES_ERROR',error);}
+  }
   if(mode==='subscription'){
     if(req.method!=='GET')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
     try{
