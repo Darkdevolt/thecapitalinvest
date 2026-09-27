@@ -73,7 +73,7 @@
     /* Panneau ancré près de la boule, sans masquer la page : l'IA accompagne la lecture. */
     + '#tc-orb-overlay{position:fixed;inset:0;z-index:999999;background:rgba(6,5,3,.35);display:none}'
     + '#tc-orb-overlay.open{display:block}'
-    + '#tc-orb-panel{position:fixed;right:22px;bottom:90px;width:min(460px,calc(100vw - 32px));height:min(680px,calc(100vh - 120px));display:flex;flex-direction:column;background:#13110c;border:1px solid rgba(212,175,106,.26);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 40px rgba(212,175,106,.08);overflow:hidden;font-family:\'DM Sans\',Arial,sans-serif;color:#f5f0e8;transform-origin:100% 100%;animation:tc-orb-in .18s ease-out}'
+    + '#tc-orb-panel{position:fixed;z-index:1000000;right:22px;bottom:90px;width:min(460px,calc(100vw - 32px));height:min(680px,calc(100vh - 120px));display:flex;flex-direction:column;background:#13110c;border:1px solid rgba(212,175,106,.26);border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 40px rgba(212,175,106,.08);overflow:hidden;font-family:\'DM Sans\',Arial,sans-serif;color:#f5f0e8;transform-origin:100% 100%;animation:tc-orb-in .18s ease-out}'
     + '#tc-orb-panel.tc-wide{width:min(760px,calc(100vw - 32px))}'
     + '@keyframes tc-orb-in{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}'
     + '#tc-orb-head{display:flex;align-items:center;gap:12px;padding:14px 16px 0}'
