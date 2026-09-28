@@ -675,7 +675,8 @@
       levels.forEach(function (lv) {
         var y = ys.at(lv.value);
         if (!M.fin(y) || y < rect.y || y > rect.y + rect.h) return;
-        var col = lv.type === 'resistance' ? T.down : T.up;
+        var isRes = (lv.kind || lv.type) === 'resistance';
+        var col = isRes ? T.down : T.up;
         ctx.globalAlpha = 0.28 + Math.min(0.4, lv.touches * 0.07);
         ctx.strokeStyle = col;
         ctx.lineWidth = 1;
@@ -689,7 +690,8 @@
         ctx.fillStyle = col;
         ctx.textAlign = 'right';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(fmtPrice(lv.value) + '  ×' + lv.touches, rect.x + rect.w - 6, y - 2);
+        ctx.fillText((isRes ? 'Résistance ' : 'Support ') + fmtPrice(lv.value) + ' · ' + lv.touches + ' contacts' +
+          (M.fin(lv.distance) ? ' · ' + (lv.distance > 0 ? '+' : '') + lv.distance.toFixed(1).replace('.', ',') + ' %' : ''), rect.x + rect.w - 6, y - 2);
         ctx.globalAlpha = 1;
       });
       ctx.restore();
@@ -1017,6 +1019,26 @@
 
       var b = view.bars[i];
       if (b) drawTag(ctx, cx, layout.timeY + 11, fmtDate(b.date, view.interval), T.gold, T.tagText);
+
+      /* Figure de chandeliers sous le curseur : nom et signification. */
+      var mk = (view.markers || []).filter(function (m) { return m.index - (view.offset || 0) === i; })[0];
+      if (mk) {
+        var label = (mk.bias > 0 ? '▲ ' : mk.bias < 0 ? '▼ ' : '◆ ') + mk.name + (mk.hint ? ' — ' + mk.hint : '');
+        ctx.font = FONT_SM;
+        var w = ctx.measureText(label).width + 16;
+        var tx = Math.max(layout.price.x + 4, Math.min(cx - w / 2, layout.price.x + layout.price.w - w - 4));
+        var ty = layout.price.y + 6;
+        ctx.fillStyle = T.bg;
+        ctx.globalAlpha = 0.92;
+        ctx.fillRect(tx, ty, w, 20);
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = mk.bias > 0 ? T.up : mk.bias < 0 ? T.down : T.dim;
+        ctx.strokeRect(Math.round(tx) + 0.5, Math.round(ty) + 0.5, Math.round(w), 20);
+        ctx.fillStyle = ctx.strokeStyle;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, tx + 8, ty + 10);
+      }
 
       ctx.restore();
       if (typeof view.onCursor === 'function') view.onCursor(i, b);
