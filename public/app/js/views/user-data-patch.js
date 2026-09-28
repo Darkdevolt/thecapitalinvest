@@ -20,6 +20,7 @@
     const payload=await call('alerts','GET');
     alerts=Array.isArray(payload?.data)?payload.data:(Array.isArray(payload)?payload:[]);
     renderAlertsServer();
+    if(typeof notify==='function')notify();
     return alerts;
   }
   window.loadAlertsFromServer=loadAlertsFromServer;
@@ -68,10 +69,14 @@
   window.getWatchlistServer=function(){return watchlist.slice();};
   window.getWatchlist=function(){return watchlist.slice();};
 
+  /* Prévient les écrans (Portefeuille, Vue d'ensemble, Analyse technique…) que les
+     valeurs suivies ou les alertes ont changé. */
+  function notify(){try{window.dispatchEvent(new CustomEvent('tc:userdata',{detail:{watchlist:watchlist.slice(),alerts:alerts.slice()}}));}catch(_){}}
   window.loadWatchlistFromServer=async function(){
     const payload=await call('watchlist','GET');
-    watchlist=Array.isArray(payload?.data)?payload.data:(Array.isArray(payload)?payload:[]);
+    watchlist=(Array.isArray(payload?.data)?payload.data:(Array.isArray(payload)?payload:[])).map(w=>Object.assign({addedAt:String(w.created_at||'').slice(0,10)},w));
     window.__TC_WATCHLIST__=watchlist.slice();
+    notify();
     return watchlist;
   };
 
@@ -86,14 +91,37 @@
   window.addWatchlistItem=async function(ticker){
     const t=String(ticker||'').toUpperCase().trim();if(!t)return false;
     if(watchlist.some(x=>String(x.ticker).toUpperCase()===t))return true;
-    await call('watchlist','POST',{ticker});await window.loadWatchlistFromServer();return true;
+    await call('watchlist','POST',{ticker:t});await window.loadWatchlistFromServer();return true;
   };
 
   window.removeWatchlistItem=async function(id){await call('watchlist','DELETE',undefined,id);await window.loadWatchlistFromServer();return true;};
+  /* Retrait par ticker (Portefeuille, Analyse technique). */
+  window.removeWatchlistTicker=async function(ticker){
+    const t=String(ticker||'').toUpperCase().trim();
+    const item=watchlist.find(x=>String(x.ticker).toUpperCase()===t);
+    if(!item)return true;
+    return window.removeWatchlistItem(item.id);
+  };
+  window.isWatched=function(ticker){const t=String(ticker||'').toUpperCase().trim();return watchlist.some(x=>String(x.ticker).toUpperCase()===t);};
+  window.createPriceAlert=async function(ticker,condition,price,note){
+    const t=String(ticker||'').toUpperCase().trim();
+    if(!t||!['above','below'].includes(condition)||!(Number(price)>0))throw new Error('Choisissez un titre, une condition et un seuil positif.');
+    await call('alerts','POST',{ticker:t,condition,price:Number(price),note:note||null});
+    await loadAlertsFromServer();return true;
+  };
 
   window.__TC_ALERTS_SERVER_READY__=true;
   window.renderAlerts=renderAlertsServer;
-  window.initUserDataLayer=function(){
-    return Promise.all([loadAlertsFromServer(),window.loadWatchlistFromServer()]).catch(e=>console.warn('[USER DATA]',e.message));
+  let initPromise=null;
+  window.initUserDataLayer=function(force){
+    if(initPromise&&!force)return initPromise;
+    window.__TC_UD_INIT__=true;
+    initPromise=Promise.all([loadAlertsFromServer(),window.loadWatchlistFromServer()]).catch(e=>{console.warn('[USER DATA]',e.message);initPromise=null;});
+    return initPromise;
   };
+  /* Chargement dès l'ouverture de l'app (avant : seulement en ouvrant l'onglet Alertes,
+     si bien que le Portefeuille et la Vue d'ensemble voyaient une liste vide). */
+  function hasSession(){try{const s=JSON.parse(localStorage.getItem('tc_session')||'null');return !!(s&&(s.access_token||(s.session&&s.session.access_token)));}catch(_){return false;}}
+  function boot(){if(hasSession()&&typeof window.apiGet==='function')window.initUserDataLayer();}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else setTimeout(boot,0);
 })();
