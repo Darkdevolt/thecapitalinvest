@@ -1,97 +1,44 @@
 // ============================================================================
-// OBLIGATIONS BRVM  (P2 roadmap — « tout ce qui est lié à l'obligation »)
-// Consultation du marché obligataire : cours du jour, rendement courant,
-// rendement à l'échéance (YTM approx.), courbe des taux, et par ligne un
-// tableau d'amortissement (in fine / amortissement constant / annuités
-// constantes) reconstruit à partir des caractéristiques.
-// Source : /api/marche?type=obligations et ?type=obligations_marche.
-// Hypothèses affichées : valeur nominale (10 000 FCFA par défaut, ajustable),
-// périodicité, méthode d'amortissement. Aucune donnée inventée — un champ
-// absent en base reste « — ».
+// OBLIGATIONS BRVM
+// Marché obligataire : rendement actuariel exact (brut et net), duration,
+// courbe des taux (Nelson-Siegel et spline cubique), et par ligne l'échéancier
+// réel (différé, amortissement constant 1/N ou in fine, périodicité) tiré de la
+// fiche technique DC/BR. Calculs : obligations-math.js (window.OBMath).
+// Aucune donnée inventée : un mode de remboursement absent de la fiche est
+// déduit du capital restant cohérent avec le cours et signalé « hypothèse ».
 // ============================================================================
 (function () {
   'use strict';
-  if (window.__TC_OBLIGATIONS_V1__) return;
-  window.__TC_OBLIGATIONS_V1__ = true;
+  if (window.__TC_OBLIGATIONS_V2__) return;
+  window.__TC_OBLIGATIONS_V2__ = true;
 
-  var LIST = null;
-  var MARCHE = null;
-  var CARAC = null; // code_obligation -> fiche technique DC/BR (ISIN, etc.)
+  var LIST = null, MARCHE = null, CARAC = null, ROWS = null;
   var loading = false;
-  var VN = 10000;
-  var METHODE = 'in_fine';   // in_fine | amort_constant | annuites_constantes
-  var FREQ = 1;              // coupons par an
-  var SEL = null;            // code sélectionné
-  var SORT = { key: 'maturite', dir: 1 };
+  var SEL = null;
+  var SORT = { key: 'life', dir: 1 };
+  var SEG = 'tous';          // tous | etat | regional | corporate
+  var CURVE_SEG = 'etat';
+  var CURVE_X = 'life';      // life (maturité) | duration
+  var QTY = 1;               // nombre de titres pour l'échéancier
+  var QUERY = '';
   var chartCurve = null, chartFlux = null;
 
+  function M() { return window.OBMath; }
   function esc(v) { var d = document.createElement('div'); d.textContent = v == null ? '' : String(v); return d.innerHTML; }
-  function num(v) { var n = Number(v); return isFinite(n) ? n : null; }
-  function nf(v, dec) { var n = Number(v); return isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
-  function pct(v, dec) { var n = Number(v); return isFinite(n) ? (n > 0 ? '+' : '') + nf(n, dec == null ? 2 : dec) + ' %' : '—'; }
+  function num(v) { if (v == null || v === '') return null; var n = Number(v); return isFinite(n) ? n : null; }
+  function nf(v, dec) { var n = Number(v); return v != null && isFinite(n) ? n.toLocaleString('fr-FR', { minimumFractionDigits: dec || 0, maximumFractionDigits: dec == null ? 0 : dec }) : '—'; }
+  function pc(v, dec) { return v == null || !isFinite(v) ? '—' : nf(v, dec == null ? 2 : dec) + ' %'; }
   function g(id) { return document.getElementById(id); }
-  function ymd(v) { return v ? String(v).slice(0, 10) : ''; }
-  function dLabel(s) { var d = ymd(s); if (!d) return '—'; var p = d.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
-  function yearsBetween(a, b) {
-    if (!a || !b) return null;
-    var d = (new Date(b) - new Date(a)) / (365.25 * 24 * 3600 * 1000);
-    return isFinite(d) ? d : null;
-  }
+  function dLabel(s) { if (!s) return '—'; var d = typeof s === 'string' ? s.slice(0, 10) : M().iso(s); var p = d.split('-'); return p[2] + '/' + p[1] + '/' + p[0]; }
+  function key(s) { return String(s || '').toUpperCase().replace(/^TNC_/, '').trim(); }
 
-  function souverain(o) {
+  function segment(o) {
     var s = ((o.code || '') + ' ' + (o.nom || '')).toUpperCase();
-    return /BIDC|BOAD|EBID|TPCI|TPBF|TPML|TPNE|TPSN|TPTG|TPCI|ETAT|TRESOR|SUKUK|CI\.O|SN\.O|BF\.O|ML\.O|TG\.O|BN\.O|NE\.O/.test(s);
+    if (/BOAD|BIDC|EBID|CRRH|SHELTER|BRS\b/.test(s)) return 'regional';
+    if (/^(TP|EO|FTP|FEO)|ETAT|TRESOR|TRÉSOR|SUKUK|APE\b/.test(s)) return 'etat';
+    return 'corporate';
   }
-
-  // rendement à l'échéance — approximation analytique (comme le simulateur Outils)
-  function metrics(o) {
-    var seance = MARCHE && MARCHE.date_seance ? MARCHE.date_seance : (o.date_seance || new Date().toISOString().slice(0, 10));
-    var n = yearsBetween(seance, o.date_maturite);
-    var prix = num(o.cours);
-    var taux = num(o.taux_facial);
-    var couponAnnuel = (taux != null) ? taux / 100 * VN : null;
-    var courant = (couponAnnuel != null && prix) ? couponAnnuel / prix * 100 : null;
-    var ytm = null;
-    if (couponAnnuel != null && prix && n && n > 0) {
-      ytm = ((couponAnnuel + (VN - prix) / n) / ((VN + prix) / 2)) * 100;
-    }
-    return { n: n, prix: prix, taux: taux, couponAnnuel: couponAnnuel, courant: courant, ytm: ytm, seance: seance };
-  }
-
-  // tableau d'amortissement reconstruit
-  function schedule(o) {
-    var m = metrics(o);
-    if (m.taux == null || !m.n || m.n <= 0) return null;
-    var years = Math.max(1, Math.round(m.n));
-    var i = m.taux / 100 / FREQ;
-    var periods = years * FREQ;
-    var rows = [];
-    var crd = VN;
-    if (METHODE === 'in_fine') {
-      for (var k = 1; k <= periods; k++) {
-        var interet = VN * i;
-        var amort = (k === periods) ? VN : 0;
-        rows.push({ k: k, crd0: crd, interet: interet, amort: amort, annuite: interet + amort, crd1: crd - amort });
-        crd -= amort;
-      }
-    } else if (METHODE === 'amort_constant') {
-      var a = VN / periods;
-      for (var k2 = 1; k2 <= periods; k2++) {
-        var int2 = crd * i;
-        rows.push({ k: k2, crd0: crd, interet: int2, amort: a, annuite: int2 + a, crd1: crd - a });
-        crd -= a;
-      }
-    } else { // annuites_constantes
-      var A = i > 0 ? VN * i / (1 - Math.pow(1 + i, -periods)) : VN / periods;
-      for (var k3 = 1; k3 <= periods; k3++) {
-        var int3 = crd * i;
-        var amort3 = A - int3;
-        rows.push({ k: k3, crd0: crd, interet: int3, amort: amort3, annuite: A, crd1: crd - amort3 });
-        crd -= amort3;
-      }
-    }
-    return { rows: rows, periods: periods, years: years, i: i, freq: FREQ, methode: METHODE };
-  }
+  var SEG_LABEL = { tous: 'Toutes', etat: 'États (souverain)', regional: 'Institutions régionales', corporate: 'Entreprises' };
 
   // ---- données ----
   function load() {
@@ -100,25 +47,41 @@
     return Promise.all([
       window.apiGet('/marche?type=obligations').catch(function () { return []; }),
       window.apiGet('/marche?type=obligations_marche&limit=5').catch(function () { return []; }),
-      window.apiGet('/marche?type=obligations_caracteristiques&limit=500').catch(function () { return []; })
+      window.apiGet('/marche?type=obligations_caracteristiques&limit=1000').catch(function () { return []; })
     ]).then(function (r) {
       var rows = Array.isArray(r[0]) ? r[0] : (r[0] && r[0].data) || [];
       var mar = Array.isArray(r[1]) ? r[1] : (r[1] && r[1].data) || [];
       var fiches = Array.isArray(r[2]) ? r[2] : (r[2] && r[2].data) || [];
       LIST = rows.filter(function (o) { return o && o.code; });
       MARCHE = mar[0] || null;
-      // Une même obligation (rapprochement par nom, admin DC/BR) peut avoir
-      // plusieurs fiches (ex. tranches) : garder la plus récemment publiée.
+      /* Fiches DC/BR rapprochées par code obligation ou symbole (préfixe « TNC_ » retiré) ;
+         la plus récemment publiée l'emporte. */
       CARAC = {};
       fiches.forEach(function (f) {
-        if (!f || !f.code_obligation) return;
-        var prev = CARAC[f.code_obligation];
-        if (!prev || String(f.date_jouissance || '') > String(prev.date_jouissance || '')) CARAC[f.code_obligation] = f;
+        var k = key(f && (f.code_obligation || f.symbole));
+        if (!k) return;
+        var prev = CARAC[k];
+        if (!prev || String(f.date_jouissance || '') > String(prev.date_jouissance || '')) CARAC[k] = f;
       });
+      ROWS = null;
     });
   }
+  function settleDate() {
+    return (MARCHE && MARCHE.date_seance) || (LIST && LIST[0] && LIST[0].date_seance) || new Date().toISOString().slice(0, 10);
+  }
+  function ficheOf(o) { return (CARAC && CARAC[key(o.code)]) || null; }
+  function analyzed() {
+    if (ROWS) return ROWS;
+    var settle = settleDate();
+    ROWS = (LIST || []).map(function (o) {
+      var a = null;
+      try { a = M().analyze(o, ficheOf(o), settle); } catch (e) { a = null; }
+      return { o: o, a: a, seg: segment(o), f: ficheOf(o) };
+    });
+    return ROWS;
+  }
 
-  // ---- rendu ----
+  // ---- styles ----
   function injectCss() {
     if (g('tc-obl-css')) return;
     var s = document.createElement('style');
@@ -128,114 +91,131 @@
       '#view-obligations .ob-kpi{background:var(--card,#181410);border:1px solid rgba(245,240,232,.09);border-radius:10px;padding:13px 15px}',
       '#view-obligations .ob-kpi .k{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}',
       '#view-obligations .ob-kpi .v{font-family:var(--mono,monospace);font-size:18px;margin-top:5px;font-variant-numeric:tabular-nums}',
-      '#view-obligations .ob-params{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:14px}',
-      '#view-obligations .ob-field{display:flex;flex-direction:column;gap:4px}',
-      '#view-obligations .ob-field label{font-size:10px;text-transform:uppercase;letter-spacing:.09em;color:var(--gold)}',
-      '#view-obligations select,#view-obligations input{background:var(--surface,#13110C);border:1px solid rgba(245,240,232,.16);color:var(--cream,#F5F0E8);border-radius:8px;padding:8px 10px;font:inherit}',
+      '#view-obligations .ob-kpi .s{font-size:10.5px;color:var(--dim);margin-top:3px}',
+      '#view-obligations .ob-bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}',
+      '#view-obligations .ob-chip{border:1px solid rgba(245,240,232,.16);background:transparent;color:var(--dim);border-radius:999px;padding:6px 12px;font:inherit;font-size:12px;cursor:pointer}',
+      '#view-obligations .ob-chip.on{border-color:var(--gold);color:var(--gold);background:rgba(184,150,78,.1)}',
+      '#view-obligations select,#view-obligations input{background:var(--surface,#13110C);border:1px solid rgba(245,240,232,.16);color:var(--cream,#F5F0E8);border-radius:8px;padding:7px 10px;font:inherit;font-size:13px}',
       '#view-obligations .ob-card{background:var(--card,#181410);border:1px solid rgba(245,240,232,.09);border-radius:12px;padding:16px;margin-bottom:16px}',
-      '#view-obligations .ob-chart{height:300px}',
+      '#view-obligations .ob-h{margin-bottom:10px;text-transform:uppercase;letter-spacing:.1em;font-size:9.5px;color:var(--gold);display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}',
+      '#view-obligations .ob-chart{height:320px}',
+      '#view-obligations .ob-grid2{display:grid;grid-template-columns:2fr 1fr;gap:16px}',
+      '@media(max-width:900px){#view-obligations .ob-grid2{grid-template-columns:1fr}}',
       '#view-obligations table{width:100%;border-collapse:collapse;font-size:13px}',
       '#view-obligations th,#view-obligations td{padding:8px 10px;border-bottom:1px solid rgba(245,240,232,.08);text-align:left;white-space:nowrap}',
       '#view-obligations td.r,#view-obligations th.r{text-align:right;font-variant-numeric:tabular-nums}',
-      '#view-obligations thead th{cursor:pointer;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}',
-      '#view-obligations tbody tr{cursor:pointer}#view-obligations tbody tr:hover td{background:rgba(245,240,232,.04)}',
+      '#view-obligations thead th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--dim)}',
+      '#view-obligations thead th[data-k]{cursor:pointer}',
+      '#view-obligations .ob-list tbody tr{cursor:pointer}#view-obligations .ob-list tbody tr:hover td{background:rgba(245,240,232,.04)}',
+      '#view-obligations tr.paid td{color:var(--dim)}',
+      '#view-obligations tr.next td{background:rgba(184,150,78,.08)}',
       '#view-obligations .ob-code{font-family:var(--mono,monospace);font-weight:700;color:var(--gold)}',
-      '#view-obligations .ob-nom{font-size:11px;color:var(--dim)}',
-      '#view-obligations .pos{color:var(--green,#4ADE80)}#view-obligations .neg{color:var(--red,#F87171)}',
-      '#view-obligations .ob-note{font-size:11.5px;line-height:1.55;color:var(--muted,rgba(245,240,232,.6))}',
-      '#view-obligations .ob-back{background:transparent;border:1px solid rgba(245,240,232,.2);color:var(--cream);border-radius:7px;padding:6px 12px;font:inherit;font-size:12px;cursor:pointer;margin-bottom:12px}',
+      '#view-obligations .ob-nom{font-size:11px;color:var(--dim);max-width:260px;overflow:hidden;text-overflow:ellipsis}',
+      '#view-obligations .ob-tag{display:inline-block;font-size:9.5px;letter-spacing:.04em;padding:2px 7px;border-radius:999px;border:1px solid rgba(245,240,232,.18);color:var(--dim)}',
+      '#view-obligations .ob-tag.fiche{border-color:rgba(74,222,128,.4);color:#4ADE80}',
+      '#view-obligations .ob-tag.hyp{border-color:rgba(251,191,36,.4);color:#FBBF24}',
+      '#view-obligations .ob-ns{color:var(--dim);border-bottom:1px dotted var(--dim);cursor:help}',
+      '#view-obligations .ob-note{font-size:11.5px;line-height:1.6;color:var(--muted,rgba(245,240,232,.6))}',
+      '#view-obligations .ob-warn{font-size:12px;line-height:1.5;color:#FBBF24;border:1px solid rgba(251,191,36,.3);background:rgba(251,191,36,.06);border-radius:8px;padding:9px 12px;margin-bottom:12px}',
+      '#view-obligations .ob-back,#view-obligations .ob-btn{background:transparent;border:1px solid rgba(245,240,232,.2);color:var(--cream);border-radius:7px;padding:6px 12px;font:inherit;font-size:12px;cursor:pointer}',
+      '#view-obligations .ob-back{margin-bottom:12px}',
+      '#view-obligations .ob-sim{display:grid;grid-template-columns:1fr 1fr;gap:14px}',
+      '@media(max-width:700px){#view-obligations .ob-sim{grid-template-columns:1fr}}',
+      '#view-obligations .ob-sim label{display:block;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:5px}',
+      '#view-obligations .ob-sim .out{font-family:var(--mono,monospace);font-size:17px;margin-top:8px;color:var(--gold)}',
       '#view-obligations .ob-empty{padding:26px;text-align:center;color:var(--dim)}'
     ].join('\n');
     document.head.appendChild(s);
   }
 
-  function kpi(k, v, cls) { return '<div class="ob-kpi"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + v + '</div></div>'; }
-
-  function paramsBar() {
-    return '<div class="ob-params">'
-      + '<div class="ob-field"><label for="obVN">Valeur nominale</label><input type="number" id="obVN" min="100" step="500" value="' + VN + '" style="width:130px"></div>'
-      + '<div class="ob-field"><label for="obMethode">Amortissement</label><select id="obMethode">'
-      + '<option value="in_fine"' + (METHODE === 'in_fine' ? ' selected' : '') + '>In fine (remboursement à l\'échéance)</option>'
-      + '<option value="amort_constant"' + (METHODE === 'amort_constant' ? ' selected' : '') + '>Amortissement constant du capital</option>'
-      + '<option value="annuites_constantes"' + (METHODE === 'annuites_constantes' ? ' selected' : '') + '>Annuités constantes</option>'
-      + '</select></div>'
-      + '<div class="ob-field"><label for="obFreq">Périodicité</label><select id="obFreq">'
-      + '<option value="1"' + (FREQ === 1 ? ' selected' : '') + '>Annuelle</option>'
-      + '<option value="2"' + (FREQ === 2 ? ' selected' : '') + '>Semestrielle</option>'
-      + '<option value="4"' + (FREQ === 4 ? ' selected' : '') + '>Trimestrielle</option>'
-      + '</select></div>'
-      + '</div>';
+  function kpi(k, v, sub, cls) { return '<div class="ob-kpi"><div class="k">' + esc(k) + '</div><div class="v ' + (cls || '') + '">' + v + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>'; }
+  function ytmCell(a, net) {
+    if (!a) return '—';
+    if (a.matured) return '<span class="ob-ns" title="Échéance passée">échue</span>';
+    var v = net ? a.ytmNet : a.ytm;
+    if (v != null) return (net ? '' : '<b>') + pc(v) + (net ? '' : '</b>');
+    if (net && a.ytm != null) return '<span class="ob-ns" title="Taux net non publié dans la fiche">—</span>';
+    return '<span class="ob-ns" title="' + esc(a.priceIssue || 'Cours indisponible') + '">n.s.</span>';
+  }
+  function modeTag(r) {
+    if (!r.a || !r.a.schedule) return '—';
+    var sc = r.a.schedule;
+    return '<span class="ob-tag ' + (sc.source === 'fiche' ? 'fiche' : 'hyp') + '" title="' + esc(sc.mode && sc.mode.label || '') + '">' + (sc.source === 'fiche' ? 'fiche' : 'hypothèse') + '</span>';
   }
 
-  function bindParams() {
-    if (g('obVN')) g('obVN').addEventListener('change', function () { VN = Math.max(100, num(this.value) || 10000); render(); });
-    if (g('obMethode')) g('obMethode').addEventListener('change', function () { METHODE = this.value; render(); });
-    if (g('obFreq')) g('obFreq').addEventListener('change', function () { FREQ = num(this.value) || 1; render(); });
+  // ---- courbe des taux ----
+  function curvePoints() {
+    return analyzed().filter(function (r) {
+      return r.a && r.a.ytm != null && r.a.ytm >= 1 && r.a.ytm <= 15 && r.a.life >= 0.25 && (CURVE_SEG === 'tous' || r.seg === CURVE_SEG);
+    }).map(function (r) { return { x: CURVE_X === 'duration' ? r.a.duration : r.a.life, y: r.a.ytm, code: r.o.code, nom: r.o.nom }; })
+      .filter(function (p) { return p.x > 0; });
   }
-
-  function drawCurve(rows) {
+  function drawCurve() {
     var cv = g('obCurve');
     if (!cv || typeof Chart === 'undefined') return;
     if (chartCurve) { try { chartCurve.destroy(); } catch (e) {} chartCurve = null; }
-    var pts = rows.map(function (r) { return r.m.n && r.m.ytm != null ? { x: r.m.n, y: r.m.ytm, s: souverain(r.o), code: r.o.code } : null; }).filter(Boolean);
-    if (pts.length < 2) { cv.parentElement.innerHTML = '<div class="ob-empty">Courbe des taux indisponible : pas assez de lignes avec échéance et prix exploitables.</div>'; return; }
-    var sov = pts.filter(function (p) { return p.s; });
-    var corp = pts.filter(function (p) { return !p.s; });
-    // tendance : régression linéaire simple sur tous les points
-    var n = pts.length, sx = 0, sy = 0, sxy = 0, sx2 = 0;
-    pts.forEach(function (p) { sx += p.x; sy += p.y; sxy += p.x * p.y; sx2 += p.x * p.x; });
-    var den = n * sx2 - sx * sx;
-    var slope = den ? (n * sxy - sx * sy) / den : 0;
-    var inter = (sy - slope * sx) / n;
-    var xs = pts.map(function (p) { return p.x; });
-    var xmin = Math.min.apply(null, xs), xmax = Math.max.apply(null, xs);
+    var pts = curvePoints();
+    var tbl = g('obTenors');
+    if (pts.length < 4) {
+      cv.parentElement.innerHTML = '<div class="ob-empty">Pas assez de lignes avec un rendement significatif pour tracer la courbe de ce segment (' + pts.length + ').</div>';
+      if (tbl) tbl.innerHTML = '';
+      return;
+    }
+    var ns = M().nelsonSiegel(pts), sp = M().splineCurve(pts, 1);
+    var xmax = Math.min(20, Math.max.apply(null, pts.map(function (p) { return p.x; })));
+    var line = function (f) { var out = []; for (var x = 0.25; x <= xmax + 1e-9; x += 0.25) out.push({ x: +x.toFixed(2), y: f(x) }); return out; };
+    var ds = [{ label: 'Rendements observés', data: pts, backgroundColor: 'rgba(245,240,232,.55)', pointRadius: 4, pointHoverRadius: 6 }];
+    if (ns) ds.push({ label: 'Nelson-Siegel', type: 'line', data: line(ns.at), borderColor: '#B8964E', borderWidth: 2.2, pointRadius: 0, fill: false, tension: 0 });
+    if (sp) ds.push({ label: 'Spline cubique', type: 'line', data: line(sp.at), borderColor: '#60A5FA', borderWidth: 1.8, borderDash: [6, 4], pointRadius: 0, fill: false, tension: 0 });
     chartCurve = new Chart(cv, {
       type: 'scatter',
-      data: {
-        datasets: [
-          { label: 'Souverain / régional', data: sov, backgroundColor: '#B8964E', pointRadius: 5 },
-          { label: 'Corporate', data: corp, backgroundColor: '#60A5FA', pointRadius: 5 },
-          { label: 'Tendance', type: 'line', data: [{ x: xmin, y: slope * xmin + inter }, { x: xmax, y: slope * xmax + inter }], borderColor: 'rgba(245,240,232,.4)', borderDash: [5, 4], pointRadius: 0, fill: false }
-        ]
-      },
+      data: { datasets: ds },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false, animation: false,
         plugins: {
           legend: { labels: { color: 'rgba(245,240,232,.7)', font: { size: 11 } } },
-          tooltip: { callbacks: { label: function (c) { return (c.raw.code || '') + ' · ' + nf(c.raw.x, 1) + ' ans · ' + nf(c.raw.y, 2) + ' %'; } } }
+          tooltip: { callbacks: { label: function (c) { return c.raw.code ? c.raw.code + ' · ' + nf(c.raw.x, 1) + ' an(s) · ' + nf(c.raw.y, 2) + ' %' : c.dataset.label + ' · ' + nf(c.raw.x, 2) + ' an(s) · ' + nf(c.raw.y, 2) + ' %'; } } }
         },
         scales: {
-          x: { title: { display: true, text: 'Années à maturité', color: 'rgba(245,240,232,.5)' }, ticks: { color: 'rgba(245,240,232,.4)' }, grid: { color: 'rgba(245,240,232,.06)' } },
-          y: { title: { display: true, text: 'Rendement à l\'échéance (%)', color: 'rgba(245,240,232,.5)' }, ticks: { color: 'rgba(245,240,232,.4)', callback: function (v) { return v + ' %'; } }, grid: { color: 'rgba(245,240,232,.06)' } }
+          x: { type: 'linear', min: 0, title: { display: true, text: CURVE_X === 'duration' ? 'Duration (années)' : 'Durée restante jusqu\'à l\'échéance (années)', color: 'rgba(245,240,232,.5)' }, ticks: { color: 'rgba(245,240,232,.4)' }, grid: { color: 'rgba(245,240,232,.06)' } },
+          y: { title: { display: true, text: 'Rendement actuariel brut (%)', color: 'rgba(245,240,232,.5)' }, ticks: { color: 'rgba(245,240,232,.4)', callback: function (v) { return v + ' %'; } }, grid: { color: 'rgba(245,240,232,.06)' } }
         }
       }
     });
+    if (tbl) {
+      var tenors = [1, 2, 3, 5, 7, 10].filter(function (t) { return t <= xmax + 0.5; });
+      tbl.innerHTML = '<table><thead><tr><th>Maturité</th><th class="r">Nelson-Siegel</th><th class="r">Spline</th></tr></thead><tbody>'
+        + tenors.map(function (t) { return '<tr><td>' + t + ' an' + (t > 1 ? 's' : '') + '</td><td class="r">' + (ns ? pc(ns.at(t)) : '—') + '</td><td class="r">' + (sp ? pc(sp.at(t)) : '—') + '</td></tr>'; }).join('')
+        + '</tbody></table><p class="ob-note" style="margin-top:8px">' + pts.length + ' lignes retenues' + (ns ? ' · écart moyen au modèle ' + nf(ns.rmse, 2) + ' pt' : '') + '.</p>';
+    }
   }
 
-  function ficheOf(o) { return (CARAC && CARAC[o.code]) || null; }
-
+  // ---- liste ----
   var COLS = [
-    { k: 'code', l: 'Code', v: function (r) { return '<span class="ob-code">' + esc(r.o.code) + '</span><div class="ob-nom">' + esc((r.o.nom || '').slice(0, 30)) + '</div>'; } },
-    { k: 'isin', l: 'ISIN', v: function (r) { var f = ficheOf(r.o); return f && f.isin ? '<span class="ob-code" style="color:var(--cream)">' + esc(f.isin) + '</span>' : '—'; } },
-    { k: 'taux', l: 'Taux facial', cls: 'r', v: function (r) { return r.m.taux != null ? nf(r.m.taux, 2) + ' %' : '—'; } },
-    { k: 'maturite', l: 'Maturité', cls: 'r', v: function (r) { return dLabel(r.o.date_maturite); } },
-    { k: 'n', l: 'Années rest.', cls: 'r', v: function (r) { return r.m.n != null ? nf(r.m.n, 1) : '—'; } },
-    { k: 'prix', l: 'Cours', cls: 'r', v: function (r) { return r.m.prix != null ? nf(r.m.prix) : '—'; } },
-    { k: 'coupon_couru', l: 'Coupon couru', cls: 'r', v: function (r) { return num(r.o.coupon_couru) != null ? nf(r.o.coupon_couru, 2) : '—'; } },
-    { k: 'courant', l: 'Rdt courant', cls: 'r', v: function (r) { return r.m.courant != null ? nf(r.m.courant, 2) + ' %' : '—'; } },
-    { k: 'ytm', l: 'Rdt échéance', cls: 'r', v: function (r) { return r.m.ytm != null ? '<b>' + nf(r.m.ytm, 2) + ' %</b>' : '—'; } }
+    { k: 'code', l: 'Obligation', v: function (r) { return '<span class="ob-code">' + esc(r.o.code) + '</span><div class="ob-nom" title="' + esc(r.o.nom || '') + '">' + esc(r.o.nom || '') + '</div>'; } },
+    { k: 'taux', l: 'Taux', cls: 'r', v: function (r) { return pc(num(r.o.taux_facial)); } },
+    { k: 'maturite', l: 'Échéance', cls: 'r', v: function (r) { return r.a && r.a.schedule ? dLabel(r.a.schedule.maturity) : dLabel(r.o.date_maturite); } },
+    { k: 'crd', l: 'Capital restant', cls: 'r', v: function (r) { return r.a ? nf(r.a.crd) : '—'; } },
+    { k: 'cours', l: 'Cours', cls: 'r', v: function (r) { return num(r.o.cours) ? nf(r.o.cours) + (r.a && r.a.pricePct != null ? '<div class="ob-nom" style="text-align:right">' + nf(r.a.pricePct, 1) + ' % du CRD</div>' : '') : '—'; } },
+    { k: 'ytm', l: 'Rdt actuariel brut', cls: 'r', v: function (r) { return ytmCell(r.a, false); } },
+    { k: 'ytmNet', l: 'Rdt net', cls: 'r', v: function (r) { return ytmCell(r.a, true); } },
+    { k: 'duration', l: 'Duration', cls: 'r', v: function (r) { return r.a && r.a.duration != null ? nf(r.a.duration, 2) : '—'; } },
+    { k: 'mode', l: 'Échéancier', v: modeTag }
   ];
-
+  function sortVal(r, k) {
+    if (k === 'code') return r.o.code || '';
+    if (k === 'maturite') return r.a && r.a.schedule ? +r.a.schedule.maturity : Infinity;
+    if (k === 'taux') return num(r.o.taux_facial);
+    if (k === 'cours') return num(r.o.cours);
+    if (k === 'mode') return r.a && r.a.schedule ? r.a.schedule.source : '';
+    return r.a ? r.a[k === 'life' ? 'life' : k] : null;
+  }
   function sortRows(rows) {
     var k = SORT.key, d = SORT.dir;
     return rows.slice().sort(function (a, b) {
-      var va, vb;
-      if (k === 'code') { va = a.o.code || ''; vb = b.o.code || ''; return va.localeCompare(vb) * d; }
-      if (k === 'isin') { va = (ficheOf(a.o) || {}).isin || ''; vb = (ficheOf(b.o) || {}).isin || ''; return va.localeCompare(vb) * d; }
-      if (k === 'maturite') { va = a.o.date_maturite || ''; vb = b.o.date_maturite || ''; return String(va).localeCompare(String(vb)) * d; }
-      if (k === 'coupon_couru') { va = num(a.o.coupon_couru); vb = num(b.o.coupon_couru); }
-      else { va = a.m[k]; vb = b.m[k]; }
-      va = va == null ? -Infinity : va; vb = vb == null ? -Infinity : vb;
+      var va = sortVal(a, k), vb = sortVal(b, k);
+      if (typeof va === 'string' || typeof vb === 'string') return String(va || '').localeCompare(String(vb || '')) * d;
+      va = va == null ? Infinity : va; vb = vb == null ? Infinity : vb;
       return (va - vb) * d;
     });
   }
@@ -243,130 +223,202 @@
   function renderList() {
     var view = g('view-obligations');
     injectCss();
-    var rows = (LIST || []).map(function (o) { return { o: o, m: metrics(o) }; });
+    var all = analyzed();
+    var live = all.filter(function (r) { return r.a && !r.a.matured; });
+    var withY = live.filter(function (r) { return r.a.ytm != null; });
+    var med = function (a) { if (!a.length) return null; a = a.slice().sort(function (x, y) { return x - y; }); var m = Math.floor(a.length / 2); return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; };
+    var q = QUERY.trim().toUpperCase();
+    var rows = live.filter(function (r) {
+      return (SEG === 'tous' || r.seg === SEG) && (!q || (r.o.code + ' ' + (r.o.nom || '') + ' ' + ((r.f && r.f.isin) || '')).toUpperCase().indexOf(q) >= 0);
+    });
     var m = MARCHE || {};
 
     view.innerHTML = ''
       + '<div class="page-header"><h1>Obligations <span style="color:var(--gold)">BRVM</span></h1>'
-      + '<p>Cours du jour, rendement courant et à l\'échéance, courbe des taux et tableau d\'amortissement par ligne. Cliquez une obligation pour le détail.</p></div>'
+      + '<p>Rendement actuariel exact, courbe des taux et échéancier réel de chaque ligne. Cliquez une obligation pour son tableau d\'amortissement.</p></div>'
       + '<div class="ob-kpis">'
-      + kpi('Lignes cotées', m.nb_lignes != null ? nf(m.nb_lignes) : nf(rows.length))
-      + kpi('Capitalisation obligataire', num(m.capitalisation_obligations) != null ? nf(m.capitalisation_obligations) + ' F' : '—')
-      + kpi('Valeur des transactions', num(m.valeur_transactions) != null ? nf(m.valeur_transactions) + ' F' : '—')
-      + kpi('Séance', m.date_seance ? dLabel(m.date_seance) : '—')
+      + kpi('Lignes en vie', nf(live.length), nf(withY.length) + ' avec un rendement significatif')
+      + kpi('Rendement médian', pc(med(withY.map(function (r) { return r.a.ytm; }))), 'actuariel brut, toutes lignes')
+      + kpi('Souverain médian', pc(med(withY.filter(function (r) { return r.seg === 'etat'; }).map(function (r) { return r.a.ytm; }))), 'emprunts d\'États UEMOA')
+      + kpi('Capitalisation obligataire', num(m.capitalisation_obligations) != null ? nf(m.capitalisation_obligations / 1e9, 1) + ' Md' : '—', m.date_seance ? 'séance du ' + dLabel(m.date_seance) : '')
       + '</div>'
-      + paramsBar()
+
+      + '<div class="ob-card"><div class="ob-h"><span>Courbe des taux</span><span class="ob-bar" style="margin:0">'
+      + ['etat', 'regional', 'corporate', 'tous'].map(function (s) { return '<button type="button" class="ob-chip' + (CURVE_SEG === s ? ' on' : '') + '" data-cseg="' + s + '">' + SEG_LABEL[s] + '</button>'; }).join('')
+      + '<select id="obCurveX" title="Axe horizontal"><option value="life"' + (CURVE_X === 'life' ? ' selected' : '') + '>Axe : durée restante</option><option value="duration"' + (CURVE_X === 'duration' ? ' selected' : '') + '>Axe : duration</option></select>'
+      + '</span></div>'
+      + '<div class="ob-grid2"><div class="ob-chart"><canvas id="obCurve"></canvas></div><div id="obTenors"></div></div>'
+      + '<p class="ob-note" style="margin-top:10px">Chaque point est une ligne cotée (rendement actuariel brut au cours du jour). <b>Nelson-Siegel</b> : courbe lissée à 4 paramètres, standard des banques centrales. <b>Spline cubique</b> : courbe passant par la médiane de chaque tranche d\'un an. Sont exclues les lignes au rendement non significatif (cours ancien) et celles à moins de 3 mois de l\'échéance.</p></div>'
+
+      + '<div class="ob-bar">'
+      + ['tous', 'etat', 'regional', 'corporate'].map(function (s) { return '<button type="button" class="ob-chip' + (SEG === s ? ' on' : '') + '" data-seg="' + s + '">' + SEG_LABEL[s] + '</button>'; }).join('')
+      + '<input type="search" id="obQ" placeholder="Rechercher un code, un émetteur, un ISIN…" value="' + esc(QUERY) + '" style="min-width:240px;flex:1">'
+      + '</div>'
       + (rows.length
-        ? '<div class="ob-card"><div class="ob-note" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--gold)">Courbe des taux</div><div class="ob-chart"><canvas id="obCurve"></canvas></div></div>'
-          + '<div class="ob-card" style="overflow-x:auto"><table><thead><tr>'
+        ? '<div class="ob-card ob-list" style="overflow-x:auto"><table><thead><tr>'
           + COLS.map(function (c) { return '<th class="' + (c.cls || '') + '" data-k="' + c.k + '">' + esc(c.l) + (SORT.key === c.k ? (SORT.dir > 0 ? ' ▲' : ' ▼') : '') + '</th>'; }).join('')
           + '</tr></thead><tbody>'
-          + sortRows(rows).map(function (r) {
-            return '<tr data-code="' + esc(r.o.code) + '">' + COLS.map(function (c) { return '<td class="' + (c.cls || '') + '">' + c.v(r) + '</td>'; }).join('') + '</tr>';
-          }).join('')
+          + sortRows(rows).map(function (r) { return '<tr data-code="' + esc(r.o.code) + '">' + COLS.map(function (c) { return '<td class="' + (c.cls || '') + '">' + c.v(r) + '</td>'; }).join('') + '</tr>'; }).join('')
           + '</tbody></table></div>'
-          + '<p class="ob-note">Hypothèses : valeur nominale ' + nf(VN) + ' FCFA (ajustable ci-dessus), coupons ' + (FREQ === 1 ? 'annuels' : FREQ === 2 ? 'semestriels' : 'trimestriels') + '. '
-          + 'Le <b>rendement courant</b> = coupon annuel / cours. Le <b>rendement à l\'échéance</b> est une approximation ( C + (VN − prix)/n ) / ( (VN + prix)/2 ), sans calcul actuariel exact ni réinvestissement des coupons. '
-          + 'Maturité et taux facial sont lus dans la base ou déduits du libellé. Ceci n\'est pas un conseil d\'investissement.</p>'
-        : '<div class="ob-empty">Aucune obligation en base. Lancez la récupération dans Admin → Récupération BRVM.</div>');
+        : '<div class="ob-empty">' + (LIST && LIST.length ? 'Aucune ligne ne correspond à ce filtre.' : 'Aucune obligation en base. Lancez la récupération dans Admin → Récupération BRVM.') + '</div>')
+      + '<p class="ob-note"><b>Rendement actuariel</b> : taux qui égalise le prix payé (cours + coupon couru) et les flux futurs (coupons et remboursements), date à date, base exact/365. <b>Net</b> : coupons au taux net d\'impôt de la fiche. '
+      + '<b>Échéancier</b> : <span class="ob-tag fiche">fiche</span> mode de remboursement lu dans la fiche technique DC/BR ; <span class="ob-tag hyp">hypothèse</span> mode déduit du capital restant cohérent avec le cours. '
+      + '« n.s. » : cours coté manifestement ancien, rendement non significatif (survolez pour le détail). Ceci n\'est pas un conseil d\'investissement.</p>';
 
-    bindParams();
+    view.querySelectorAll('[data-cseg]').forEach(function (b) { b.addEventListener('click', function () { CURVE_SEG = b.getAttribute('data-cseg'); renderList(); }); });
+    view.querySelectorAll('[data-seg]').forEach(function (b) { b.addEventListener('click', function () { SEG = b.getAttribute('data-seg'); renderList(); }); });
+    if (g('obCurveX')) g('obCurveX').addEventListener('change', function () { CURVE_X = this.value; renderList(); });
+    if (g('obQ')) g('obQ').addEventListener('input', function () { var v = this.value, pos = this.selectionStart; QUERY = v; renderList(); var i = g('obQ'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (e) {} } });
     view.querySelectorAll('thead th[data-k]').forEach(function (th) {
       th.addEventListener('click', function () {
         var k = th.getAttribute('data-k');
-        if (SORT.key === k) SORT.dir = -SORT.dir; else { SORT.key = k; SORT.dir = (k === 'code' || k === 'maturite') ? 1 : -1; }
+        if (SORT.key === k) SORT.dir = -SORT.dir; else { SORT.key = k; SORT.dir = (k === 'code' || k === 'maturite' || k === 'mode') ? 1 : -1; }
         renderList();
       });
     });
-    view.querySelectorAll('tbody tr[data-code]').forEach(function (tr) {
-      tr.addEventListener('click', function () { SEL = tr.getAttribute('data-code'); render(); });
-    });
-    if (rows.length) drawCurve(rows);
+    view.querySelectorAll('.ob-list tbody tr[data-code]').forEach(function (tr) { tr.addEventListener('click', function () { SEL = tr.getAttribute('data-code'); render(); window.scrollTo(0, 0); }); });
+    drawCurve();
   }
 
+  // ---- détail ----
   function renderDetail() {
     var view = g('view-obligations');
     injectCss();
-    var o = (LIST || []).find(function (x) { return x.code === SEL; });
-    if (!o) { SEL = null; return renderList(); }
-    var m = metrics(o);
-    var sch = schedule(o);
-    var fiche = ficheOf(o);
-
-    var carac = [
-      ['Code', o.code],
-      ['Émetteur', o.nom || '—']
-    ];
-    if (fiche) {
-      carac.push(['ISIN', fiche.isin || '—']);
-      if (fiche.raison_sociale_emetteur) carac.push(['Raison sociale', fiche.raison_sociale_emetteur]);
-      if (fiche.registraire) carac.push(['Registraire', fiche.registraire]);
-      if (fiche.valeur_nominale != null) carac.push(['Valeur nominale (DC/BR)', nf(fiche.valeur_nominale) + ' FCFA']);
-      if (fiche.nombre_titres != null) carac.push(['Nombre de titres', nf(fiche.nombre_titres)]);
-      if (fiche.mode_remboursement) carac.push(['Mode de remboursement', fiche.mode_remboursement]);
-      if (fiche.modalite_paiement) carac.push(['Modalité de paiement', fiche.modalite_paiement]);
+    var r = analyzed().find(function (x) { return x.o.code === SEL; });
+    if (!r) { SEL = null; return renderList(); }
+    var o = r.o, a = r.a, f = r.f;
+    if (!a || !a.schedule) {
+      view.innerHTML = '<button type="button" class="ob-back" id="obBack">← Toutes les obligations</button><div class="ob-card ob-note">Échéancier impossible : taux facial ou dates manquants pour ' + esc(o.code) + '.</div>';
+      g('obBack').addEventListener('click', function () { SEL = null; render(); });
+      return;
     }
-    carac = carac.concat([
-      ['Taux facial', m.taux != null ? nf(m.taux, 2) + ' %' : '—'],
-      ['Émission', dLabel(o.date_emission)],
-      ['Maturité', dLabel(o.date_maturite)],
-      ['Années restantes', m.n != null ? nf(m.n, 2) : '—'],
-      ['Cours du jour', m.prix != null ? nf(m.prix) + ' FCFA' : '—'],
-      ['Coupon couru', num(o.coupon_couru) != null ? nf(o.coupon_couru, 2) + ' FCFA' : '—'],
-      ['Dernier paiement', o.dernier_paiement_date ? dLabel(o.dernier_paiement_date) + (o.dernier_paiement_valeur != null ? ' · ' + nf(o.dernier_paiement_valeur, 2) : '') : '—'],
-      ['Coupon annuel (VN ' + nf(VN) + ')', m.couponAnnuel != null ? nf(m.couponAnnuel) + ' FCFA' : '—'],
-      ['Rendement courant', m.courant != null ? nf(m.courant, 2) + ' %' : '—'],
-      ['Rendement à l\'échéance', m.ytm != null ? nf(m.ytm, 2) + ' %' : '—']
-    ]);
+    var sc = a.schedule, settle = M().toDate(a.settle);
+    var freqL = { 1: 'annuelle', 2: 'semestrielle', 4: 'trimestrielle', 12: 'mensuelle' }[sc.freq] || sc.freq + '/an';
+    var next = a.next;
+    var carac = [
+      ['Code', o.code], ['Émetteur', o.nom || '—'],
+      ['ISIN', f && f.isin ? f.isin : '—'],
+      ['Catégorie', SEG_LABEL[r.seg]],
+      ['Taux facial brut / net', pc(sc.rate) + (sc.rateNet != null ? ' / ' + pc(sc.rateNet) : '')],
+      ['Valeur nominale', nf(sc.vn) + ' FCFA'],
+      ['Jouissance', dLabel(sc.start)], ['Échéance', dLabel(sc.maturity)],
+      ['Périodicité des coupons', freqL],
+      ['Mode de remboursement', (sc.mode && sc.mode.label) || '—'],
+      ['Source de l\'échéancier', sc.source === 'fiche' ? 'Fiche technique DC/BR' : 'Hypothèse déduite du cours'],
+      ['Dernier paiement publié', o.dernier_paiement_date ? dLabel(o.dernier_paiement_date) + (num(o.dernier_paiement_valeur) != null ? ' · ' + nf(o.dernier_paiement_valeur, 2) + ' FCFA' : '') : '—']
+    ];
+    if (f && f.registraire) carac.push(['Registraire', f.registraire]);
+    if (f && f.nombre_titres != null) carac.push(['Titres émis', nf(f.nombre_titres)]);
 
-    var methLabel = METHODE === 'in_fine' ? 'In fine' : METHODE === 'amort_constant' ? 'Amortissement constant' : 'Annuités constantes';
+    var totals = { i: 0, in: 0, a: 0 };
+    var body = sc.rows.map(function (row) {
+      var paid = row.date <= settle, isNext = next && row.k === next.k;
+      if (!paid) { totals.i += row.interet; totals.in += row.interetNet; totals.a += row.amort; }
+      return '<tr class="' + (paid ? 'paid' : isNext ? 'next' : '') + '"><td>' + row.k + '</td><td>' + dLabel(row.date) + '</td><td>' + (paid ? 'payé' : isNext ? 'prochain' : 'à venir') + '</td>'
+        + '<td class="r">' + nf(row.crd0 * QTY) + '</td><td class="r">' + nf(row.interet * QTY, QTY > 1 ? 0 : 2) + '</td><td class="r">' + nf(row.interetNet * QTY, QTY > 1 ? 0 : 2) + '</td>'
+        + '<td class="r">' + nf(row.amort * QTY) + '</td><td class="r"><b>' + nf(row.flux * QTY, QTY > 1 ? 0 : 2) + '</b></td><td class="r">' + nf(Math.max(0, row.crd1) * QTY) + '</td></tr>';
+    }).join('');
 
     view.innerHTML = ''
       + '<button type="button" class="ob-back" id="obBack">← Toutes les obligations</button>'
-      + '<div class="page-header"><h1>' + esc(o.code) + ' <span style="color:var(--gold)">' + esc((o.nom || '').slice(0, 40)) + '</span></h1></div>'
-      + paramsBar()
-      + '<div class="ob-card"><div class="ob-note" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--gold)">Caractéristiques</div>'
-      + '<div style="overflow-x:auto"><table><tbody>'
-      + carac.map(function (c) { return '<tr><td>' + esc(c[0]) + '</td><td class="r">' + esc(c[1]) + '</td></tr>'; }).join('')
-      + '</tbody></table></div></div>'
-      + (sch
-        ? '<div class="ob-card"><div class="ob-note" style="margin-bottom:8px;text-transform:uppercase;letter-spacing:.1em;font-size:9px;color:var(--gold)">Tableau d\'amortissement — ' + esc(methLabel) + ' · ' + (FREQ === 1 ? 'annuel' : FREQ === 2 ? 'semestriel' : 'trimestriel') + '</div>'
-          + '<div class="ob-chart"><canvas id="obFlux"></canvas></div>'
-          + '<div style="overflow-x:auto;margin-top:12px"><table><thead><tr><th>Échéance</th><th class="r">CRD début</th><th class="r">Intérêt</th><th class="r">Amortissement</th><th class="r">Annuité</th><th class="r">CRD fin</th></tr></thead><tbody>'
-          + sch.rows.map(function (r) {
-            return '<tr><td>' + r.k + ' / ' + sch.periods + '</td><td class="r">' + nf(r.crd0) + '</td><td class="r">' + nf(r.interet) + '</td><td class="r">' + nf(r.amort) + '</td><td class="r">' + nf(r.annuite) + '</td><td class="r">' + nf(Math.max(0, r.crd1)) + '</td></tr>';
-          }).join('')
-          + '</tbody></table></div>'
-          + '<p class="ob-note" style="margin-top:10px">Reconstruction à partir du taux facial, de la valeur nominale et de la maturité — <b>' + esc(methLabel) + '</b>. Le type d\'amortissement réel figure dans la note d\'information de l\'émission ; ce tableau est un modèle. Hors fiscalité, frais et clauses particulières (différé, call…).</p>'
-          + '</div>'
-        : '<div class="ob-card ob-note">Tableau d\'amortissement impossible : taux facial ou maturité manquants pour cette ligne.</div>');
+      + '<div class="page-header"><h1>' + esc(o.code) + ' <span style="color:var(--gold)">' + esc(o.nom || '') + '</span></h1></div>'
+      + (a.priceIssue ? '<div class="ob-warn">' + esc(a.priceIssue) + '</div>' : '')
+      + (a.priceBasis === 'nominal' ? '<div class="ob-warn">Le cours coté (' + nf(a.quoted) + ' FCFA) n\'a pas été ajusté des amortissements déjà remboursés : il est lu comme ' + nf(a.pricePct, 1) + ' % du capital restant (' + nf(a.crd) + ' FCFA).</div>' : '')
+      + '<div class="ob-kpis">'
+      + kpi('Rendement actuariel brut', a.matured ? 'échue' : pc(a.ytm), 'au cours du jour')
+      + kpi('Rendement actuariel net', pc(a.ytmNet), sc.rateNet != null ? 'coupons nets d\'impôt' : 'taux net non publié')
+      + kpi('Prix', a.pricePct != null ? nf(a.pricePct, 2) + ' %' : '—', 'du capital restant · cours ' + (num(o.cours) ? nf(o.cours) + ' F' : '—'))
+      + kpi('Capital restant dû', nf(a.crd) + ' F', 'sur ' + nf(sc.vn) + ' F de nominal')
+      + kpi('Coupon couru', a.accrued != null ? nf(a.accrued, 2) + ' F' : '—', a.accruedPublished != null ? 'publié : ' + nf(a.accruedPublished, 2) + ' F' : 'calculé')
+      + kpi('Duration', a.duration != null ? nf(a.duration, 2) + ' ans' : '—', a.modDuration != null ? 'sensibilité ' + nf(a.modDuration, 2) + ' % par point de taux' : '')
+      + kpi('Convexité', a.convexity != null ? nf(a.convexity, 2) : '—', a.dv01 != null ? nf(a.dv01, 2) + ' F par titre pour 0,01 %' : '')
+      + kpi('Durée de vie moyenne', a.averageLife != null ? nf(a.averageLife, 2) + ' ans' : '—', 'échéance dans ' + nf(a.life, 2) + ' ans')
+      + kpi('Prochain flux', next ? nf(next.flux, 2) + ' F' : '—', next ? dLabel(next.date) + (next.amort > 0 ? ' · dont ' + nf(next.amort) + ' F de capital' : ' · coupon') : '')
+      + '</div>'
 
-    if (g('obBack')) g('obBack').addEventListener('click', function () { SEL = null; render(); });
-    bindParams();
-    if (sch) drawFlux(sch);
+      + '<div class="ob-card"><div class="ob-h"><span>Simulateur</span></div><div class="ob-sim">'
+      + '<div><label for="obSimP">Prix pied de coupon (FCFA par titre)</label><input type="number" id="obSimP" step="1" value="' + (a.clean != null ? Math.round(a.clean) : Math.round(a.crd)) + '"><div class="out" id="obSimPOut"></div></div>'
+      + '<div><label for="obSimY">Rendement souhaité (%)</label><input type="number" id="obSimY" step="0.05" value="' + (a.ytm != null ? a.ytm.toFixed(2) : sc.rate) + '"><div class="out" id="obSimYOut"></div></div>'
+      + '</div><p class="ob-note" style="margin-top:8px">Saisissez un prix pour obtenir le rendement, ou un rendement pour obtenir le prix à payer (hors frais de courtage).</p></div>'
+
+      + '<div class="ob-card"><div class="ob-h"><span>Tableau d\'amortissement · ' + esc(freqL) + ' · ' + esc((sc.mode && sc.mode.label) || '') + '</span>'
+      + '<span class="ob-bar" style="margin:0"><label for="obQty" style="font-size:10px;letter-spacing:.08em;color:var(--dim)">NOMBRE DE TITRES</label><input type="number" id="obQty" min="1" step="1" value="' + QTY + '" style="width:90px"><button type="button" class="ob-btn" id="obCsv">Export CSV</button></span></div>'
+      + '<div class="ob-chart" style="height:240px"><canvas id="obFlux"></canvas></div>'
+      + '<div style="overflow-x:auto;margin-top:12px"><table><thead><tr><th>N°</th><th>Date</th><th>Statut</th><th class="r">Capital début</th><th class="r">Intérêt brut</th><th class="r">Intérêt net</th><th class="r">Amortissement</th><th class="r">Flux total</th><th class="r">Capital fin</th></tr></thead><tbody>'
+      + body
+      + '<tr><td colspan="4"><b>Reste à percevoir</b></td><td class="r"><b>' + nf(totals.i * QTY) + '</b></td><td class="r"><b>' + nf(totals.in * QTY) + '</b></td><td class="r"><b>' + nf(totals.a * QTY) + '</b></td><td class="r"><b>' + nf((totals.i + totals.a) * QTY) + '</b></td><td></td></tr>'
+      + '</tbody></table></div>'
+      + '<p class="ob-note" style="margin-top:10px">Montants en FCFA pour ' + nf(QTY) + ' titre' + (QTY > 1 ? 's' : '') + '. Intérêts calculés sur le capital restant en début de période. '
+      + (sc.source === 'fiche' ? 'Mode de remboursement et périodicité issus de la fiche technique DC/BR.' : 'La fiche technique de cette ligne n\'est pas disponible : le mode de remboursement est une hypothèse déduite du cours ; se référer à la note d\'information.')
+      + ' Hors frais et clauses particulières (remboursement anticipé…).</p></div>'
+
+      + '<div class="ob-card"><div class="ob-h"><span>Caractéristiques</span></div><div style="overflow-x:auto"><table><tbody>'
+      + carac.map(function (c) { return '<tr><td>' + esc(c[0]) + '</td><td class="r" style="white-space:normal">' + esc(c[1]) + '</td></tr>'; }).join('')
+      + '</tbody></table></div></div>';
+
+    g('obBack').addEventListener('click', function () { SEL = null; render(); });
+    g('obQty').addEventListener('change', function () { QTY = Math.max(1, Math.round(num(this.value) || 1)); renderDetail(); });
+    g('obCsv').addEventListener('click', function () { exportCsv(o, sc); });
+    var simP = function () {
+      var p = num(g('obSimP').value), out = g('obSimPOut');
+      if (!(p > 0)) { out.textContent = ''; return; }
+      var s = M().analyze(o, f, a.settle, p);
+      out.textContent = s && s.ytmRaw == null && s.ytm != null ? 'Rendement : ' + pc(s.ytm) + ' brut · ' + pc(s.ytmNet) + ' net' : (s && s.ytmRaw != null ? 'Rendement : ' + pc(s.ytmRaw) + ' (hors norme)' : 'Rendement incalculable pour ce prix');
+    };
+    var simY = function () {
+      var y = num(g('obSimY').value), out = g('obSimYOut');
+      if (y == null) { out.textContent = ''; return; }
+      var p = M().priceForYield(a, y);
+      out.textContent = p != null ? 'Prix : ' + nf(p) + ' F par titre (' + nf(p / a.crd * 100, 2) + ' % du capital restant)' : '';
+    };
+    g('obSimP').addEventListener('input', simP); g('obSimY').addEventListener('input', simY);
+    simP(); simY();
+    drawFlux(sc, settle);
   }
 
-  function drawFlux(sch) {
+  function exportCsv(o, sc) {
+    var lines = [['N', 'Date', 'Capital debut', 'Interet brut', 'Interet net', 'Amortissement', 'Flux total', 'Capital fin'].join(';')];
+    sc.rows.forEach(function (r) {
+      lines.push([r.k, M().iso(r.date), (r.crd0 * QTY).toFixed(2), (r.interet * QTY).toFixed(2), (r.interetNet * QTY).toFixed(2), (r.amort * QTY).toFixed(2), (r.flux * QTY).toFixed(2), (Math.max(0, r.crd1) * QTY).toFixed(2)].join(';'));
+    });
+    var blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    var aEl = document.createElement('a');
+    aEl.href = URL.createObjectURL(blob);
+    aEl.download = 'echeancier-' + o.code + '.csv';
+    document.body.appendChild(aEl); aEl.click(); document.body.removeChild(aEl);
+  }
+
+  function drawFlux(sc, settle) {
     var cv = g('obFlux');
     if (!cv || typeof Chart === 'undefined') return;
     if (chartFlux) { try { chartFlux.destroy(); } catch (e) {} chartFlux = null; }
     chartFlux = new Chart(cv, {
       type: 'bar',
       data: {
-        labels: sch.rows.map(function (r) { return 'É' + r.k; }),
+        labels: sc.rows.map(function (r) { return dLabel(r.date).slice(3); }),
         datasets: [
-          { label: 'Intérêt', data: sch.rows.map(function (r) { return Math.round(r.interet); }), backgroundColor: '#B8964E' },
-          { label: 'Amortissement', data: sch.rows.map(function (r) { return Math.round(r.amort); }), backgroundColor: '#60A5FA' }
+          { label: 'Intérêt', data: sc.rows.map(function (r) { return Math.round(r.interet * QTY); }), backgroundColor: sc.rows.map(function (r) { return r.date <= settle ? 'rgba(184,150,78,.35)' : '#B8964E'; }) },
+          { label: 'Amortissement', data: sc.rows.map(function (r) { return Math.round(r.amort * QTY); }), backgroundColor: sc.rows.map(function (r) { return r.date <= settle ? 'rgba(96,165,250,.35)' : '#60A5FA'; }) }
         ]
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false, animation: false,
         plugins: { legend: { labels: { color: 'rgba(245,240,232,.7)', font: { size: 11 } } } },
         scales: {
-          x: { stacked: true, ticks: { color: 'rgba(245,240,232,.4)', maxTicksLimit: 12 }, grid: { display: false } },
+          x: { stacked: true, ticks: { color: 'rgba(245,240,232,.4)', maxTicksLimit: 14 }, grid: { display: false } },
           y: { stacked: true, ticks: { color: 'rgba(245,240,232,.4)', callback: function (v) { return nf(v); } }, grid: { color: 'rgba(245,240,232,.06)' } }
         }
       }
+    });
+  }
+
+  function ensureMath() {
+    if (window.OBMath) return Promise.resolve();
+    return new Promise(function (resolve) {
+      var s = document.createElement('script');
+      s.src = '/app/js/views/obligations-math.js?v=1';
+      s.onload = resolve; s.onerror = resolve;
+      document.head.appendChild(s);
     });
   }
 
@@ -375,10 +427,10 @@
     if (!view) return;
     injectCss();
     if (loading) return;
-    if (!LIST) {
+    if (!LIST || !window.OBMath) {
       view.innerHTML = '<div class="page-header"><h1>Obligations <span style="color:var(--gold)">BRVM</span></h1></div><div class="ob-empty">Chargement du marché obligataire…</div>';
       loading = true;
-      load().then(function () { loading = false; render(); });
+      Promise.all([ensureMath(), load()]).then(function () { loading = false; render(); });
       return;
     }
     if (SEL) renderDetail(); else renderList();
