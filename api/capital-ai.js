@@ -36,6 +36,7 @@ const SYSTEM_PROMPT = (contexte, donnees) => [
   "Tu peux calculer des ratios à partir de ces chiffres en montrant le calcul. Les montants du bloc sont en millions de FCFA sauf mention contraire.",
   "Les lignes marquées « en revue » proviennent des publications officielles mais n'ont pas encore été contrôlées une seconde fois : signale-le si la conclusion en dépend.",
   "Si une donnée utile manque dans le bloc, dis qu'elle n'est pas encore disponible dans The Capital plutôt que de l'estimer.",
+  "Ne confonds jamais le PER (exprimé en « x », nombre d'années de bénéfices) et le rendement du dividende (exprimé en %, dividende ÷ cours). Pour tout classement, reprends tels quels les CLASSEMENTS fournis au lieu de trier toi-même, et cite pour chaque valeur l'exercice du dividende utilisé.",
   `Consignes d'affichage de l'application : ${contexte || 'aucune.'}`
 ].join(' ') + '\n\nDONNÉES THE CAPITAL :\n' + (donnees || 'aucune donnée disponible pour cette question.');
 
