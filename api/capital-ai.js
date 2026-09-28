@@ -15,7 +15,9 @@ export const config = { maxDuration: 60 };
 
 const MAX_QUESTION = 2000;
 const MAX_CONTEXT = 12000;
-const PROVIDER_TIMEOUT_MS = 45000;
+const PROVIDER_TIMEOUT_MS = 55000;
+/* Délai accordé à chaque modèle pour commencer à répondre avant de passer au suivant. */
+const FIRST_BYTE_TIMEOUT_MS = 15000;
 
 const SYSTEM_PROMPT = (contexte, donnees) => [
   "Tu es The Capital AI, assistant d'intelligence financière spécialisé sur la BRVM et l'UEMOA.",
@@ -103,38 +105,97 @@ export default async function handler(req, res) {
   const model = useGemini ? (process.env.GEMINI_MODEL || 'gemini-flash-latest') : (process.env.OPENAI_MODEL || 'gpt-5-mini');
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
+  const wantStream = body?.stream === true;
 
   try {
     if (useGemini) {
-      const ask = m => fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + ':generateContent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_PROMPT(contexte, donnees.text) }] },
-          contents: [{ role: 'user', parts: [{ text: question }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 4096 }
-        }),
-        signal: controller.signal
+      /* Réflexion interne (« thinking ») désactivée : les chiffres et ratios sont déjà
+         calculés côté serveur, le modèle n'a qu'à rédiger. Elle faisait dépasser le délai
+         sur les questions ouvertes. Si un modèle refuse ce réglage (400), on réessaie sans. */
+      const payload = thinking => JSON.stringify({
+        systemInstruction: { parts: [{ text: SYSTEM_PROMPT(contexte, donnees.text) }] },
+        contents: [{ role: 'user', parts: [{ text: question }] }],
+        generationConfig: { temperature: 0.3, maxOutputTokens: 4096, ...(thinking ? {} : { thinkingConfig: { thinkingBudget: 0 } }) }
       });
-      /* Modèle saturé (503), quota du modèle atteint (429), erreur passagère (500)
-         ou modèle retiré (404) : on essaie le modèle gratuit suivant. Les secours
-         viennent de la liste publiée par Google, car les noms codés en dur
-         finissent par être retirés. */
+      /* Chaque modèle a son propre délai pour commencer à répondre : un modèle
+         saturé ne consomme plus tout le temps des secours. */
+      const ask = async m => {
+        const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + (wantStream ? ':streamGenerateContent?alt=sse' : ':generateContent');
+        const attempt = async thinking => {
+          const ctl = new AbortController();
+          const t = setTimeout(() => ctl.abort(), FIRST_BYTE_TIMEOUT_MS);
+          const onAbort = () => ctl.abort();
+          controller.signal.addEventListener('abort', onAbort);
+          try {
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: payload(thinking), signal: ctl.signal });
+            return { r, ctl };
+          } catch (e) {
+            if (controller.signal.aborted) throw e;
+            return { r: { status: 504, ok: false, json: async () => ({ error: { message: 'délai de réponse dépassé' } }) }, ctl };
+          } finally { clearTimeout(t); /* l'écoute reste active : le délai global coupe aussi la lecture du flux */ }
+        };
+        let out = await attempt(false);
+        if (out.r.status === 400) {
+          const detail = await out.r.json().catch(() => null);
+          if (/thinking/i.test(detail?.error?.message || '')) out = await attempt(true);
+          else out.r = { status: 400, ok: false, json: async () => detail };
+        }
+        return out.r;
+      };
+      /* Modèle saturé (503), quota du modèle atteint (429), erreur passagère (500),
+         modèle retiré (404) ou trop lent à démarrer (504) : on essaie le modèle gratuit
+         suivant. Les secours viennent de la liste publiée par Google, car les noms codés
+         en dur finissent par être retirés. */
       const chain = [...new Set([model, ...await geminiFallbacks(geminiKey)])].slice(0, 5);
       let response, used = model;
       for (const m of chain) {
         used = m;
         response = await ask(m);
-        if (![404, 429, 500, 503].includes(response.status)) break;
+        if (![404, 429, 500, 503, 504].includes(response.status)) break;
         console.warn('[CAPITAL-AI] gemini', m, response.status, '→ modèle suivant');
       }
-      const data = await response.json().catch(() => null);
       if (!response.ok) {
+        const data = await response.json().catch(() => null);
         console.error('[CAPITAL-AI] gemini', response.status, data?.error?.message || '');
-        if (response.status === 429 || response.status === 503) return fail(res, 503, 'L’assistant est très sollicité en ce moment : réessayez dans une minute.', 'AI_BUSY');
+        if ([429, 503, 504].includes(response.status)) return fail(res, 503, 'L’assistant est très sollicité en ce moment : réessayez dans une minute.', 'AI_BUSY');
         return fail(res, 502, 'Le moteur IA est temporairement indisponible.', 'AI_PROVIDER_ERROR');
       }
-      const text = (data?.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('').trim();
+
+      if (wantStream) {
+        /* Texte envoyé au fur et à mesure (flux SSE de Gemini relayé en texte brut). */
+        res.statusCode = 200;
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-store');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.setHeader('X-AI-Model', used);
+        if (typeof res.flushHeaders === 'function') res.flushHeaders();
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buf = '', wrote = 0;
+        try {
+          for (;;) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buf += decoder.decode(value, { stream: true });
+            let nl;
+            while ((nl = buf.indexOf('\n')) >= 0) {
+              const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
+              if (!line.startsWith('data:')) continue;
+              let evt; try { evt = JSON.parse(line.slice(5)); } catch { continue; }
+              const piece = (evt?.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+              if (piece) { res.write(piece); wrote += piece.length; }
+            }
+          }
+          if (!wrote) res.write('Réponse indisponible pour le moment : réessayez.');
+        } catch (e) {
+          console.error('[CAPITAL-AI] flux interrompu', e?.message || e);
+          res.write(wrote ? '\n\n_Réponse interrompue : reposez la question pour la suite._' : 'Le moteur IA met trop de temps à répondre : réessayez.');
+        }
+        return res.end();
+      }
+
+      const data = await response.json().catch(() => null);
+      const text = (data?.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
       if (!text) return fail(res, 502, 'Réponse IA vide.', 'AI_EMPTY_RESPONSE');
       return ok(res, { answer: text, model: used, tickers: donnees.tickers, generatedAt: new Date().toISOString() });
     }
