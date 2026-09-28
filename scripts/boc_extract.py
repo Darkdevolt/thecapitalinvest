@@ -18,6 +18,7 @@ Authentification : jeton OIDC GitHub Actions (aucun secret à stocker).
 Usage :
   python3 scripts/boc_extract.py                  # BOC en attente (GitHub Actions)
   python3 scripts/boc_extract.py --pdf f.pdf --date 2026-09-24 --dry-run
+  python3 scripts/boc_extract.py --bonds          # tableau obligataire des BOC pas encore lus
 """
 import argparse
 import json
@@ -425,6 +426,44 @@ def download(url, path):
             time.sleep(5 * (attempt + 1))
 
 
+def fetch_pdf(urls):
+    fd, pdf = tempfile.mkstemp(suffix='.pdf')
+    os.close(fd)
+    for n, url in enumerate(urls):
+        try:
+            download(url, pdf)
+            with open(pdf, 'rb') as f:
+                if f.read(5) != b'%PDF-':
+                    raise ValueError('réponse non PDF')
+            return pdf
+        except Exception as e:  # noqa: BLE001
+            if n == len(urls) - 1:
+                raise
+            print(f'{url} indisponible ({e}), source suivante', file=sys.stderr)
+
+
+def run_bonds():
+    """Tableau des obligations (cotations, CRD, coupons, amortissement) de chaque BOC en base."""
+    import pymupdf
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from boc_bonds import extract_bonds
+    jobs = api({'scope': 'boc_extract', 'action': 'bonds_pending'}).get('pending', [])
+    print(f'{len(jobs)} BOC sans tableau obligataire : {[j["date_seance"] for j in jobs]}')
+    for job in jobs:
+        try:
+            pdf = fetch_pdf(job['urls'])
+            rows = extract_bonds(pymupdf.open(pdf))
+            os.unlink(pdf)
+        except Exception as e:  # noqa: BLE001
+            print(f"BOC {job['date_seance']} : lecture impossible ({e})", file=sys.stderr)
+            continue
+        if not rows:
+            print(f"BOC {job['date_seance']} : aucun titre obligataire lu")
+            continue
+        res = api({'scope': 'boc_extract', 'action': 'bonds', 'date_seance': job['date_seance'], 'bonds': rows})
+        print(f"BOC {job['date_seance']} : {res.get('bonds')} lignes obligataires enregistrées")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--pdf')
@@ -433,7 +472,11 @@ def main():
     ap.add_argument('--check', action='store_true', help='indique seulement s\'il y a des BOC à analyser')
     ap.add_argument('--out')
     ap.add_argument('--ocr-cache', help='développement : réutilise l\'OCR déjà fait')
+    ap.add_argument('--bonds', action='store_true', help='tableau obligataire des BOC pas encore lus')
     args = ap.parse_args()
+
+    if args.bonds:
+        return run_bonds()
 
     if args.pdf:
         jobs = [{'date_seance': args.date, 'pdf': args.pdf, 'fichier_url': None}]

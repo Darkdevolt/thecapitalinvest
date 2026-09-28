@@ -159,6 +159,113 @@
     return { rows: rows, vn: vn, rate: rate, rateNet: rateNet, freq: freq, start: start, maturity: maturity, mode: mode, source: source };
   }
 
+  /* ── Échéancier ancré sur le BOC ─────────────────────────────────────
+     Le Bulletin Officiel de la Cote publie pour chaque ligne, à chaque séance :
+     capital restant dû par titre, périodicité (A/S/T), date et montant net du
+     prochain coupon, coupon couru et type d'amortissement (IF in fine, AC
+     constant, AD dégressif, ACD constant différé). L'échéancier est calé sur la
+     date du prochain coupon et part du capital restant publié ; seul le différé
+     d'un ACD encore non amorti reste à supposer (fiche DC/BR sinon). */
+  var BOC_TYPE = {
+    IF: 'In fine',
+    AC: 'Amortissement constant',
+    AD: 'Amortissement dégressif',
+    ACD: 'Amortissement constant après différé'
+  };
+  function titleYears(t) {
+    var m = String(t || '').match(/((?:19|20)\d{2})\s*[-–\/]\s*((?:19|20)\d{2})/);
+    return m ? [+m[1], +m[2]] : null;
+  }
+  function nearestOnGrid(anchor, step, target) {
+    var k = Math.round((target - anchor) / (step * 30.4375 * DAY)), best = null;
+    for (var j = k - 2; j <= k + 2; j++) {
+      var d = addMonths(anchor, step * j);
+      if (!best || Math.abs(d - target) < Math.abs(best - target)) best = d;
+    }
+    return best;
+  }
+  function scheduleBoc(bond, fiche, boc) {
+    var freq = num(boc.periodicite), next = toDate(boc.echeance_coupon), crdNow = num(boc.valeur_nominale);
+    var type = boc.type_amort;
+    if (!freq || !next || !(crdNow > 0) || !BOC_TYPE[type]) return null;
+    var tf = num(bond && bond.taux_facial), tb = num(fiche && fiche.taux_brut);
+    if (fiche && tf != null && tb != null && Math.abs(tf - tb) > 0.05) fiche = null;
+    var rate = tb != null && fiche ? tb : tf != null ? tf : num(boc.taux);
+    /* Taux variable (« taux de base + spread ») : taux courant déduit du prochain coupon. */
+    var rateFromCoupon = false;
+    if (rate == null && num(boc.coupon_net) > 0) { rate = num(boc.coupon_net) * freq / crdNow * 100; rateFromCoupon = true; }
+    if (rate == null) return null;
+    var step = 12 / freq, ty = titleYears(boc.titre || (bond && bond.nom));
+    var vn = Math.max(num(fiche && fiche.valeur_nominale) || 10000, crdNow);
+    /* Jouissance et échéance, recalées sur la grille des coupons du BOC. */
+    var start = toDate((fiche && fiche.date_jouissance) || (bond && bond.date_emission));
+    var maturity = toDate(bond && bond.date_maturite);
+    var dur = parseYears(fiche && fiche.duree);
+    if (start && dur) maturity = addMonths(start, Math.round(dur * 12));
+    else if (maturity && start && iso(maturity).slice(5) === '12-31') maturity = new Date(Date.UTC(maturity.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate()));
+    if (!maturity && ty) maturity = new Date(Date.UTC(ty[1], next.getUTCMonth(), next.getUTCDate()));
+    if (!maturity) return null;
+    maturity = nearestOnGrid(next, step, maturity);
+    if (maturity < next) maturity = next;
+    if (!start && ty) start = new Date(Date.UTC(ty[0], next.getUTCMonth(), next.getUTCDate()));
+    start = start ? nearestOnGrid(next, step, start) : addMonths(next, -step);
+    if (start >= next) start = addMonths(next, -step);
+    var dates = datesBetween(start, maturity, freq);
+    if (!dates.length) return null;
+    var fm = parseMode(fiche && fiche.mode_remboursement);
+    var annual = !!(fm && fm.annualAmort);
+    var totalY = years(start, maturity);
+    /* Différé : fiche ; à défaut, usage des émissions UEMOA (1 an jusqu'à 5 ans,
+       2 ans jusqu'à 7 ans, 3 ans au-delà). */
+    var defer = 0, deferGuess = false;
+    if (type === 'ACD') {
+      if (fm && fm.type === 'constant' && (fm.defer || fm.n)) defer = fm.n ? Math.max(0, totalY - fm.n / (annual ? 1 : freq)) : fm.defer;
+      else { defer = totalY <= 5.1 ? 1 : totalY <= 7.1 ? 2 : 3; deferGuess = crdNow >= vn - 1e-6; }
+    }
+    var past = [], fut = [];
+    dates.forEach(function (d, i) {
+      var t = years(start, d);
+      var amortOk = type === 'IF' ? i === dates.length - 1
+        : (!annual || freq === 1 || (i + 1) % freq === 0 || i === dates.length - 1) && t > defer + 1e-6;
+      (d < next ? past : fut).push({ i: i, ok: amortOk });
+    });
+    var amort = new Array(dates.length).fill(0);
+    /* Futur : capital restant publié réparti sur les échéances d'amortissement restantes. */
+    var futAm = fut.filter(function (x) { return x.ok; });
+    if (!futAm.length) futAm = [fut[fut.length - 1]];
+    if (type === 'AD') {
+      /* Dégressif : poids décroissants (dernier = 1, avant-dernier = 2…). */
+      var w = futAm.map(function (x, k) { return futAm.length - k; }), sw = w.reduce(function (a, b) { return a + b; }, 0);
+      futAm.forEach(function (x, k) { amort[x.i] = crdNow * w[k] / sw; });
+    } else futAm.forEach(function (x) { amort[x.i] = crdNow / futAm.length; });
+    /* Passé : déjà remboursé (nominal d'origine − restant), réparti à parts égales. */
+    var paid = vn - crdNow;
+    if (paid > 1e-6) {
+      var pastAm = past.filter(function (x) { return x.ok; });
+      if (!pastAm.length) pastAm = past.slice(-1);
+      if (!pastAm.length) vn = crdNow;
+      else pastAm.forEach(function (x) { amort[x.i] = paid / pastAm.length; });
+    }
+    /* Taux net : rapport du prochain coupon net publié au coupon brut attendu. */
+    var gross = crdNow * rate / 100 / freq, cn = num(boc.coupon_net), rateNet = num(fiche && fiche.taux_net);
+    var ratio = cn && gross ? cn / gross : null;
+    if (ratio != null && ratio > 0.75 && ratio < 1.02) rateNet = rate * Math.min(1, ratio);
+    var rows = [], crd = vn;
+    for (var j = 0; j < dates.length; j++) {
+      var a = Math.min(amort[j], crd);
+      var it = crd * rate / 100 / freq, itn = crd * (rateNet != null ? rateNet : rate) / 100 / freq;
+      rows.push({ k: j + 1, date: dates[j], crd0: crd, interet: it, interetNet: itn, amort: a, flux: it + a, fluxNet: itn + a, crd1: crd - a });
+      crd -= a;
+    }
+    var label = BOC_TYPE[type] + (type === 'ACD' ? ' (' + (deferGuess ? 'différé supposé de ' : 'différé ') + nf1(defer) + ' an' + (defer > 1 ? 's' : '') + ')' : '');
+    return {
+      rows: rows, vn: vn, rate: rate, rateNet: rateNet, freq: freq, start: start, maturity: maturity,
+      mode: { type: type === 'IF' ? 'in_fine' : 'constant', label: label, boc: type, deferGuess: deferGuess },
+      source: 'boc', bocDate: boc.date_seance, crdPublished: crdNow, rateFromCoupon: rateFromCoupon
+    };
+  }
+  function nf1(v) { return String(Math.round(v * 10) / 10).replace('.', ','); }
+
   /* ── Rendement, duration, convexité ──────────────────────────────── */
 
   function pv(flows, y) { var s = 0; for (var i = 0; i < flows.length; i++) s += flows[i].cf / Math.pow(1 + y, flows[i].t); return s; }
@@ -176,9 +283,9 @@
 
   /* Analyse complète d'une ligne à la date `settle` pour un cours pied de coupon
      `clean` (FCFA par titre) et un coupon couru publié (sinon calculé). */
-  function analyze(bond, fiche, settleIso, cleanOverride) {
+  function analyze(bond, fiche, settleIso, cleanOverride, boc) {
     var settle = toDate(settleIso) || new Date();
-    var sc = schedule(bond, fiche, settle);
+    var sc = (boc && scheduleBoc(bond, fiche, boc)) || schedule(bond, fiche, settle);
     if (!sc || !sc.rows.length) return null;
     var future = sc.rows.filter(function (r) { return r.date > settle; });
     var crd = crdAt(sc.rows, sc.vn, settle);
@@ -190,8 +297,10 @@
     /* Coupon couru recalculé sur le capital restant (celui publié est parfois établi
        sur le nominal d'origine) ; le chiffre publié est conservé pour information. */
     var accrued = accruedCalc;
-    out.accruedPublished = num(bond.coupon_couru);
-    var clean = cleanOverride != null ? cleanOverride : num(bond.cours);
+    out.accruedPublished = num(boc && boc.coupon_couru != null ? boc.coupon_couru : bond.coupon_couru);
+    /* Coupon couru du BOC : établi sur le capital restant, retenu tel quel le jour de sa séance. */
+    if (sc.source === 'boc' && boc.coupon_couru != null && String(boc.date_seance).slice(0, 10) === iso(settle)) accrued = num(boc.coupon_couru);
+    var clean = cleanOverride != null ? cleanOverride : (num(bond.cours) || num(boc && (boc.cours_jour || boc.cours_reference)));
     out.next = future[0];
     out.accrued = accrued;
     out.life = years(settle, sc.maturity);
@@ -208,7 +317,7 @@
     var useNominal = cleanOverride == null && crd < sc.vn - 1 && (rCrd == null || Math.abs(rVn - 1) < Math.abs(rCrd - 1));
     if (cleanOverride != null) out.priceBasis = 'crd';
     else if (!useNominal && rCrd != null && rCrd >= 0.75 && rCrd <= 1.25) out.priceBasis = 'crd';
-    else if (useNominal && rVn >= 0.75 && rVn <= 1.25) { out.priceBasis = 'nominal'; clean = rVn * crd; }
+    else if (useNominal && rVn >= 0.85 && rVn <= 1.15) { out.priceBasis = 'nominal'; clean = rVn * crd; }
     if (!out.priceBasis) { out.priceIssue = 'Cours incohérent avec le capital restant (' + Math.round(clean) + ' FCFA pour ' + Math.round(crd) + ' FCFA restants) : rendement non significatif.'; return out; }
     var dirty = clean + accrued;
     var flows = future.map(function (r) { return { t: years(settle, r.date), cf: r.flux }; });
@@ -216,7 +325,7 @@
     var y = irr(flows, dirty), yn = irr(flowsNet, dirty);
     out.clean = clean; out.dirty = dirty;
     out.pricePct = crd > 0 ? clean / crd * 100 : null;
-    out.quoted = cleanOverride != null ? cleanOverride : num(bond.cours);
+    out.quoted = cleanOverride != null ? cleanOverride : (num(bond.cours) || num(boc && (boc.cours_jour || boc.cours_reference)));
     out.ytm = y != null ? y * 100 : null;
     out.ytmNet = yn != null ? yn * 100 : null;
     if (cleanOverride == null && (out.ytm == null || out.ytm < 0 || out.ytm > 25)) {
@@ -311,7 +420,7 @@
 
   return {
     parseFreq: parseFreq, parseMode: parseMode, parseYears: parseYears,
-    schedule: schedule, analyze: analyze, priceForYield: priceForYield, irr: irr,
+    schedule: schedule, scheduleBoc: scheduleBoc, analyze: analyze, priceForYield: priceForYield, irr: irr,
     nelsonSiegel: nelsonSiegel, splineCurve: splineCurve,
     toDate: toDate, iso: iso
   };

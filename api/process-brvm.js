@@ -680,7 +680,60 @@ const BOC_OIDC = {
   workflow: '.github/workflows/boc-extract.yml'
 };
 
+/* Tableau obligataire du BOC (scripts/boc_bonds.py) : une ligne par titre et
+   par séance dans obligations_boc (capital restant dû, coupon couru,
+   périodicité, prochain coupon net et sa date, type d'amortissement…). */
+const BOND_NUM = ['valeur_nominale', 'cours_precedent', 'cours_jour', 'cours_reference', 'volume', 'valeur',
+  'coupon_couru', 'coupon_net', 'taux'];
+
+function cleanBondRow(r, date) {
+  const sym = String(r?.symbole || '').trim().toUpperCase();
+  if (!/^[A-Z][A-Z0-9_]{1,14}\.[OS]\d{1,3}$/.test(sym)) return null;
+  const row = { symbole: sym, date_seance: date, titre: String(r.titre || '').slice(0, 200) || null,
+    categorie: r.categorie ? String(r.categorie).slice(0, 30) : null };
+  for (const k of BOND_NUM) {
+    const v = Number(r[k]);
+    row[k] = r[k] == null || !Number.isFinite(v) ? null : v;
+  }
+  if (!(row.valeur_nominale > 0)) return null;
+  row.periodicite = [1, 2, 4, 12].includes(Number(r.periodicite)) ? Number(r.periodicite) : null;
+  row.echeance_coupon = /^\d{4}-\d{2}-\d{2}$/.test(String(r.echeance_coupon || '')) ? r.echeance_coupon : null;
+  row.type_amort = ['IF', 'AC', 'AD', 'ACD'].includes(r.type_amort) ? r.type_amort : null;
+  row.suspendu = r.suspendu === true;
+  row.page = Number.isInteger(r.page) ? r.page : null;
+  return row;
+}
+
+async function runBocBonds(body) {
+  if (body.action === 'bonds_pending') {
+    // Tous les BOC en base dont le tableau obligataire n'a pas encore été lu.
+    const { data: bocs, error } = await supabaseAdmin.from('boc')
+      .select('date_seance, fichier_url').order('date_seance', { ascending: false }).limit(60);
+    if (error) throw error;
+    const pending = [];
+    for (const b of bocs || []) {
+      const date = String(b.date_seance).slice(0, 10);
+      const { count, error: e2 } = await supabaseAdmin.from('obligations_boc')
+        .select('symbole', { count: 'exact', head: true }).eq('date_seance', date);
+      if (e2) throw e2;
+      if (!count) pending.push({ date_seance: date, urls: [b.fichier_url, bocPublicUrl(date)].filter(Boolean) });
+      if (pending.length >= 30) break;
+    }
+    return { pending };
+  }
+  const date = String(body.date_seance || '').slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) throw new Error('date_seance invalide');
+  const rows = (Array.isArray(body.bonds) ? body.bonds : []).slice(0, 600).map(r => cleanBondRow(r, date)).filter(Boolean);
+  for (let i = 0; i < rows.length; i += 200) {
+    const { error } = await supabaseAdmin.from('obligations_boc')
+      .upsert(rows.slice(i, i + 200), { onConflict: 'symbole,date_seance' });
+    if (error) throw error;
+  }
+  return { date_seance: date, bonds: rows.length };
+}
+
 async function runBocExtract(body) {
+  if (body.action === 'bonds_pending' || body.action === 'bonds') return runBocBonds(body);
   if (body.action === 'pending') {
     const since = new Date(Date.now() - 10 * 86400000).toISOString().slice(0, 10);
     const { data: bocs, error } = await supabaseAdmin.from('boc')

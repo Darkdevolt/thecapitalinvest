@@ -41,9 +41,16 @@ jobs:
         id: check
         run: python3 scripts/boc_extract.py --check
 
-      - name: Dépendances (PDF + OCR)
+      - name: Dépendances (PDF)
+        run: pip install --quiet pymupdf==1.28.2
+
+      - name: Tableau obligataire (cotations, coupons, amortissement)
+        continue-on-error: true
+        run: python3 scripts/boc_extract.py --bonds
+
+      - name: Dépendances (OCR)
         if: steps.check.outputs.pending != '0'
-        run: pip install --quiet pymupdf==1.28.2 rapidocr-onnxruntime==1.4.4
+        run: pip install --quiet rapidocr-onnxruntime==1.4.4
 
       - name: Lecture et intégration
         if: steps.check.outputs.pending != '0'
