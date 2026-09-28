@@ -1852,9 +1852,15 @@
       switch (t.id) {
         case 'atxWatchBtn':
           if (!S.ticker) return;
-          if (S.watch.indexOf(S.ticker) >= 0) S.watch = S.watch.filter(function (x) { return x !== S.ticker; });
+          var wasOn = S.watch.indexOf(S.ticker) >= 0;
+          if (wasOn) S.watch = S.watch.filter(function (x) { return x !== S.ticker; });
           else S.watch.push(S.ticker);
           store(LS.watch, S.watch);
+          /* Même liste que « Suivi & alertes » (enregistrée sur le compte). */
+          try {
+            if (wasOn && typeof global.removeWatchlistTicker === 'function') global.removeWatchlistTicker(S.ticker);
+            else if (!wasOn && typeof global.addWatchlistItem === 'function') global.addWatchlistItem(S.ticker).then(function () { notify(S.ticker + ' ajouté à vos valeurs suivies.', 'success'); });
+          } catch (e) { }
           renderWatchlist();
           if (S.tab === 'suivi') renderSide();
           break;
@@ -1945,6 +1951,21 @@
     S.type = read(LS.type, 'candle');
     S.tab = read(LS.tab, 'signaux');
     S.watch = read(LS.watch, []) || [];
+    /* Valeurs suivies du compte : elles remplacent la liste locale dès qu'elles sont chargées. */
+    global.addEventListener('tc:userdata', function (e) {
+      var list = ((e && e.detail && e.detail.watchlist) || []).map(function (w) { return String(w.ticker || '').toUpperCase(); }).filter(Boolean);
+      /* Une seule fois : les valeurs suivies seulement dans ce navigateur (ancienne liste
+         locale) sont envoyées sur le compte au lieu d'être perdues. */
+      if (read('tc-atp-watch-migrated', '') !== '1' && typeof global.addWatchlistItem === 'function') {
+        store('tc-atp-watch-migrated', '1');
+        var localOnly = S.watch.filter(function (t) { return list.indexOf(String(t).toUpperCase()) < 0; });
+        localOnly.reduce(function (p, t) { return p.then(function () { return global.addWatchlistItem(t).catch(function () { }); }); }, Promise.resolve());
+        if (localOnly.length) return;
+      }
+      S.watch = list;
+      store(LS.watch, S.watch);
+      try { renderWatchlist(); renderSide(); } catch (err) { }
+    });
     var saved = read(LS.inds, null);
     if (Array.isArray(saved) && saved.length) {
       saved.forEach(function (x) { if (IND.byId(x.id)) addIndicator(x.id, x.params); });

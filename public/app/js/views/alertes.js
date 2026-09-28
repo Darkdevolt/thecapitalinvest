@@ -16,6 +16,7 @@
     if (!c) return { cp: null, v: null };
     return { cp: Number(c.cloture != null ? c.cloture : c.cours), v: Number(c.variation_pct != null ? c.variation_pct : c.variation) };
   }
+  function say(m, k) { if (typeof window.toast === 'function') window.toast(m, k || 'info'); }
   function getWL() { return typeof window.getWatchlist === 'function' ? (window.getWatchlist() || []) : (window.__TC_WATCHLIST__ || []); }
   function getAL() { return typeof window.getAlerts === 'function' ? (window.getAlerts() || []) : []; }
 
@@ -121,13 +122,19 @@
       return '<option value="' + esc(e.ticker) + '">' + esc(e.ticker) + ' — ' + esc(e.nom || '') + '</option>';
     }).join('');
 
+    /* Valeurs déjà suivies retirées de la liste « Suivre ». */
+    var watched = {}; wl.forEach(function (w) { watched[String(w.ticker).toUpperCase()] = 1; });
+    var wlOptns = '<option value="">Ticker…</option>' + companies.filter(function (e) { return !watched[String(e.ticker).toUpperCase()]; }).map(function (e) {
+      return '<option value="' + esc(e.ticker) + '">' + esc(e.ticker) + ' — ' + esc(e.nom || '') + '</option>';
+    }).join('');
+
     view.innerHTML =
       '<div class="page-header"><h1>Suivi <span style="color:var(--gold)">&amp; alertes</span></h1>'
       + '<p>Vos valeurs suivies et vos seuils de prix. Depuis une valeur suivie : « ＋ alerte » pré-remplit le ticker.</p></div>'
       + '<div class="alr-cols">'
       + '<div class="card"><div class="card-h"><span class="t">Valeurs suivies · ' + wl.length + '</span></div><div class="card-b">'
       + wlHtml
-      + '<div class="add"><select id="wlAdd">' + optns + '</select><button type="button" id="wlAddBtn">Suivre</button></div></div></div>'
+      + '<div class="add"><select id="wlAdd">' + wlOptns + '</select><button type="button" id="wlAddBtn">Suivre</button></div></div></div>'
       + '<div class="card"><div class="card-h"><span class="t">Alertes de prix · ' + al.length + '</span></div><div class="card-b">'
       + '<div class="alr-desc" style="padding:8px 6px 4px">Vous recevez un e-mail dès qu’une alerte est atteinte (vérification toutes les 15 min pendant la séance, puis à la clôture). L’alerte se met ensuite en pause.</div>'
       + alHtml
@@ -143,15 +150,19 @@
     var wlAdd = view.querySelector('#wlAddBtn');
     if (wlAdd) wlAdd.addEventListener('click', async function () {
       var t = (view.querySelector('#wlAdd') || {}).value;
-      if (!t || typeof window.addWatchlistItem !== 'function') return;
+      if (!t) { say('Choisissez un titre à suivre.', 'warn'); return; }
+      if (typeof window.addWatchlistItem !== 'function') return;
+      if (typeof window.isWatched === 'function' && window.isWatched(t)) { say(t + ' est déjà dans vos valeurs suivies.', 'info'); return; }
       wlAdd.disabled = true;
-      try { await window.addWatchlistItem(t); } catch (e) {}
+      try { await window.addWatchlistItem(t); say(t + ' ajouté à vos valeurs suivies.', 'success'); }
+      catch (e) { say('Ajout impossible : ' + (e.message || 'erreur réseau'), 'error'); }
       reload();
     });
     view.querySelectorAll('[data-wl-rm]').forEach(function (b) {
       b.addEventListener('click', async function () {
         if (typeof window.removeWatchlistItem !== 'function') return;
-        try { await window.removeWatchlistItem(b.getAttribute('data-wl-rm')); } catch (e) {}
+        try { await window.removeWatchlistItem(b.getAttribute('data-wl-rm')); }
+        catch (e) { say('Retrait impossible : ' + (e.message || 'erreur réseau'), 'error'); }
         reload();
       });
     });
@@ -170,12 +181,16 @@
       var cond = (view.querySelector('#alCond') || {}).value;
       var px = Number((view.querySelector('#alPx') || {}).value);
       if (!t || ['above', 'below'].indexOf(cond) < 0 || !(px > 0)) {
-        if (typeof window.toast === 'function') window.toast('Ticker, condition et seuil positif requis.', 'warn');
+        say('Choisissez un titre, une condition et un seuil positif.', 'warn');
         return;
       }
+      var cur = coursOf(String(t).toUpperCase()).cp;
+      if (isFinite(cur) && ((cond === 'above' && cur >= px) || (cond === 'below' && cur <= px))) {
+        say('Attention : ce seuil est déjà atteint (cours actuel ' + nf(cur) + ' FCFA). L’e-mail partira au prochain contrôle.', 'warn');
+      }
       alAdd.disabled = true;
-      try { await apiAlert('POST', { ticker: String(t).toUpperCase(), condition: cond, price: px }); if (typeof window.toast === 'function') window.toast('Alerte créée', 'success'); }
-      catch (e) { if (typeof window.toast === 'function') window.toast(e.message || 'Échec', 'error'); }
+      try { await apiAlert('POST', { ticker: String(t).toUpperCase(), condition: cond, price: px }); say('Alerte créée : vous recevrez un e-mail quand le seuil sera atteint.', 'success'); }
+      catch (e) { say('Création impossible : ' + (e.message || 'erreur réseau'), 'error'); }
       reload();
     });
     view.querySelectorAll('[data-al-toggle]').forEach(function (b) {
@@ -194,15 +209,15 @@
   }
 
   function renderAlertes() {
-    if (typeof window.initUserDataLayer === 'function' && !window.__TC_UD_INIT__) {
-      window.__TC_UD_INIT__ = true;
-      Promise.resolve(window.initUserDataLayer()).then(draw).catch(draw);
-    } else {
-      draw();
-    }
+    draw();
+    if (typeof window.initUserDataLayer === 'function') Promise.resolve(window.initUserDataLayer()).then(draw).catch(draw);
   }
   window.renderAlertes = renderAlertes;
   window.renderAlerts = draw;
+  window.addEventListener('tc:userdata', function () {
+    var v = document.getElementById('view-alertes');
+    if (v && v.classList.contains('active')) draw();
+  });
   window.addEventListener('tc:dataready', function () {
     var v = document.getElementById('view-alertes');
     if (v && v.classList.contains('active')) draw();

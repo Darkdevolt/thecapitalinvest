@@ -320,43 +320,40 @@ window.calculatePosition = function() {
 };
 
 // ─── WATCHLIST ───
-window.addToWatchlist = function() {
+// Enregistrée côté serveur (même liste que « Suivi & alertes »).
+window.addToWatchlist = async function() {
   const el = document.getElementById('watchTicker');
   const ticker = (el?.value || '').toUpperCase().trim();
   if (!ticker) { toast('Sélectionnez un titre.', 'error'); return; }
-  const list = getWatchlist();
-  if (list.some(w => w.ticker === ticker)) { toast('Déjà présent dans la watchlist.', 'error'); return; }
-  list.push({ ticker, addedAt: new Date().toISOString().split('T')[0] });
-  saveWatchlist(list);
-  el.selectedIndex = 0;
-  toast(`${ticker} ajouté à la watchlist.`, 'success');
+  if (typeof window.isWatched === 'function' && window.isWatched(ticker)) { toast('Déjà présent dans la watchlist.', 'error'); return; }
+  try {
+    await window.addWatchlistItem(ticker);
+    el.selectedIndex = 0;
+    toast(`${ticker} ajouté à la watchlist.`, 'success');
+  } catch (e) { toast('Ajout impossible : ' + (e.message || 'erreur réseau'), 'error'); }
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
-window.removeFromWatchlist = function(ticker) {
-  saveWatchlist(getWatchlist().filter(w => w.ticker !== ticker));
+window.removeFromWatchlist = async function(ticker) {
+  try { await window.removeWatchlistTicker(ticker); } catch (e) { toast('Retrait impossible : ' + (e.message || 'erreur réseau'), 'error'); }
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
 // ─── ALERTES DE PRIX ───
-window.addPriceAlert = function() {
+// Avant : « Alerte créée » s'affichait mais rien n'était enregistré (saveAlerts vide).
+window.addPriceAlert = async function() {
   const tickerEl = document.getElementById('alertTicker');
   const condEl = document.getElementById('alertCondition');
   const targetEl = document.getElementById('alertTarget');
-  const ticker = (tickerEl?.value || '').toUpperCase().trim();
-  const condition = condEl?.value;
-  const target = +targetEl?.value;
-  if (!ticker || !target || target <= 0) { toast('Champs invalides.', 'error'); return; }
-
-  const alerts = getAlerts();
-  alerts.push({ id: Date.now(), ticker, condition, target, active: true });
-  saveAlerts(alerts);
-  tickerEl.value = '';
-  targetEl.value = '';
-  toast('Alerte créée.', 'success');
+  try {
+    await window.createPriceAlert(tickerEl?.value, condEl?.value, +targetEl?.value);
+    if (tickerEl) tickerEl.value = '';
+    if (targetEl) targetEl.value = '';
+    toast('Alerte créée : vous recevrez un e-mail quand le seuil sera atteint.', 'success');
+  } catch (e) { toast(e.message || 'Création impossible.', 'error'); }
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
-window.removePriceAlert = function(id) {
-  saveAlerts(getAlerts().filter(a => String(a.id) !== String(id)));
+window.removePriceAlert = async function(id) {
+  if (typeof window.removeAlert === 'function') await window.removeAlert(id);
   if (typeof renderPortfolio === 'function') renderPortfolio();
 };
 
