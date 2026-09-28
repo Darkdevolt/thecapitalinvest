@@ -398,11 +398,26 @@
       /* Derniers échanges, pour les questions de suivi (« et pour SGBC ? »). */
       var prior = history.slice(-7, -1).map(function (m) { return (m.role === 'user' ? 'Utilisateur : ' : 'The Capital AI : ') + String(m.text).slice(0, 1200); }).join('\n');
       if (prior) context += '\nConversation précédente :\n' + prior;
+      /* Réponse en flux : le texte s'affiche au fur et à mesure qu'il est rédigé. */
       fetch('/api/capital-ai', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + s.access_token },
-        body: JSON.stringify({ question: q, context: context, ticker: ctx.ticker || undefined })
+        body: JSON.stringify({ question: q, context: context, ticker: ctx.ticker || undefined, stream: true })
       }).then(function (r) {
+        var type = r.headers.get('content-type') || '';
+        if (r.ok && type.indexOf('text/plain') === 0 && r.body && r.body.getReader) {
+          var reader = r.body.getReader(), decoder = new TextDecoder(), acc = '', queued = false;
+          var paint = function () { queued = false; pending.innerHTML = renderMarkdown(acc); };
+          var pump = function () {
+            return reader.read().then(function (x) {
+              if (x.done) { acc += decoder.decode(); return acc.trim() || 'Réponse indisponible.'; }
+              acc += decoder.decode(x.value, { stream: true });
+              if (!queued) { queued = true; requestAnimationFrame(paint); }
+              return pump();
+            });
+          };
+          return pump();
+        }
         return r.json().catch(function () { return {}; }).then(function (data) {
           if (r.status === 401) throw new Error('Votre session a expiré : reconnectez-vous pour utiliser Capital AI.');
           if (!r.ok) throw new Error((data && (data.error || data.message)) || 'Le moteur IA est temporairement indisponible.');
