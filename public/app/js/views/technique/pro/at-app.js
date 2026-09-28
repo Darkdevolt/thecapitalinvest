@@ -34,7 +34,9 @@
     type: 'tc-atp-type',
     shapes: 'tc-atp-shapes:',
     tab: 'tc-atp-tab',
-    watch: 'tc-atp-watchlist'
+    watch: 'tc-atp-watchlist',
+    levels: 'tc-atp-levels',
+    markers: 'tc-atp-markers'
   };
 
   /* ── État ─────────────────────────────────────────────────────── */
@@ -60,8 +62,9 @@
     loading: false,
     error: '',
     cursorIndex: null,
-    autoLevels: true,
-    showMarkers: true,
+    /* Désactivés par défaut : l'utilisateur les active, son choix est mémorisé. */
+    autoLevels: false,
+    showMarkers: false,
     analysis: null,
     screenRows: null,
     screenState: '',
@@ -533,7 +536,15 @@
     var autoLevels = null;
     if (S.autoLevels && S.bars.length >= 60) {
       try {
-        autoLevels = M.supportResistance(full.h, full.l, full.c, { max: 6, minTouches: 2, tolerance: 0.018 });
+        /* Classés par rapport au dernier cours : au-dessous = support, au-dessus =
+           résistance. On ne garde que les deux plus proches de chaque côté. */
+        var lastClose = full.c[full.c.length - 1];
+        var lv = M.supportResistance(full.h, full.l, full.c, { max: 8, minTouches: 2, tolerance: 0.018 }) || [];
+        var below = lv.filter(function (x) { return x.value < lastClose; }).sort(function (a, b) { return b.value - a.value; }).slice(0, 2);
+        var above = lv.filter(function (x) { return x.value >= lastClose; }).sort(function (a, b) { return a.value - b.value; }).slice(0, 2);
+        autoLevels = below.map(function (x) { return Object.assign({}, x, { kind: 'support' }); })
+          .concat(above.map(function (x) { return Object.assign({}, x, { kind: 'resistance' }); }))
+          .map(function (x) { return Object.assign(x, { distance: lastClose ? (x.value / lastClose - 1) * 100 : null }); });
       } catch (e) { autoLevels = null; }
     }
 
@@ -544,7 +555,12 @@
           .filter(function (cd) { return Math.abs(cd.bias) >= 2 && cd.index >= range.from && cd.index < range.to; })
           .slice(0, 30)
           .map(function (cd) {
-            return { index: cd.index, price: cd.bias > 0 ? full.l[cd.index] : full.h[cd.index], bias: cd.bias, name: cd.name };
+            return {
+              index: cd.index, price: cd.bias > 0 ? full.l[cd.index] : full.h[cd.index], bias: cd.bias, name: cd.name,
+              hint: cd.bias > 0 ? 'signal de retournement ou de poursuite à la hausse, à confirmer par la séance suivante'
+                : cd.bias < 0 ? 'signal de retournement ou de poursuite à la baisse, à confirmer par la séance suivante'
+                : 'indécision du marché'
+            };
           });
       } catch (e) { markers = null; }
     }
@@ -1679,8 +1695,8 @@
       '</div>' +
       '<div class="atx-tb-g">' +
       '<button type="button" class="atx-btn" data-toggle="log" title="Échelle logarithmique : les variations en pourcentage occupent la même hauteur, quel que soit le niveau du cours">Log</button>' +
-      '<button type="button" class="atx-btn on" data-toggle="autoLevels" title="Supports et résistances détectés automatiquement">Niveaux</button>' +
-      '<button type="button" class="atx-btn on" data-toggle="showMarkers" title="Repères des configurations en chandeliers marquées">Repères</button>' +
+      '<button type="button" class="atx-btn" data-toggle="autoLevels" title="Supports et résistances : prix où le titre a déjà rebondi (support, en vert) ou calé (résistance, en rouge) au moins deux fois. Les deux plus proches du cours de chaque côté.">Supports / résistances</button>' +
+      '<button type="button" class="atx-btn" data-toggle="showMarkers" title="Figures de chandeliers (marteau, avalement, étoile du matin…) : ▲ signal haussier, ▼ signal baissier. Survolez un triangle pour son nom et sa signification.">Figures chandeliers</button>' +
       '<button type="button" class="atx-btn" data-toggle="light" title="Basculer entre fond sombre et fond clair">Clair</button>' +
       '</div>' +
       '<div class="atx-tb-g atx-tb-right">' +
@@ -1775,6 +1791,8 @@
       if ((v = t.getAttribute('data-toggle'))) {
         S[v] = !S[v];
         if (v === 'light') store(LS.theme, S.light ? 'light' : 'dark');
+        if (v === 'autoLevels') store(LS.levels, S.autoLevels ? 'on' : 'off');
+        if (v === 'showMarkers') store(LS.markers, S.showMarkers ? 'on' : 'off');
         renderAll();
         return;
       }
@@ -1900,6 +1918,8 @@
 
   function restore() {
     S.light = read(LS.theme, 'dark') === 'light';
+    S.autoLevels = read(LS.levels, 'off') === 'on';
+    S.showMarkers = read(LS.markers, 'off') === 'on';
     S.type = read(LS.type, 'candle');
     S.tab = read(LS.tab, 'signaux');
     S.watch = read(LS.watch, []) || [];
