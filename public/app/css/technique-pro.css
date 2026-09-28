@@ -959,3 +959,8 @@ body.atx-body-full { overflow: hidden; }
   .atx-q-name { display: none; }
   .atx-stats { grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); }
 }
+
+/* Icônes SVG des outils de tracé (remplacent des caractères Unicode absents de
+   nombreuses polices). Elles suivent la couleur du bouton. */
+.atx-tool svg { display: block; pointer-events: none; }
+#atxFullscreen svg { width: 14px; height: 14px; vertical-align: -2px; pointer-events: none; }

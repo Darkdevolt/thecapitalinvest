@@ -335,19 +335,41 @@
 
   /* ── Dessins ──────────────────────────────────────────────────── */
 
+  /* Icônes dessinées en SVG : les caractères Unicode utilisés avant (⚏ ⑂ ⫽ ➔…)
+     sont absents de nombreuses polices Windows et Android et s'affichaient en carrés vides. */
+  function svg(body) {
+    return '<svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + body + '</svg>';
+  }
+  var ICONS = {
+    cursor: svg('<path d="M5 3l10 6.5-4.6 1.1 2.6 5.2-2 1-2.6-5.2L5 15z" fill="currentColor" stroke-width="1"/>'),
+    hline: svg('<path d="M2.5 10h15"/><circle cx="10" cy="10" r="1.6" fill="currentColor"/>'),
+    vline: svg('<path d="M10 2.5v15"/><circle cx="10" cy="10" r="1.6" fill="currentColor"/>'),
+    trend: svg('<path d="M3 16L17 4"/><circle cx="5.5" cy="13.9" r="1.6" fill="currentColor"/><circle cx="14.5" cy="6.1" r="1.6" fill="currentColor"/>'),
+    arrow: svg('<path d="M4 16L16 4"/><path d="M9 4h7v7"/>'),
+    channel: svg('<path d="M2.5 12.5L13 3"/><path d="M7 17l10.5-9.5"/>'),
+    rect: svg('<rect x="3.5" y="5.5" width="13" height="9" rx="1"/>'),
+    fib: svg('<path d="M3 4h14M3 7.5h14M3 11h14M3 16h14" stroke-width="1.3"/><path d="M3 16L17 4" stroke-dasharray="1.5 2"/>'),
+    pitch: svg('<path d="M3 10h6"/><path d="M9 10l8-5.5M9 10l8 5.5M9 10h8"/>'),
+    measure: svg('<path d="M3 10h14"/><path d="M6 7l-3 3 3 3M14 7l3 3-3 3"/>'),
+    text: svg('<path d="M4.5 5V3.5h11V5M10 3.5v13M7.5 16.5h5"/>'),
+    undo: svg('<path d="M7 5L3.5 8.5 7 12"/><path d="M3.5 8.5H12a4.5 4.5 0 010 9H9"/>'),
+    fullscreen: svg('<path d="M3.5 7.5v-4h4M12.5 3.5h4v4M16.5 12.5v4h-4M7.5 16.5h-4v-4"/>'),
+    trash: svg('<path d="M3.5 5.5h13M8 5.5V3.5h4v2M5.5 5.5l.8 11h7.4l.8-11M8.5 8.5v5M11.5 8.5v5"/>')
+  };
   var TOOLS = [
-    { id: 'cursor', icon: '↖', label: 'Curseur', hint: '', points: 0 },
-    { id: 'hline', icon: '─', label: 'Horizontale', hint: 'Cliquez au niveau souhaité.', points: 1 },
-    { id: 'vline', icon: '│', label: 'Verticale', hint: 'Cliquez sur la séance souhaitée.', points: 1 },
-    { id: 'trend', icon: '╱', label: 'Tendance', hint: 'Cliquez deux points.', points: 2, extend: true },
-    { id: 'arrow', icon: '➔', label: 'Flèche', hint: 'Cliquez le départ puis la pointe.', points: 2 },
-    { id: 'channel', icon: '⫽', label: 'Canal', hint: 'Deux points pour la base, un troisième pour la largeur.', points: 3 },
-    { id: 'rect', icon: '▭', label: 'Zone', hint: 'Cliquez deux coins opposés.', points: 2 },
-    { id: 'fib', icon: '⚏', label: 'Fibonacci', hint: 'Cliquez le point bas puis le point haut.', points: 2, extend: true },
-    { id: 'pitch', icon: '⑂', label: 'Pitchfork', hint: 'Trois points : pivot, puis les deux branches.', points: 3 },
-    { id: 'measure', icon: '⇔', label: 'Mesure', hint: 'Cliquez le début puis la fin du mouvement.', points: 2 },
-    { id: 'text', icon: 'T', label: 'Annotation', hint: 'Cliquez où placer le texte.', points: 1 }
+    { id: 'cursor', label: 'Curseur', hint: '', points: 0 },
+    { id: 'hline', label: 'Horizontale', hint: 'Cliquez au niveau souhaité.', points: 1 },
+    { id: 'vline', label: 'Verticale', hint: 'Cliquez sur la séance souhaitée.', points: 1 },
+    { id: 'trend', label: 'Tendance', hint: 'Cliquez deux points.', points: 2, extend: true },
+    { id: 'arrow', label: 'Flèche', hint: 'Cliquez le départ puis la pointe.', points: 2 },
+    { id: 'channel', label: 'Canal', hint: 'Deux points pour la base, un troisième pour la largeur.', points: 3 },
+    { id: 'rect', label: 'Zone', hint: 'Cliquez deux coins opposés.', points: 2 },
+    { id: 'fib', label: 'Fibonacci', hint: 'Cliquez le point bas puis le point haut.', points: 2, extend: true },
+    { id: 'pitch', label: 'Pitchfork', hint: 'Trois points : pivot, puis les deux branches.', points: 3 },
+    { id: 'measure', label: 'Mesure', hint: 'Cliquez le début puis la fin du mouvement.', points: 2 },
+    { id: 'text', label: 'Annotation', hint: 'Cliquez où placer le texte.', points: 1 }
   ];
+  TOOLS.forEach(function (t) { t.icon = ICONS[t.id]; });
   function toolDef(id) { for (var i = 0; i < TOOLS.length; i++) if (TOOLS[i].id === id) return TOOLS[i]; return TOOLS[0]; }
 
   function shapeKey() { return LS.shapes + norm(S.ticker); }
@@ -1704,7 +1726,7 @@
       '<button type="button" class="atx-btn" id="atxPng">PNG</button>' +
       '<button type="button" class="atx-btn" id="atxCsv">CSV</button>' +
       '<button type="button" class="atx-btn" id="atxReport">Rapport</button>' +
-      '<button type="button" class="atx-btn" id="atxFullscreen" title="Plein écran">⛶</button>' +
+      '<button type="button" class="atx-btn" id="atxFullscreen" title="Plein écran" aria-label="Plein écran">' + ICONS.fullscreen + '</button>' +
       '</div>';
 
     var tools = $('atxTools');
@@ -1713,8 +1735,8 @@
         return '<button type="button" class="atx-tool" data-tool="' + t.id + '" title="' + esc(t.label + (t.hint ? ' — ' + t.hint : '')) + '">' + t.icon + '</button>';
       }).join('') +
         '<div class="atx-tool-sep"></div>' +
-        '<button type="button" class="atx-tool" id="atxUndo" title="Annuler le dernier tracé">↶</button>' +
-        '<button type="button" class="atx-tool atx-tool-danger" id="atxClear" title="Effacer tous les tracés">🗑</button>';
+        '<button type="button" class="atx-tool" id="atxUndo" title="Annuler le dernier tracé">' + ICONS.undo + '</button>' +
+        '<button type="button" class="atx-tool atx-tool-danger" id="atxClear" title="Effacer tous les tracés">' + ICONS.trash + '</button>';
     }
     syncToolbar();
   }
