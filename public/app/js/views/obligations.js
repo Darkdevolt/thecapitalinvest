@@ -4,15 +4,16 @@
 // courbe des taux (Nelson-Siegel et spline cubique), et par ligne l'échéancier
 // réel (différé, amortissement constant 1/N ou in fine, périodicité) tiré de la
 // fiche technique DC/BR. Calculs : obligations-math.js (window.OBMath).
-// Aucune donnée inventée : un mode de remboursement absent de la fiche est
-// déduit du capital restant cohérent avec le cours et signalé « hypothèse ».
+// Source prioritaire : le dernier BOC (capital restant dû, périodicité, prochain
+// coupon, type d'amortissement). Aucune donnée inventée : un mode absent du BOC
+// et de la fiche est déduit du cours et signalé « hypothèse ».
 // ============================================================================
 (function () {
   'use strict';
   if (window.__TC_OBLIGATIONS_V2__) return;
   window.__TC_OBLIGATIONS_V2__ = true;
 
-  var LIST = null, MARCHE = null, CARAC = null, ROWS = null;
+  var LIST = null, MARCHE = null, CARAC = null, BOC = null, ROWS = null;
   var loading = false;
   var SEL = null;
   var SORT = { key: 'life', dir: 1 };
@@ -43,11 +44,12 @@
   // ---- données ----
   function load() {
     if (LIST) return Promise.resolve();
-    if (typeof window.apiGet !== 'function') { LIST = []; CARAC = {}; return Promise.resolve(); }
+    if (typeof window.apiGet !== 'function') { LIST = []; CARAC = {}; BOC = {}; return Promise.resolve(); }
     return Promise.all([
       window.apiGet('/marche?type=obligations').catch(function () { return []; }),
       window.apiGet('/marche?type=obligations_marche&limit=5').catch(function () { return []; }),
-      window.apiGet('/marche?type=obligations_caracteristiques&limit=1000').catch(function () { return []; })
+      window.apiGet('/marche?type=obligations_caracteristiques&limit=1000').catch(function () { return []; }),
+      window.apiGet('/marche?type=obligations_boc').catch(function () { return []; })
     ]).then(function (r) {
       var rows = Array.isArray(r[0]) ? r[0] : (r[0] && r[0].data) || [];
       var mar = Array.isArray(r[1]) ? r[1] : (r[1] && r[1].data) || [];
@@ -63,6 +65,19 @@
         var prev = CARAC[k];
         if (!prev || String(f.date_jouissance || '') > String(prev.date_jouissance || '')) CARAC[k] = f;
       });
+      /* Dernier BOC : capital restant dû, périodicité, prochain coupon et type
+         d'amortissement de chaque ligne cotée. Une ligne du BOC absente de la
+         cote quotidienne est ajoutée à partir du BOC. */
+      var bocRows = Array.isArray(r[3]) ? r[3] : (r[3] && r[3].data) || [];
+      BOC = {};
+      bocRows.forEach(function (b) { if (b && b.symbole) BOC[key(b.symbole)] = b; });
+      var known = {};
+      LIST.forEach(function (o) { known[key(o.code)] = 1; });
+      bocRows.forEach(function (b) {
+        if (!b || !b.symbole || known[key(b.symbole)]) return;
+        LIST.push({ code: b.symbole, nom: b.titre, taux_facial: b.taux, cours: b.cours_jour || b.cours_reference,
+          coupon_couru: b.coupon_couru, date_seance: b.date_seance, fromBoc: true });
+      });
       ROWS = null;
     });
   }
@@ -70,13 +85,14 @@
     return (MARCHE && MARCHE.date_seance) || (LIST && LIST[0] && LIST[0].date_seance) || new Date().toISOString().slice(0, 10);
   }
   function ficheOf(o) { return (CARAC && CARAC[key(o.code)]) || null; }
+  function bocOf(o) { return (BOC && BOC[key(o.code)]) || null; }
   function analyzed() {
     if (ROWS) return ROWS;
     var settle = settleDate();
     ROWS = (LIST || []).map(function (o) {
       var a = null;
-      try { a = M().analyze(o, ficheOf(o), settle); } catch (e) { a = null; }
-      return { o: o, a: a, seg: segment(o), f: ficheOf(o) };
+      try { a = M().analyze(o, ficheOf(o), settle, null, bocOf(o)); } catch (e) { a = null; }
+      return { o: o, a: a, seg: segment(o), f: ficheOf(o), b: bocOf(o) };
     });
     return ROWS;
   }
@@ -140,7 +156,9 @@
   function modeTag(r) {
     if (!r.a || !r.a.schedule) return '—';
     var sc = r.a.schedule;
-    return '<span class="ob-tag ' + (sc.source === 'fiche' ? 'fiche' : 'hyp') + '" title="' + esc(sc.mode && sc.mode.label || '') + '">' + (sc.source === 'fiche' ? 'fiche' : 'hypothèse') + '</span>';
+    var cls = sc.source === 'hypothese' || (sc.mode && sc.mode.deferGuess) ? 'hyp' : 'fiche';
+    var lbl = sc.source === 'boc' ? 'BOC · ' + sc.mode.boc : sc.source === 'fiche' ? 'fiche' : 'hypothèse';
+    return '<span class="ob-tag ' + cls + '" title="' + esc(sc.mode && sc.mode.label || '') + '">' + esc(lbl) + '</span>';
   }
 
   // ---- courbe des taux ----
@@ -261,8 +279,8 @@
           + sortRows(rows).map(function (r) { return '<tr data-code="' + esc(r.o.code) + '">' + COLS.map(function (c) { return '<td class="' + (c.cls || '') + '">' + c.v(r) + '</td>'; }).join('') + '</tr>'; }).join('')
           + '</tbody></table></div>'
         : '<div class="ob-empty">' + (LIST && LIST.length ? 'Aucune ligne ne correspond à ce filtre.' : 'Aucune obligation en base. Lancez la récupération dans Admin → Récupération BRVM.') + '</div>')
-      + '<p class="ob-note"><b>Rendement actuariel</b> : taux qui égalise le prix payé (cours + coupon couru) et les flux futurs (coupons et remboursements), date à date, base exact/365. <b>Net</b> : coupons au taux net d\'impôt de la fiche. '
-      + '<b>Échéancier</b> : <span class="ob-tag fiche">fiche</span> mode de remboursement lu dans la fiche technique DC/BR ; <span class="ob-tag hyp">hypothèse</span> mode déduit du capital restant cohérent avec le cours. '
+      + '<p class="ob-note"><b>Rendement actuariel</b> : taux qui égalise le prix payé (cours + coupon couru) et les flux futurs (coupons et remboursements), date à date, base exact/365. <b>Net</b> : coupons nets d\'impôt (montant net publié au BOC, sinon taux net de la fiche). '
+      + '<b>Échéancier</b> : <span class="ob-tag fiche">BOC</span> capital restant, périodicité, prochain coupon et type d\'amortissement (IF in fine, AC constant, AD dégressif, ACD constant après différé) lus dans le Bulletin Officiel de la Cote ; <span class="ob-tag fiche">fiche</span> mode de remboursement lu dans la fiche technique DC/BR ; <span class="ob-tag hyp">hypothèse</span> mode déduit du capital restant cohérent avec le cours. '
       + '« n.s. » : cours coté manifestement ancien, rendement non significatif (survolez pour le détail). Ceci n\'est pas un conseil d\'investissement.</p>';
 
     view.querySelectorAll('[data-cseg]').forEach(function (b) { b.addEventListener('click', function () { CURVE_SEG = b.getAttribute('data-cseg'); renderList(); }); });
@@ -286,7 +304,7 @@
     injectCss();
     var r = analyzed().find(function (x) { return x.o.code === SEL; });
     if (!r) { SEL = null; return renderList(); }
-    var o = r.o, a = r.a, f = r.f;
+    var o = r.o, a = r.a, f = r.f, b = r.b;
     if (!a || !a.schedule) {
       view.innerHTML = '<button type="button" class="ob-back" id="obBack">← Toutes les obligations</button><div class="ob-card ob-note">Échéancier impossible : taux facial ou dates manquants pour ' + esc(o.code) + '.</div>';
       g('obBack').addEventListener('click', function () { SEL = null; render(); });
@@ -304,9 +322,15 @@
       ['Jouissance', dLabel(sc.start)], ['Échéance', dLabel(sc.maturity)],
       ['Périodicité des coupons', freqL],
       ['Mode de remboursement', (sc.mode && sc.mode.label) || '—'],
-      ['Source de l\'échéancier', sc.source === 'fiche' ? 'Fiche technique DC/BR' : 'Hypothèse déduite du cours'],
+      ['Source de l\'échéancier', sc.source === 'boc' ? 'Bulletin Officiel de la Cote du ' + dLabel(sc.bocDate) + (f ? ' + fiche technique DC/BR' : '') : sc.source === 'fiche' ? 'Fiche technique DC/BR' : 'Hypothèse déduite du cours'],
       ['Dernier paiement publié', o.dernier_paiement_date ? dLabel(o.dernier_paiement_date) + (num(o.dernier_paiement_valeur) != null ? ' · ' + nf(o.dernier_paiement_valeur, 2) + ' FCFA' : '') : '—']
     ];
+    if (b) {
+      carac.push(['Capital restant dû publié (BOC)', nf(b.valeur_nominale, 2) + ' FCFA par titre']);
+      if (b.coupon_net != null) carac.push(['Prochain coupon net publié', nf(b.coupon_net, 2) + ' FCFA' + (b.echeance_coupon ? ' le ' + dLabel(b.echeance_coupon) : '')]);
+      carac.push(['Cours de référence (BOC)', b.cours_reference != null ? nf(b.cours_reference, 2) + ' FCFA' + (b.suspendu ? ' · cotation suspendue' : '') : '—']);
+      if (sc.rateFromCoupon) carac.push(['Taux', 'Variable : taux courant déduit du prochain coupon publié']);
+    }
     if (f && f.registraire) carac.push(['Registraire', f.registraire]);
     if (f && f.nombre_titres != null) carac.push(['Titres émis', nf(f.nombre_titres)]);
 
@@ -349,7 +373,7 @@
       + '<tr><td colspan="4"><b>Reste à percevoir</b></td><td class="r"><b>' + nf(totals.i * QTY) + '</b></td><td class="r"><b>' + nf(totals.in * QTY) + '</b></td><td class="r"><b>' + nf(totals.a * QTY) + '</b></td><td class="r"><b>' + nf((totals.i + totals.a) * QTY) + '</b></td><td></td></tr>'
       + '</tbody></table></div>'
       + '<p class="ob-note" style="margin-top:10px">Montants en FCFA pour ' + nf(QTY) + ' titre' + (QTY > 1 ? 's' : '') + '. Intérêts calculés sur le capital restant en début de période. '
-      + (sc.source === 'fiche' ? 'Mode de remboursement et périodicité issus de la fiche technique DC/BR.' : 'La fiche technique de cette ligne n\'est pas disponible : le mode de remboursement est une hypothèse déduite du cours ; se référer à la note d\'information.')
+      + (sc.source === 'boc' ? 'Capital restant dû, périodicité, date du prochain coupon et type d\'amortissement issus du Bulletin Officiel de la Cote de la BRVM' + (sc.mode.deferGuess ? ' ; la durée du différé n\'y figure pas et suit l\'usage des émissions UEMOA (à confirmer dans la note d\'information).' : '.') : sc.source === 'fiche' ? 'Mode de remboursement et périodicité issus de la fiche technique DC/BR.' : 'La fiche technique de cette ligne n\'est pas disponible : le mode de remboursement est une hypothèse déduite du cours ; se référer à la note d\'information.')
       + ' Hors frais et clauses particulières (remboursement anticipé…).</p></div>'
 
       + '<div class="ob-card"><div class="ob-h"><span>Caractéristiques</span></div><div style="overflow-x:auto"><table><tbody>'
@@ -362,7 +386,7 @@
     var simP = function () {
       var p = num(g('obSimP').value), out = g('obSimPOut');
       if (!(p > 0)) { out.textContent = ''; return; }
-      var s = M().analyze(o, f, a.settle, p);
+      var s = M().analyze(o, f, a.settle, p, b);
       out.textContent = s && s.ytmRaw == null && s.ytm != null ? 'Rendement : ' + pc(s.ytm) + ' brut · ' + pc(s.ytmNet) + ' net' : (s && s.ytmRaw != null ? 'Rendement : ' + pc(s.ytmRaw) + ' (hors norme)' : 'Rendement incalculable pour ce prix');
     };
     var simY = function () {
@@ -416,7 +440,7 @@
     if (window.OBMath) return Promise.resolve();
     return new Promise(function (resolve) {
       var s = document.createElement('script');
-      s.src = '/app/js/views/obligations-math.js?v=1';
+      s.src = '/app/js/views/obligations-math.js?v=2';
       s.onload = resolve; s.onerror = resolve;
       document.head.appendChild(s);
     });
