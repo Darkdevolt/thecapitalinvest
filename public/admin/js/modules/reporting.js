@@ -23,13 +23,13 @@
 
 (function (TC) {
 
-    /* Palette sur fond blanc. `cream` reste la clé du texte principal mais
-       porte désormais une encre sombre : tous les appels text() suivent. */
+    /* Palette « papier et encre ». `cream` reste la clé du texte principal
+       (anciens appels) et porte l'encre. */
     const C = {
-        bg: '#FFFFFF', panel: '#F7F3EA', line: '#E6DECC',
-        cream: '#1C1813', ink: '#1C1813',
-        gold: '#8C6D2E', goldBright: '#B8964E', goldLight: '#A9884A',
-        muted: '#8A8172', green: '#1F9B57', red: '#CC3B3B'
+        bg: '#F3EDE1', panel: '#E9E1D0', line: '#D8CDB7',
+        cream: '#17130E', ink: '#17130E', ink2: '#4B4337',
+        gold: '#9A7021', goldBright: '#B8893A', goldLight: '#A9884A',
+        muted: '#877B68', flatCell: '#B5AB98', green: '#1D6A45', red: '#AD2D22'
     };
 
     const FORMATS = [
@@ -40,11 +40,11 @@
     ];
 
     const PERIODES = [
-        { v: 'seance', l: 'Séance', titre: 'La séance en une minute' },
-        { v: 'hebdo', l: 'Semaine', titre: 'La semaine boursière' },
-        { v: 'mensuel', l: 'Mois', titre: 'Le mois boursier' },
-        { v: 'trimestre', l: 'Trimestre', titre: 'Le trimestre boursier' },
-        { v: 'annuel', l: 'Année', titre: "L'année boursière" }
+        { v: 'seance', l: 'Séance', titre: 'La séance en une minute', rubrique: 'La séance du jour' },
+        { v: 'hebdo', l: 'Semaine', titre: 'La semaine boursière', rubrique: 'Bilan de la semaine' },
+        { v: 'mensuel', l: 'Mois', titre: 'Le mois boursier', rubrique: 'Bilan du mois' },
+        { v: 'trimestre', l: 'Trimestre', titre: 'Le trimestre boursier', rubrique: 'Bilan du trimestre' },
+        { v: 'annuel', l: 'Année', titre: "L'année boursière", rubrique: "Bilan de l'année" }
     ];
 
     const BLOCS = [
@@ -79,8 +79,6 @@
     const SESSION_OPEN_H = 9, SESSION_CLOSE_H = 15.25;
 
     let logoData = null;
-    let bannerData = null;
-    let bannerRatio = 0;
     let report = null;
 
     /* ── Vue ─────────────────────────────────────────────── */
@@ -519,7 +517,7 @@
         const parts = [];
         if (compo && compo.perf !== null && compo.perf !== undefined) {
             parts.push(compo.indice + ' ' + (compo.perf >= 0 ? 'progresse' : 'recule') + ' de ' +
-                pct(compo.perf).replace('+', '') + ' à ' +
+                pct(Math.abs(compo.perf)).replace('+', '') + ' à ' +
                 compo.last.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' points.');
         }
         parts.push(t.up + ' valeur' + (t.up > 1 ? 's' : '') + ' en hausse contre ' + t.down +
@@ -529,85 +527,39 @@
         return parts.join(' ');
     }
 
-    /* Petites icônes de repère — traits géométriques simples (rects, cercles,
-       lignes, polygones), un seul système visuel cohérent, sans police
-       d'icônes externe pour que l'export PNG/JPEG reste autonome. */
-    function glyph(key, x, y, opts) {
-        const o = opts || {};
-        const s = o.color || C.gold, cy = y - 4; // aligné sur la ligne de base du titre (12px)
-        switch (key) {
-            case 'up':
-                return '<path d="M' + x + ' ' + (cy + 5) + ' L' + (x + 5) + ' ' + (cy - 2) + ' L' + (x + 9) + ' ' + (cy + 2) + ' L' + (x + 15) + ' ' + (cy - 6) +
-                    '" fill="none" stroke="' + C.green + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-                    '<path d="M' + (x + 11) + ' ' + (cy - 6) + ' L' + (x + 15) + ' ' + (cy - 6) + ' L' + (x + 15) + ' ' + (cy - 2) + '" fill="none" stroke="' + C.green + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
-            case 'down':
-                return '<path d="M' + x + ' ' + (cy - 5) + ' L' + (x + 5) + ' ' + (cy + 2) + ' L' + (x + 9) + ' ' + (cy - 2) + ' L' + (x + 15) + ' ' + (cy + 6) +
-                    '" fill="none" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-                    '<path d="M' + (x + 11) + ' ' + (cy + 6) + ' L' + (x + 15) + ' ' + (cy + 6) + ' L' + (x + 15) + ' ' + (cy + 2) + '" fill="none" stroke="' + C.red + '" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
-            case 'bars':
-                return '<rect x="' + x + '" y="' + (cy + 1) + '" width="3" height="7" fill="' + s + '" rx="1"/>' +
-                    '<rect x="' + (x + 5) + '" y="' + (cy - 4) + '" width="3" height="12" fill="' + s + '" rx="1"/>' +
-                    '<rect x="' + (x + 10) + '" y="' + (cy - 7) + '" width="3" height="15" fill="' + s + '" rx="1"/>';
-            /* Bourse / colonnes — fronton triangulaire sur trois colonnes,
-               identité graphique cohérente avec le bandeau or/bronze
-               (remplace l'ancien pictogramme « pièces » lu comme un
-               maillon de chaîne). */
-            case 'columns':
-                return '<path d="M' + (x - 1) + ' ' + (cy - 6) + ' L' + (x + 7.5) + ' ' + (cy - 11) + ' L' + (x + 16) + ' ' + (cy - 6) + ' Z" fill="none" stroke="' + s + '" stroke-width="1.5" stroke-linejoin="round"/>' +
-                    '<line x1="' + (x - 1) + '" y1="' + (cy - 6) + '" x2="' + (x + 16) + '" y2="' + (cy - 6) + '" stroke="' + s + '" stroke-width="1.5"/>' +
-                    '<line x1="' + (x + 1) + '" y1="' + (cy - 3) + '" x2="' + (x + 1) + '" y2="' + (cy + 6) + '" stroke="' + s + '" stroke-width="1.5" stroke-linecap="round"/>' +
-                    '<line x1="' + (x + 7.5) + '" y1="' + (cy - 3) + '" x2="' + (x + 7.5) + '" y2="' + (cy + 6) + '" stroke="' + s + '" stroke-width="1.5" stroke-linecap="round"/>' +
-                    '<line x1="' + (x + 14) + '" y1="' + (cy - 3) + '" x2="' + (x + 14) + '" y2="' + (cy + 6) + '" stroke="' + s + '" stroke-width="1.5" stroke-linecap="round"/>' +
-                    '<line x1="' + (x - 2) + '" y1="' + (cy + 6) + '" x2="' + (x + 17) + '" y2="' + (cy + 6) + '" stroke="' + s + '" stroke-width="1.5"/>';
-            case 'calendar':
-                return '<rect x="' + x + '" y="' + (cy - 6) + '" width="15" height="13" rx="2" fill="none" stroke="' + s + '" stroke-width="1.6"/>' +
-                    '<line x1="' + x + '" y1="' + (cy - 2) + '" x2="' + (x + 15) + '" y2="' + (cy - 2) + '" stroke="' + s + '" stroke-width="1.6"/>' +
-                    '<line x1="' + (x + 4) + '" y1="' + (cy - 8) + '" x2="' + (x + 4) + '" y2="' + (cy - 4) + '" stroke="' + s + '" stroke-width="1.6" stroke-linecap="round"/>' +
-                    '<line x1="' + (x + 11) + '" y1="' + (cy - 8) + '" x2="' + (x + 11) + '" y2="' + (cy - 4) + '" stroke="' + s + '" stroke-width="1.6" stroke-linecap="round"/>';
-            case 'quote':
-                return '<path d="M' + x + ' ' + (cy + 4) + ' Q' + x + ' ' + (cy - 6) + ' ' + (x + 7) + ' ' + (cy - 6) +
-                    ' Q' + (x + 4) + ' ' + (cy - 6) + ' ' + (x + 4) + ' ' + (cy - 1) + ' L' + (x + 4) + ' ' + (cy + 4) + ' Z" fill="' + s + '" fill-opacity="0.85"/>' +
-                    '<path d="M' + (x + 8) + ' ' + (cy + 4) + ' Q' + (x + 8) + ' ' + (cy - 6) + ' ' + (x + 15) + ' ' + (cy - 6) +
-                    ' Q' + (x + 12) + ' ' + (cy - 6) + ' ' + (x + 12) + ' ' + (cy - 1) + ' L' + (x + 12) + ' ' + (cy + 4) + ' Z" fill="' + s + '" fill-opacity="0.85"/>';
-            case 'bond':
-                return '<rect x="' + x + '" y="' + (cy - 6) + '" width="15" height="11" rx="2" fill="none" stroke="' + s + '" stroke-width="1.6"/>' +
-                    '<line x1="' + (x + 3) + '" y1="' + (cy - 2) + '" x2="' + (x + 12) + '" y2="' + (cy - 2) + '" stroke="' + s + '" stroke-width="1.2"/>' +
-                    '<circle cx="' + (x + 11) + '" cy="' + (cy + 1) + '" r="2.6" fill="' + C.bg + '" stroke="' + s + '" stroke-width="1.2"/>';
-            case 'volume':
-            case 'pulse':
-                return '<polyline points="' + x + ',' + (cy + 3) + ' ' + (x + 4) + ',' + (cy + 3) + ' ' + (x + 6.5) + ',' + (cy - 7) + ' ' + (x + 9) + ',' + (cy + 8) + ' ' + (x + 11.5) + ',' + (cy - 2) + ' ' + (x + 15) + ',' + (cy - 2) +
-                    '" fill="none" stroke="' + s + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
-            case 'coin':
-                return '<circle cx="' + (x + 7.5) + '" cy="' + cy + '" r="7.5" fill="none" stroke="' + s + '" stroke-width="1.6"/>' +
-                    '<text x="' + (x + 7.5) + '" y="' + (cy + 3.2) + '" text-anchor="middle" font-size="8" font-family="\'DM Mono\',monospace" fill="' + s + '" font-weight="600">F</text>';
-            /* Triangle plein — utilisé pour le repère de tendance des cases
-               d'activité et devant chaque variation d'indice. */
-            case 'triUp':
-                return '<polygon points="' + (x + 5) + ',' + (cy - 7) + ' ' + (x + 10) + ',' + (cy + 3) + ' ' + x + ',' + (cy + 3) + '" fill="' + (o.color || C.green) + '"/>';
-            case 'triDown':
-                return '<polygon points="' + x + ',' + (cy - 7) + ' ' + (x + 10) + ',' + (cy - 7) + ' ' + (x + 5) + ',' + (cy + 3) + '" fill="' + (o.color || C.red) + '"/>';
-            case 'dash':
-                return '<rect x="' + x + '" y="' + (cy - 2) + '" width="10" height="3.4" rx="1.7" fill="' + (o.color || C.muted) + '"/>';
-            default:
-                return '';
-        }
+    /* ── Charte « cote du jour » ─────────────────────────────
+       Une page de quotidien financier : papier chaud, encre, filets,
+       titre en serif (Newsreader), chiffres en colonnes (IBM Plex Mono),
+       libellés en Plex Sans Condensed. Pas de pastilles, d'avatars ni de
+       dégradés ; la couleur ne porte que le sens (hausse / baisse) et la
+       marque (ocre). Les polices sont embarquées dans le SVG (voir
+       loadFonts) : l'export PNG/JPEG est identique à l'aperçu. */
+    const F = {
+        serif: "'TC Serif',Georgia,serif",
+        mono: "'TC Mono','Courier New',monospace",
+        sans: "'TC Sans','Arial Narrow',sans-serif"
+    };
+
+    /* Triangle de sens, calé sur la ligne de base d'un texte de taille fs. */
+    function tri(v, x, y, fs) {
+        const s = Math.round(fs * 0.55), top = y - fs * 0.62;
+        if (v > 0) return '<polygon points="' + (x + s / 2) + ',' + top + ' ' + (x + s) + ',' + (top + s * 0.9) + ' ' + x + ',' + (top + s * 0.9) + '" fill="' + C.green + '"/>';
+        if (v < 0) return '<polygon points="' + x + ',' + top + ' ' + (x + s) + ',' + top + ' ' + (x + s / 2) + ',' + (top + s * 0.9) + '" fill="' + C.red + '"/>';
+        return '<rect x="' + x + '" y="' + (top + s * 0.35) + '" width="' + s + '" height="' + Math.max(2, s * 0.22) + '" fill="' + C.muted + '"/>';
     }
 
-    /* Ligne de séparation ; x1/x2 permettent de la limiter à une colonne
-       plutôt qu'à toute la largeur (usage : mise en page à deux colonnes). */
-    function makeRule(pad, W, text) {
-        return function (ty, opacity, x1, x2) {
-            return '<line x1="' + (x1 != null ? x1 : pad) + '" y1="' + ty + '" x2="' + (x2 != null ? x2 : (W - pad)) + '" y2="' + ty +
-                '" stroke="' + C.gold + '" stroke-opacity="' + (opacity || 0.24) + '" stroke-width="1"/>';
-        };
-    }
-
-    function section(parts, title, x, y, width, text, rule, g, icon) {
-        const dx = icon ? 22 : 0;
-        if (icon) parts.push(glyph(icon, x, y));
-        parts.push(text(title.toUpperCase(), x + dx, y, { size: 12, fill: C.gold, spacing: 2.2, weight: 500 }));
-        parts.push(rule(y + 14, 0.2, x, x + width));
-        return y + (g ? g(40) : 40);
+    /* Mini-tendance à l'encre, point final ocre. */
+    function sparkline(x1, x2, yBase, height, values) {
+        const v = (values || []).filter(n => n !== null && n !== undefined && isFinite(n));
+        if (v.length < 2) return '';
+        const min = Math.min.apply(null, v), max = Math.max.apply(null, v);
+        const span = (max - min) || Math.abs(max) || 1;
+        const pts = v.map(function (val, i) {
+            return (x1 + (x2 - x1) * (i / (v.length - 1))).toFixed(1) + ',' + (yBase - ((val - min) / span) * height).toFixed(1);
+        }).join(' ');
+        const lastY = yBase - ((v[v.length - 1] - min) / span) * height;
+        return '<polyline points="' + pts + '" fill="none" stroke="' + C.ink + '" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>' +
+            '<circle cx="' + x2.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="3" fill="' + C.gold + '"/>';
     }
 
     function wrap(source, width) {
@@ -622,43 +574,24 @@
         return lines;
     }
 
-    /* Mini-tendance à 5 points — indices uniquement, sans axe ni étiquette :
-       la lecture est relative (progression / repli), pas la valeur absolue. */
-    function sparkline(x1, x2, yBase, height, values) {
-        const v = (values || []).filter(n => n !== null && n !== undefined && isFinite(n));
-        if (v.length < 2) return '';
-        const min = Math.min.apply(null, v), max = Math.max.apply(null, v);
-        const span = (max - min) || Math.abs(max) || 1;
-        const color = v[v.length - 1] >= v[0] ? C.green : C.red;
-        const pts = v.map(function (val, i) {
-            const px = x1 + (x2 - x1) * (i / (v.length - 1));
-            const py = yBase - ((val - min) / span) * height;
-            return px.toFixed(1) + ',' + py.toFixed(1);
-        }).join(' ');
-        const last = v[v.length - 1], lastX = x1 + (x2 - x1), lastY = yBase - ((last - min) / span) * height;
-        return '<polyline points="' + pts + '" fill="none" stroke="' + color + '" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>' +
-            '<circle cx="' + lastX.toFixed(1) + '" cy="' + lastY.toFixed(1) + '" r="2" fill="' + color + '"/>';
+    /* Nom lisible : sans « Côte d'Ivoire » (le pays par défaut ; les autres
+       distinguent BOA Burkina de BOA Bénin), coupé au mot avec une ellipse. */
+    function nomCourt(nom, max) {
+        let n = String(nom || '').replace(/\s+(COTE D'IVOIRE|CÔTE D'IVOIRE|CI)$/i, '').trim();
+        if (n.length <= max) return n;
+        n = n.slice(0, max - 1);
+        return n.slice(0, Math.max(n.lastIndexOf(' '), max * 0.6)).trim() + '…';
     }
 
-    /* Badge pilule aligné sur son bord droit (x2). Retourne le bord gauche
-       utilisé, pour empiler un second badge à sa gauche si besoin. */
-    function pillRight(parts, text, label, x2, yCenter, opts) {
-        const o = opts || {};
-        const fs = o.size || 11;
-        const charW = fs * 0.6;
-        const dot = !!o.dot;
-        const padX = 10;
-        const textW = label.length * charW;
-        const w = Math.round(textW + padX * 2 + (dot ? 13 : 0));
-        const h = o.height || 22;
-        const x1 = x2 - w;
-        parts.push('<rect x="' + x1 + '" y="' + (yCenter - h / 2) + '" width="' + w + '" height="' + h +
-            '" rx="' + (h / 2) + '" fill="' + (o.fill || C.panel) + '" stroke="' + (o.stroke || C.line) + '" stroke-width="1"/>');
-        if (dot) parts.push('<circle cx="' + (x1 + padX + 3) + '" cy="' + yCenter + '" r="3" fill="' + (o.dotColor || C.gold) + '"/>');
-        parts.push(text(label, x2 - padX, yCenter + fs * 0.35, {
-            size: fs, anchor: 'end', fill: o.textColor || C.ink, family: "'DM Mono',monospace", spacing: 0.4
-        }));
-        return x1;
+    /* Titre de une, tiré des chiffres de la période (jamais inventé). */
+    function headline(data) {
+        const compo = data.indices.find(i => /COMPOSITE/.test(i.indice || '')) || data.indices[0];
+        const quand = { seance: 'en séance', hebdo: 'sur la semaine', mensuel: 'sur le mois', trimestre: 'sur le trimestre', annuel: 'sur l\'année' }[data.window.periode] || '';
+        if (!compo || compo.perf == null) return PERIODES.find(p => p.v === data.window.periode).titre;
+        const p = TC.toNumber(compo.perf);
+        if (Math.abs(p) < 0.05) return 'La BRVM est stable ' + quand;
+        return 'La BRVM ' + (p > 0 ? 'progresse' : 'recule') + ' de ' +
+            Math.abs(p).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' % ' + quand;
     }
 
     function build(data, options) {
@@ -676,325 +609,279 @@
 
         const text = (content, x, ty, opts) => {
             const o = opts || {};
-            return '<text x="' + x + '" y="' + ty + '" fill="' + (o.fill || C.cream) + '" ' +
-                'font-family="' + (o.family || "'DM Sans',sans-serif") + '" ' +
+            return '<text x="' + x + '" y="' + ty + '" fill="' + (o.fill || C.ink) + '" ' +
+                'font-family="' + (o.family || F.sans) + '" ' +
                 'font-size="' + (o.size || 18) + '" font-weight="' + (o.weight || 400) + '" ' +
                 (o.anchor ? 'text-anchor="' + o.anchor + '" ' : '') +
                 (o.spacing ? 'letter-spacing="' + o.spacing + '" ' : '') +
                 (o.style ? 'font-style="' + o.style + '" ' : '') +
                 '>' + esc(content) + '</text>';
         };
-        const rule = makeRule(pad, W, text);
-
-        /* — Fond blanc — */
-        parts.push('<rect width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>');
-
-        const status = marketStatus(data.window);
-
-        /* — Badges d'en-tête : édition/heure + statut marché, coin
-           haut-droit du bandeau, à côté du logo. */
-        const headerBadges = function (bh) {
-            const cy1 = Math.max(20, Math.round(bh * 0.16));
-            const cy2 = Math.max(44, Math.round(bh * 0.40));
-            const editionLabel = [options.bulletin, options.heure].filter(Boolean).join(' · ');
-            if (editionLabel) pillRight(parts, text, editionLabel, W - pad, cy1, { fill: '#FFFFFF', stroke: C.line, textColor: C.ink, size: 12 });
-            if (status) pillRight(parts, text, status.label, W - pad, cy2, {
-                fill: status.open ? '#EAF7EF' : C.panel, stroke: status.open ? C.green : C.line,
-                textColor: status.open ? C.green : C.muted, dot: true, dotColor: status.open ? C.green : C.muted, size: 11
-            });
+        const label = (s, x, ty, o) => text(String(s).toUpperCase(), x, ty, Object.assign({ size: 11, fill: C.muted, spacing: 1.4, weight: 600 }, o || {}));
+        const num = (s, x, ty, o) => text(s, x, ty, Object.assign({ family: F.mono, size: 15, anchor: 'end' }, o || {}));
+        const line = (x1, ty, x2, w, color, op) => '<line x1="' + x1 + '" y1="' + ty + '" x2="' + x2 + '" y2="' + ty +
+            '" stroke="' + (color || C.ink) + '" stroke-opacity="' + (op == null ? 1 : op) + '" stroke-width="' + (w || 1) + '"/>';
+        const hair = (ty, x1, x2) => line(x1 != null ? x1 : pad, ty, x2 != null ? x2 : W - pad, 1, C.ink, 0.16);
+        const signe = v => TC.toNumber(v) > 0 ? C.green : TC.toNumber(v) < 0 ? C.red : C.muted;
+        const variation = (v, x2, ty, fs, weight) => {
+            const s = pct(v);
+            const w = s.length * fs * 0.6;
+            return tri(TC.toNumber(v), x2 - w - fs * 0.95, ty, fs) +
+                num(s, x2, ty, { size: fs, fill: signe(v), weight: weight || 600 });
         };
 
-        /* — Bannière — l'image fournie (/assets) est posée telle quelle en
-           pleine largeur ; elle contient déjà le logo et les titres. Sans
-           fichier, une composition SVG de repli reprend le même gabarit. */
-        if (bannerData) {
-            const bh = Math.min(Math.round(H * 0.30), Math.round(W * (bannerRatio || 0.32)));
-            parts.push('<image href="' + bannerData + '" x="0" y="0" width="' + W + '" height="' + bh +
-                '" preserveAspectRatio="xMidYMid meet"/>');
-            parts.push('<rect x="0" y="' + bh + '" width="' + W + '" height="2" fill="' + C.goldBright + '" fill-opacity="0.5"/>');
-            headerBadges(bh);
-            y = bh + Math.round(pad * 0.62) + 18;
-            parts.push(glyph('columns', pad, y, { color: C.gold }));
-            parts.push(text(options.surtitre || 'BRVM · Bourse Régionale des Valeurs Mobilières',
-                pad + 22, y, { size: 14, fill: C.muted, spacing: 1.6 }));
-        } else {
-            const banH = Math.max(Math.round(W * 0.150), Math.round(H * 0.104));
-            parts.push('<defs><linearGradient id="tcBanner" x1="0" y1="0" x2="1" y2="1">' +
-                '<stop offset="0" stop-color="#171009"/><stop offset="0.5" stop-color="#0C0906"/>' +
-                '<stop offset="1" stop-color="#1E1509"/></linearGradient></defs>');
-            parts.push('<rect x="0" y="0" width="' + W + '" height="' + banH + '" fill="url(#tcBanner)"/>');
-            parts.push('<rect x="0" y="0" width="' + W + '" height="3" fill="' + C.goldBright + '"/>');
-            parts.push('<rect x="0" y="' + (banH - 2) + '" width="' + W + '" height="2" fill="' + C.goldBright + '" fill-opacity="0.55"/>');
+        /* Format court (réseaux sociaux) : pas de détail sous chaque valeur,
+           lignes plus serrées, pour tenir dans le format du post. */
+        const compact = !options.blocs.chiffres && !options.blocs.volumes;
+        const pas = compact ? 32 : 38;
 
-            const lr = Math.round(banH * 0.30);
-            const lcx = pad + lr;
-            const lcy = Math.round(banH / 2);
-            parts.push('<circle cx="' + lcx + '" cy="' + lcy + '" r="' + lr + '" fill="none" stroke="' + C.goldBright + '" stroke-width="2"/>');
-            if (logoData) {
-                const li = Math.round(lr * 1.42);
-                parts.push('<image href="' + logoData + '" x="' + (lcx - li / 2) + '" y="' + (lcy - li / 2) +
-                    '" width="' + li + '" height="' + li + '" preserveAspectRatio="xMidYMid meet"/>');
-            }
+        /* Rubrique numérotée : gros filet noir, numéro ocre, intitulé. */
+        let nRub = 0;
+        const rubrique = function (titre, x, width, droite) {
+            nRub++;
+            parts.push('<rect x="' + x + '" y="' + y + '" width="' + width + '" height="3.5" fill="' + C.ink + '"/>');
+            const ty = y + 24;
+            parts.push(text(String(nRub).padStart(2, '0'), x, ty, { family: F.mono, size: 13, fill: C.gold, weight: 600 }));
+            parts.push(label(titre, x + 28, ty, { size: 13, fill: C.ink, spacing: 1.8 }));
+            if (droite) parts.push(label(droite, x + width, ty, { anchor: 'end' }));
+            return ty + g(30);
+        };
 
-            const bx = lcx + lr + Math.round(banH * 0.30);
-            parts.push('<line x1="' + (bx - Math.round(banH * 0.16)) + '" y1="' + Math.round(banH * 0.22) +
-                '" x2="' + (bx - Math.round(banH * 0.16)) + '" y2="' + Math.round(banH * 0.78) +
-                '" stroke="' + C.goldBright + '" stroke-opacity="0.5" stroke-width="1"/>');
-            const bs = Math.round(banH * 0.29);
-            const b1y = Math.round(banH * 0.42);
-            parts.push(text('LA SÉANCE DU JOUR', bx, b1y, {
-                family: "'Playfair Display',serif", size: bs, weight: 700, fill: '#FBF7EF', spacing: 0.5
-            }));
-            parts.push(text('EN 1 MINUTE', bx, b1y + Math.round(bs * 1.05), {
-                family: "'Playfair Display',serif", size: bs, weight: 700, fill: C.goldBright, spacing: 0.5
-            }));
-            parts.push(text("L'AFRIQUE FINANCIÈRE EN TEMPS RÉEL", bx,
-                b1y + Math.round(bs * 1.05) + Math.round(banH * 0.19), {
-                size: Math.max(10, Math.round(banH * 0.095)), fill: '#C9B58B', spacing: 3
-            }));
-            headerBadges(banH);
+        /* — Fond papier, liseré ocre — */
+        parts.push('<rect width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>');
+        parts.push('<rect width="' + W + '" height="8" fill="' + C.gold + '"/>');
 
-            y = banH + Math.round(pad * 0.55) + 22;
-            if (logoData) {
-                parts.push('<image href="' + logoData + '" x="' + pad + '" y="' + (y - 32) + '" width="44" height="44" preserveAspectRatio="xMidYMid meet"/>');
-            }
-            parts.push(text('THE · CAPITAL', pad + (logoData ? 58 : 0), y, {
-                family: "'Playfair Display',serif", size: 25, weight: 700, spacing: 3.4
-            }));
-            const surtY = y + 21;
-            parts.push(glyph('columns', pad + (logoData ? 58 : 0), surtY, { color: C.gold }));
-            parts.push(text(options.surtitre || 'BRVM · Bourse Régionale des Valeurs Mobilières',
-                pad + (logoData ? 58 : 0) + 22, surtY, { size: 14, fill: C.muted, spacing: 1.6 }));
-        }
-
-        y += 50;
-        parts.push(rule(y, 0.3));
-
-        /* — Titre de période — */
-        const bodyTop = y;
-        y += g(62);
+        /* — Manchette — */
         const meta = PERIODES.find(p => p.v === data.window.periode);
-        parts.push(text(meta.titre, pad, y, { family: "'Playfair Display',serif", size: 46, weight: 700 }));
-        y += g(34);
-        parts.push(text(data.window.label, pad, y, { size: 17, fill: C.gold, style: 'italic', family: "'Playfair Display',serif" }));
-        if (data.window.periode !== 'seance') {
-            y += g(24);
-            parts.push(text(data.totals.seances + ' séance' + (data.totals.seances > 1 ? 's' : '') + ' de cotation',
-                pad, y, { size: 13, fill: C.muted }));
+        const status = marketStatus(data.window);
+        y = 30 + Math.round(pad * 0.4);
+        const lg = Math.round(W * 0.052);
+        let tx = pad;
+        if (logoData) {
+            parts.push('<image href="' + logoData + '" x="' + pad + '" y="' + y + '" width="' + lg + '" height="' + lg + '" preserveAspectRatio="xMidYMid meet"/>');
+            tx = pad + lg + 16;
         }
+        parts.push(text('The Capital', tx, y + lg * 0.62, { family: F.serif, size: Math.round(W * 0.036), weight: 700, spacing: -0.4 }));
+        parts.push(label('Bourse régionale · UEMOA', tx, y + lg * 0.62 + 20, { size: 10.5 }));
+        parts.push(label(meta.rubrique, W - pad, y + lg * 0.4, { anchor: 'end', size: 12.5, fill: C.gold, spacing: 1.6 }));
+        const edition = [options.bulletin, options.heure].filter(Boolean).join(' · ');
+        if (edition) parts.push(label(edition, W - pad, y + lg * 0.4 + 19, { anchor: 'end', size: 10.5 }));
+        if (status) parts.push(label((status.open ? '● ' : '○ ') + status.label, W - pad, y + lg * 0.4 + (edition ? 37 : 19), { anchor: 'end', size: 10.5, fill: status.open ? C.green : C.muted }));
+        y += lg + 16;
+        parts.push('<rect x="' + pad + '" y="' + y + '" width="' + inner + '" height="3" fill="' + C.ink + '"/>');
+        parts.push(line(pad, y + 7, W - pad, 1));
+        y += 27;
+        const dateLigne = data.window.periode === 'seance'
+            ? new Date(data.window.to + 'T12:00:00Z').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+            : data.window.label;
+        parts.push(label(dateLigne, pad, y, { size: 12, fill: C.ink2, spacing: 1.2 }));
+        parts.push(label(options.surtitre || 'Clôture BRVM · Abidjan', W - pad, y, { anchor: 'end', size: 12, spacing: 1.2 }));
+        y += 12;
+        parts.push(hair(y));
 
-        /* — Analyse de la séance — 2-3 phrases, entre le titre et les
-           chiffres clés. Texte éditorial s'il est saisi, sinon une lecture
-           générée à partir des totaux réels de la période. */
+        /* — Titre de une et chapeau — */
+        const bodyTop = y;
+        const hs = Math.round(W * 0.043);
+        y += g(22) + hs;
+        wrap(headline(data), Math.floor(inner / (hs * 0.47))).slice(0, 2).forEach(function (l, i) {
+            if (i) y += Math.round(hs * 1.08);
+            parts.push(text(l, pad, y, { family: F.serif, size: hs, weight: 600, spacing: -0.5 }));
+        });
+        if (data.window.periode !== 'seance') {
+            y += g(26);
+            parts.push(label(data.totals.seances + ' séance' + (data.totals.seances > 1 ? 's' : '') + ' de cotation', pad, y, { size: 11 }));
+        }
         if (options.blocs.note) {
             const noteText = (options.note && options.note.trim()) || autoNote(data);
             if (noteText) {
-                y += g(34);
-                wrap(noteText, Math.floor(inner / 8.4)).slice(0, 4).forEach(function (line) {
-                    parts.push(text(line, pad, y, { size: 17, fill: C.ink, family: "'Playfair Display',serif", style: 'italic' }));
-                    y += g(26);
+                y += g(14);
+                wrap(noteText, Math.floor(inner / 8.3)).slice(0, 4).forEach(function (l) {
+                    y += g(25);
+                    parts.push(text(l, pad, y, { size: 17, fill: C.ink2, family: F.serif, style: 'italic' }));
                 });
             }
         }
 
-        /* — Bandeau d'activité — chaque case porte un repère de tendance
-           distinct en haut à gauche : triangle vert / rouge, tiret gris,
-           pouls pour la valeur échangée. */
-        y += g(36);
+        /* — Activité : bandeau à filets + une case par titre coté — */
+        y += g(30);
         if (options.blocs.activite) {
-            const boxH = 112;
-            parts.push('<rect x="' + pad + '" y="' + y + '" width="' + inner + '" height="' + boxH +
-                '" fill="' + C.panel + '" stroke="' + C.line + '" rx="6"/>');
+            const boxH = 76;
+            parts.push(line(pad, y, W - pad, 1.5));
+            parts.push(line(pad, y + boxH, W - pad, 1.5));
             const cells = [
-                { l: 'Titres cotés', v: String(data.totals.titres), icon: 'columns' },
-                { l: 'Hausse', v: String(data.totals.up), c: C.green, icon: 'triUp' },
-                { l: 'Baisse', v: String(data.totals.down), c: C.red, icon: 'triDown' },
-                { l: 'Stables', v: String(data.totals.flat), icon: 'dash' },
-                { l: 'Valeur échangée', v: money(data.totals.valeur), icon: 'pulse' }
+                { l: 'Titres cotés', v: String(data.totals.titres) },
+                { l: 'En hausse', v: String(data.totals.up), c: C.green },
+                { l: 'En baisse', v: String(data.totals.down), c: C.red },
+                { l: 'Stables', v: String(data.totals.flat), c: C.muted },
+                { l: 'Valeur échangée', v: money(data.totals.valeur) + ' F' }
             ];
             const cw = inner / cells.length;
             cells.forEach(function (cell, i) {
-                const cx = pad + cw * i + cw / 2;
-                const ix = pad + cw * i + 16;
-                parts.push(glyph(cell.icon, ix, y + 24, { color: cell.c || C.gold }));
-                parts.push(text(cell.l.toUpperCase(), cx, y + 42, { size: 11, fill: C.muted, anchor: 'middle', spacing: 1.5 }));
-                parts.push(text(cell.v, cx, y + 82, {
-                    size: 32, anchor: 'middle', family: "'DM Mono',monospace", fill: cell.c || C.cream, weight: 500
-                }));
-                if (i) parts.push('<line x1="' + (pad + cw * i) + '" y1="' + (y + 18) + '" x2="' + (pad + cw * i) +
-                    '" y2="' + (y + boxH - 18) + '" stroke="' + C.line + '"/>');
+                const x = pad + cw * i + (i ? 16 : 0);
+                if (i) parts.push('<line x1="' + (pad + cw * i) + '" y1="' + (y + 12) + '" x2="' + (pad + cw * i) + '" y2="' + (y + boxH - 12) + '" stroke="' + C.ink + '" stroke-opacity="0.16"/>');
+                parts.push(label(cell.l, x, y + 26, { size: 10.5 }));
+                parts.push(text(cell.v, x, y + 58, { family: F.mono, size: 26, weight: 600, fill: cell.c || C.ink }));
             });
-            y += boxH + g(40);
+            y += boxH + g(18);
+            const n = Math.max(1, data.totals.titres), gap = 2.5;
+            const cell = (inner - gap * (n - 1)) / n;
+            for (let i = 0; i < n; i++) {
+                const c = i < data.totals.up ? C.green : i < data.totals.up + data.totals.flat ? C.flatCell : C.red;
+                parts.push('<rect x="' + (pad + i * (cell + gap)).toFixed(1) + '" y="' + y + '" width="' + cell.toFixed(1) + '" height="18" fill="' + c + '"/>');
+            }
+            y += 18 + g(40);
         }
 
-        /* — Indices — valeur, variation de période (triangle + %), variation
-           depuis le 1er janvier, mini-tendance 5 séances. */
+        /* — Indices — */
         if (options.blocs.indices && data.indices.length) {
-            y = section(parts, 'Indices de marché', pad, y, inner, text, rule, g, 'bars');
-            const sparkX2 = W - pad, sparkX1 = sparkX2 - 64;
-            const colYtd = sparkX1 - 26, colPer = colYtd - 140, colVal = colPer - 150;
-            parts.push(text('VALEUR', colVal, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
-            parts.push(text(data.window.periode === 'seance' ? 'SÉANCE' : 'PÉRIODE', colPer, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
-            parts.push(text('DEPUIS 1ᵉʳ JANV.', colYtd, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
-            parts.push(text('TENDANCE', (sparkX1 + sparkX2) / 2, y, { size: 9, anchor: 'middle', fill: C.muted, spacing: 1.4 }));
-            y += g(26);
+            y = rubrique('Indices de marché', pad, inner);
+            const sparkX2 = W - pad, sparkX1 = sparkX2 - 70;
+            const colYtd = sparkX1 - 28, colPer = colYtd - 150, colVal = colPer - 150;
+            parts.push(label('Valeur', colVal, y, { anchor: 'end', size: 10 }));
+            parts.push(label(data.window.periode === 'seance' ? 'Séance' : 'Période', colPer, y, { anchor: 'end', size: 10 }));
+            parts.push(label('Depuis le 1er janv.', colYtd, y, { anchor: 'end', size: 10 }));
+            parts.push(label('5 séances', sparkX2, y, { anchor: 'end', size: 10 }));
+            parts.push(line(pad, y + 9, W - pad, 1.2));
+            y += g(38);
             data.indices.slice(0, 5).forEach(function (idx) {
-                const positive = TC.toNumber(idx.perf) >= 0;
-                parts.push(text(idx.indice, pad, y, { size: 16 }));
-                parts.push(text(idx.last.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-                    colVal, y, { size: 16, anchor: 'end', family: "'DM Mono',monospace" }));
-                parts.push(glyph(positive ? 'triUp' : 'triDown', colPer - 88, y, { color: positive ? C.green : C.red }));
-                parts.push(text(pct(idx.perf), colPer, y, {
-                    size: 16, anchor: 'end', family: "'DM Mono',monospace",
-                    fill: positive ? C.green : C.red
-                }));
-                parts.push(text(idx.ytd == null ? '—' : pct(idx.ytd), colYtd, y, {
-                    size: 16, anchor: 'end', family: "'DM Mono',monospace",
-                    fill: idx.ytd == null ? C.muted : TC.toNumber(idx.ytd) >= 0 ? C.green : C.red
-                }));
-                if (idx.spark && idx.spark.length >= 2) {
-                    parts.push(sparkline(sparkX1, sparkX2, y + 4, 22, idx.spark));
-                }
-                y += g(34);
+                parts.push(text(String(idx.indice).replace('BRVM-', 'BRVM ').replace('COMPOSITE', 'Composite').replace('PRESTIGE', 'Prestige'),
+                    pad, y, { family: F.serif, size: 19, weight: 600 }));
+                parts.push(num(idx.last.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }), colVal, y, { size: 16 }));
+                parts.push(variation(idx.perf, colPer, y, 16));
+                parts.push(num(idx.ytd == null ? '—' : pct(idx.ytd), colYtd, y, { size: 15, fill: idx.ytd == null ? C.muted : signe(idx.ytd) }));
+                if (idx.spark && idx.spark.length >= 2) parts.push(sparkline(sparkX1, sparkX2 - 3, y + 2, 20, idx.spark));
+                parts.push(hair(y + g(12)));
+                y += g(pas);
             });
-            y += g(10);
+            y += g(compact ? 10 : 18);
         }
 
-        /* — Marché en chiffres / Répartition sectorielle — deux colonnes :
-           actions + obligataire à gauche, secteurs à droite. Si les
-           secteurs sont indisponibles, la colonne de gauche reprend toute
-           la largeur plutôt que de laisser un vide. */
+        /* — Marché en chiffres / secteurs — deux colonnes */
         if (options.blocs.chiffres && data.chiffres) {
             const hasSecteurs = data.secteurs && data.secteurs.length >= 2;
             const colGap = Math.round(inner * 0.06);
             const colW = hasSecteurs ? Math.round((inner - colGap) / 2) : inner;
             const xR = pad + colW + colGap;
-            let yL = y, yR = y;
-
+            const y0 = y;
             const c = data.chiffres;
-            yL = section(parts, 'Le marché en chiffres', pad, yL, colW, text, rule, g, 'columns');
-            const rowItem = function (label, value, yy) {
-                parts.push(text(label, pad, yy, { size: 14, fill: C.muted }));
-                parts.push(text(value, pad + colW, yy, { size: 14, anchor: 'end', family: "'DM Mono',monospace" }));
-                return yy + g(23);
+            let yL = rubrique('Le marché en chiffres', pad, colW);
+            const rowItem = function (lib, value, yy) {
+                parts.push(text(lib, pad, yy, { size: 14, fill: C.ink2 }));
+                parts.push(num(value, pad + colW, yy, { size: 14 }));
+                parts.push(hair(yy + 8, pad, pad + colW));
+                return yy + g(26);
             };
             if (c.valeurTransactions != null) yL = rowItem('Valeur des transactions', money(c.valeurTransactions) + ' F', yL);
-            yL += g(4);
-            parts.push(text('ACTIONS', pad, yL, { size: 10, fill: C.gold, spacing: 1.8, weight: 600 }));
+            yL += g(6);
+            parts.push(label('Actions', pad, yL, { size: 10, fill: C.gold }));
             yL += g(20);
             [
                 ['Titres cotés', c.titresCotes != null ? String(c.titresCotes) : null],
                 ['Sociétés cotées', c.societesCotees != null ? String(c.societesCotees) : null],
                 ['Capitalisation actions', c.capiActions != null ? money(c.capiActions) + ' F' : null],
-                ['PER médian', c.perMedian != null ? c.perMedian.toFixed(1) + 'x' : null],
-                ['Rendement médian', c.rdtMedian != null ? c.rdtMedian.toFixed(2) + ' %' : null],
-                ['Rentabilité médiane (ROE)', c.roeMedian != null ? c.roeMedian.toFixed(1) + ' %' : null]
+                ['PER médian', c.perMedian != null ? c.perMedian.toFixed(1).replace('.', ',') + ' x' : null],
+                ['Rendement médian', c.rdtMedian != null ? c.rdtMedian.toFixed(2).replace('.', ',') + ' %' : null],
+                ['Rentabilité médiane (ROE)', c.roeMedian != null ? c.roeMedian.toFixed(1).replace('.', ',') + ' %' : null]
             ].filter(it => it[1] != null).forEach(it => { yL = rowItem(it[0], it[1], yL); });
-
             if (c.lignesObligataires != null || c.capiObligations != null) {
-                yL += g(10);
-                parts.push(glyph('bond', pad, yL, { color: C.gold }));
-                parts.push(text('OBLIGATAIRE', pad + 20, yL, { size: 10, fill: C.gold, spacing: 1.8, weight: 600 }));
+                yL += g(8);
+                parts.push(label('Obligataire', pad, yL, { size: 10, fill: C.gold }));
                 yL += g(20);
                 [
                     ['Lignes obligataires', c.lignesObligataires != null ? String(c.lignesObligataires) : null],
                     ['Capitalisation obligations', c.capiObligations != null ? money(c.capiObligations) + ' F' : null]
                 ].filter(it => it[1] != null).forEach(it => { yL = rowItem(it[0], it[1], yL); });
             }
-
+            let yR = y0;
             if (hasSecteurs) {
-                yR = section(parts, 'Répartition sectorielle', xR, yR, colW, text, rule, g, 'pulse');
+                y = y0;
+                yR = rubrique('Échanges par secteur', xR, colW);
                 const maxPct = Math.max.apply(null, data.secteurs.map(s => s.pct)) || 1;
                 data.secteurs.forEach(function (s) {
-                    parts.push(text(s.nom, xR, yR, { size: 13, fill: C.ink }));
-                    parts.push(text(s.pct.toFixed(1) + ' %', xR + colW, yR, { size: 13, anchor: 'end', family: "'DM Mono',monospace", fill: C.gold }));
-                    const barY = yR + 8;
-                    const barW = Math.max(4, colW * (s.pct / maxPct));
-                    parts.push('<rect x="' + xR + '" y="' + barY + '" width="' + colW + '" height="4" fill="' + C.line + '" rx="2"/>');
-                    parts.push('<rect x="' + xR + '" y="' + barY + '" width="' + barW + '" height="4" fill="' + C.gold + '" rx="2"/>');
-                    yR += g(34);
+                    parts.push(text(s.nom, xR, yR, { size: 14 }));
+                    parts.push(num(s.pct.toFixed(1).replace('.', ',') + ' %', xR + colW, yR, { size: 14, fill: C.gold, weight: 600 }));
+                    parts.push('<rect x="' + xR + '" y="' + (yR + 8) + '" width="' + Math.max(3, colW * (s.pct / maxPct)).toFixed(1) + '" height="5" fill="' + C.ink + '"/>');
+                    yR += g(36);
                 });
             }
-            y = Math.max(yL, yR) + g(16);
+            y = Math.max(yL, yR) + g(20);
         }
 
-        /* — Palmarès — avatar rond (initiale du ticker) + en-têtes de
-           colonnes (Société / Cours / Var.) sous le titre de section. */
-        const podium = function (title, list, positive) {
+        /* — Palmarès — */
+        const podium = function (title, list) {
             if (!list.length) return;
-            const colCours = W - pad - 132, colVar = W - pad;
-            y = section(parts, title, pad, y, inner, text, rule, g, positive ? 'up' : 'down');
-            parts.push(text('SOCIÉTÉ', pad + 40, y, { size: 9, anchor: 'start', fill: C.muted, spacing: 1.4 }));
-            parts.push(text('COURS', colCours, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
-            parts.push(text('VAR.', colVar, y, { size: 9, anchor: 'end', fill: C.muted, spacing: 1.4 }));
-            y += g(22);
-            list.forEach(function (e) {
-                const initiale = String(e.ticker || '?').charAt(0);
-                parts.push('<circle cx="' + (pad + 13) + '" cy="' + (y - 5) + '" r="13" fill="' + C.panel + '" stroke="' + C.gold + '" stroke-width="1.4"/>');
-                parts.push(text(initiale, pad + 13, y - 1, { size: 12, anchor: 'middle', fill: C.gold, weight: 700, family: "'Playfair Display',serif" }));
-                parts.push(text(e.ticker, pad + 34, y, { size: 18, weight: 500, family: "'Playfair Display',serif", fill: C.gold }));
-                const label = (e.nom || '').slice(0, 24);
-                if (label) parts.push(text(label, pad + 34 + Math.max(72, e.ticker.length * 12), y, { size: 13, fill: C.muted }));
-                parts.push(text(money(e.last), colCours, y, { size: 16, anchor: 'end', family: "'DM Mono',monospace" }));
-                parts.push(text(pct(e.perf), colVar, y, {
-                    size: 17, anchor: 'end', family: "'DM Mono',monospace", weight: 500,
-                    fill: positive ? C.green : C.red
-                }));
+            const colCours = W - pad - 150, colVar = W - pad;
+            y = rubrique(title, pad, inner);
+            parts.push(label('Valeur', pad + 30, y, { size: 10 }));
+            parts.push(label('Cours', colCours, y, { anchor: 'end', size: 10 }));
+            parts.push(label('Var.', colVar, y, { anchor: 'end', size: 10 }));
+            parts.push(line(pad, y + 9, W - pad, 1.2));
+            y += g(38);
+            list.forEach(function (e, k) {
+                parts.push(text(String(k + 1), pad, y, { family: F.mono, size: 13, fill: C.muted }));
+                parts.push(text(e.ticker, pad + 30, y, { size: 19, weight: 700, spacing: 0.3 }));
+                const nm = nomCourt(e.nom, 30);
+                if (nm) parts.push(text(nm, pad + 30 + Math.max(80, String(e.ticker).length * 12.5), y, { size: 15, fill: C.ink2, family: F.serif, style: 'italic' }));
+                parts.push(num(money(e.last), colCours, y, { size: 16, fill: C.ink2 }));
+                parts.push(variation(e.perf, colVar, y, 17));
                 const detail = [];
                 if (TC.toNumber(e.volume)) detail.push(money(e.volume) + ' titres');
                 if (TC.toNumber(e.valeur)) detail.push(money(e.valeur) + ' F échangés');
-                if (detail.length) {
-                    parts.push(text(detail.join(' · '), pad + 34, y + g(16), { size: 11, fill: C.muted }));
-                    y += g(37);
+                if (detail.length && !compact) {
+                    parts.push(text(detail.join(' · '), pad + 30, y + g(19), { size: 11.5, fill: C.muted }));
+                    parts.push(hair(y + g(31)));
+                    y += g(50);
                 } else {
-                    y += g(27);
+                    parts.push(hair(y + g(12)));
+                    y += g(pas);
                 }
             });
-            y += g(14);
+            y += g(compact ? 8 : 16);
         };
-        if (options.blocs.hausses) podium('Plus fortes hausses', data.hausses, true);
-        if (options.blocs.baisses) podium('Plus fortes baisses', data.baisses, false);
+        if (options.blocs.hausses) podium('Plus fortes hausses', data.hausses);
+        if (options.blocs.baisses) podium('Plus fortes baisses', data.baisses);
 
-        /* — Plus forte activité — titres les plus échangés en valeur — */
+        /* — Plus forte activité — */
         if (options.blocs.volumes && data.volumes.length) {
-            y = section(parts, 'Plus forte activité · valeurs échangées', pad, y, inner, text, rule, g, 'pulse');
+            y = rubrique('Plus forte activité', pad, inner, 'valeurs échangées');
             const max = Math.max.apply(null, data.volumes.map(e => e.valeur)) || 1;
+            const barX = pad + 110, barMax = inner - 110 - 150;
             data.volumes.forEach(function (e) {
-                parts.push(text(e.ticker, pad, y, { size: 17, fill: C.gold, family: "'Playfair Display',serif", weight: 500 }));
-                parts.push(text(money(e.valeur) + ' F', W - pad, y, { size: 15, anchor: 'end', family: "'DM Mono',monospace" }));
-                const barY = y + 10;
-                const barW = Math.max(6, (inner) * (e.valeur / max));
-                parts.push('<rect x="' + pad + '" y="' + barY + '" width="' + inner + '" height="4" fill="' + C.line + '" rx="2"/>');
-                parts.push('<rect x="' + pad + '" y="' + barY + '" width="' + barW + '" height="4" fill="' + C.gold + '" rx="2"/>');
-                y += g(33);
+                parts.push(text(e.ticker, pad, y, { size: 17, weight: 700 }));
+                parts.push('<rect x="' + barX + '" y="' + (y - 11) + '" width="' + Math.max(4, barMax * e.valeur / max).toFixed(1) + '" height="10" fill="' + C.ink + '"/>');
+                parts.push(num(money(e.valeur) + ' F', W - pad, y, { size: 15, weight: 600 }));
+                parts.push(hair(y + g(12)));
+                y += g(34);
             });
-            y += g(6);
+            y += g(16);
         }
 
         /* — Marché obligataire — */
         if (options.blocs.obligataire && data.obligataire && (data.obligataire.lignes || data.obligataire.snapshot)) {
             const o = data.obligataire;
-            y = section(parts, 'Marché obligataire', pad, y, inner, text, rule, g, 'bond');
+            y = rubrique('Marché obligataire', pad, inner);
             const lines = [];
             if (o.lignes) lines.push(['Lignes cotées', String(o.lignes)]);
             if (o.snapshot && TC.toNumber(o.snapshot.capitalisation_obligations) != null)
                 lines.push(['Capitalisation obligataire', money(o.snapshot.capitalisation_obligations) + ' F']);
-            if (o.tauxMoyen != null) lines.push(['Taux facial médian', o.tauxMoyen.toFixed(2) + ' %']);
+            if (o.tauxMoyen != null) lines.push(['Taux facial médian', o.tauxMoyen.toFixed(2).replace('.', ',') + ' %']);
             lines.forEach(function (it) {
-                parts.push(text(it[0], pad, y, { size: 15, fill: C.muted }));
-                parts.push(text(it[1], W - pad, y, { size: 15, anchor: 'end', family: "'DM Mono',monospace" }));
-                y += g(24);
+                parts.push(text(it[0], pad, y, { size: 15, fill: C.ink2 }));
+                parts.push(num(it[1], W - pad, y, { size: 15 }));
+                parts.push(hair(y + 9));
+                y += g(28);
             });
             if (o.top && o.top.length) {
-                y += g(6);
-                parts.push(text('LIGNES LES PLUS COTÉES', pad, y, { size: 9, fill: C.muted, spacing: 1.6 }));
+                y += g(8);
+                parts.push(label('Lignes les plus cotées', pad, y, { size: 10, fill: C.gold }));
                 y += g(24);
                 o.top.slice(0, 5).forEach(function (b) {
-                    parts.push(text(String(b.code || ''), pad, y, { size: 14, fill: C.gold, family: "'DM Mono',monospace" }));
-                    const nm = (b.nom || '').slice(0, 34);
-                    if (nm) parts.push(text(nm, pad + 120, y, { size: 12, fill: C.muted }));
-                    parts.push(text(money(b.cours) + ' F', W - pad, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace" }));
-                    y += g(26);
+                    parts.push(text(String(b.code || ''), pad, y, { size: 14, family: F.mono, weight: 600 }));
+                    const nm = (b.nom || '').slice(0, 38);
+                    if (nm) parts.push(text(nm, pad + 130, y, { size: 13, fill: C.ink2, family: F.serif, style: 'italic' }));
+                    parts.push(num(money(b.cours) + ' F', W - pad, y, { size: 14 }));
+                    parts.push(hair(y + 9));
+                    y += g(28);
                 });
             }
             y += g(16);
@@ -1002,59 +889,97 @@
 
         /* — Dividendes à venir — */
         if (options.blocs.dividendes && data.dividendesAVenir && data.dividendesAVenir.length) {
-            y = section(parts, 'Dividendes à venir', pad, y, inner, text, rule, g, 'calendar');
+            y = rubrique('Dividendes à venir', pad, inner);
+            parts.push(label('Détachement', W - pad - 210, y, { anchor: 'end', size: 10 }));
+            parts.push(label('Net', W - pad - 95, y, { anchor: 'end', size: 10 }));
+            parts.push(label('Rdt', W - pad, y, { anchor: 'end', size: 10 }));
+            parts.push(line(pad, y + 9, W - pad, 1.2));
+            y += g(36);
             data.dividendesAVenir.forEach(function (d) {
-                parts.push(text(d.ticker, pad, y, { size: 15, fill: C.gold, family: "'Playfair Display',serif", weight: 500 }));
-                const nm = (d.nom || '').slice(0, 24);
-                if (nm) parts.push(text(nm, pad + 90, y, { size: 12, fill: C.muted }));
-                parts.push(text(typeof TC.fmtDate === 'function' ? TC.fmtDate(d.detach) : String(d.detach || ''), W - pad - 210, y, { size: 13, anchor: 'end', fill: C.muted, family: "'DM Mono',monospace" }));
-                parts.push(text(d.montant != null ? money(d.montant) + ' F' : '—', W - pad - 90, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace" }));
-                parts.push(text(d.rdt != null ? (d.rdt <= 1.5 ? (d.rdt * 100) : d.rdt).toFixed(2) + ' %' : '—', W - pad, y, { size: 13, anchor: 'end', family: "'DM Mono',monospace", fill: C.green }));
-                y += g(25);
+                parts.push(text(d.ticker, pad, y, { size: 16, weight: 700 }));
+                const nm = nomCourt(d.nom, 26);
+                if (nm) parts.push(text(nm, pad + 90, y, { size: 14, fill: C.ink2, family: F.serif, style: 'italic' }));
+                parts.push(num(typeof TC.fmtDate === 'function' ? TC.fmtDate(d.detach) : String(d.detach || ''), W - pad - 210, y, { size: 14, fill: C.ink2 }));
+                parts.push(num(d.montant != null ? money(d.montant) + ' F' : '—', W - pad - 95, y, { size: 14 }));
+                parts.push(num(d.rdt != null ? (d.rdt <= 1.5 ? (d.rdt * 100) : d.rdt).toFixed(2).replace('.', ',') + ' %' : '—', W - pad, y, { size: 14, fill: C.green, weight: 600 }));
+                parts.push(hair(y + 9));
+                y += g(30);
             });
             y += g(16);
         }
 
-        /* — Change / parité XOF — fait réglementaire fixe, pas une cotation
-           du jour : un bandeau fin, avant le pied de page. */
+        /* — Parité XOF : fait réglementaire fixe, pas une cotation — */
         if (options.blocs.chiffres) {
-            y += g(6);
-            parts.push(glyph('coin', pad, y, { color: C.gold }));
-            parts.push(text('1 € = ' + XOF_PER_EUR.toLocaleString('fr-FR', { minimumFractionDigits: 3 }) + ' FCFA', pad + 22, y, { size: 13, family: "'DM Mono',monospace", fill: C.ink }));
-            parts.push(text('Parité fixe UEMOA / zone euro', W - pad, y, { size: 12, anchor: 'end', fill: C.muted }));
+            y += g(4);
+            parts.push(text('1 € = ' + XOF_PER_EUR.toLocaleString('fr-FR', { minimumFractionDigits: 3 }) + ' FCFA', pad, y, { size: 13, family: F.mono }));
+            parts.push(text('Parité fixe UEMOA / zone euro', W - pad, y, { size: 12, anchor: 'end', fill: C.muted, family: F.serif, style: 'italic' }));
             y += g(30);
         }
 
-        /* — Pied de page — source, mention réglementaire, abonnement,
-           copyright. Toujours quatre lignes, jamais tronqué : la hauteur
-           du canevas s'ajuste plus bas si le contenu déborde. */
-        const footLines = 2;
-        const footH = 22 + footLines * 18;
+        /* — Pied de page — jamais tronqué : la hauteur du canevas s'ajuste
+           plus bas si le contenu déborde. */
+        const footH = 58;
         const footYIdeal = H - Math.round(pad * 0.72);
         const footTop = Math.max(footYIdeal - footH, Math.round(y + g(30)));
         const footY = footTop + footH;
-        parts.push(rule(footTop - 10, 0.22));
-        parts.push(text('Données de séance The Capital · sources BRVM', pad, footTop + 16, { size: 12, fill: C.muted }));
-        parts.push(text('Information à caractère informatif — ne constitue pas un conseil en investissement.', pad, footTop + 36, { size: 10.5, fill: C.muted }));
-        parts.push(text('thecapitalinvest.com · abonnement Investor', W - pad, footTop + 16, { size: 12, fill: C.gold, anchor: 'end', family: "'DM Mono',monospace" }));
-        parts.push(text('© ' + data.window.to.slice(0, 4) + ' The Capital — Tous droits réservés.', W - pad, footTop + 36, { size: 10.5, fill: C.muted, anchor: 'end' }));
+        parts.push(line(pad, footTop - 10, W - pad, 1.2));
+        parts.push(text('Source : BRVM · calculs The Capital', pad, footTop + 14, { size: 12, fill: C.ink2 }));
+        parts.push(text('Information à caractère informatif — ne constitue pas un conseil en investissement.', pad, footTop + 34, { size: 11, fill: C.muted, family: F.serif, style: 'italic' }));
+        parts.push(text('thecapitalinvest.com', W - pad, footTop + 14, { size: 13, fill: C.gold, anchor: 'end', family: F.mono, weight: 600 }));
+        parts.push(text('© ' + data.window.to.slice(0, 4) + ' The Capital', W - pad, footTop + 34, { size: 11, fill: C.muted, anchor: 'end' }));
 
-        /* Le contenu peut dépasser le format choisi : on prévient plutôt que
-           de tronquer silencieusement une section. */
         const overflow = y > (footTop - 44);
-        /* Filet de sécurité : si même après compression (gap) le contenu
-           déborde encore du format social choisi, le canevas grandit pour
-           l'accueillir. Mieux vaut une image plus haute qu'un tableau coupé
-           en plein milieu — ce n'est jamais un compromis acceptable. */
+        /* Filet de sécurité : mieux vaut une image plus haute qu'un tableau
+           coupé en plein milieu. */
         const neededH = footY + Math.round(pad * 0.5);
-        if (neededH > H) H = neededH;
+        if (neededH > H) {
+            H = neededH;
+            parts[0] = '<rect width="' + W + '" height="' + H + '" fill="' + C.bg + '"/>';
+        }
 
         return {
             bodyTop: bodyTop, footTop: footTop - 44,
             svg: '<svg xmlns="http://www.w3.org/2000/svg" width="' + W + '" height="' + H +
-                '" viewBox="0 0 ' + W + ' ' + H + '" font-family="\'DM Sans\',sans-serif">' + parts.join('') + '</svg>',
+                '" viewBox="0 0 ' + W + ' ' + H + '" font-family="' + F.sans.replace(/'/g, '&apos;') + '">' +
+                (fontCss ? '<defs><style>' + fontCss + '</style></defs>' : '') + parts.join('') + '</svg>',
             width: W, height: H, overflow, contentBottom: Math.round(y), grew: H > H0
         };
+    }
+
+    /* ── Polices embarquées (base64) : l'export ne dépend ni du réseau ni des
+       polices installées sur le poste. ── */
+    const FONT_FILES = [
+        ['TC Serif', 'newsreader-600-normal.woff', 600, 'normal'],
+        ['TC Serif', 'newsreader-700-normal.woff', 700, 'normal'],
+        ['TC Serif', 'newsreader-400-italic.woff', 400, 'italic'],
+        ['TC Mono', 'ibm-plex-mono-400-normal.woff', 400, 'normal'],
+        ['TC Mono', 'ibm-plex-mono-600-normal.woff', 600, 'normal'],
+        ['TC Sans', 'ibm-plex-sans-condensed-400-normal.woff', 400, 'normal'],
+        ['TC Sans', 'ibm-plex-sans-condensed-600-normal.woff', 600, 'normal'],
+        ['TC Sans', 'ibm-plex-sans-condensed-700-normal.woff', 700, 'normal']
+    ];
+    let fontCss = null;
+    async function loadFonts() {
+        if (fontCss !== null) return fontCss;
+        try {
+            const rules = await Promise.all(FONT_FILES.map(async function (f) {
+                const r = await fetch('/fonts/report/' + f[1], { cache: 'force-cache' });
+                if (!r.ok) throw new Error(f[1]);
+                const blob = await r.blob();
+                const data = await new Promise(function (resolve, reject) {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+                return "@font-face{font-family:'" + f[0] + "';src:url(" + data.replace('application/octet-stream', 'font/woff') + ") format('woff');font-weight:" + f[2] + ';font-style:' + f[3] + '}';
+            }));
+            fontCss = rules.join('');
+        } catch (e) {
+            fontCss = '';
+            console.warn('[REPORTING] Polices non chargées, repli système :', e && e.message);
+        }
+        return fontCss;
     }
 
     /* ── Logo en base64, pour que l'export ne dépende pas du réseau ── */
@@ -1077,37 +1002,6 @@
         return logoData;
     }
 
-    /* ── Bannière fournie (image /assets), en base64 comme le logo ── */
-
-    async function loadBanner() {
-        if (bannerData !== null) return bannerData;
-        /* Ne dépend pas d'un config.js éventuellement en cache : l'URL a un
-           repli en dur. */
-        const url = (TC.env && TC.env.BANNER) || '/assets/banniere-seance-1min.png';
-        try {
-            const r = await fetch(url, { cache: 'no-cache' });
-            if (!r.ok) throw new Error('bannière absente (' + r.status + ')');
-            const blob = await r.blob();
-            bannerData = await new Promise(function (resolve, reject) {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-            });
-            /* Ratio réel de l'image, pour poser la bande à la bonne hauteur. */
-            bannerRatio = await new Promise(function (resolve) {
-                const img = new Image();
-                img.onload = () => resolve(img.naturalWidth ? img.naturalHeight / img.naturalWidth : 0.32);
-                img.onerror = () => resolve(0.32);
-                img.src = bannerData;
-            });
-        } catch (e) {
-            bannerData = '';
-            console.warn('[REPORTING] Bannière /assets non chargée, repli SVG :', e && e.message);
-        }
-        return bannerData;
-    }
-
     /* ── Génération ──────────────────────────────────────── */
 
     async function generate() {
@@ -1118,7 +1012,7 @@
         TC.say('rep-msg', 'Lecture des données…', 'info');
         TC.el('rep-stage').innerHTML = '<div class="loading"><div class="spinner"></div>Agrégation de la période…</div>';
 
-        await Promise.all([loadLogo(), loadBanner()]);
+        await Promise.all([loadLogo(), loadFonts()]);
         const data = await collect(w);
 
         if (!data) {

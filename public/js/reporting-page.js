@@ -106,6 +106,26 @@
       '<tbody>' + list.map(function (e) { return avatarRow(e, positive); }).join('') + '</tbody></table>';
   }
 
+  /* Une case par titre coté : hausses, stables, baisses. */
+  function waffle(t) {
+    var n = Number(t.titres) || 0, up = Number(t.up) || 0, flat = Number(t.flat) || 0, out = '';
+    if (!n) return '';
+    for (var i = 0; i < n; i++) out += '<i class="' + (i < up ? 'u' : i < up + flat ? '' : 'd') + '"></i>';
+    return '<div class="rep-waffle" role="img" aria-label="' + up + ' en hausse, ' + flat + ' stables, ' + (Number(t.down) || 0) + ' en baisse">' + out + '</div>';
+  }
+
+  /* Titre de une tiré des chiffres publiés (jamais inventé). */
+  var RUBRIQUE = { seance: 'La séance du jour', hebdo: 'Bilan de la semaine', mensuel: 'Bilan du mois', trimestre: 'Bilan du trimestre', annuel: 'Bilan de l\'année' };
+  function headline(p, w) {
+    var compo = (p.indices || []).filter(function (i) { return /COMPOSITE/.test(i.indice || ''); })[0] || (p.indices || [])[0];
+    var quand = { seance: 'en séance', hebdo: 'sur la semaine', mensuel: 'sur le mois', trimestre: 'sur le trimestre', annuel: 'sur l\'année' }[w.periode] || '';
+    var v = compo ? Number(compo.perf) : NaN;
+    if (!isFinite(v)) return p.titre || 'La séance en une minute';
+    if (Math.abs(v) < 0.05) return 'La BRVM est stable ' + quand;
+    return 'La BRVM ' + (v > 0 ? 'progresse' : 'recule') + ' de ' +
+      Math.abs(v).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' % ' + quand;
+  }
+
   function render(row) {
     if (!row || !row.payload) {
       root.innerHTML = '<div class="rep-wrap"><div class="rep-empty"><h2>Aucun reporting publié pour l\'instant</h2>' +
@@ -119,9 +139,9 @@
 
     var html = '';
     html += '<div class="rep-wrap rep-head">';
-    html += '<div class="rep-crumb">' + ICON.columns + '<span>BRVM · Bourse Régionale des Valeurs Mobilières</span></div>';
-    html += '<h1 class="rep-title">' + esc(p.titre || 'La séance en une minute') + '</h1>';
-    html += '<div class="rep-window">' + esc(w.periode === 'seance' ? fmtDateLong(w.to) : (w.label || '')) + '</div>';
+    html += '<div class="rep-crumb"><span class="rep-masthead">The Capital</span><span class="rep-rub">' + esc(RUBRIQUE[w.periode] || 'Reporting de marché') + '</span></div>';
+    html += '<div class="rep-window">' + esc(w.periode === 'seance' ? fmtDateLong(w.to) : (w.label || '')) + ' · clôture BRVM</div>';
+    html += '<h1 class="rep-title">' + esc(headline(p, w)) + '</h1>';
     var badges = [];
     if (h.bulletin || h.heure) badges.push('<span class="rep-badge">' + esc([h.bulletin, h.heure].filter(Boolean).join(' · ')) + '</span>');
     badges.push('<span class="rep-badge"><span class="dot"></span>Publié le ' + esc(fmtDateTime(row.published_at)) + '</span>');
@@ -137,7 +157,7 @@
         statCell('down', 'triDown', 'Baisse', t.down) +
         statCell('', 'dash', 'Stables', t.flat) +
         statCell('', 'pulse', 'Valeur échangée', money(t.valeur) + ' F') +
-        '</div></div>';
+        '</div>' + waffle(t) + '</div>';
     }
 
     // Indices
@@ -161,9 +181,9 @@
     var chiffresRows = [
       ['Titres cotés', c.titresCotes], ['Sociétés cotées', c.societesCotees],
       ['Capitalisation actions', c.capiActions != null ? money(c.capiActions) + ' F' : null],
-      ['PER médian', c.perMedian != null ? c.perMedian.toFixed(1) + 'x' : null],
-      ['Rendement médian', c.rdtMedian != null ? c.rdtMedian.toFixed(2) + ' %' : null],
-      ['Rentabilité médiane (ROE)', c.roeMedian != null ? c.roeMedian.toFixed(1) + ' %' : null]
+      ['PER médian', c.perMedian != null ? c.perMedian.toFixed(1).replace('.', ',') + 'x' : null],
+      ['Rendement médian', c.rdtMedian != null ? c.rdtMedian.toFixed(2).replace('.', ',') + ' %' : null],
+      ['Rentabilité médiane (ROE)', c.roeMedian != null ? c.roeMedian.toFixed(1).replace('.', ',') + ' %' : null]
     ].filter(function (r) { return r[1] != null; });
     var oblRows = [
       ['Lignes obligataires', c.lignesObligataires], ['Capitalisation obligations', c.capiObligations != null ? money(c.capiObligations) + ' F' : null]
@@ -185,7 +205,7 @@
         var maxPct = Math.max.apply(null, p.secteurs.map(function (s) { return s.pct; })) || 1;
         html += '<div class="rep-section-title">' + ICON.pulse + '<span>Répartition sectorielle</span></div><div class="rep-bars">';
         html += p.secteurs.map(function (s) {
-          return '<div class="rep-bar-row"><div class="top"><span>' + esc(s.nom) + '</span><span style="font-family:var(--mono);color:var(--gold)">' + s.pct.toFixed(1) + ' %</span></div>' +
+          return '<div class="rep-bar-row"><div class="top"><span>' + esc(s.nom) + '</span><span style="font-family:var(--mono);font-weight:600">' + s.pct.toFixed(1).replace('.', ',') + ' %</span></div>' +
             '<div class="track"><div class="fill" style="width:' + Math.max(3, (s.pct / maxPct) * 100) + '%"></div></div></div>';
         }).join('');
         html += '</div>';
@@ -206,7 +226,7 @@
       var maxV = Math.max.apply(null, p.volumes.map(function (e) { return e.valeur || 0; })) || 1;
       html += '<div class="rep-wrap rep-section"><div class="rep-section-title">' + ICON.pulse + '<span>Plus forte activité · valeurs échangées</span></div><div class="rep-bars">' +
         p.volumes.map(function (e) {
-          return '<div class="rep-bar-row"><div class="top"><span style="font-family:var(--serif);font-weight:600;color:var(--gold)">' + esc(e.ticker) + '</span>' +
+          return '<div class="rep-bar-row"><div class="top"><span style="font-family:var(--sans);font-weight:700;color:var(--ink)">' + esc(e.ticker) + '</span>' +
             '<span style="font-family:var(--mono)">' + esc(money(e.valeur) + ' F') + '</span></div>' +
             '<div class="track"><div class="fill" style="width:' + Math.max(3, ((e.valeur || 0) / maxV) * 100) + '%"></div></div></div>';
         }).join('') + '</div></div>';
@@ -218,7 +238,7 @@
       html += '<div class="rep-wrap rep-section"><div class="rep-section-title">' + ICON.bond + '<span>Marché obligataire · lignes les plus cotées</span></div>' +
         '<table class="rep-table"><thead><tr><th>Code</th><th>Société</th><th class="r">Cours</th></tr></thead><tbody>' +
         o.top.map(function (b) {
-          return '<tr><td style="font-family:var(--mono);color:var(--gold)">' + esc(b.code || '') + '</td><td>' + esc(b.nom || '—') + '</td><td class="r">' + esc(money(b.cours) + ' F') + '</td></tr>';
+          return '<tr><td style="font-family:var(--mono);font-weight:600">' + esc(b.code || '') + '</td><td>' + esc(b.nom || '—') + '</td><td class="r">' + esc(money(b.cours) + ' F') + '</td></tr>';
         }).join('') + '</tbody></table></div>';
     }
 
@@ -227,11 +247,11 @@
       html += '<div class="rep-wrap rep-section"><div class="rep-section-title">' + ICON.calendar + '<span>Dividendes à venir</span></div>' +
         '<table class="rep-table"><thead><tr><th>Société</th><th class="r">Détachement</th><th class="r">Montant</th><th class="r">Rendement</th></tr></thead><tbody>' +
         p.dividendesAVenir.map(function (d) {
-          return '<tr><td><span style="font-family:var(--serif);font-weight:600;color:var(--gold)">' + esc(d.ticker) + '</span>' +
+          return '<tr><td><span style="font-family:var(--sans);font-weight:700;color:var(--ink)">' + esc(d.ticker) + '</span>' +
             (d.nom ? ' <span style="color:var(--muted);font-size:12px">' + esc(d.nom) + '</span>' : '') + '</td>' +
             '<td class="r">' + esc(d.detach ? fmtDateShort(d.detach) : '—') + '</td>' +
             '<td class="r">' + esc(d.montant != null ? money(d.montant) + ' F' : '—') + '</td>' +
-            '<td class="r" style="color:var(--green)">' + esc(d.rdt != null ? (d.rdt <= 1.5 ? (d.rdt * 100) : d.rdt).toFixed(2) + ' %' : '—') + '</td></tr>';
+            '<td class="r" style="color:var(--green)">' + esc(d.rdt != null ? (d.rdt <= 1.5 ? (d.rdt * 100) : d.rdt).toFixed(2).replace('.', ',') + ' %' : '—') + '</td></tr>';
         }).join('') + '</tbody></table></div>';
     }
 
