@@ -144,8 +144,12 @@ for (const file of files) {
 // formules.js, paiements.js, support.js ; parametres.js éditable ; helper RPC
 // dans core/api.js). Demandé et validé par le propriétaire (« feu vert pour
 // tout »). Changement délibéré et revu.
+// Bump 2026-09-28 : cache-buster de reporting.js (v2026091001 -> v2026092801)
+// pour la nouvelle charte « cote du jour » du générateur de reporting.
+// Demandé par le propriétaire (refonte du design des reportings). Changement
+// délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = 'cb0a82f16e047cc952aa675baec3de6611afb781';
+const expectedAdminBlobSha = '431088bc1bffc77fd3f55aa70eef821cb9eef690';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
