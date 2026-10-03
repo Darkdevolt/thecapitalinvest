@@ -800,14 +800,16 @@
     if (market) return market;
     var get = function (q) { return w.apiGet('/marche?type=' + q).then(function (r) { return Array.isArray(r) ? r : (r && r.data) || []; }).catch(function () { return []; }); };
     market = Promise.all([
-      w.OBMath ? Promise.resolve() : loadScript('/app/js/views/obligations-math.js?v=3'),
+      w.OBMath ? Promise.resolve() : loadScript('/app/js/views/obligations-math.js?v=4'),
       get('obligations'), get('obligations_caracteristiques&limit=1000'), get('obligations_boc')
     ]).then(function (r) {
       var fiches = {}, boc = {};
       r[2].forEach(function (f) { [f.symbole, f.code_obligation].forEach(function (k) { if (k) fiches[keyOf(k)] = f; }); });
       r[3].forEach(function (b) { if (b && b.symbole) boc[keyOf(b.symbole)] = b; });
       var today = todayIso();
-      var list = r[1].filter(function (o) {
+      /* Lignes de la cote complétées par le BOC (cours à 0 ou ancien, lignes nouvelles). */
+      var rows = w.OBMath && w.OBMath.mergeBoc ? w.OBMath.mergeBoc(r[1], r[3], keyOf) : r[1];
+      var list = rows.filter(function (o) {
         if (!o || !o.code || /^TNC_/i.test(o.code)) return false;
         var an = w.OBMath && w.OBMath.analyze(o, fiches[keyOf(o.code)] || null, today, null, boc[keyOf(o.code)] || null);
         return an && an.schedule && !an.matured;  // lignes vivantes uniquement

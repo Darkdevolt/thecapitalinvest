@@ -333,7 +333,36 @@ export default async function handler(req, res) {
       case 'financials': result = await readAll(() => db.from('financials').select('*').order('validation_status', { ascending: true }).order('annee', { ascending: false }).order('id', { ascending: true })); break;
       case 'analyses': result = await db.from('analyses').select('*').order('date_analyse', { ascending: false }).limit(500); break;
       case 'dividendes': result = await readAll(() => db.from('dividendes_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
-      case 'coupons': result = await readAll(() => db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
+      /* Calendrier des coupons : saisies de `coupons_calendrier`, complétées par
+         le prochain coupon de chaque ligne vivante du dernier BOC (date de
+         paiement et montant net par titre publiés par la BRVM). */
+      case 'coupons': {
+        const saisis = await readAll(() => db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true }));
+        if (saisis.error) { result = saisis; break; }
+        const rows = saisis.data || [];
+        const { data: last } = await db.from('obligations_boc').select('date_seance')
+          .order('date_seance', { ascending: false }).limit(1);
+        if (last && last.length) {
+          const seance = last[0].date_seance;
+          const { data: boc } = await db.from('obligations_boc')
+            .select('symbole,titre,taux,valeur_nominale,periodicite,coupon_net,echeance_coupon,suspendu')
+            .eq('date_seance', seance).gte('echeance_coupon', seance).limit(1000);
+          const known = new Set(rows.map(r => `${String(r.code || '').toUpperCase()}|${String(r.date_paiement || '').slice(0, 10)}`));
+          for (const b of boc || []) {
+            if (!b.symbole || !b.echeance_coupon || !(Number(b.coupon_net) > 0)) continue;
+            if (known.has(`${String(b.symbole).toUpperCase()}|${b.echeance_coupon}`)) continue;
+            rows.push({
+              id: `boc-${b.symbole}-${b.echeance_coupon}`, code: b.symbole, emetteur: b.titre,
+              taux_facial: b.taux, nominal: b.valeur_nominale, montant_brut: null, montant_net: Number(b.coupon_net),
+              date_detachement: null, date_paiement: b.echeance_coupon, statut: 'prévisionnel',
+              notes: `Prochain coupon publié au BOC du ${seance}${b.suspendu ? ' (cotation suspendue)' : ''}`, source: 'boc'
+            });
+          }
+          rows.sort((a, b) => String(a.date_paiement || a.date_detachement || '').localeCompare(String(b.date_paiement || b.date_detachement || '')));
+        }
+        result = { data: rows, error: null };
+        break;
+      }
       // Export Excel / PDF (formule Professional, voir MARCHE_TIER) : toutes
       // les données financières disponibles, en une lecture. Jamais mis en
       // cache partagé : la réponse dépend de la formule de l'appelant.

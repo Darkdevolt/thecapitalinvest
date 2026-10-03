@@ -13,7 +13,7 @@
   if (window.__TC_OBLIGATIONS_V2__) return;
   window.__TC_OBLIGATIONS_V2__ = true;
 
-  var LIST = null, MARCHE = null, CARAC = null, BOC = null, ROWS = null;
+  var LIST = null, MARCHE = null, CARAC = null, BOC = null, ROWS = null, BOC_ROWS = [], MERGED = false;
   var loading = false;
   var SEL = null;
   var SORT = { key: 'life', dir: 1 };
@@ -71,6 +71,7 @@
       var bocRows = Array.isArray(r[3]) ? r[3] : (r[3] && r[3].data) || [];
       BOC = {};
       bocRows.forEach(function (b) { if (b && b.symbole) BOC[key(b.symbole)] = b; });
+      BOC_ROWS = bocRows; MERGED = false;
       var known = {};
       LIST.forEach(function (o) { known[key(o.code)] = 1; });
       bocRows.forEach(function (b) {
@@ -88,6 +89,8 @@
   function bocOf(o) { return (BOC && BOC[key(o.code)]) || null; }
   function analyzed() {
     if (ROWS) return ROWS;
+    /* Cours à 0 ou resté ancien sur la page BRVM : le BOC de la séance fait foi. */
+    if (!MERGED && window.OBMath && window.OBMath.mergeBoc) { LIST = window.OBMath.mergeBoc(LIST, BOC_ROWS, key); MERGED = true; }
     var settle = settleDate();
     ROWS = (LIST || []).map(function (o) {
       var a = null;
@@ -435,7 +438,7 @@
     if (window.OBMath) return Promise.resolve();
     return new Promise(function (resolve) {
       var s = document.createElement('script');
-      s.src = '/app/js/views/obligations-math.js?v=3';
+      s.src = '/app/js/views/obligations-math.js?v=4';
       s.onload = resolve; s.onerror = resolve;
       document.head.appendChild(s);
     });

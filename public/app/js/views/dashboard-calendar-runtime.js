@@ -30,6 +30,7 @@
   function buildRows() {
     var rows = [];
     (Array.isArray(w.allDividendes) ? w.allDividendes : []).forEach(function (row) {
+      if (row && /annul|suspend/i.test(String(row.statut || ''))) return;
       var detach = dateInfo(row && (row.date_detachement || row.ex_date));
       var pay = dateInfo(row && row.date_paiement);
       if (row && row.ticker && (detach || pay)) rows.push({ instrument: row.ticker, nature: 'Dividende', detach: detach, pay: pay, status: row.statut || 'confirmé', detail: row.annee ? 'Exercice ' + row.annee : '' });
@@ -38,7 +39,7 @@
       var detach = dateInfo(row && row.date_detachement);
       var pay = dateInfo(row && row.date_paiement);
       var instrument = row && (row.code || row.isin || row.ticker);
-      if (instrument && (detach || pay)) rows.push({ instrument: instrument, nature: 'Coupon', detach: detach, pay: pay, status: row.statut || 'prévisionnel', detail: row.numero_coupon != null ? 'Coupon n°' + row.numero_coupon : '' });
+      if (instrument && (detach || pay)) rows.push({ instrument: instrument, nature: 'Coupon', detach: detach, pay: pay, status: row.statut || 'prévisionnel', detail: row.numero_coupon != null ? 'Coupon n°' + row.numero_coupon : (row.montant_net != null ? 'Net ' + Number(row.montant_net).toLocaleString('fr-FR') + ' F par titre' : '') });
     });
     return rows;
   }
