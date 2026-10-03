@@ -148,8 +148,14 @@ for (const file of files) {
 // pour la nouvelle charte « cote du jour » du générateur de reporting.
 // Demandé par le propriétaire (refonte du design des reportings). Changement
 // délibéré et revu.
+// Bump 2026-10-02 : ajout du module « Composition des indices »
+// (public/admin/js/modules/indices-composition.js) — composition du BRVM 30,
+// Prestige, Principal et des indices sectoriels avec historique des révisions
+// (table indices_composition) ; cache-buster de core/config.js pour les
+// colonnes déclarées de la nouvelle table. Demandé par le propriétaire.
+// Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '431088bc1bffc77fd3f55aa70eef821cb9eef690';
+const expectedAdminBlobSha = '3104511aa7034eee28db4e7986d6aa435c3b105a';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');

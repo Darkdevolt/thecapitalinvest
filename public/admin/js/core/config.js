@@ -89,6 +89,8 @@ TC.COLUMNS = {
 
     indices: ['indice', 'date_seance', 'valeur', 'variation', 'variation_pct'],
 
+    indices_composition: ['indice', 'ticker', 'date_debut', 'date_fin', 'poids_pct', 'notes'],
+
     /* Colonnes vérifiées directement dans Supabase. `titre` et `resume`
        n'existent pas : les écrire faisait rejeter la note entière par
        PostgREST. `objectif_cours`, `potentiel_pct` et `horizon` existent et
@@ -109,6 +111,7 @@ TC.CONFLICT = {
     financials: 'ticker,annee,periode',
     dividendes_calendrier: 'ticker,exercice',
     indices: 'indice,date_seance',
+    indices_composition: 'indice,ticker,date_debut',
     actionnaires: null,
     analyses: null
 };

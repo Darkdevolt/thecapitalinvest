@@ -349,6 +349,8 @@
         '<div class="section" id="indices">' +
           '<div class="section-title">Cours des Indices</div><div class="section-sub">Évolution des indices de référence de la BRVM</div>' +
           '<div class="grid-3 mb20">' + indexCard('BRVM Composite', composite) + indexCard('BRVM 30', brvm30) + indexCard('BRVM Prestige', prestige) + '</div>' +
+          '<div class="card mb20"><div class="card-header"><div class="card-title">Composition des indices</div><div style="font-size:12px;color:var(--dim)" id="marche-compoCount">—</div></div>' +
+            '<div class="card-body"><div class="search-bar" id="marche-compoTabs"></div><div class="table-wrap"><table><thead><tr><th>Ticker</th><th>Société</th><th class="right">Cours (FCFA)</th><th class="right">Variation</th><th>Secteur</th><th>Depuis</th></tr></thead><tbody id="marche-compoTable"><tr><td colspan="6" style="color:var(--dim)">Chargement…</td></tr></tbody></table></div></div></div>' +
           '<div class="card mb20"><div class="card-header"><div class="card-title">BRVM Composite, Historique</div><div style="display:flex;gap:6px">' +
             '<button class="filter-btn active" data-marche-filter="index-30" type="button">1M</button>' +
             '<button class="filter-btn" data-marche-filter="index-90" type="button">3M</button>' +
@@ -403,6 +405,14 @@
     var search = document.getElementById('marche-searchCours');
     if (search) search.addEventListener('input', function () { courseQuery = search.value || ''; renderCourses(getCours()); });
 
+    var compoTabs = document.getElementById('marche-compoTabs');
+    if (compoTabs) compoTabs.addEventListener('click', function (e) {
+      var b = e.target && e.target.closest ? e.target.closest('[data-compo]') : null;
+      if (!b) return;
+      compoIndex = b.dataset.compo;
+      renderComposition();
+    });
+
     var pubSearch = document.getElementById('marche-searchPub');
     if (pubSearch) pubSearch.addEventListener('input', function () { pubQuery = pubSearch.value || ''; renderPublications(); });
 
@@ -430,7 +440,65 @@
     });
   }
 
+  /* Composition des indices, saisie dans l'admin (table indices_composition).
+     Chargée à la demande : seule la page Marché en a besoin. */
+  var COMPO_LABELS = {
+    'BRVM-30': 'BRVM 30', 'BRVM-PRESTIGE': 'Prestige', 'BRVM-PRINCIPAL': 'Principal', 'BRVM-COMPOSITE': 'Composite',
+    'BRVM-TELECOMMUNICATIONS': 'Télécoms', 'BRVM-CONSOMMATION-DISCRETIONNAIRE': 'Conso. discrétionnaire',
+    'BRVM-SERVICES-FINANCIERS': 'Services financiers', 'BRVM-CONSOMMATION-DE-BASE': 'Conso. de base',
+    'BRVM-INDUSTRIELS': 'Industriels', 'BRVM-ENERGIE': 'Énergie', 'BRVM-SERVICES-PUBLICS': 'Services publics'
+  };
+  var compoRows = null;
+  var compoIndex = 'BRVM-30';
+
+  function compoLabel(code) { return COMPO_LABELS[code] || code; }
+
+  function renderComposition() {
+    var tabs = document.getElementById('marche-compoTabs');
+    var body = document.getElementById('marche-compoTable');
+    var count = document.getElementById('marche-compoCount');
+    if (!tabs || !body) return;
+    var rows = Array.isArray(compoRows) ? compoRows : [];
+    if (!rows.length) {
+      tabs.innerHTML = '';
+      if (count) count.textContent = '—';
+      body.innerHTML = '<tr><td colspan="6" style="color:var(--dim)">' + (compoRows === null ? 'Chargement…' : 'Composition non renseignée pour le moment.') + '</td></tr>';
+      return;
+    }
+    var order = Object.keys(COMPO_LABELS);
+    var codes = rows.map(function (r) { return r.indice; }).filter(function (c, i, a) { return a.indexOf(c) === i; })
+      .sort(function (a, b) { var ia = order.indexOf(a), ib = order.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a.localeCompare(b); });
+    if (codes.indexOf(compoIndex) === -1) compoIndex = codes[0];
+    tabs.innerHTML = codes.map(function (c) {
+      return '<button class="filter-btn' + (c === compoIndex ? ' active' : '') + '" type="button" data-compo="' + esc(c) + '">' + esc(compoLabel(c)) + '</button>';
+    }).join('');
+    var priceMap = {};
+    getCours().forEach(function (r) { priceMap[courseTicker(r)] = r; });
+    var list = rows.filter(function (r) { return r.indice === compoIndex; });
+    if (count) count.textContent = list.length + ' valeur(s)';
+    body.innerHTML = list.map(function (r) {
+      var c = priceMap[String(r.ticker || '').toUpperCase()] || null;
+      var v = c ? courseVariation(c) : null;
+      var color = v > 0 ? 'var(--green)' : v < 0 ? 'var(--red)' : 'var(--dim)';
+      return '<tr><td><strong>' + esc(r.ticker) + '</strong></td><td>' + esc(r.nom || companyName(r.ticker)) + '</td>' +
+        '<td class="right">' + (c ? money(coursePrice(c)) : '—') + '</td>' +
+        '<td class="right" style="color:' + color + '">' + pct(v) + '</td>' +
+        '<td style="color:var(--dim)">' + esc(r.secteur || '') + '</td><td style="color:var(--dim)">' + esc(dateLabel(r.date_debut)) + '</td></tr>';
+    }).join('');
+  }
+
+  function loadComposition() {
+    if (Array.isArray(compoRows)) { renderComposition(); return; }
+    renderComposition();
+    if (typeof window.apiGet !== 'function') { compoRows = []; renderComposition(); return; }
+    window.apiGet('/marche?type=indices_composition').then(function (res) {
+      compoRows = Array.isArray(res) ? res : (res && Array.isArray(res.data) ? res.data : []);
+      renderComposition();
+    }).catch(function () { compoRows = []; renderComposition(); });
+  }
+
   function refreshMarket(cours) {
+    loadComposition();
     renderCourses(cours);
     renderMovers(cours);
     renderDividends();
