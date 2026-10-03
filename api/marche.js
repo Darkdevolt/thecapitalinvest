@@ -334,6 +334,16 @@ export default async function handler(req, res) {
       case 'analyses': result = await db.from('analyses').select('*').order('date_analyse', { ascending: false }).limit(500); break;
       case 'dividendes': result = await readAll(() => db.from('dividendes_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
       case 'coupons': result = await readAll(() => db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
+      // Composition en vigueur des indices (BRVM 30, Prestige, sectoriels…),
+      // saisie dans l'admin (table indices_composition).
+      case 'indices_composition': {
+        let q = db.from('indices_composition_actuelle').select('*')
+          .order('indice', { ascending: true }).order('ticker', { ascending: true }).limit(1000);
+        const indice = (url.searchParams.get('indice') || '').trim().toUpperCase();
+        if (indice) q = q.eq('indice', indice);
+        result = await q;
+        break;
+      }
       case 'obligations': result = await readAll(() => db.from('obligations').select('*').order('code', { ascending: true })); break;
       case 'commodities': result = await readAll(() => db.from('commodity_prices').select('serie,date,valeur,unite').gte('date', '2015-01-01').order('serie', { ascending: true }).order('date', { ascending: true })); break;
       // Tableau obligataire du dernier BOC (scripts/boc_bonds.py) : capital
