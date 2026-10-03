@@ -2,8 +2,7 @@
 -- Déjà appliqués en base ; idempotent (on conflict do nothing).
 -- Lacunes restantes justifiées : BICB 2020 (banque créée en 2020 par fusion),
 -- LNBB 2020-2023 (avant l'introduction en bourse), SICC 2025, SEMC 2025,
--- UNLC 2024-2025 (non publiés par les émetteurs au 03/10/2026),
--- ORAC 2020 (antérieur à la cotation, note d'information de l'OPV à reprendre).
+-- UNLC 2024-2025 (non publiés par les émetteurs au 03/10/2026).
 insert into public.financials (ticker, annee, periode, chiffre_affaires, rbe, resultat_exploitation, resultat_net, bpa, dpa, fonds_propres, total_actif, nombre_actions, source, source_url, validation_status, validation_notes) values
 ('SGBC', 2022, 'annuel', 215101000000, null, null, 74612000000, 2398.25, 1230, null, null, 31111110,
  'Société Générale Côte d''Ivoire : communiqué résultats annuels 2022',
@@ -33,4 +32,11 @@ insert into public.financials (ticker, annee, periode, chiffre_affaires, rbe, re
  'SOCIETE GENERALE CI : Rapport d''activités - 1er trimestre 2026 (BRVM)',
  'https://www.brvm.org/sites/default/files/20260430_-_rapport_dactivites_-_1er_trimestre_2026_-_societe_generale_ci.pdf',
  'review', 'PNB en chiffre d''affaires ; RBE = PNB - frais généraux (65 644 - 26 646) ; données non auditées, millions FCFA.')
+on conflict (ticker, annee, periode) do nothing;
+
+insert into public.financials (ticker, annee, periode, chiffre_affaires, resultat_net, bpa, fonds_propres, total_actif, source, source_url, validation_status, validation_notes) values
+('ORAC', 2020, 'annuel', 871393000000, 122208000000, 811.17, 588975000000, 1617427000000,
+ 'ORANGE CI : Note d''information de l''OPV 2022, comptes consolidés IFRS (colonne 2020)',
+ 'https://groupe.orange.ci/site-institutionnel/resources/other/note-d-informationoOpv-orange-ci-2022.pdf',
+ 'review', 'Millions FCFA ; capitaux propres part du Groupe (hors minoritaires 57 209) ; BPA sur la même base d''actions que 2021 ; exercice antérieur à la cotation (30/12/2022).')
 on conflict (ticker, annee, periode) do nothing;
