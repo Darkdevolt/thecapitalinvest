@@ -263,7 +263,7 @@
     if (window.TCOrdreObligataire) return go();
     host.innerHTML = '<p class="ou-note">Chargement du simulateur…</p>';
     var s = document.createElement('script');
-    s.src = '/app/js/views/obligations-ordre.js?v=20261003.5';
+    s.src = '/app/js/views/obligations-ordre.js?v=20261004';
     s.onload = go;
     s.onerror = function () { host.innerHTML = '<p class="ou-note">Simulateur indisponible : rechargez la page.</p>'; };
     document.head.appendChild(s);

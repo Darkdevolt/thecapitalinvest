@@ -296,19 +296,22 @@
     if (!list) return;
     var events = [];
     (Array.isArray(window.allDividendes) ? window.allDividendes : []).forEach(function (r) {
+      if (/annul|suspend/i.test(String(r.statut || ''))) return;
       var ticker = String(r.ticker || '').toUpperCase();
       var d = r.date_detachement || r.date_detachement_dividende || r.ex_date;
-      if (d) events.push({ date: d, ticker: ticker, label: 'Détachement dividende', amount: r.dpa || r.dividende });
+      if (d) events.push({ date: d, ticker: ticker, label: 'Détachement dividende', amount: r.montant != null ? r.montant : (r.dpa || r.dividende) });
       var p = r.date_paiement;
-      if (p) events.push({ date: p, ticker: ticker, label: 'Paiement dividende', amount: r.dpa || r.dividende });
+      if (p) events.push({ date: p, ticker: ticker, label: 'Paiement dividende', amount: r.montant != null ? r.montant : (r.dpa || r.dividende) });
     });
     (Array.isArray(window.allCoupons) ? window.allCoupons : []).forEach(function (r) {
       var ticker = String(r.code || r.isin || r.ticker || '').toUpperCase();
       var d = r.date_detachement || r.ex_date;
       var amount = r.montant_net != null ? r.montant_net : r.montant_brut;
       if (d) events.push({ date: d, ticker: ticker, label: 'Détachement coupon', amount: amount });
+      else if (r.date_paiement) events.push({ date: r.date_paiement, ticker: ticker, label: 'Paiement coupon (net)', amount: amount });
     });
-    events = events.filter(function (e) { return e.date; }).sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); }).slice(0, 12);
+    var today = new Date().toISOString().slice(0, 10);
+    events = events.filter(function (e) { return e.date && String(e.date).slice(0, 10) >= today; }).sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); }).slice(0, 12);
     list.innerHTML = events.length ? events.map(function (e) {
       return '<div class="pub-ticker-card"><span class="pub-check">•</span><span class="pub-ticker">' + esc(dateLabel(e.date)) + '</span><span class="pub-name"><strong>' + esc(e.ticker || 'Marché') + '</strong> · ' + esc(e.label) + (e.amount != null ? ' · ' + money(e.amount) + ' FCFA' : '') + '</span></div>';
     }).join('') : '<div class="empty-state"><div class="empty-title">Aucun événement à venir</div><div class="empty-text">Les détachements et paiements seront affichés automatiquement.</div></div>';

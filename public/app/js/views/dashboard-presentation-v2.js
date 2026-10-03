@@ -23,7 +23,7 @@
   }
 
   function loadCalendarRuntime() {
-    var src = '/app/js/views/dashboard-calendar-runtime.js?v=20260910';
+    var src = '/app/js/views/dashboard-calendar-runtime.js?v=20261004';
     if (d.querySelector('script[data-tc-dashboard-calendar-runtime]')) return;
     if (d.querySelector('script[src*="dashboard-calendar-runtime.js"]')) return;
     loadScriptOnce(src).then(function () {

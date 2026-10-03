@@ -422,7 +422,49 @@
     };
   }
 
+  /* Cote quotidienne complétée par le BOC de la même séance. La page de la BRVM
+     publie parfois un cours à 0, un cours resté ancien alors que la ligne a été
+     échangée (FCAGS.O2 : 9 286 affiché, 9 053 traité), ou omet des lignes
+     nouvellement admises (TPCI.O100 à O102) : le BOC fait foi dans ces cas. */
+  function mergeBoc(list, bocRows, keyFn) {
+    var key = keyFn || function (s) { return String(s || '').toUpperCase().replace(/^TNC_/, '').trim(); };
+    var boc = {};
+    (bocRows || []).forEach(function (b) { if (b && b.symbole) boc[key(b.symbole)] = b; });
+    var seen = {};
+    var bocDay = (bocRows || []).reduce(function (m, b) { var d = String((b && b.date_seance) || '').slice(0, 10); return d > m ? d : m; }, '');
+    /* Ligne non échue absente du BOC de la séance et sans paiement depuis plus de
+       18 mois : plus cotée (TPBJ.O1, remboursée par anticipation, reste affichée par
+       la BRVM avec un cours de 2021). */
+    var inactive = function (o) {
+      if (!bocDay || boc[key(o.code)] || String(o.date_seance || '').slice(0, 10) !== bocDay) return false;
+      var mat = toDate(o.date_maturite), last = toDate(o.dernier_paiement_date), day = toDate(bocDay);
+      return !!(mat && last && mat > day && (day - last) / DAY > 550);
+    };
+    var out = (list || []).filter(function (o) { return o && o.code && !inactive(o); }).map(function (o) {
+      seen[key(o.code)] = 1;
+      var b = boc[key(o.code)];
+      if (!b) return o;
+      var same = String(b.date_seance || '').slice(0, 10) === String(o.date_seance || '').slice(0, 10);
+      var traded = num(b.cours_jour) > 0 ? num(b.cours_jour) : null;
+      var ref = traded || (num(b.cours_reference) > 0 ? num(b.cours_reference) : null);
+      var c = Object.assign({}, o);
+      if (!(num(o.cours) > 0) && ref) c.cours = ref;
+      else if (same && traded) c.cours = traded;
+      if (c.taux_facial == null && num(b.taux) != null) c.taux_facial = num(b.taux);
+      if (!c.nom && b.titre) c.nom = b.titre;
+      return c;
+    });
+    (bocRows || []).forEach(function (b) {
+      if (!b || !b.symbole || seen[key(b.symbole)]) return;
+      seen[key(b.symbole)] = 1;
+      out.push({ code: b.symbole, nom: b.titre, taux_facial: num(b.taux), cours: num(b.cours_jour) || num(b.cours_reference),
+        coupon_couru: b.coupon_couru, date_seance: b.date_seance, fromBoc: true });
+    });
+    return out;
+  }
+
   return {
+    mergeBoc: mergeBoc,
     parseFreq: parseFreq, parseMode: parseMode, parseYears: parseYears,
     schedule: schedule, scheduleBoc: scheduleBoc, analyze: analyze, priceForYield: priceForYield, irr: irr,
     nelsonSiegel: nelsonSiegel, splineCurve: splineCurve,

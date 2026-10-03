@@ -94,7 +94,7 @@
       '/app/js/market-ux.js?v=20260827.2',
       '/app/js/views/technique/data-bridge.js?v=20260826',
       '/app/js/views/user-data-patch.js?v=8',
-      '/app/js/views/dashboard-presentation-v2.js?v=20261004'
+      '/app/js/views/dashboard-presentation-v2.js?v=20261004b'
     ];
     for(const src of modules){ await loadScript(src); }
   }
