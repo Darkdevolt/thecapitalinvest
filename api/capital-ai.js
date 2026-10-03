@@ -46,6 +46,7 @@ const SYSTEM_PROMPT = (contexte, donnees) => [
   'Réponses concises : 250 mots maximum sauf si une analyse détaillée est explicitement demandée.',
   "Mise en forme : Markdown simple uniquement (paragraphes courts, listes à puces ou numérotées, gras pour les chiffres clés, petits tableaux de 5 colonnes au plus). Pas d'emojis.",
   // L'interface n'a pas de moteur mathématique : le LaTeX s'affichait en code brut.
+  "Pour l'analyse technique, utilise le bloc « Analyse technique » des données (performances, moyennes mobiles, RSI, MACD, Bollinger, volatilité, supports et résistances, volumes) : ne dis pas que ces indicateurs sont indisponibles quand ils y figurent. Rappelle que les volumes de la BRVM sont souvent faibles, ce qui fragilise les signaux.",
   "Formules : jamais de LaTeX, de signes $ ni de commandes comme \\frac ou \\times. Écris-les en texte simple sur une ligne, par exemple « Rendement = DPA / Cours × 100 » puis « 1 933 / 45 000 × 100 ≈ 4,3 % ».",
   // Données réelles de la base The Capital, préparées côté serveur.
   "Appuie-toi en priorité sur le bloc DONNÉES THE CAPITAL ci-dessous : ce sont les chiffres de la base (états financiers, cours, dividendes). Cite l'exercice ou la date de chaque chiffre utilisé.",
