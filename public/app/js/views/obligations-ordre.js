@@ -4,21 +4,19 @@
 // Reproduit la fiche « SIMULATION » d'une SGI : intérêts courus ACT/ACT,
 // montant de l'opération, commission SGI, apporteur d'affaires, TAF,
 // commissions BRVM/DC-BR, prix TTC et rendement actuariel frais inclus.
-// Les taux par défaut sont réglés dans l'admin (parametres_publics,
-// clé simulateur_obligataire) ; chaque professionnel peut les remplacer par
-// les siens et masquer des lignes (réglages conservés sur son appareil).
-// Le même fichier sert à l'admin : modèle Excel et lecture d'un fichier
-// rempli (window.TCOrdreObligataire.parseRows).
+// Taux par défaut fournis par le serveur ; chaque professionnel peut les
+// remplacer par les siens et masquer des lignes (réglages conservés sur son
+// appareil).
 // ============================================================================
 (function (w) {
   'use strict';
   if (w.TCOrdreObligataire) return;
 
   var DEFAULTS = {
-    commission_sgi_pct: 0.4, commission_sgi_libelle: 'Commission SGI',
+    commission_sgi_pct: 0.9, commission_sgi_libelle: 'Commission SGI',
     taf_pct: 17, taf_sur_apporteur: false,
-    apporteur_par_titre: 100, apporteur_actif: true,
-    brvm_dcbr_pct: 0.11742, brvm_dcbr_base: 'nominal', brvm_dcbr_actif: true,
+    apporteur_par_titre: 200, apporteur_actif: true,
+    brvm_dcbr_pct: 0.11692125, brvm_dcbr_base: 'nominal', brvm_dcbr_actif: true,
     delai_reglement_jours: 2, masquer: []
   };
   var STORE = 'tc_ordre_oblig_v1';
@@ -56,7 +54,7 @@
     { k: 'montant', l: 'Montant', f: 'int', sec: 'total' }
   ];
 
-  /* Lignes « paramètres » du fichier Excel (lues par l'admin). */
+  /* Lignes « paramètres » du modèle Excel complet. */
   var PARAM_ROWS = [
     ['commission_sgi_pct', 'Commission SGI (%)', 'num'],
     ['commission_sgi_libelle', 'Libellé de la commission SGI', 'text'],
@@ -71,14 +69,14 @@
     ['masquer', 'Lignes masquées (codes séparés par des virgules)', 'list']
   ];
 
-  /* Fiche d'exemple (modèle fourni) pour le fichier vierge de l'admin. */
+  /* Fiche de référence (modèle SGI). */
   var SAMPLE = {
     designation: 'ETAT DU SENEGAL 6,60% 2025-2030', code: 'EOS.O19', quantite: 200000, vn: 10000,
-    coupon: 6.6, prix: 9600, prix_pct: 96, date_transaction: '2026-08-28', date_valeur: '2026-09-01',
-    echeance: '2030-04-16', maturite: 3.62, interets_courus: 49770492, taux_couru: 2.49, prix_cc: 98.49,
-    montant_operation: 1969770492, commission_sgi: 7879082, apporteur: 20000000, taf: 1339444,
-    brvm_dcbr: 2348400, total_commissions: 31566926, taux_commissions: 1.58, prix_ttc: 100.07,
-    montant: 2001337418
+    coupon: 6.6, prix: 9600, prix_pct: 96, date_transaction: '2026-07-29', date_valeur: '2026-07-31',
+    echeance: '2030-04-16', maturite: 3.71, interets_courus: 38229508, taux_couru: 1.91, prix_cc: 97.91,
+    montant_operation: 1958229508, commission_sgi: 17624066, apporteur: 40000000, taf: 2996091,
+    brvm_dcbr: 2338425, total_commissions: 62958582, taux_commissions: 3.15, prix_ttc: 101.06,
+    montant: 2021188090
   };
 
   // ── utilitaires ───────────────────────────────────────────────────────
@@ -156,12 +154,16 @@
     if (an.matured) return { error: 'Cette obligation est échue à la date de valeur.' };
     var sc = an.schedule, crd = an.crd, accrued = an.accrued || 0;
     var settle = dOf(vdate);
+    /* Comme sur les fiches des SGI : chaque montant est arrondi au franc avant
+       d'être additionné (la TAF porte sur la commission arrondie). */
+    var R = Math.round;
     var nominalTotal = qty * crd;
-    var montantOp = qty * (clean + accrued);
-    var sgi = (num(p.commission_sgi_pct) || 0) / 100 * montantOp;
-    var apporteur = p.apporteur_actif ? qty * (num(p.apporteur_par_titre) || 0) : 0;
-    var taf = (num(p.taf_pct) || 0) / 100 * (sgi + (p.taf_sur_apporteur ? apporteur : 0));
-    var dcbr = p.brvm_dcbr_actif ? (num(p.brvm_dcbr_pct) || 0) / 100 * (p.brvm_dcbr_base === 'montant' ? montantOp : nominalTotal) : 0;
+    var interets = R(qty * accrued);
+    var montantOp = R(qty * clean) + interets;
+    var sgi = R((num(p.commission_sgi_pct) || 0) / 100 * montantOp);
+    var apporteur = p.apporteur_actif ? R(qty * (num(p.apporteur_par_titre) || 0)) : 0;
+    var taf = R((num(p.taf_pct) || 0) / 100 * (sgi + (p.taf_sur_apporteur ? apporteur : 0)));
+    var dcbr = p.brvm_dcbr_actif ? R((num(p.brvm_dcbr_pct) || 0) / 100 * (p.brvm_dcbr_base === 'montant' ? montantOp : nominalTotal)) : 0;
     var total = sgi + apporteur + taf + dcbr;
     var flows = sc.rows.filter(function (r) { return r.date > settle; })
       .map(function (r) { return { t: (r.date - settle) / (365 * DAY), cf: r.flux }; });
@@ -172,7 +174,7 @@
       coupon: sc.rate, prix: clean, prix_pct: clean / crd * 100,
       date_transaction: tdate, date_valeur: vdate, echeance: isoOf(sc.maturity),
       maturite: (sc.maturity - settle) / (365 * DAY),
-      interets_courus: qty * accrued, taux_couru: accrued / crd * 100,
+      interets_courus: interets, taux_couru: accrued / crd * 100,
       prix_cc: (clean + accrued) / crd * 100, montant_operation: montantOp,
       commission_sgi: sgi, apporteur: apporteur, taf: taf, brvm_dcbr: dcbr, total_commissions: total,
       taux_commissions: total / nominalTotal * 100,
@@ -204,8 +206,8 @@
 
   // ── fichier Excel (modèle) ───────────────────────────────────────────
   /* Tableau libellé / valeur au format du modèle, suivi des paramètres. */
-  function sheetRows(values, p) {
-    var rows = [['SIMULATION', '']];
+  function sheetRows(values, p, withParams) {
+    var rows = [['THE CAPITAL — SIMULATION D\'ORDRE OBLIGATAIRE', '']];
     var lines = values === SAMPLE ? LINES.filter(function (l) { return SAMPLE[l.k] != null; }) : visibleLines(values, p);
     var prev = null;
     lines.forEach(function (l) {
@@ -218,6 +220,7 @@
       else if (l.f === 'date' && v) v = dLabel(v);
       rows.push([labelOf(l, p), v == null ? '' : v]);
     });
+    if (!withParams) return rows;
     rows.push(['', '']);
     rows.push(['PARAMÈTRES', '']);
     PARAM_ROWS.forEach(function (r) {
@@ -238,8 +241,11 @@
       document.head.appendChild(s);
     });
   }
-  function writeWorkbook(X, values, p, filename) {
-    var rows = sheetRows(values, p);
+  /* full : modèle complet (section PARAMÈTRES + mode d'emploi) ; sinon la
+     seule fiche de simulation. */
+  function writeWorkbook(X, values, p, filename, full) {
+    var rows = sheetRows(values, p, !!full);
+    if (!full) rows.push(['', ''], ['Simulation indicative établie avec The Capital le ' + dLabel(todayIso()) + '. Intérêts courus ACT/ACT, rendement actuariel frais inclus sur l\'échéancier réel. Ne constitue ni une offre ni un conseil en investissement.', '']);
     var ws = X.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{ wch: 52 }, { wch: 34 }];
     rows.forEach(function (r, i) {
@@ -250,17 +256,11 @@
     });
     var wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, ws, 'Simulation');
-    X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet([
-      ['Mode d\'emploi'],
-      ['Ce fichier suit la fiche « SIMULATION » : une ligne par libellé, valeur en colonne B.'],
-      ['Admin The Capital → Simulateur obligataire → Importer : les taux de la section PARAMÈTRES deviennent les valeurs par défaut des abonnés Professional.'],
-      ['À défaut de section PARAMÈTRES, les taux sont déduits des libellés (« Commission SGI (0,4%) », « TAF (17%) », « Apporteur d\'affaires (100 FCFA par titre) ») et de la ligne Commissions BRVM/DCBR rapportée au nominal.'],
-      ['Codes de lignes masquables : ' + LINES.filter(function (l) { return l.k !== 'montant'; }).map(function (l) { return l.k; }).join(', ')]
-    ]), 'Mode_emploi');
+    if (full && full.notes) X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(full.notes.map(function (t) { return [t]; })), 'Mode_emploi');
     X.writeFile(wb, filename);
   }
 
-  // ── lecture d'un fichier rempli (admin) ──────────────────────────────
+  // ── lecture d'un fichier rempli ──────────────────────────────────────
   function norm(s) { return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’']/g, "'").replace(/\s+/g, ' ').trim(); }
   function cellPct(raw, text) {
     if (typeof raw === 'number') return /%/.test(String(text || '')) ? raw * 100 : raw;
@@ -429,7 +429,15 @@
       });
       function params() { return mergeParams(srv.parametres, user.params); }
 
+      /* Un champ qui perd le focus pendant le redessin déclenche un « change » :
+         ce second rendu est différé au lieu d'être imbriqué. */
+      var painting = false;
       function paint() {
+        if (painting) { setTimeout(paint, 0); return; }
+        painting = true;
+        try { paintNow(); } finally { painting = false; }
+      }
+      function paintNow() {
         var p = params();
         var res = compute({ o: ctx.o, f: ctx.f, b: ctx.b, quantite: st.quantite, prix: st.prix, dateTransaction: st.dateTransaction, dateValeur: st.valeurManuelle ? st.dateValeur : '', echeance: st.echeance, joursFeries: srv.jours_feries }, p);
         if (!st.valeurManuelle && res.values) st.dateValeur = res.values.date_valeur;
@@ -444,7 +452,8 @@
           + inp('ooPct', 'Prix (% du nominal)', 'number', Math.round(st.prix / crd * 10000) / 100)
           + inp('ooT', 'Date de transaction', 'date', st.dateTransaction)
           + inp('ooV', 'Date de valeur · T+' + esc(p.delai_reglement_jours), 'date', st.dateValeur || '')
-          + inp('ooE', 'Échéance' + (st.echeance ? ' (saisie)' : ''), 'date', st.echeance || (v ? v.echeance : ''), '', 'full')
+          + inp('ooE', 'Échéance' + (st.echeance ? ' (saisie)' : ''), 'date', st.echeance || (v ? v.echeance : ''))
+          + inp('ooY', 'Rendement visé (%) → prix', 'number', st.rendementVise != null ? st.rendementVise : '', ' placeholder="ex. 7,5"')
           + '</div>';
         if (v) {
           var tile = function (k, val, cls) { return '<div class="oo-kpi ' + (cls || '') + '"><div class="k">' + esc(k) + '</div><div class="v">' + esc(val) + '</div></div>'; };
@@ -513,10 +522,19 @@
         var g = function (id) { return host.querySelector('#' + id); };
         var refocus = function (id) { var el = g(id); if (el) { el.focus(); try { var l = el.value.length; el.setSelectionRange && el.type === 'text' && el.setSelectionRange(l, l); } catch (e) {} } };
         g('ooQty').addEventListener('change', function () { st.quantite = Math.max(1, Math.round(num(this.value) || 1)); user.last_quantite = st.quantite; saveUser(); paint(); });
-        g('ooPx').addEventListener('change', function () { var v = num(this.value); if (v > 0) st.prix = v; paint(); });
+        g('ooPx').addEventListener('change', function () { var v = num(this.value); if (v > 0) { st.prix = v; st.rendementVise = null; } paint(); });
         g('ooPct').addEventListener('change', function () { var v = num(this.value), crd = res.analysis ? res.analysis.crd : 10000; if (v > 0) st.prix = Math.round(v / 100 * crd * 100) / 100; paint(); });
         g('ooT').addEventListener('change', function () { if (this.value) { st.dateTransaction = this.value; st.valeurManuelle = false; } paint(); });
         g('ooV').addEventListener('change', function () { st.dateValeur = this.value; st.valeurManuelle = !!this.value; paint(); });
+        /* Rendement actuariel visé (hors frais) → prix pied de coupon à payer. */
+        g('ooY').addEventListener('change', function () {
+          var y = num(this.value); st.rendementVise = y;
+          if (y != null && res.analysis && w.OBMath) {
+            var px = w.OBMath.priceForYield(res.analysis, y);
+            if (px > 0) st.prix = Math.round(px);
+          }
+          paint();
+        });
         g('ooE').addEventListener('change', function () { st.echeance = this.value || ''; paint(); });
         g('ooSet').addEventListener('click', function () { st.settingsOpen = !st.settingsOpen; paint(); });
         g('ooXlsx').addEventListener('click', function () {
@@ -550,24 +568,49 @@
     });
   }
 
+  /* Fiche imprimable aux couleurs de The Capital (une page A4). */
   function printSheet(v, p) {
     var lines = visibleLines(v, p), prev = null, body = '';
+    var SEC = { titre: 'Titre et opération', frais: 'Frais et commissions', synthese: 'Synthèse' };
     lines.forEach(function (l) {
       if (l.sec === 'total') return;
-      if (prev && prev !== l.sec) body += '<tr class="gap"><td colspan="2"></td></tr>';
+      if (prev !== l.sec) body += '<tr class="sec"><td colspan="2">' + esc(SEC[l.sec] || '') + '</td></tr>';
       prev = l.sec;
       body += '<tr' + (l.strong ? ' class="strong"' : '') + '><td>' + esc(labelOf(l, p)) + '</td><td class="v">' + esc(fmt(l, v[l.k])) + '</td></tr>';
     });
-    var html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Simulation ' + esc(v.code) + '</title><style>'
-      + 'body{font-family:Arial,Helvetica,sans-serif;color:#111;margin:32px}table{width:100%;max-width:720px;border-collapse:collapse}'
-      + '.hd td{background:#E3CC1E;text-align:center;font-weight:600;border-top:1px solid #000;border-bottom:1px solid #000}'
-      + 'td{padding:5px 8px;font-size:14px}td.v{text-align:right;white-space:nowrap}tr.gap td{height:14px;border-bottom:1px solid #000}'
-      + 'tr.strong td{border-top:1px solid #000;border-bottom:1px solid #000}tr.total td{background:#000;color:#fff;font-weight:700}'
-      + 'p{font-size:11px;color:#555;max-width:720px}@media print{body{margin:12mm}}</style></head><body>'
-      + '<table><tbody><tr class="hd"><td colspan="2">SIMULATION</td></tr>' + body
-      + '<tr class="gap"><td colspan="2"></td></tr><tr class="total"><td>Montant</td><td class="v">' + esc(nf(Math.round(v.montant))) + '</td></tr></tbody></table>'
-      + '<p>Simulation indicative établie avec The Capital le ' + esc(dLabel(todayIso())) + '. Intérêts courus ACT/ACT, rendement actuariel frais inclus sur l\'échéancier réel. Ne constitue ni une offre ni un conseil en investissement.</p>'
-      + '<script>window.onload=function(){window.print();}<\/script></body></html>';
+    var kpi = function (k, val) { return '<div class="kpi"><span>' + esc(k) + '</span><b>' + esc(val) + '</b></div>'; };
+    var html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>The Capital — Simulation ' + esc(v.code) + '</title>'
+      + '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">'
+      + '<style>'
+      + '@page{size:A4;margin:12mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      + 'body{margin:0;font-family:"DM Sans",Arial,sans-serif;color:#1d1a14;font-size:11.5px;background:#fff}'
+      + '.sheet{max-width:186mm;margin:0 auto}'
+      + '.band{display:flex;justify-content:space-between;align-items:center;background:#14110c;color:#f5f0e8;border-radius:10px;padding:14px 18px}'
+      + '.brand{font:700 15px/1 "Playfair Display",Georgia,serif;letter-spacing:.14em}.brand i{color:#B8964E;font-style:normal}'
+      + '.brand small{display:block;margin-top:5px;font:500 8.5px/1 "DM Sans",sans-serif;letter-spacing:.2em;color:#B8964E}'
+      + '.band .t{text-align:right}.band .t b{display:block;font:700 13px/1.2 "DM Sans",sans-serif}.band .t span{font-size:10px;color:#cfc6b6}'
+      + '.id{display:flex;justify-content:space-between;align-items:flex-end;margin:14px 2px 10px}.id h1{margin:0;font:700 17px/1.2 "Playfair Display",Georgia,serif}'
+      + '.id .code{display:inline-block;margin-top:4px;font-size:10.5px;color:#7a705f;letter-spacing:.06em}.id .d{font-size:10px;color:#7a705f;text-align:right}'
+      + '.kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-bottom:12px}'
+      + '.kpi{border:1px solid #e6dcc8;border-radius:9px;padding:9px 12px;background:#faf7f0}.kpi span{display:block;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#8a7d64}'
+      + '.kpi b{display:block;margin-top:4px;font-size:15px;color:#1d1a14}.kpi:first-child{background:#14110c;border-color:#14110c}.kpi:first-child span{color:#B8964E}.kpi:first-child b{color:#E6C979;font-size:17px}'
+      + 'table{width:100%;border-collapse:collapse}td{padding:4.5px 10px;border-bottom:1px solid #eee6d6}td.v{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500}'
+      + 'tr.sec td{padding:11px 10px 4px;border-bottom:1.5px solid #B8964E;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#9a7b3c;font-weight:700}'
+      + 'tr.strong td{font-weight:700;background:#faf7f0}'
+      + 'tr.total td{padding:10px;border:0;border-top:2px solid #B8964E;font-size:14px;font-weight:700}tr.total td.v{color:#9a7b3c}'
+      + '.foot{margin-top:14px;padding-top:8px;border-top:1px solid #eee6d6;font-size:8.5px;line-height:1.5;color:#8a7d64;display:flex;justify-content:space-between;gap:16px}'
+      + '.foot b{color:#1d1a14}table,tr{page-break-inside:avoid}'
+      + '</style></head><body><div class="sheet">'
+      + '<div class="band"><div class="brand">THE <i>·</i> CAPITAL<small>INTELLIGENCE FINANCIÈRE AFRICAINE</small></div>'
+      + '<div class="t"><b>Simulation d\'ordre obligataire</b><span>Achat · marché secondaire BRVM</span></div></div>'
+      + '<div class="id"><div><h1>' + esc(v.designation) + '</h1><span class="code">' + esc(v.code) + ' · ' + esc(nf(v.quantite)) + ' titres</span></div>'
+      + '<div class="d">Établie le ' + esc(dLabel(todayIso())) + '<br>Valeur estimée ' + esc(dLabel(v.date_valeur)) + '</div></div>'
+      + '<div class="kpis">' + kpi('Montant à régler', nf(Math.round(v.montant)) + ' FCFA') + kpi('Prix TTC', nf(v.prix_ttc, 2) + ' %')
+      + kpi('Rendement frais inclus', v.ytm != null ? nf(v.ytm, 2) + ' %' : '—') + '</div>'
+      + '<table><tbody>' + body + '<tr class="total"><td>Montant total à régler</td><td class="v">' + esc(nf(Math.round(v.montant))) + ' FCFA</td></tr></tbody></table>'
+      + '<div class="foot"><span>Simulation indicative établie avec <b>The Capital</b>. Intérêts courus ACT/ACT, rendement actuariel frais inclus calculé sur l\'échéancier réel. '
+      + 'Les frais effectifs sont ceux de votre SGI. Ne constitue ni une offre ni un conseil en investissement.</span><span style="white-space:nowrap">thecapitalinvest.app</span></div>'
+      + '</div><script>window.onload=function(){setTimeout(function(){window.print();},350);}<\/script></body></html>';
     var win = w.open('', '_blank');
     if (!win) { alert('Autorisez les fenêtres pour imprimer la simulation.'); return; }
     win.document.open(); win.document.write(html); win.document.close();

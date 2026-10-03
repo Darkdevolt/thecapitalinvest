@@ -103,18 +103,86 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
       <a class="tc-institute" href="/app/app.html?ai=1" onclick="if(window.tcOrb){event.preventDefault();window.tcOrb.open('ai')}" aria-label="The Capital AI" title="Poser une question à l’assistant d’analyse"><span aria-hidden="true" style="color:var(--tc-gold-2);font-size:13px">✦</span><span class="tc-institute-label">Capital AI</span></a>
       <a class="tc-institute" href="/the-capital-institute/index.html" aria-label="The Capital Institute"><img src="/assets/the-capital-logo.png" alt=""><span class="tc-institute-label">Institute</span></a>
       <!-- Guide de navigation : remplacé par la boule d'or flottante (nav-orb.js), accessible depuis toutes les pages. -->
-      <!-- Aucun lien vers /admin.html : l'accès admin se fait par saisie directe de l'URL, réservé aux administrateurs. -->
       <a class="tc-user" id="topnavUser" href="/app/account.html" aria-label="Mon compte et préférences"><div class="tc-avatar" id="headerAvatar">TC</div><span class="tc-user-name" id="headerName">—</span></a>
       <button class="tc-logout" type="button" data-action="logout" aria-label="Se déconnecter">↪</button>
     </div>
   </header>
-  <nav class="tc-navstrip" aria-label="Navigation">
-    <button class="tc-navitem active" data-route="overview">Vue d’ensemble</button><span class="tc-navsep"></span>
-    <button class="tc-navitem" data-route="titres">Titres BRVM</button><button class="tc-navitem" data-route="marche">Marché</button><button class="tc-navitem" data-route="boc">BOC</button><span class="tc-navsep"></span>
-    <button class="tc-navitem" data-route="analyses">Recommandations</button><button class="tc-navitem" data-route="analyse-technique">Technique</button><button class="tc-navitem" data-route="analyse-fondamentale">Fondamentale</button><button class="tc-navitem" data-route="screener">Screener</button><button class="tc-navitem" data-route="dividend-screener">Screener Dividendes</button><button class="tc-navitem" data-route="comparison">Comparateur</button><button class="tc-navitem" data-route="backtest">Backtest</button><button class="tc-navitem" data-route="outils">Outils</button><button class="tc-navitem" data-route="opportunites">Opportunités</button><button class="tc-navitem" data-route="palmares">Palmarès</button><button class="tc-navitem" data-route="obligations">Obligations</button><button class="tc-navitem" data-route="matieres-premieres">Matières premières</button><button class="tc-navitem" data-route="documents">Documents</button><button class="tc-navitem" data-route="evenements-valeurs">Évènements</button><span class="tc-navsep"></span>
-    <button class="tc-navitem" data-route="portefeuille">Portefeuille</button><button class="tc-navitem" data-route="alertes">Alertes</button><span class="tc-navsep"></span>
-    <button class="tc-navitem" data-route="financials">États financiers</button><button class="tc-navitem" data-route="publications">Calendrier</button>
+  <nav class="tc-navstrip tc-navgrouped" aria-label="Navigation">
+    <button class="tc-navitem tc-navdirect active" data-route="overview"><b>Vue d’ensemble</b></button>
+    <div class="tc-navgroup" data-group="marches"><button class="tc-navgroup-btn" type="button" aria-haspopup="true" aria-expanded="false">Marchés<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="tc-navmenu" role="menu"><button class="tc-navitem" data-route="titres"><b>Titres BRVM</b><small>Toutes les valeurs cotées et leurs fiches</small></button><button class="tc-navitem" data-route="marche"><b>Marché</b><small>Séance du jour, indices et volumes</small></button><button class="tc-navitem" data-route="palmares"><b>Palmarès</b><small>Hausses, baisses et échanges par période</small></button><button class="tc-navitem" data-route="obligations"><b>Obligations</b><small>Rendements, courbe des taux, échéanciers</small></button><button class="tc-navitem" data-route="boc"><b>BOC</b><small>Bulletin officiel de la cote</small></button><button class="tc-navitem" data-route="matieres-premieres"><b>Matières premières</b><small>Cacao, café, pétrole, or…</small></button></div></div>
+    <div class="tc-navgroup" data-group="analyse"><button class="tc-navgroup-btn" type="button" aria-haspopup="true" aria-expanded="false">Analyse<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="tc-navmenu" role="menu"><button class="tc-navitem" data-route="analyses"><b>Recommandations</b><small>Notes d’analyse et objectifs de cours</small></button><button class="tc-navitem" data-route="analyse-technique"><b>Technique</b><small>Graphiques et indicateurs</small></button><button class="tc-navitem" data-route="analyse-fondamentale"><b>Fondamentale</b><small>Valorisation, ratios, DCF</small></button><button class="tc-navitem" data-route="comparison"><b>Comparateur</b><small>Comparer plusieurs sociétés</small></button></div></div>
+    <div class="tc-navgroup" data-group="screeners"><button class="tc-navgroup-btn" type="button" aria-haspopup="true" aria-expanded="false">Screeners<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="tc-navmenu" role="menu"><button class="tc-navitem" data-route="screener"><b>Screener</b><small>Filtrer les valeurs par critères</small></button><button class="tc-navitem" data-route="dividend-screener"><b>Screener dividendes</b><small>Rendement et régularité des dividendes</small></button><button class="tc-navitem" data-route="opportunites"><b>Opportunités</b><small>Signaux et idées du moment</small></button><button class="tc-navitem" data-route="backtest"><b>Backtest</b><small>Tester une stratégie sur l’historique</small></button></div></div>
+    <div class="tc-navgroup" data-group="donnees"><button class="tc-navgroup-btn" type="button" aria-haspopup="true" aria-expanded="false">Données<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3 4.5l3 3 3-3" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="tc-navmenu" role="menu"><button class="tc-navitem" data-route="financials"><b>États financiers</b><small>Comptes annuels et intermédiaires</small></button><button class="tc-navitem" data-route="publications"><b>Calendrier</b><small>Publications et assemblées à venir</small></button><button class="tc-navitem" data-route="documents"><b>Documents</b><small>Rapports officiels des émetteurs</small></button><button class="tc-navitem" data-route="evenements-valeurs"><b>Évènements</b><small>Dividendes, coupons, opérations sur titres</small></button></div></div>
+    <button class="tc-navitem tc-navdirect" data-route="outils"><b>Outils</b></button>
+    <span class="tc-navspacer"></span>
+    <button class="tc-navitem tc-navdirect" data-route="portefeuille"><b>Portefeuille</b></button><button class="tc-navitem tc-navdirect" data-route="alertes"><b>Alertes</b></button>
   </nav>
+<style id="tc-navgrouped-css">
+/* Navigation regroupée : 5 entrées directes + 4 menus thématiques, lisible sans défilement. */
+.tc-navstrip.tc-navgrouped{height:50px!important;padding:0 20px!important;gap:2px!important;background:#14110c!important;border-bottom:1px solid rgba(184,150,78,.18)!important;overflow:visible!important;-webkit-mask-image:none!important;mask-image:none!important;position:relative;z-index:40}
+.tc-navgrouped .tc-navitem.tc-navdirect,.tc-navgrouped .tc-navgroup-btn{height:36px!important;padding:0 14px!important;border:0!important;border-radius:9px!important;background:transparent!important;color:#cfc8bc!important;font:600 12.5px/1 'DM Sans',sans-serif!important;letter-spacing:.01em!important;text-transform:none!important;cursor:pointer;display:inline-flex;align-items:center;gap:6px;white-space:nowrap;position:relative;box-shadow:none!important;transform:none!important}
+.tc-navgrouped .tc-navitem.tc-navdirect b,.tc-navgrouped .tc-navitem.tc-navdirect small{font:inherit}
+.tc-navgrouped .tc-navitem.tc-navdirect small{display:none}
+.tc-navgrouped .tc-navitem::before,.tc-navgrouped .tc-navgroup-btn::before{display:none!important}
+.tc-navgrouped .tc-navitem.tc-navdirect::after,.tc-navgrouped .tc-navgroup-btn::after{content:""!important;position:absolute!important;left:14px!important;right:14px!important;bottom:-7px!important;top:auto!important;height:2px!important;border-radius:2px;background:var(--tc-gold,#B8964E)!important;transform:scaleX(0)!important;transition:transform .18s ease;opacity:1!important}
+.tc-navgrouped .tc-navitem.tc-navdirect:hover,.tc-navgrouped .tc-navgroup-btn:hover,.tc-navgroup.open>.tc-navgroup-btn{background:rgba(245,240,232,.06)!important;color:#fff!important}
+.tc-navgrouped .tc-navitem.tc-navdirect.active,.tc-navgroup.has-active>.tc-navgroup-btn{color:#E6C979!important;background:rgba(184,150,78,.12)!important}
+.tc-navgrouped .tc-navitem.tc-navdirect.active::after,.tc-navgroup.has-active>.tc-navgroup-btn::after{transform:scaleX(1)!important}
+.tc-navgroup-btn svg{width:12px;height:12px;opacity:.7;transition:transform .18s ease}
+.tc-navgroup.open>.tc-navgroup-btn svg{transform:rotate(180deg)}
+.tc-navgroup{position:relative}
+.tc-navmenu{position:fixed;min-width:290px;padding:8px;background:#1a1610;border:1px solid rgba(184,150,78,.28);border-radius:14px;box-shadow:0 18px 40px rgba(0,0,0,.55);display:none;z-index:1000}
+.tc-navgroup.open>.tc-navmenu{display:grid;gap:2px}
+.tc-navmenu .tc-navitem{all:unset;box-sizing:border-box;display:block!important;width:100%;padding:10px 12px!important;border-radius:9px!important;cursor:pointer;height:auto!important;border:0!important;background:transparent!important;box-shadow:none!important;transform:none!important;text-align:left}
+.tc-navmenu .tc-navitem::before,.tc-navmenu .tc-navitem::after{display:none!important}
+.tc-navmenu .tc-navitem b{display:block;font:600 13px/1.25 'DM Sans',sans-serif;color:#efe9de}
+.tc-navmenu .tc-navitem small{display:block;margin-top:3px;font:400 11.5px/1.35 'DM Sans',sans-serif;color:#978f83}
+.tc-navmenu .tc-navitem:hover,.tc-navmenu .tc-navitem:focus-visible{background:rgba(184,150,78,.1)!important}
+.tc-navmenu .tc-navitem.active{background:rgba(184,150,78,.16)!important;box-shadow:inset 3px 0 0 #B8964E!important}
+.tc-navmenu .tc-navitem.active b{color:#E6C979}
+.tc-navmenu .tc-navitem{position:relative}.tc-navmenu .tc-lock-badge{position:absolute;right:12px;top:11px;font-size:11px;opacity:.85}.tc-navgrouped .tc-navdirect .tc-lock-badge{font-size:10px;margin-left:2px}
+.tc-navspacer{flex:1 1 auto}
+@media (max-width:980px){.tc-navstrip.tc-navgrouped{overflow-x:auto!important;padding:0 10px!important;scrollbar-width:none}.tc-navstrip.tc-navgrouped::-webkit-scrollbar{display:none}.tc-navspacer{flex:0 0 8px}.tc-navgrouped .tc-navitem.tc-navdirect,.tc-navgrouped .tc-navgroup-btn{padding:0 11px!important;font-size:12px!important}}
+</style>
+<script>
+/* Menus de navigation : ouverture au clic (et au survol à la souris), position calée
+   sous le bouton (position fixe, jamais rognée par le défilement horizontal),
+   groupe marqué actif quand la page courante en fait partie. */
+(function(){
+  'use strict';
+  function groups(){return Array.prototype.slice.call(document.querySelectorAll('.tc-navgroup'));}
+  function place(g){var b=g.querySelector('.tc-navgroup-btn'),m=g.querySelector('.tc-navmenu');if(!b||!m)return;var r=b.getBoundingClientRect();m.style.top=Math.round(r.bottom+8)+'px';var w=Math.max(290,m.offsetWidth||290);var left=Math.min(Math.max(8,r.left),window.innerWidth-w-8);m.style.left=Math.round(left)+'px';}
+  function close(except){groups().forEach(function(g){if(g!==except){g.classList.remove('open');var b=g.querySelector('.tc-navgroup-btn');if(b)b.setAttribute('aria-expanded','false');}});}
+  function open(g){close(g);if(!g.classList.contains('open'))g.__openedAt=Date.now();g.classList.add('open');g.querySelector('.tc-navgroup-btn').setAttribute('aria-expanded','true');place(g);}
+  var lastRoute=null;
+  function syncGroups(){
+    groups().forEach(function(g){g.classList.toggle('has-active',!!g.querySelector('.tc-navitem.active'));});
+    var a=document.querySelector('.tc-navgrouped .tc-navitem.active'),r=a?a.dataset.route:null;
+    if(r!==lastRoute){var first=lastRoute===null;lastRoute=r;if(!first){var q=Date.now()+800;groups().forEach(function(g){g.__quietUntil=q;});close();}}
+  }
+  function init(){
+    groups().forEach(function(g){
+      var b=g.querySelector('.tc-navgroup-btn');var t;
+      /* Un menu ouvert par le survol à l'instant ne se referme pas sur le clic qui suit. */
+      b.addEventListener('click',function(e){e.stopPropagation();if(g.classList.contains('open')&&Date.now()-(g.__openedAt||0)>450)close();else open(g);});
+      g.addEventListener('mouseenter',function(){if(window.matchMedia('(hover:hover)').matches&&Date.now()>(g.__quietUntil||0)){clearTimeout(t);open(g);}});
+      g.addEventListener('mousemove',function(){if(!g.classList.contains('open')&&window.matchMedia('(hover:hover)').matches&&Date.now()>(g.__quietUntil||0)&&g.querySelector('.tc-navgroup-btn').matches(':hover')){open(g);}});
+      g.addEventListener('mouseleave',function(){if(window.matchMedia('(hover:hover)').matches){t=setTimeout(function(){g.classList.remove('open');b.setAttribute('aria-expanded','false');},180);}});
+      g.querySelector('.tc-navmenu').addEventListener('click',function(e){if(e.target.closest('.tc-navitem')){g.__quietUntil=Date.now()+800;close();setTimeout(function(){close();syncGroups();},0);}},true);
+    });
+    document.addEventListener('click',function(e){if(!e.target.closest('.tc-navgroup'))close();});
+    document.addEventListener('keydown',function(e){if(e.key==='Escape')close();});
+    window.addEventListener('resize',function(){close();});
+    var strip=document.querySelector('.tc-navgrouped');if(strip)strip.addEventListener('scroll',function(){close();},{passive:true});
+    /* Le routeur intercepte le clic : la fermeture suit le changement de page. */
+    window.addEventListener('hashchange',function(){var q=Date.now()+800;groups().forEach(function(g){g.__quietUntil=q;});close();setTimeout(syncGroups,0);});
+    if(window.MutationObserver&&strip)new MutationObserver(syncGroups).observe(strip,{subtree:true,attributes:true,attributeFilter:['class']});
+    syncGroups();
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+
 </div>
 
 <!-- Fil d'Ariane global retiré : doublon avec les barres « ← Retour » propres
@@ -342,7 +410,6 @@ body.tc-command-layout .sidebar,body.tc-command-layout .tc-rail{display:none!imp
 <script src="/app/js/app-shell-fixes.js?v=2"></script>
 <!-- Boule d'or : navigation flottante (remplace l'ancien lien « Guide de navigation ») -->
 <script src="/app/js/nav-orb.js?v=7"></script>
-<!-- Logos des sociétés (déposés dans l'admin) : affichés à côté de chaque ticker -->
 <script src="/app/js/company-logos.js?v=1"></script>
 <script>
 (function(){
