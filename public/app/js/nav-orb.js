@@ -278,7 +278,13 @@
     var active = document.querySelector('.view.active');
     var view = active && active.id ? active.id.replace(/^view-/, '') : '';
     var label = VIEW_LABELS[view] || (document.title || '').split(',')[0] || 'The Capital';
-    var ticker = view === 'fiche' ? String(window._lastFicheTicker || '').toUpperCase() : '';
+    /* Valeur affichée : fiche société, ou titre choisi dans l'analyse technique
+       ou fondamentale (sans cela l'IA ignorait le graphique ouvert à l'écran). */
+    var picker = { 'analyse-technique': 'atTicker', 'analyse-fondamentale': 'afTicker' }[view];
+    var pickEl = picker && document.getElementById(picker);
+    var ticker = view === 'fiche' ? String(window._lastFicheTicker || '')
+      : pickEl ? String(pickEl.value || '') : '';
+    ticker = ticker.toUpperCase().replace(/[^A-Z0-9.]/g, '');
     return { view: view, label: label, ticker: ticker };
   }
 
@@ -384,6 +390,11 @@
     }
 
     function suggestions(ctx) {
+      if (ctx.ticker && ctx.view === 'analyse-technique') return [
+        'Analyse technique de ' + ctx.ticker + ' : tendance, RSI, MACD',
+        'Supports et résistances de ' + ctx.ticker,
+        'Momentum et volumes récents de ' + ctx.ticker
+      ];
       if (ctx.ticker) return [
         'Analyse ' + ctx.ticker + ' : fondamentaux, marges et risques',
         'Le cours de ' + ctx.ticker + ' est-il cher par rapport à ses bénéfices ?',
