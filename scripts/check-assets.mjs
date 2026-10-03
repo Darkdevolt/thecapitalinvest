@@ -162,8 +162,10 @@ for (const file of files) {
 // Bump 2026-10-03 (2) : cache-buster de reporting.js (signature des visuels
 // thecapitalinvest.com -> thecapitalinvest.app, domaine retenu par le
 // propriétaire). Changement délibéré et revu.
+// Bump 2026-10-03 (3) : modules « Jours fériés » et « Simulateur obligataire »,
+// cache-busters de config.js et seances-excel.js. Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = 'ffb6ae2de8c7a119e88a44822c32bfae8977ff7a';
+const expectedAdminBlobSha = '95d0109cb8ef38bf5bd86abff22d2f1d4d4d5771';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');

@@ -1,7 +1,7 @@
 /* THE CAPITAL — IMPORT EXCEL ET SUIVI DES SÉANCES */
 'use strict';
 (function (TC) {
-    const state = { rows: [], calDate: new Date(), holidays: '' };
+    const state = { rows: [], calDate: new Date() };
     const headers = ['ticker','date_seance','cours_cloture','cours_ouverture','plus_haut','plus_bas','volume','variation','valeur_totale'];
     const aliases = {
         ticker:['ticker','code','symbole','valeur'], date_seance:['date','date_seance','seance','date_de_seance'],
@@ -17,8 +17,7 @@
         '<div class="card accent"><div class="card-head"><span class="card-title">1. Importer une séance</span></div><div class="card-body"><div class="note">Téléchargez le modèle, renseignez une ligne par valeur, puis téléversez le fichier. La clé de contrôle est <strong>ticker + date de séance</strong>.</div><div class="actions"><button class="btn btn-outline" id="sx-template">Télécharger le modèle Excel</button><label class="btn btn-primary" for="sx-file">Choisir un fichier Excel</label><input id="sx-file" type="file" accept=".xlsx,.xls,.csv" hidden></div><div id="sx-preview" class="note">Aucun fichier chargé.</div><div class="actions"><button class="btn btn-primary" id="sx-import" disabled>Importer les lignes valides</button><span class="msg" id="sx-msg"></span></div></div></div>' +
         '<div class="card"><div class="card-head"><span class="card-title">2. Suivi des séances attendues</span><span class="card-tools"><span class="card-count" id="sx-count"></span></span></div>' +
         '<div class="card-body">' +
-        '<div class="note">Renseignez les jours fériés BRVM au format <strong>AAAA-MM-JJ</strong>, séparés par des virgules. Les week-ends et jours fériés ne comptent pas comme des séances manquantes.</div>' +
-        '<textarea id="sx-holidays" rows="2" placeholder="2026-01-01,2026-04-06,2026-05-01"></textarea>' +
+        '<div class="note">Les week-ends et les jours fériés (module « Jours fériés ») ne comptent pas comme des séances manquantes. Cliquez sur un jour <strong>rouge</strong> pour le déclarer férié si la bourse était fermée, ou sur un jour férié pour le retirer.</div>' +
         '<div class="tc-cal-nav" style="margin-top:14px">' +
         '<button class="btn btn-outline btn-sm" id="sx-cal-prev">← Mois précédent</button>' +
         '<span class="tc-cal-title" id="sx-cal-title"></span>' +
@@ -47,12 +46,28 @@
         TC.el('sx-template').onclick=()=>{try{template();TC.toast('Modèle Excel téléchargé','ok')}catch(e){TC.toast(e.message,'err')}};
         TC.el('sx-file').onchange=async e=>{try{state.rows=await read(e.target.files[0]); const dates=[...new Set(state.rows.map(r=>r.date_seance))]; TC.el('sx-preview').innerHTML='<strong>'+state.rows.length+' ligne(s)</strong> · séance(s) : '+dates.join(', '); TC.el('sx-import').disabled=!state.rows.length;}catch(err){state.rows=[];TC.el('sx-preview').textContent=err.message;TC.el('sx-import').disabled=true;}};
         TC.el('sx-import').onclick=async()=>{TC.el('sx-import').disabled=true;TC.say('sx-msg','Import en cours…','info'); try{await TC.postBatched('historique',state.rows,TC.CONFLICT.historique);TC.say('sx-msg',state.rows.length+' ligne(s) importées.','ok'); await renderCalendar();}catch(e){TC.say('sx-msg',e.message,'err')}finally{TC.el('sx-import').disabled=false;}};
-        TC.el('sx-holidays').value = state.holidays;
-        TC.el('sx-holidays').oninput = e => { state.holidays = e.target.value; renderCalendar(); };
+        TC.el('sx-calendar').onclick = onDayClick;
         TC.el('sx-cal-prev').onclick = () => calMove(-1);
         TC.el('sx-cal-next').onclick = () => calMove(1);
         TC.el('sx-cal-today').onclick = () => { state.calDate = new Date(); renderCalendar(); };
         renderCalendar();
+    }
+    async function onDayClick(e) {
+        const cell = e.target.closest('.tc-cal-day[data-date]'); if (!cell) return;
+        const iso = cell.dataset.date;
+        try {
+            if (cell.dataset.kind === 'missing') {
+                const libelle = window.prompt('Le ' + TC.fmtDate(iso) + ' était un jour sans séance ? Libellé du jour férié :', 'Jour férié');
+                if (libelle === null) return;
+                await TC.joursFeries.add(iso, libelle.trim());
+                TC.toast(TC.fmtDate(iso) + ' marqué férié', 'ok');
+            } else if (cell.dataset.kind === 'holiday') {
+                if (!window.confirm('Retirer le ' + TC.fmtDate(iso) + ' des jours fériés ?')) return;
+                await TC.joursFeries.remove(iso);
+                TC.toast('Jour férié retiré', 'ok');
+            } else return;
+            renderCalendar();
+        } catch (err) { TC.toast(err.message, 'err'); }
     }
     function calMove(delta) { state.calDate = new Date(state.calDate.getFullYear(), state.calDate.getMonth() + delta, 1); renderCalendar(); }
     /* Grille du mois affiché, comme le calendrier des dividendes côté app :
@@ -60,12 +75,13 @@
        qu'un tableau à plat listant chaque jour ouvré de l'année. */
     async function renderCalendar() {
         const grid = TC.el('sx-calendar'); if (!grid) return;
-        const holidays = new Set((state.holidays || '').split(',').map(x => x.trim()).filter(Boolean));
+        const holidays = TC.joursFeries ? await TC.joursFeries.load().catch(() => new Map()) : new Map();
         const y = state.calDate.getFullYear(), m = state.calDate.getMonth();
         const first = new Date(y, m, 1), last = new Date(y, m + 1, 0);
         const monthStart = TC.toISODate(first), nextMonthStart = TC.toISODate(new Date(y, m + 1, 1));
         TC.el('sx-cal-title').textContent = first.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-        const rows = await TC.getAll('historique', 'select=date_seance&date_seance=gte.' + monthStart + '&date_seance=lt.' + nextMonthStart);
+        const rows = await TC.rpc('seances_dates', { debut: monthStart, fin: nextMonthStart })
+            .catch(() => TC.getAll('historique', 'select=date_seance&date_seance=gte.' + monthStart + '&date_seance=lt.' + nextMonthStart));
         const have = new Set((rows || []).map(r => r.date_seance));
         const today = TC.today();
         const names = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
@@ -76,13 +92,15 @@
         for (let d = 1; d <= last.getDate(); d++) {
             const iso = y + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
             const weekend = TC.isWeekend(iso), holiday = holidays.has(iso), ouvre = !weekend && !holiday;
-            const ok = ouvre && have.has(iso), manque = ouvre && !have.has(iso);
-            if (ouvre) { expected++; if (manque) missing++; }
-            html += '<div class="tc-cal-day' + (weekend || holiday ? ' weekend' : '') + (ok ? ' ok' : '') + (manque ? ' missing' : '') + (iso === today ? ' today' : '') + '">' +
+            const ok = ouvre && have.has(iso), manque = ouvre && !have.has(iso) && iso < today;
+            if (ouvre && (iso < today || ok)) { expected++; if (manque) missing++; }
+            const kind = manque ? 'missing' : (holiday && !weekend ? 'holiday' : '');
+            html += '<div class="tc-cal-day' + (weekend || holiday ? ' weekend' : '') + (ok ? ' ok' : '') + (manque ? ' missing' : '') + (iso === today ? ' today' : '') + '"' +
+                (kind ? ' data-date="' + iso + '" data-kind="' + kind + '" style="cursor:pointer" title="' + (kind === 'missing' ? 'Cliquer pour déclarer ce jour férié' : TC.esc(holidays.get(iso) || 'Férié') + ' — cliquer pour retirer') + '"' : '') + '>' +
                 '<span class="n">' + d + '</span>' +
                 (ok ? '<span class="tc-cal-event">Séance enregistrée</span>' : '') +
                 (manque ? '<span class="tc-cal-event" style="background:rgba(248,113,113,.16);color:var(--red)">Manquante</span>' : '') +
-                (holiday && !weekend ? '<span class="tc-cal-event" style="background:rgba(245,240,232,.08);color:var(--muted)">Férié</span>' : '') +
+                (holiday && !weekend ? '<span class="tc-cal-event" style="background:rgba(245,240,232,.08);color:var(--muted)">' + TC.esc(holidays.get(iso) || 'Férié') + '</span>' : '') +
                 '</div>';
         }
         grid.innerHTML = html;

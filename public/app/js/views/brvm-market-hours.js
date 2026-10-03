@@ -21,7 +21,7 @@
   ];
   var HOLIDAYS_2026 = {
     '2026-01-01':'Jour de l’an',
-    '2026-03-17':'Lendemain de la nuit du destin',
+    '2026-03-16':'Lendemain de la nuit du destin',
     '2026-03-20':'Fête du Ramadan',
     '2026-04-06':'Lundi de Pâques',
     '2026-05-01':'Fête du Travail',
@@ -32,6 +32,10 @@
     '2026-08-25':'Fête de Maouloud',
     '2026-12-25':'Fête de Noël'
   };
+  /* Jours fériés effectifs : liste 2026 embarquée (repli hors ligne) complétée
+     par la table jours_feries gérée dans l'admin (/api/marche?type=jours_feries). */
+  var HOLIDAYS = {};
+  Object.keys(HOLIDAYS_2026).forEach(function (k) { HOLIDAYS[k] = HOLIDAYS_2026[k]; });
   var EXCEPTIONAL = {};
   function pad(n) { return String(n).padStart(2, '0'); }
   function key(d) { return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()); }
@@ -46,7 +50,7 @@
   function schedule(d) {
     var k = key(d), exceptional = EXCEPTIONAL[k];
     if (exceptional) return {type: exceptional.type || 'exceptional', reason: exceptional.reason || 'Séance exceptionnelle BRVM', phases: exceptional.phases || NORMAL};
-    if (weekend(d) || HOLIDAYS_2026[k]) return {type:'closed', reason:weekend(d) ? 'Week-end' : HOLIDAYS_2026[k], phases:[]};
+    if (weekend(d) || HOLIDAYS[k]) return {type:'closed', reason:weekend(d) ? 'Week-end' : HOLIDAYS[k], phases:[]};
     return {type:'normal', reason:'Horaire normal BRVM', phases:NORMAL};
   }
   function nextTradingDay(from) {
@@ -109,12 +113,30 @@
     global.TC_BRVM_MARKET_PHASE = state;
     return state;
   }
+  function loadHolidays() {
+    if (typeof fetch !== 'function') return Promise.resolve(HOLIDAYS);
+    return fetch('/api/marche?type=jours_feries', { headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : []; })
+      .then(function (body) {
+        var rows = Array.isArray(body) ? body : (body && Array.isArray(body.data) ? body.data : []);
+        if (rows.length) {
+          rows.forEach(function (r) { if (r && /^\d{4}-\d{2}-\d{2}$/.test(r.date)) HOLIDAYS[r.date] = r.libelle || 'Jour férié'; });
+          publishState(new Date());
+          try { global.dispatchEvent(new CustomEvent('tc:brvm-holidays', { detail: HOLIDAYS })); } catch (e) {}
+        }
+        return HOLIDAYS;
+      })
+      .catch(function () { return HOLIDAYS; });
+  }
   global.TC_BRVM_MARKET_HOURS = {
-    version:'2026.08.27.2',
+    version:'2026.10.03.1',
     labels:LABELS,
     normalPhases:NORMAL,
     holidayEvePhases:HOLIDAY_EVE,
     holidays2026:HOLIDAYS_2026,
+    holidays:HOLIDAYS,
+    holidaysReady:null,
+    isHoliday:function (date) { return !!HOLIDAYS[String(date).slice(0, 10)]; },
     exceptionalSessions:EXCEPTIONAL,
     getState:function (value) { return publishState(value || new Date()); },
     isTradingDay:function (value) { return stateFor(value || new Date()).isTradingDay; },
@@ -126,4 +148,5 @@
     }
   };
   publishState(new Date());
+  global.TC_BRVM_MARKET_HOURS.holidaysReady = loadHolidays();
 })(window);
