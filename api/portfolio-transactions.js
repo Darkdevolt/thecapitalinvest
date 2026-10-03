@@ -7,9 +7,8 @@
  *  - la date de transaction est validée (format et absence de date future) ;
  *  - un RETRAIT ne peut plus rendre le solde espèces négatif ;
  *  - la suppression d'un ACHAT ne peut plus rendre une position négative ;
- *  - `cout_net_unitaire` n'est plus renseigné pour les ventes, où la notion de
- *    coût de revient unitaire n'a pas de sens ; le produit net unitaire est
- *    porté par `produit_net_unitaire` ;
+ *  - `cout_net_unitaire` (NOT NULL en base) porte le coût de revient unitaire
+ *    à l'achat et le produit net unitaire à la vente ;
  *  - le barème de frais est paramétrable par variables d'environnement.
  *
  * LIMITE CONNUE : le contrôle de position et de solde est effectué en lecture
@@ -21,6 +20,7 @@ import { supabaseAdmin, isSupabaseReady } from '../lib/supabase.js';
 import { authenticate, rateLimited, handlePreflight } from '../lib/middleware.js';
 import { ok, fail, json, readBody, requestUrl, BodyError } from '../lib/http.js';
 import { validators } from '../lib/validate.js';
+import { resolveEntitlements, meets, FEATURE_TIER, TIERS_MODE } from '../lib/entitlements.js';
 
 const num = (name, fallback) => {
   const value = Number(process.env[name]);
@@ -35,15 +35,30 @@ const FRAIS = {
   dcbr: num('FEE_DCBR', 0.0005)
 };
 
+/* Barème propre à un client (Espace Gérant, formule Pro) : taux en %, bornés. */
+function clientRates(f) {
+  if (!f || typeof f !== 'object') return null;
+  const read = (k, max, fallback) => {
+    const n = Number(f[k]);
+    return Number.isFinite(n) && n >= 0 && n <= max ? n / 100 : fallback;
+  };
+  return {
+    courtage: read('courtage_pct', 10, FRAIS.courtage),
+    tva: read('tva_pct', 30, FRAIS.tva),
+    brvm: read('brvm_pct', 1, FRAIS.brvm),
+    dcbr: read('dcbr_pct', 1, FRAIS.dcbr)
+  };
+}
+
 const TRADE_TYPES = new Set(['ACHAT', 'VENTE']);
 const CASH_TYPES = new Set(['DEPOT', 'RETRAIT', 'DIVIDENDE']);
 const TICKER_RE = /^[A-Z0-9]{2,12}$/;
 
-function fees(amount) {
-  const commission = amount * FRAIS.courtage;
-  const tva = commission * FRAIS.tva;
-  const brvm = amount * FRAIS.brvm;
-  const dcbr = amount * FRAIS.dcbr;
+function fees(amount, rates = FRAIS) {
+  const commission = amount * rates.courtage;
+  const tva = commission * rates.tva;
+  const brvm = amount * rates.brvm;
+  const dcbr = amount * rates.dcbr;
   return { commission, tva, brvm, dcbr, total: commission + tva + brvm + dcbr };
 }
 
@@ -131,7 +146,12 @@ export default async function handler(req, res) {
       }
 
       const grossAmount = quantity * price;
-      const f = isTrade ? fees(grossAmount) : { commission: 0, tva: 0, brvm: 0, dcbr: 0, total: 0 };
+      let rates = FRAIS;
+      if (isTrade && input?.frais) {
+        const custom = clientRates(input.frais);
+        if (custom && (TIERS_MODE !== 'on' || meets((await resolveEntitlements(req)).effective, FEATURE_TIER.gestion_pro))) rates = custom;
+      }
+      const f = isTrade ? fees(grossAmount, rates) : { commission: 0, tva: 0, brvm: 0, dcbr: 0, total: 0 };
       const montantNet = type === 'ACHAT' ? grossAmount + f.total
         : type === 'VENTE' ? grossAmount - f.total
         : type === 'RETRAIT' ? -grossAmount
@@ -167,8 +187,12 @@ export default async function handler(req, res) {
         redevance_dcbr: f.dcbr,
         total_frais: f.total,
         montant_net: montantNet,
-        // Coût de revient : pertinent à l'achat et sur les mouvements d'espèces.
-        cout_net_unitaire: type === 'ACHAT' ? montantNet / quantity : (isTrade ? null : montantNet),
+        // Colonne NOT NULL en base : coût de revient unitaire à l'achat, produit
+        // net unitaire à la vente (un null faisait échouer toute vente).
+        cout_net_unitaire: isTrade ? montantNet / quantity : montantNet,
+        prix_unitaire: price,
+        montant_brut: grossAmount,
+        frais_total: f.total,
         societe: input?.societe || null,
         remarque: input?.note || input?.remarque || null,
         note: input?.note || null

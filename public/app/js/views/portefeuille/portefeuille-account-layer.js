@@ -37,7 +37,7 @@
   function transactionOrder(a, b) {
     var da = new Date((a && (a.date_transaction || a.date)) || 0).getTime();
     var db = new Date((b && (b.date_transaction || b.date)) || 0).getTime();
-    return da !== db ? da - db : String((a && a.id) || '').localeCompare(String((b && b.id) || ''));
+    return da !== db ? da - db : (String((a && a.created_at) || '').localeCompare(String((b && b.created_at) || '')) || String((a && a.id) || '').localeCompare(String((b && b.id) || '')));
   }
   function rebuildLots(rows) {
     var lots = [];
@@ -96,8 +96,14 @@
     window.portfolioStore.addTransaction = function (input) {
       input = input || {};
       var a = window.tcActiveAccount;
-      if (a && a !== '__all__' && !TAG_RE.test(String(input.note || ''))) {
+      if (a && a !== '__all__' && a !== '__none__' && !TAG_RE.test(String(input.note || ''))) {
         input.note = '@@' + a + '@@' + (input.note ? ' ' + input.note : '');
+      }
+      /* Espace Gérant : barème de frais du client sélectionné. */
+      var g = window.TCGestion;
+      if (a && a !== '__all__' && g && typeof g.fraisFor === 'function' && !input.frais) {
+        var fr = g.fraisFor(a);
+        if (fr) input.frais = fr;
       }
       return origAdd(input);
     };
@@ -120,6 +126,7 @@
     var raw = origGetTx ? origGetTx() : (window.portfolioStore && window.portfolioStore.getTransactions ? window.portfolioStore.getTransactions() : []);
     (raw || []).forEach(function (t) { var a = acctOf(t); if (a !== '__none__') set[a] = 1; });
     readList().forEach(function (a) { set[a] = 1; });
+    if (window.TCGestion && window.TCGestion.active()) window.TCGestion.codes().forEach(function (a) { set[a] = 1; });
     var hasNone = (raw || []).some(function (t) { return acctOf(t) === '__none__'; });
     return { list: Object.keys(set).sort(), hasNone: hasNone };
   }
@@ -156,18 +163,19 @@
     var active = window.tcActiveAccount || '__all__';
     if (active !== '__all__' && active !== '__none__' && inv.list.indexOf(active) < 0) { active = '__all__'; window.tcActiveAccount = '__all__'; }
 
-    var opts = '<option value="__all__"' + (active === '__all__' ? ' selected' : '') + '>Tous les comptes (consolidé)</option>';
-    inv.list.forEach(function (a) { opts += '<option value="' + esc(a) + '"' + (a === active ? ' selected' : '') + '>' + esc(a) + '</option>'; });
+    var g = window.TCGestion && window.TCGestion.active() ? window.TCGestion : null;
+    var opts = '<option value="__all__"' + (active === '__all__' ? ' selected' : '') + '>' + (g ? 'Tous les clients (consolidé)' : 'Tous les comptes (consolidé)') + '</option>';
+    inv.list.forEach(function (a) { opts += '<option value="' + esc(a) + '"' + (a === active ? ' selected' : '') + '>' + esc(g ? g.labelFor(a) : a) + '</option>'; });
     if (inv.hasNone) opts += '<option value="__none__"' + (active === '__none__' ? ' selected' : '') + '>Non affecté</option>';
 
-    bar.innerHTML = '<span class="lab">Compte</span>'
+    bar.innerHTML = '<span class="lab">' + (g ? 'Client' : 'Compte') + '</span>'
       + '<select id="tcPfAccountSel">' + opts + '</select>'
-      + '<button type="button" id="tcPfAccountAdd">＋ Nouveau compte</button>'
+      + '<button type="button" id="tcPfAccountAdd">' + (g ? '＋ Nouveau client' : '＋ Nouveau compte') + '</button>'
       + '<span class="hint">' + (active === '__all__'
         ? 'Vue consolidée : toutes les opérations, tous comptes confondus.'
         : active === '__none__'
           ? 'Opérations sans compte affecté.'
-          : 'Filtré sur « ' + esc(active) + ' ». Les nouvelles opérations seront rattachées à ce compte.') + '</span>';
+          : 'Filtré sur « ' + esc(g ? g.labelFor(active) : active) + ' ». Les nouvelles opérations seront rattachées à ce ' + (g ? 'client' : 'compte') + (g && g.fraisFor(active) ? ', avec son barème de frais' : '') + '.') + '</span>';
 
     document.getElementById('tcPfAccountSel').addEventListener('change', function () {
       window.tcActiveAccount = this.value || '__all__';
@@ -175,6 +183,7 @@
       rerender();
     });
     document.getElementById('tcPfAccountAdd').addEventListener('click', function () {
+      if (window.TCGestion && window.TCGestion.active()) { window.TCGestion.editClient(null); return; }
       var name = (window.prompt('Nom du compte (ex. « SGI Hudson », « PEA BOA ») :', '') || '').trim().slice(0, 60);
       if (!name || /@@/.test(name)) return;
       var list = readList();
@@ -184,6 +193,16 @@
       rerender();
     });
   }
+
+  /* Interface pour l'Espace Gérant (gestion-pro.js). */
+  window.TCPfAccounts = {
+    acctOf: acctOf,
+    rebuildLots: rebuildLots,
+    allTransactions: function () { return origGetTx ? origGetTx() : (window.portfolioStore ? window.portfolioStore.getTransactions() : []); },
+    select: function (code) { window.tcActiveAccount = code || '__all__'; writeActive(window.tcActiveAccount); rerender(); },
+    remember: function (code) { var list = readList(); if (code && list.indexOf(code) < 0) { list.push(code); writeList(list); } },
+    refresh: function () { mountBar(); }
+  };
 
   function rerender() {
     mountBar();

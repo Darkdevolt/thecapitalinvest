@@ -35,7 +35,7 @@
   function primePortfolioStore() {
     // Le dashboard utilise le portefeuille avant que l'utilisateur n'ouvre
     // la route Portefeuille. Le store doit donc être hydraté dès l'entrée.
-    loadScriptOnce('/app/js/views/portefeuille/portfolio-store.js?v=20260917').then(function () {
+    loadScriptOnce('/app/js/views/portefeuille/portfolio-store.js?v=6').then(function () {
       if (w.portfolioStore && typeof w.portfolioStore.hydrate === 'function') w.portfolioStore.hydrate();
       if (typeof w.renderCurrentView === 'function') setTimeout(w.renderCurrentView, 0);
     });

@@ -11,7 +11,7 @@ import { validators } from '../lib/validate.js';
 import { handleAdminBilling, handleAdminInstitute } from '../lib/admin-billing.js';
 import { handleAdminUsers, handleAdminSettings, handlePublicConfig } from '../lib/admin-users.js';
 import { handleWaveCheckout } from '../lib/wave-checkout.js';
-import { resolveEntitlements, meets, MARCHE_TIER } from '../lib/entitlements.js';
+import { resolveEntitlements, meets, FEATURE_TIER, TIERS_MODE } from '../lib/entitlements.js';
 
 const TABLES = { alerts: 'alertes_cours', watchlist: 'watchlist' };
 const TICKER_RE = /^[A-Z0-9]{2,12}$/;
@@ -45,6 +45,47 @@ function cleanParams(p){
     else if(t==='list'&&Array.isArray(v))out[k]=v.slice(0,40).map(x=>txt(x,40)).filter(x=>/^[a-z_]+$/.test(x));
   }
   return out;
+}
+
+/* Droit d'accès d'une fonctionnalité payante, aligné sur le front (tiers.js) :
+   appliqué seulement quand les formules sont actives. */
+async function hasFeature(req,feature){
+  if(TIERS_MODE!=='on')return true;
+  const ent=await resolveEntitlements(req);
+  return meets(ent.effective,FEATURE_TIER[feature]||'pro');
+}
+const pct=(v,max)=>{const n=Number(v);return Number.isFinite(n)&&n>=0&&n<=max?Math.round(n*10000)/10000:undefined;};
+function cleanFrais(f){
+  const o={};if(!f||typeof f!=='object')return o;
+  const map={courtage_pct:10,tva_pct:30,brvm_pct:1,dcbr_pct:1,gestion_annuelle_pct:10,performance_pct:50,droits_garde_pct:5};
+  for(const [k,max] of Object.entries(map)){const v=pct(f[k],max);if(v!==undefined)o[k]=v;}
+  return o;
+}
+function cleanLimites(l){
+  const o={};if(!l||typeof l!=='object')return o;
+  for(const k of['ligne_max_pct','secteur_max_pct','cash_min_pct','cash_max_pct','actions_max_pct','perte_alerte_pct']){const v=pct(l[k],100);if(v!==undefined)o[k]=v;}
+  return o;
+}
+const CLIENT_TYPES=new Set(['particulier','entreprise','institutionnel']),PROFILS=new Set(['prudent','equilibre','dynamique']);
+function cleanClient(b,creating){
+  if(!b||typeof b!=='object')return{error:'Fiche client vide.'};
+  const v={};
+  if(creating||b.code!==undefined){const code=txt(b.code,40).replace(/@/g,'');if(!code)return{error:'Code client obligatoire.'};v.code=code;}
+  if(creating||b.nom!==undefined){const nom=txt(b.nom,120);if(!nom)return{error:'Nom du client obligatoire.'};v.nom=nom;}
+  if(b.type_client!==undefined)v.type_client=CLIENT_TYPES.has(b.type_client)?b.type_client:'particulier';
+  if(b.profil_risque!==undefined)v.profil_risque=PROFILS.has(b.profil_risque)?b.profil_risque:'equilibre';
+  for(const [k,n] of [['email',120],['telephone',40],['numero_compte',60],['objectif',300],['horizon',60],['notes',2000]])if(b[k]!==undefined)v[k]=txt(b[k],n)||null;
+  if(v.email&&!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.email))return{error:'Adresse e-mail invalide.'};
+  if(b.date_ouverture!==undefined)v.date_ouverture=b.date_ouverture&&validators.date(String(b.date_ouverture))?String(b.date_ouverture):null;
+  if(b.frais!==undefined)v.frais=cleanFrais(b.frais);
+  if(b.limites!==undefined)v.limites=cleanLimites(b.limites);
+  if(b.actif!==undefined)v.actif=b.actif!==false;
+  return{value:v};
+}
+function cleanGestionParams(p){
+  const o={frais:cleanFrais(p?.frais),profils:{},mention_releve:txt(p?.mention_releve,300)};
+  for(const k of PROFILS)o.profils[k]=cleanLimites(p?.profils?.[k]);
+  return o;
 }
 
 export default async function handler(req,res){
@@ -122,8 +163,7 @@ export default async function handler(req,res){
         if(error)throw error;return ok(res,{profil:data||null});
       }
       if(req.method!=='PUT')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
-      const ent=await resolveEntitlements(req);
-      if(!meets(ent.effective,MARCHE_TIER.simulateur_obligataire||'pro'))return fail(res,403,'Personnalisation réservée à la formule Pro.','PLAN_REQUIRED');
+      if(!await hasFeature(req,'simulateur_obligataire'))return fail(res,403,'Personnalisation réservée à la formule Pro.','PLAN_REQUIRED');
       let body;try{body=await readBody(req,{limit:600000})}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY')}
       const row={user_id:userId,updated_at:new Date().toISOString()};
       if(body&&Object.prototype.hasOwnProperty.call(body,'marque')){const m=cleanMarque(body.marque);if(m.error)return fail(res,400,m.error,'INVALID_BRAND');row.marque=m.value;}
@@ -131,6 +171,43 @@ export default async function handler(req,res){
       const {data,error}=await supabaseAdmin.from('simulateur_profils').upsert(row,{onConflict:'user_id'}).select('marque,parametres,updated_at').single();
       if(error)throw error;return ok(res,{profil:data});
     }catch(error){return fail(res,500,'Impossible de charger ou d\'enregistrer la personnalisation.','PROFILE_ERROR',error);}
+  }
+  if(mode==='gestion-clients'||mode==='gestion-parametres'){
+    if(!await hasFeature(req,'gestion_pro'))return fail(res,403,'Espace Gérant réservé à la formule Pro.','PLAN_REQUIRED');
+    try{
+      if(mode==='gestion-parametres'){
+        if(req.method==='GET'){const {data,error}=await supabaseAdmin.from('gestion_parametres').select('valeur,updated_at').eq('user_id',userId).maybeSingle();if(error)throw error;return ok(res,{parametres:data?.valeur||{},updated_at:data?.updated_at||null});}
+        if(req.method!=='PUT')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
+        let body;try{body=await readBody(req)}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY')}
+        const valeur=cleanGestionParams(body?.parametres??body);
+        const {data,error}=await supabaseAdmin.from('gestion_parametres').upsert({user_id:userId,valeur,updated_at:new Date().toISOString()},{onConflict:'user_id'}).select('valeur,updated_at').single();
+        if(error)throw error;return ok(res,{parametres:data.valeur,updated_at:data.updated_at});
+      }
+      const id=url.searchParams.get('id')||'';
+      if(req.method==='GET'){const {data,error}=await supabaseAdmin.from('gestion_clients').select('*').eq('gerant_id',userId).order('nom',{ascending:true});if(error)throw error;return ok(res,{clients:data||[]});}
+      if(req.method==='DELETE'){
+        if(!validators.uuid(id))return fail(res,400,'Identifiant invalide.','INVALID_ID');
+        const {data,error}=await supabaseAdmin.from('gestion_clients').delete().eq('id',id).eq('gerant_id',userId).select('id');
+        if(error)throw error;if(!data?.length)return fail(res,404,'Client introuvable.','NOT_FOUND');return ok(res,{id});
+      }
+      if(req.method!=='POST'&&req.method!=='PUT')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
+      let body;try{body=await readBody(req)}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY')}
+      const c=cleanClient(body,req.method==='POST');if(c.error)return fail(res,400,c.error,'INVALID_CLIENT');
+      const row={...c.value,updated_at:new Date().toISOString()};
+      let q;
+      if(req.method==='POST'){
+        const {count,error:ce}=await supabaseAdmin.from('gestion_clients').select('id',{count:'exact',head:true}).eq('gerant_id',userId);
+        if(ce)throw ce;if((count||0)>=500)return fail(res,400,'Limite de 500 clients atteinte.','CLIENT_LIMIT');
+        q=supabaseAdmin.from('gestion_clients').insert({...row,gerant_id:userId}).select('*').single();
+      }else{
+        if(!validators.uuid(id))return fail(res,400,'Identifiant invalide.','INVALID_ID');
+        q=supabaseAdmin.from('gestion_clients').update(row).eq('id',id).eq('gerant_id',userId).select('*').maybeSingle();
+      }
+      const {data,error}=await q;
+      if(error&&error.code==='23505')return fail(res,409,'Ce code client est déjà utilisé.','DUPLICATE_CODE');
+      if(error)throw error;if(!data)return fail(res,404,'Client introuvable.','NOT_FOUND');
+      return json(res,req.method==='POST'?201:200,{success:true,data});
+    }catch(error){return fail(res,500,'Impossible de traiter la demande de l\'Espace Gérant.','GESTION_ERROR',error);}
   }
   const table=TABLES[mode];if(!table)return fail(res,400,'Mode invalide (attendu : alerts ou watchlist).','INVALID_MODE');
   try{
