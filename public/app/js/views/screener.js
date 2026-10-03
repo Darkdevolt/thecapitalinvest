@@ -319,7 +319,7 @@
       + Object.keys(PRESETS).map(function (n) { return '<button type="button" class="scr-preset" data-p="' + n + '">' + n + '</button>'; }).join('')
       + '</div>'
       + '<div class="scr-form"><div><label>Secteur</label><select id="fSector">' + sectorOptions() + '</select></div>'
-      + FILTERS.map(function (f) { return '<div><label>' + f[1] + '</label><input type="number" step="0.1" id="' + f[0] + '" placeholder="—"></div>'; }).join('')
+      + FILTERS.map(function (f) { return '<div><label>' + f[1] + '</label><input type="number" step="any" id="' + f[0] + '" placeholder="—"></div>'; }).join('')
       + '</div>'
       + '<div class="scr-bar"><span class="cnt" id="scrCount">—</span>'
       + '<span id="scrActions"><button type="button" id="scrReset">Réinitialiser</button> '

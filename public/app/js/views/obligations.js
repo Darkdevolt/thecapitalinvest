@@ -361,8 +361,8 @@
       + '</div>'
 
       + '<div class="ob-card"><div class="ob-h"><span>Simulateur</span></div><div class="ob-sim">'
-      + '<div><label for="obSimP">Prix pied de coupon (FCFA par titre)</label><input type="number" id="obSimP" step="1" value="' + (a.clean != null ? Math.round(a.clean) : Math.round(a.crd)) + '"><div class="out" id="obSimPOut"></div></div>'
-      + '<div><label for="obSimY">Rendement souhaité (%)</label><input type="number" id="obSimY" step="0.05" value="' + (a.ytm != null ? a.ytm.toFixed(2) : sc.rate) + '"><div class="out" id="obSimYOut"></div></div>'
+      + '<div><label for="obSimP">Prix pied de coupon (FCFA par titre)</label><input type="number" id="obSimP" step="any" value="' + (a.clean != null ? Math.round(a.clean) : Math.round(a.crd)) + '"><div class="out" id="obSimPOut"></div></div>'
+      + '<div><label for="obSimY">Rendement souhaité (%)</label><input type="number" id="obSimY" step="any" value="' + (a.ytm != null ? a.ytm.toFixed(2) : sc.rate) + '"><div class="out" id="obSimYOut"></div></div>'
       + '</div><p class="ob-note" style="margin-top:8px">Saisissez un prix pour obtenir le rendement, ou un rendement pour obtenir le prix à payer (hors frais de courtage).</p></div>'
 
       + '<div class="ob-card"><div class="ob-h"><span>Tableau d\'amortissement · ' + esc(freqL) + ' · ' + esc((sc.mode && sc.mode.label) || '') + '</span>'

@@ -65,10 +65,10 @@
   // ====================================================== 1. INTÉRÊTS COMPOSÉS
   function composeForm() {
     return '<form class="ou-form" id="ouComposeForm">'
-      + field('ouCapital', 'Capital de départ (FCFA)', 'number', '500000', 'min="0" step="1000"')
-      + field('ouPmt', 'Versement périodique (FCFA)', 'number', '25000', 'min="0" step="1000"')
-      + field('ouRate', 'Taux annuel (%)', 'number', '6', 'min="0" max="50" step="0.1"')
-      + field('ouYears', 'Durée (années)', 'number', '10', 'min="1" max="60" step="1"')
+      + field('ouCapital', 'Capital de départ (FCFA)', 'number', '500000', 'min="0" step="any"')
+      + field('ouPmt', 'Versement périodique (FCFA)', 'number', '25000', 'min="0" step="any"')
+      + field('ouRate', 'Taux annuel (%)', 'number', '6', 'min="0" max="50" step="any"')
+      + field('ouYears', 'Durée (années)', 'number', '10', 'min="1" max="60" step="any"')
       + '<div class="ou-field"><label for="ouFreq">Fréquence de versement</label><select id="ouFreq"><option value="12">Mensuelle</option><option value="4">Trimestrielle</option><option value="1">Annuelle</option></select></div>'
       + '<div class="ou-field"><label>&nbsp;</label><button type="submit" class="ou-tab active" style="cursor:pointer">Calculer</button></div>'
       + '</form><div id="ouComposeOut"></div>';
@@ -108,11 +108,11 @@
   // ====================================================== 2. RENDEMENT OBLIGATAIRE
   function bondForm() {
     return '<form class="ou-form" id="ouBondForm">'
-      + field('ouNominal', 'Valeur nominale (FCFA)', 'number', '10000', 'min="1" step="100"')
-      + field('ouPrice', "Prix d'achat (% du pair)", 'number', '98', 'min="1" max="200" step="0.01"')
-      + field('ouCoupon', 'Taux de coupon annuel (%)', 'number', '6.25', 'min="0" max="30" step="0.01"')
+      + field('ouNominal', 'Valeur nominale (FCFA)', 'number', '10000', 'min="1" step="any"')
+      + field('ouPrice', "Prix d'achat (% du pair)", 'number', '98', 'min="1" max="200" step="any"')
+      + field('ouCoupon', 'Taux de coupon annuel (%)', 'number', '6.25', 'min="0" max="30" step="any"')
       + '<div class="ou-field"><label for="ouCpnFreq">Périodicité du coupon</label><select id="ouCpnFreq"><option value="1">Annuelle</option><option value="2">Semestrielle</option><option value="4">Trimestrielle</option></select></div>'
-      + field('ouMaturity', "Maturité résiduelle (années)", 'number', '5', 'min="0.5" max="30" step="0.5"')
+      + field('ouMaturity', "Maturité résiduelle (années)", 'number', '5', 'min="0.5" max="30" step="any"')
       + '<div class="ou-field"><label>&nbsp;</label><button type="submit" class="ou-tab active" style="cursor:pointer">Calculer</button></div>'
       + '</form><div id="ouBondOut"></div>';
   }
@@ -160,8 +160,8 @@
     }).join('');
     return '<form class="ou-form" id="ouBandForm">'
       + (opts ? '<div class="ou-field"><label for="ouBandTicker">Reprendre le cours d\'une valeur</label><select id="ouBandTicker">' + opts + '</select></div>' : '')
-      + field('ouRef', 'Cours de référence (FCFA)', 'number', '10000', 'min="1" step="1"')
-      + field('ouLimit', 'Limite quotidienne (%)', 'number', '7.5', 'min="0.5" max="20" step="0.5"')
+      + field('ouRef', 'Cours de référence (FCFA)', 'number', '10000', 'min="1" step="any"')
+      + field('ouLimit', 'Limite quotidienne (%)', 'number', '7.5', 'min="0.5" max="20" step="any"')
       + '<div class="ou-field"><label>&nbsp;</label><button type="submit" class="ou-tab active" style="cursor:pointer">Calculer</button></div>'
       + '</form><div id="ouBandOut"></div>';
   }
