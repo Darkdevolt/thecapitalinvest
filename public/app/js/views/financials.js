@@ -328,6 +328,7 @@ function filterFin() {
         ${finMetric('Sources à compléter', noSource)}
       </div>
     </div>
+    ${window.TCExport ? `<div class="fin-export-bar" style="display:flex;justify-content:flex-end;margin:0 0 12px">${window.TCExport.button(q && tickers.length === 1 ? tickers[0] : '')}</div>` : ''}
     <div class="fin-trust-note"><span>●</span><div><strong>Transparence des données</strong><p>Un indicateur marqué « En validation » est présenté à titre informatif et n'est pas encore certifié par l'équipe The Capital.</p></div></div>
     <div class="fin-grid-list">${tickers.map(ticker => renderFinancialTicker(ticker, byTicker[ticker])).join('')}</div>`;
 }
@@ -389,6 +390,7 @@ function openFinDetail(ticker) {
       <div><span class="fin-kicker">FICHE FINANCIÈRE · ${finEsc(ticker)}</span><h1>${company}</h1><p>Lecture structurée des comptes disponibles, période par période.</p></div>
       <div class="fin-detail-price"><span>Cours disponible</span><strong>${Number.isFinite(cp) && cp ? fmt(cp)+' FCFA' : '—'}</strong><small>Dernière cotation disponible</small></div>
     </div>
+    ${window.TCExport ? `<div style="display:flex;justify-content:flex-end;margin:0 0 12px">${window.TCExport.button(ticker)}</div>` : ''}
     <div class="fin-detail-trust">${financialValidationBadge(latest)}<span>${finStatus(latest)==='validated' ? 'Les données affichées sont validées.' : 'Certaines données sont encore en validation éditoriale.'}</span></div>
     ${researchHtml}
     <div class="card mb20"><div class="card-header"><div><div class="card-title">Évolution du ${finCa(ticker, 'min')} et du résultat net</div><div class="fin-section-note">${interimCount > 0 ? `Exercices annuels ci-dessous · ${interimCount} publication(s) infra-annuelle(s) (semestre/trimestre) dans le détail par période.` : 'Historique disponible dans la base The Capital. Aucune publication semestrielle ou trimestrielle enregistrée pour ce titre : le détail par période reste annuel.'}</div></div></div><div class="card-body"><div class="chart-container tall"><canvas id="chartFinEvolution"></canvas></div></div></div>
