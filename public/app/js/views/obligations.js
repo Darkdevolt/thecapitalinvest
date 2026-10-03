@@ -365,6 +365,8 @@
       + '<div><label for="obSimY">Rendement souhaité (%)</label><input type="number" id="obSimY" step="any" value="' + (a.ytm != null ? a.ytm.toFixed(2) : sc.rate) + '"><div class="out" id="obSimYOut"></div></div>'
       + '</div><p class="ob-note" style="margin-top:8px">Saisissez un prix pour obtenir le rendement, ou un rendement pour obtenir le prix à payer (hors frais de courtage).</p></div>'
 
+      + '<div class="ob-card"><div class="ob-h"><span>Simulateur d\'ordre · frais et prix TTC</span><span class="ob-note" style="margin:0">Professional</span></div><div id="obOrdre"></div></div>'
+
       + '<div class="ob-card"><div class="ob-h"><span>Tableau d\'amortissement · ' + esc(freqL) + ' · ' + esc((sc.mode && sc.mode.label) || '') + '</span>'
       + '<span class="ob-bar" style="margin:0"><label for="obQty" style="font-size:10px;letter-spacing:.08em;color:var(--dim)">NOMBRE DE TITRES</label><input type="number" id="obQty" min="1" step="1" value="' + QTY + '" style="width:90px"><button type="button" class="ob-btn" id="obCsv">Export CSV</button></span></div>'
       + '<div class="ob-chart" style="height:240px"><canvas id="obFlux"></canvas></div>'
@@ -397,7 +399,19 @@
     };
     g('obSimP').addEventListener('input', simP); g('obSimY').addEventListener('input', simY);
     simP(); simY();
+    mountOrdre({ o: o, f: f, b: b, a: a });
     drawFlux(sc, settle);
+  }
+
+  /* Simulateur d'ordre (frais SGI, TAF, BRVM/DC-BR) : module chargé à la demande. */
+  function mountOrdre(ctx) {
+    var go = function () { if (window.TCOrdreObligataire && g('obOrdre')) window.TCOrdreObligataire.mount(g('obOrdre'), ctx); };
+    if (window.TCOrdreObligataire) return go();
+    var s = document.createElement('script');
+    s.src = '/app/js/views/obligations-ordre.js?v=20261003.1';
+    s.onload = go;
+    s.onerror = function () { var h = g('obOrdre'); if (h) h.innerHTML = '<div class="ob-note">Simulateur indisponible : rechargez la page.</div>'; };
+    document.head.appendChild(s);
   }
 
   function exportCsv(o, sc) {
@@ -440,7 +454,7 @@
     if (window.OBMath) return Promise.resolve();
     return new Promise(function (resolve) {
       var s = document.createElement('script');
-      s.src = '/app/js/views/obligations-math.js?v=2';
+      s.src = '/app/js/views/obligations-math.js?v=3';
       s.onload = resolve; s.onerror = resolve;
       document.head.appendChild(s);
     });

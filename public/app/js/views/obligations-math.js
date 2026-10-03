@@ -293,7 +293,11 @@
     if (!future.length) return out;
     var prev = sc.rows.filter(function (r) { return r.date <= settle; }).pop();
     var prevDate = prev ? prev.date : sc.start;
-    var accruedCalc = crd * sc.rate / 100 * Math.max(0, (settle - prevDate) / DAY) / 365;
+    /* Coupon couru ACT/ACT (ICMA) : coupon de la période au prorata des jours
+       écoulés sur la durée réelle de la période, convention BRVM / DC/BR
+       (EOS.O19 : 330 FCFA × 138 / 183 jours). */
+    var periodDays = Math.max(1, (future[0].date - prevDate) / DAY);
+    var accruedCalc = crd * sc.rate / 100 / sc.freq * Math.min(1, Math.max(0, (settle - prevDate) / DAY) / periodDays);
     /* Coupon couru recalculé sur le capital restant (celui publié est parfois établi
        sur le nominal d'origine) ; le chiffre publié est conservé pour information. */
     var accrued = accruedCalc;

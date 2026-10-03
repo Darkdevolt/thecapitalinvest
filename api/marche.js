@@ -376,6 +376,24 @@ export default async function handler(req, res) {
         result = await q;
         break;
       }
+      // Jours fériés BRVM saisis dans l'admin (module « Jours fériés ») :
+      // horaires de marché et dates de valeur côté application.
+      case 'jours_feries': result = await db.from('jours_feries').select('date,libelle')
+        .gte('date', '2015-01-01').order('date', { ascending: true }).limit(2000); break;
+      // Paramètres par défaut du simulateur d'ordre obligataire (Pro), réglés
+      // dans l'admin, accompagnés des jours fériés pour la date de valeur.
+      case 'simulateur_obligataire': {
+        const [p, f] = await Promise.all([
+          db.from('parametres_publics').select('valeur,updated_at').eq('cle', 'simulateur_obligataire').maybeSingle(),
+          db.from('jours_feries').select('date').gte('date', '2020-01-01').order('date', { ascending: true }).limit(2000)
+        ]);
+        if (p.error) throw p.error;
+        if (f.error) throw f.error;
+        return json(res, 200, {
+          parametres: p.data?.valeur || {}, mis_a_jour: p.data?.updated_at || null,
+          jours_feries: (f.data || []).map((r) => r.date)
+        }, { cache: 'private, no-store' });
+      }
       case 'obligations': result = await readAll(() => db.from('obligations').select('*').order('code', { ascending: true })); break;
       case 'commodities': result = await readAll(() => db.from('commodity_prices').select('serie,date,valeur,unite').gte('date', '2015-01-01').order('serie', { ascending: true }).order('date', { ascending: true })); break;
       // Tableau obligataire du dernier BOC (scripts/boc_bonds.py) : capital

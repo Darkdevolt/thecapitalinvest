@@ -90,7 +90,7 @@
   async function loadSecondaryModules(){
     const modules = [
       '/app/js/views/overview-fixes.js?v=1',
-      '/app/js/views/brvm-market-hours.js?v=20260827.3',
+      '/app/js/views/brvm-market-hours.js?v=20261003.1',
       '/app/js/market-ux.js?v=20260827.2',
       '/app/js/views/technique/data-bridge.js?v=20260826',
       '/app/js/views/user-data-patch.js?v=8',
