@@ -229,7 +229,7 @@
   // ── fichier Excel (modèle) ───────────────────────────────────────────
   /* Tableau libellé / valeur au format du modèle, suivi des paramètres. */
   function sheetRows(values, p, withParams) {
-    var rows = [['THE CAPITAL — SIMULATION D\'ORDRE OBLIGATAIRE', '']];
+    var rows = [[(BRAND.nom ? BRAND.nom.toUpperCase() : 'THE CAPITAL') + ' — SIMULATION D\'ORDRE OBLIGATAIRE', '']];
     var lines = values === SAMPLE ? LINES.filter(function (l) { return SAMPLE[l.k] != null; }) : visibleLines(values, p);
     var prev = null;
     lines.forEach(function (l) {
@@ -267,7 +267,12 @@
      seule fiche de simulation. */
   function writeWorkbook(X, values, p, filename, full) {
     var rows = sheetRows(values, p, !!full);
-    if (!full) rows.push(['', ''], ['Simulation indicative établie avec The Capital le ' + dLabel(todayIso()) + '. Intérêts courus ACT/ACT, rendement actuariel frais inclus sur l\'échéancier réel. Ne constitue ni une offre ni un conseil en investissement.', '']);
+    if (!full) {
+      var own = !!(BRAND.nom || BRAND.logo || BRAND.couleur);
+      rows.push(['', '']);
+      if (BRAND.mention) rows.push([BRAND.mention, '']);
+      rows.push(['Simulation indicative établie ' + (own ? '' : 'avec The Capital ') + 'le ' + dLabel(todayIso()) + '. Intérêts courus ACT/ACT, rendement = TRI des paiements sur les flux datés, frais inclus. Ne constitue ni une offre ni un conseil en investissement.', '']);
+    }
     var ws = X.utils.aoa_to_sheet(rows);
     ws['!cols'] = [{ wch: 52 }, { wch: 34 }];
     rows.forEach(function (r, i) {
@@ -374,7 +379,7 @@
 
   // ── interface (fiche obligation de l'application) ────────────────────
   var CSS = ''
-    + '.oo{--oo-line:rgba(245,240,232,.09);--oo-soft:rgba(245,240,232,.04);--oo-gold:var(--gold,#B8964E)}'
+    + '.oo{--oo-line:rgba(245,240,232,.09);--oo-soft:rgba(245,240,232,.04);--oo-gold:var(--gold,#B8964E);--oo-ink:#17120a}'
     + '.oo-wrap{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:18px;align-items:start}'
     + '@media (max-width:900px){.oo-wrap{grid-template-columns:1fr}}'
     + '.oo-panel{background:var(--card,rgba(245,240,232,.03));border:1px solid var(--oo-line);border-radius:12px;padding:16px}'
@@ -400,14 +405,14 @@
     + '.oo-sheet td.v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.oo-sheet tr.gap td{padding:3px;border:0;background:var(--oo-soft)}'
     + '.oo-sheet tr.sec td{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--oo-gold);padding-top:12px;border-bottom:0}'
     + '.oo-sheet tr.strong td{font-weight:600;border-top:1px solid rgba(245,240,232,.22)}'
-    + '.oo-sheet tr.total td{background:var(--oo-gold);color:#17120a;font-weight:700;font-size:16px;border:0;padding:12px 16px}'
+    + '.oo-sheet tr.total td{background:var(--oo-gold);color:var(--oo-ink);font-weight:700;font-size:16px;border:0;padding:12px 16px}'
     + '.oo-sheet .h{font-size:11px;color:var(--dim,rgba(245,240,232,.5));margin-left:6px}'
     + '.oo-flux{margin-top:12px;border:1px solid var(--oo-line);border-radius:12px;overflow:hidden}.oo-flux summary{cursor:pointer;padding:11px 16px;font-size:12.5px;font-weight:600;color:var(--oo-gold);background:rgba(184,150,78,.06)}'
     + '.oo-fluxw{overflow-x:auto}.oo-flux table{width:100%;border-collapse:collapse;font-size:12.5px}.oo-flux th{text-align:right;font-weight:500;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim,rgba(245,240,232,.55));padding:8px 12px;border-bottom:1px solid var(--oo-line)}'
     + '.oo-flux th:nth-child(-n+2){text-align:left}.oo-flux td{padding:6px 12px;border-bottom:1px solid var(--oo-line);white-space:nowrap}.oo-flux td.v{text-align:right;font-variant-numeric:tabular-nums}.oo-flux td.neg{color:#e07a6a}'
     + '.oo-bar{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}'
     + '.oo-btn{background:var(--oo-soft);border:1px solid rgba(245,240,232,.16);color:inherit;border-radius:8px;padding:8px 13px;font:inherit;font-size:13px;cursor:pointer}'
-    + '.oo-btn:hover{border-color:var(--oo-gold)}.oo-btn.gold{background:var(--oo-gold);border-color:var(--oo-gold);color:#17120a;font-weight:600}'
+    + '.oo-btn:hover{border-color:var(--oo-gold)}.oo-btn.gold{background:var(--oo-gold);border-color:var(--oo-gold);color:var(--oo-ink);font-weight:600}'
     + '.oo-set{margin-top:14px;border-top:1px solid var(--oo-line);padding-top:14px}'
     + '.oo-set h4{margin:14px 0 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--oo-gold)}.oo-set h4:first-child{margin-top:0}'
     + '.oo-checks{display:grid;grid-template-columns:1fr;gap:6px;font-size:13px}.oo-checks.cols{grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12px}'
@@ -419,6 +424,12 @@
     + '.oo-lock a{display:inline-block;margin-top:10px;background:var(--oo-gold);color:#17120a;font-weight:600;padding:8px 14px;border-radius:8px;text-decoration:none}'
     + '.oo-pick{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:16px}'
     + '.oo-pick .meta{font-size:12px;color:var(--dim,rgba(245,240,232,.55));margin-top:6px}'
+    + '.oo-sheet .hd .brandlogo{display:flex;align-items:center;gap:10px;min-width:0}.oo-sheet .hd img{max-height:34px;max-width:150px;object-fit:contain;border-radius:4px}'
+    + '.oo-brand{display:grid;grid-template-columns:minmax(0,1fr) 120px;gap:12px;align-items:start}.oo-brand .prev{border:1px dashed rgba(245,240,232,.2);border-radius:10px;min-height:64px;display:flex;align-items:center;justify-content:center;padding:6px;font-size:11px;color:var(--dim,rgba(245,240,232,.5));text-align:center}'
+    + '.oo-brand .prev img{max-width:100%;max-height:70px;object-fit:contain}.oo .oo-color{display:flex;gap:8px;align-items:center}.oo .oo-color input[type=color]{width:44px;height:36px;padding:2px;border-radius:8px;border:1px solid rgba(245,240,232,.14);background:transparent;cursor:pointer}'
+    + '.oo-swatches{display:flex;gap:6px;flex-wrap:wrap}.oo-swatches button{width:22px;height:22px;border-radius:50%;border:1px solid rgba(245,240,232,.25);cursor:pointer;padding:0}'
+    + '.oo-msg{font-size:12px;margin-left:8px;color:var(--dim,rgba(245,240,232,.6))}.oo-msg.ok{color:#7fc79a}.oo-msg.err{color:#e07a6a}'
+    + '@media (max-width:520px){.oo-brand{grid-template-columns:1fr}}'
     + '.oo select,#ooBond{color-scheme:dark}.oo select option,#ooBond option,#ooBond optgroup{background:#15120d;color:#f5f0e8}.oo select option:checked,#ooBond option:checked{background:#b8964e;color:#17120a}';
   function injectCss() {
     if (document.getElementById('oo-css')) return;
@@ -439,6 +450,59 @@
       });
     return server;
   }
+  /* Personnalisation du professionnel (logo, nom, couleur, mention, taux),
+     enregistrée sur son compte : /api/user-data?mode=simulateur-profil. */
+  var profile = null;
+  function loadProfile() {
+    if (profile) return profile;
+    if (typeof w.apiGet !== 'function') return Promise.resolve(null);
+    profile = w.apiGet('/user-data?mode=simulateur-profil', { cache: 'no-store' })
+      .then(function (r) { var d = r && (r.profil !== undefined ? r : r.data); return (d && d.profil) || null; })
+      .catch(function () { profile = null; return null; });
+    return profile;
+  }
+  function saveProfile(patch) {
+    if (typeof w.apiPut !== 'function') return Promise.reject(new Error('Connexion requise pour enregistrer.'));
+    return w.apiPut('/user-data?mode=simulateur-profil', patch).then(function (r) {
+      var d = r && (r.profil !== undefined ? r : r.data); var pr = (d && d.profil) || null;
+      profile = Promise.resolve(pr); return pr;
+    });
+  }
+  var paramTimer = null;
+  function pushParams(params) {
+    clearTimeout(paramTimer);
+    paramTimer = setTimeout(function () { saveProfile({ parametres: params || {} }).catch(function () {}); }, 900);
+  }
+  var BRAND = {};
+  function brandColor() { return /^#[0-9a-f]{6}$/i.test(BRAND.couleur || '') ? BRAND.couleur : null; }
+  function inkFor(hex) {
+    var n = parseInt(String(hex).slice(1), 16), r = n >> 16 & 255, g = n >> 8 & 255, b = n & 255;
+    var L = function (c) { c /= 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    return 0.2126 * L(r) + 0.7152 * L(g) + 0.0722 * L(b) > 0.36 ? '#17120a' : '#ffffff';
+  }
+  function brandStyle() { var c = brandColor(); return c ? ' style="--oo-gold:' + c + ';--oo-ink:' + inkFor(c) + '"' : ''; }
+  /* Logo réduit dans le navigateur (600 × 200 max) et converti en PNG/WebP. */
+  function shrinkLogo(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || !/^image\//.test(file.type)) { reject(new Error('Choisissez une image (PNG, JPEG, WebP ou SVG).')); return; }
+      if (file.size > 5 * 1024 * 1024) { reject(new Error('Image trop lourde (5 Mo maximum).')); return; }
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function () {
+        var k = Math.min(1, 600 / (img.naturalWidth || 600), 200 / (img.naturalHeight || 200));
+        var c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round((img.naturalWidth || 600) * k)); c.height = Math.max(1, Math.round((img.naturalHeight || 200) * k));
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        var out = c.toDataURL('image/png');
+        if (out.length > 280000) out = c.toDataURL('image/webp', 0.85);
+        if (out.length > 280000 || !/^data:image\/(png|webp)/.test(out)) out = c.toDataURL('image/jpeg', 0.85);
+        out.length > 300000 ? reject(new Error('Logo trop détaillé : essayez une image plus simple.')) : resolve(out);
+      };
+      img.onerror = function () { URL.revokeObjectURL(url); reject(new Error('Image illisible.')); };
+      img.src = url;
+    });
+  }
+
   function allowed() { return !w.TC || typeof w.TC.can !== 'function' || w.TC.can('simulateur_obligataire'); }
 
   function lockedHtml() {
@@ -455,10 +519,16 @@
     if (!allowed()) { host.innerHTML = lockedHtml(); return; }
     var token = {}; host.__ooToken = token;  // un seul simulateur actif par conteneur
     host.innerHTML = '<div class="oo-note">Chargement des paramètres…</div>';
-    loadServer().then(function (srv) {
+    Promise.all([loadServer(), loadProfile()]).then(function (all) {
+      var srv = all[0], prof = all[1];
       if (!host.isConnected || host.__ooToken !== token) return;  // fiche redessinée ou autre obligation choisie
       if (srv.error === 'plan') { host.innerHTML = lockedHtml(); return; }
       var user = readUser();
+      /* Le compte fait foi : taux et identité retrouvés sur tous les appareils. */
+      if (prof) {
+        BRAND = prof.marque || {};
+        if (prof.parametres && Object.keys(prof.parametres).length && (!user.params_at || prof.updated_at > user.params_at)) { user.params = prof.parametres; user.params_at = prof.updated_at; writeUser(user); }
+      } else if (user.marque) BRAND = user.marque;
       /* État conservé par ligne pendant la session : l'application redessine la
          page à chaque rafraîchissement des données (tc:dataready), la saisie
          ne doit pas être perdue. */
@@ -507,7 +577,7 @@
             + '</div>';
         }
         panel += '<div class="oo-bar"><button type="button" class="oo-btn gold" id="ooXlsx">Exporter Excel</button><button type="button" class="oo-btn" id="ooPrint">Imprimer / PDF</button>'
-          + '<button type="button" class="oo-btn" id="ooSet">' + (st.settingsOpen ? 'Masquer mes réglages' : 'Mes taux et lignes') + '</button></div>';
+          + '<button type="button" class="oo-btn" id="ooSet">' + (st.settingsOpen ? 'Masquer la personnalisation' : 'Personnaliser') + '</button></div>';
         if (st.settingsOpen) panel += settingsHtml(p);
         panel += '</div>';
         var sheet;
@@ -522,7 +592,10 @@
             body += '<tr class="' + (l.strong ? 'strong' : '') + '"><td>' + esc(labelOf(l, p)) + (l.hint ? '<span class="h">' + esc(l.hint) + '</span>' : '') + '</td><td class="v">' + esc(fmt(l, v[l.k])) + '</td></tr>';
           });
           body += '<tr class="total"><td>Montant</td><td class="v">' + esc(fmt(LINES[LINES.length - 1], v.montant)) + ' FCFA</td></tr>';
-          sheet = '<div class="oo-sheet" id="ooSheet"><div class="hd"><b>SIMULATION</b><span>' + esc(v.code) + ' · ' + esc(v.designation) + '</span></div><table><tbody>' + body + '</tbody></table></div>';
+          var head = BRAND.logo || BRAND.nom
+            ? '<div class="brandlogo">' + (BRAND.logo ? '<img src="' + esc(BRAND.logo) + '" alt="">' : '') + (BRAND.nom ? '<b>' + esc(BRAND.nom) + '</b>' : '') + '</div>'
+            : '<b>SIMULATION</b>';
+          sheet = '<div class="oo-sheet" id="ooSheet"><div class="hd">' + head + '<span>' + esc(v.code) + ' · ' + esc(v.designation) + '</span></div><table><tbody>' + body + '</tbody></table></div>';
           if (v.flux && v.flux.length > 1) {
             sheet += '<details class="oo-flux"' + (st.fluxOpen ? ' open' : '') + ' id="ooFlux"><summary>Échéancier des flux · TRI des paiements ' + esc(fmt(LINES.find(function (l) { return l.k === 'ytm'; }), v.ytm)) + '</summary>'
               + '<div class="oo-fluxw"><table><thead><tr><th>Date</th><th>Opération</th><th>Coupon</th><th>Amortissement</th><th>Flux</th></tr></thead><tbody>'
@@ -531,7 +604,7 @@
               }).join('') + '</tbody></table></div></details>';
           }
         }
-        var html = '<div class="oo-wrap">' + panel + '<div>' + sheet
+        var html = '<div class="oo-wrap"' + brandStyle() + '>' + panel + '<div>' + sheet
           + '<p class="oo-note">Intérêts courus en base exacte (ACT/ACT) sur la période de coupon en cours. Date de valeur estimée en jours ouvrés BRVM, fériés exclus. '
           + 'Rendement = TRI des paiements (TRI.PAIEMENTS) sur les flux datés de l\'ordre : montant total réglé à la date de valeur, puis coupons et amortissements de l\'échéancier réel. Simulation indicative : les frais réels sont ceux de votre SGI.</p></div></div>';
         host.innerHTML = html;
@@ -542,7 +615,21 @@
 
       function settingsHtml(p) {
         var hide = {}; (p.masquer || []).forEach(function (k) { hide[k] = 1; });
-        return '<div class="oo-set"><h4>Mes taux</h4><div class="oo-grid">'
+        var c = brandColor() || '#b8964e';
+        var sw = ['#b8964e', '#0f4c81', '#1f7a4d', '#a4262c', '#5b2c83', '#e07a1f', '#1d1d1d', '#0e7490'];
+        return '<div class="oo-set"><h4>Mon identité · fiche, PDF et Excel</h4>'
+          + '<div class="oo-brand"><div class="oo-grid">'
+          + '<div class="full"><label class="l" for="ooBNom">Nom affiché</label><input type="text" id="ooBNom" maxlength="80" placeholder="Votre société" value="' + esc(BRAND.nom || '') + '"></div>'
+          + '<div class="full"><label class="l" for="ooBMention">Mention de bas de page</label><input type="text" id="ooBMention" maxlength="200" placeholder="Agrément, adresse, téléphone…" value="' + esc(BRAND.mention || '') + '"></div>'
+          + '<div class="full"><label class="l" for="ooBColor">Couleur principale</label><div class="oo-color"><input type="color" id="ooBColor" value="' + esc(c) + '"><div class="oo-swatches">'
+          + sw.map(function (x) { return '<button type="button" data-sw="' + x + '" style="background:' + x + '" aria-label="' + x + '"></button>'; }).join('') + '</div></div></div>'
+          + '<div class="full"><label class="l" for="ooBLogo">Logo (PNG, JPEG, WebP ou SVG)</label><input type="file" id="ooBLogo" accept="image/png,image/jpeg,image/webp,image/svg+xml"></div>'
+          + '</div><div class="prev" id="ooBPrev">' + (BRAND.logo ? '<img src="' + esc(BRAND.logo) + '" alt="Logo">' : 'Aperçu du logo') + '</div></div>'
+          + '<div class="oo-bar"><button type="button" class="oo-btn gold" id="ooBSave">Enregistrer mon identité</button>'
+          + (BRAND.logo ? '<button type="button" class="oo-btn" id="ooBNoLogo">Retirer le logo</button>' : '')
+          + (BRAND.nom || BRAND.logo || BRAND.couleur || BRAND.mention ? '<button type="button" class="oo-btn" id="ooBReset">Identité par défaut</button>' : '')
+          + '<span class="oo-msg" id="ooBMsg"></span></div>'
+          + '<h4>Mes taux</h4><div class="oo-grid">'
           + field('commission_sgi_libelle', 'Libellé commission SGI', 'text', p.commission_sgi_libelle)
           + field('commission_sgi_pct', 'Commission SGI (%)', 'number', p.commission_sgi_pct)
           + field('apporteur_par_titre', 'Apporteur (FCFA / titre)', 'number', p.apporteur_par_titre)
@@ -566,7 +653,7 @@
       function check(k, l, v) { return '<label><input type="checkbox" data-pb="' + k + '"' + (v ? ' checked' : '') + '> ' + esc(l) + '</label>'; }
 
       function saveUser() { writeUser(user); }
-      function setParam(k, v) { user.params = user.params || {}; user.params[k] = v; saveUser(); }
+      function setParam(k, v) { user.params = user.params || {}; user.params[k] = v; user.params_at = new Date().toISOString(); saveUser(); pushParams(user.params); }
 
       function wire(res, p) {
         var g = function (id) { return host.querySelector('#' + id); };
@@ -611,7 +698,36 @@
             setParam('masquer', cur); paint();
           });
         });
-        if (g('ooReset')) g('ooReset').addEventListener('click', function () { user.params = {}; saveUser(); paint(); });
+        if (g('ooReset')) g('ooReset').addEventListener('click', function () { user.params = {}; user.params_at = new Date().toISOString(); saveUser(); pushParams({}); paint(); });
+        /* Identité visuelle : brouillon local jusqu'à l'enregistrement sur le compte. */
+        var draft = { logo: BRAND.logo || '' };
+        var msg = function (t, cls) { var m = g('ooBMsg'); if (m) { m.textContent = t; m.className = 'oo-msg ' + (cls || ''); } };
+        var preview = function () { var wrap = host.querySelector('.oo-wrap'), col = g('ooBColor') && g('ooBColor').value; if (wrap && col) { wrap.style.setProperty('--oo-gold', col); wrap.style.setProperty('--oo-ink', inkFor(col)); } };
+        if (g('ooBColor')) g('ooBColor').addEventListener('input', preview);
+        host.querySelectorAll('[data-sw]').forEach(function (b) { b.addEventListener('click', function () { g('ooBColor').value = b.getAttribute('data-sw'); preview(); }); });
+        if (g('ooBLogo')) g('ooBLogo').addEventListener('change', function () {
+          var file = this.files && this.files[0]; if (!file) return;
+          msg('Préparation du logo…');
+          shrinkLogo(file).then(function (data) { draft.logo = data; g('ooBPrev').innerHTML = '<img src="' + data + '" alt="Logo">'; msg('Logo prêt : pensez à enregistrer.'); })
+            .catch(function (e) { msg(e.message, 'err'); });
+        });
+        var persist = function (marque, done) {
+          msg('Enregistrement…');
+          saveProfile({ marque: marque }).then(function (pr) {
+            BRAND = (pr && pr.marque) || marque; user.marque = BRAND; saveUser(); paint();
+            var m2 = host.querySelector('#ooBMsg'); if (m2) { m2.textContent = done; m2.className = 'oo-msg ok'; }
+          }).catch(function (e) { msg(/403|PLAN/.test(String(e && e.message)) ? 'Personnalisation réservée à la formule Pro.' : (e && e.message) || 'Enregistrement impossible.', 'err'); });
+        };
+        if (g('ooBSave')) g('ooBSave').addEventListener('click', function () {
+          persist({ nom: g('ooBNom').value.trim(), mention: g('ooBMention').value.trim(), couleur: g('ooBColor').value, logo: draft.logo || undefined }, 'Identité enregistrée sur votre compte.');
+        });
+        if (g('ooBNoLogo')) g('ooBNoLogo').addEventListener('click', function () {
+          var m = Object.assign({}, BRAND); delete m.logo; persist(m, 'Logo retiré.');
+        });
+        if (g('ooBReset')) g('ooBReset').addEventListener('click', function () {
+          if (!w.confirm('Revenir à la présentation par défaut (sans logo ni couleur) ?')) return;
+          persist({}, 'Présentation par défaut rétablie.');
+        });
       }
 
       paint();
@@ -628,38 +744,44 @@
       prev = l.sec;
       body += '<tr' + (l.strong ? ' class="strong"' : '') + '><td>' + esc(labelOf(l, p)) + '</td><td class="v">' + esc(fmt(l, v[l.k])) + '</td></tr>';
     });
+    var bc = brandColor(), own = !!(BRAND.nom || BRAND.logo || bc);
+    var acc = bc || '' + acc + '', accDark = bc || '' + accDark + '', band = bc || '#14110c', bandInk = bc ? inkFor(bc) : '#f5f0e8';
     var kpi = function (k, val) { return '<div class="kpi"><span>' + esc(k) + '</span><b>' + esc(val) + '</b></div>'; };
-    var html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>The Capital — Simulation ' + esc(v.code) + '</title>'
+    var html = '<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>' + esc(BRAND.nom || 'The Capital') + ' — Simulation ' + esc(v.code) + '</title>'
       + '<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">'
       + '<style>'
       + '@page{size:A4;margin:12mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
       + 'body{margin:0;font-family:"DM Sans",Arial,sans-serif;color:#1d1a14;font-size:11.5px;background:#fff}'
       + '.sheet{max-width:186mm;margin:0 auto}'
-      + '.band{display:flex;justify-content:space-between;align-items:center;background:#14110c;color:#f5f0e8;border-radius:10px;padding:14px 18px}'
-      + '.brand{font:700 15px/1 "Playfair Display",Georgia,serif;letter-spacing:.14em}.brand i{color:#B8964E;font-style:normal}'
-      + '.brand small{display:block;margin-top:5px;font:500 8.5px/1 "DM Sans",sans-serif;letter-spacing:.2em;color:#B8964E}'
-      + '.band .t{text-align:right}.band .t b{display:block;font:700 13px/1.2 "DM Sans",sans-serif}.band .t span{font-size:10px;color:#cfc6b6}'
+      + '.band{display:flex;justify-content:space-between;align-items:center;background:' + band + ';color:' + bandInk + ';border-radius:10px;padding:14px 18px}'
+      + '.brand{font:700 15px/1 "Playfair Display",Georgia,serif;letter-spacing:.14em}.brand i{color:' + acc + ';font-style:normal}'
+      + '.brand small{display:block;margin-top:5px;font:500 8.5px/1 "DM Sans",sans-serif;letter-spacing:.2em;color:' + acc + '}'
+      + '.band .t{text-align:right}.band .t b{display:block;font:700 13px/1.2 "DM Sans",sans-serif}.band .t span{font-size:10px;opacity:.75}'
       + '.id{display:flex;justify-content:space-between;align-items:flex-end;margin:14px 2px 10px}.id h1{margin:0;font:700 17px/1.2 "Playfair Display",Georgia,serif}'
       + '.id .code{display:inline-block;margin-top:4px;font-size:10.5px;color:#7a705f;letter-spacing:.06em}.id .d{font-size:10px;color:#7a705f;text-align:right}'
       + '.kpis{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px;margin-bottom:12px}'
       + '.kpi{border:1px solid #e6dcc8;border-radius:9px;padding:9px 12px;background:#faf7f0}.kpi span{display:block;font-size:8.5px;letter-spacing:.12em;text-transform:uppercase;color:#8a7d64}'
-      + '.kpi b{display:block;margin-top:4px;font-size:15px;color:#1d1a14}.kpi:first-child{background:#14110c;border-color:#14110c}.kpi:first-child span{color:#B8964E}.kpi:first-child b{color:#E6C979;font-size:17px}'
+      + '.kpi b{display:block;margin-top:4px;font-size:15px;color:#1d1a14}.kpi:first-child{background:' + band + ';border-color:' + band + '}.kpi:first-child span{color:' + (bc ? bandInk : acc) + ';opacity:.85}.kpi:first-child b{color:' + (bc ? bandInk : '#E6C979') + ';font-size:17px}'
       + 'table{width:100%;border-collapse:collapse}td{padding:4.5px 10px;border-bottom:1px solid #eee6d6}td.v{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;font-weight:500}'
-      + 'tr.sec td{padding:11px 10px 4px;border-bottom:1.5px solid #B8964E;font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:#9a7b3c;font-weight:700}'
+      + 'tr.sec td{padding:11px 10px 4px;border-bottom:1.5px solid ' + acc + ';font-size:8.5px;letter-spacing:.16em;text-transform:uppercase;color:' + accDark + ';font-weight:700}'
       + 'tr.strong td{font-weight:700;background:#faf7f0}'
-      + 'tr.total td{padding:10px;border:0;border-top:2px solid #B8964E;font-size:14px;font-weight:700}tr.total td.v{color:#9a7b3c}'
+      + 'tr.total td{padding:10px;border:0;border-top:2px solid ' + acc + ';font-size:14px;font-weight:700}tr.total td.v{color:' + accDark + '}'
       + '.foot{margin-top:14px;padding-top:8px;border-top:1px solid #eee6d6;font-size:8.5px;line-height:1.5;color:#8a7d64;display:flex;justify-content:space-between;gap:16px}'
+      + '.logo{display:flex;align-items:center;gap:12px}.logo img{max-height:40px;max-width:170px;object-fit:contain;background:#fff;border-radius:6px;padding:3px}.logo b{font:700 15px/1.15 "Playfair Display",Georgia,serif}'
       + '.foot b{color:#1d1a14}table,tr{page-break-inside:avoid}'
       + '</style></head><body><div class="sheet">'
-      + '<div class="band"><div class="brand">THE <i>·</i> CAPITAL<small>INTELLIGENCE FINANCIÈRE AFRICAINE</small></div>'
+      + '<div class="band">' + (own && (BRAND.nom || BRAND.logo)
+        ? '<div class="logo">' + (BRAND.logo ? '<img src="' + esc(BRAND.logo) + '" alt="">' : '') + (BRAND.nom ? '<b>' + esc(BRAND.nom) + '</b>' : '') + '</div>'
+        : '<div class="brand">THE <i>·</i> CAPITAL<small>INTELLIGENCE FINANCIÈRE AFRICAINE</small></div>')
       + '<div class="t"><b>Simulation d\'ordre obligataire</b><span>Achat · marché secondaire BRVM</span></div></div>'
       + '<div class="id"><div><h1>' + esc(v.designation) + '</h1><span class="code">' + esc(v.code) + ' · ' + esc(nf(v.quantite)) + ' titres</span></div>'
       + '<div class="d">Établie le ' + esc(dLabel(todayIso())) + '<br>Valeur estimée ' + esc(dLabel(v.date_valeur)) + '</div></div>'
       + '<div class="kpis">' + kpi('Montant à régler', nf(Math.round(v.montant)) + ' FCFA') + kpi('Prix TTC', nf(v.prix_ttc, 2) + ' %')
       + kpi('Rendement frais inclus', v.ytm != null ? nf(v.ytm, 2) + ' %' : '—') + '</div>'
       + '<table><tbody>' + body + '<tr class="total"><td>Montant total à régler</td><td class="v">' + esc(nf(Math.round(v.montant))) + ' FCFA</td></tr></tbody></table>'
-      + '<div class="foot"><span>Simulation indicative établie avec <b>The Capital</b>. Intérêts courus ACT/ACT, rendement actuariel frais inclus calculé sur l\'échéancier réel. '
-      + 'Les frais effectifs sont ceux de votre SGI. Ne constitue ni une offre ni un conseil en investissement.</span><span style="white-space:nowrap">thecapitalinvest.app</span></div>'
+      + '<div class="foot"><span>' + (BRAND.mention ? '<b>' + esc(BRAND.mention) + '</b><br>' : '')
+      + 'Simulation indicative' + (own ? '' : ' établie avec <b>The Capital</b>') + '. Intérêts courus ACT/ACT, rendement = TRI des paiements sur les flux datés, frais inclus. '
+      + 'Ne constitue ni une offre ni un conseil en investissement.</span><span style="white-space:nowrap">' + esc(own ? (BRAND.nom || '') : 'thecapitalinvest.app') + '</span></div>'
       + '</div><script>window.onload=function(){setTimeout(function(){window.print();},350);}<\/script></body></html>';
     var win = w.open('', '_blank');
     if (!win) { alert('Autorisez les fenêtres pour imprimer la simulation.'); return; }

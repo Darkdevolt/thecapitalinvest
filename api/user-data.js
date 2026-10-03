@@ -11,6 +11,7 @@ import { validators } from '../lib/validate.js';
 import { handleAdminBilling, handleAdminInstitute } from '../lib/admin-billing.js';
 import { handleAdminUsers, handleAdminSettings, handlePublicConfig } from '../lib/admin-users.js';
 import { handleWaveCheckout } from '../lib/wave-checkout.js';
+import { resolveEntitlements, meets, MARCHE_TIER } from '../lib/entitlements.js';
 
 const TABLES = { alerts: 'alertes_cours', watchlist: 'watchlist' };
 const TICKER_RE = /^[A-Z0-9]{2,12}$/;
@@ -18,6 +19,33 @@ const TICKER_RE = /^[A-Z0-9]{2,12}$/;
 const validId = id => validators.uuid(id) || /^\d{1,18}$/.test(id);
 function normalizeAlertType(value){const type=String(value||'').trim().toLowerCase();if(type==='above'||type==='hausse')return'HAUSSE';if(type==='below'||type==='baisse')return'BAISSE';return null;}
 function toApiAlert(row){if(!row)return row;const condition=row.type_alerte==='HAUSSE'?'above':row.type_alerte==='BAISSE'?'below':row.type_alerte;return{...row,condition};}
+
+
+/* Personnalisation du simulateur obligataire : seules des images matricielles
+   (PNG, JPEG, WebP) en data URL sont acceptées, jamais de SVG. */
+const HEX_RE=/^#[0-9a-f]{6}$/i;
+const LOGO_RE=/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/;
+const txt=(v,n)=>String(v??'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,n);
+function cleanMarque(m){
+  if(!m||typeof m!=='object')return{value:{}};
+  const out={nom:txt(m.nom,80),mention:txt(m.mention,200)};
+  for(const k of['couleur','couleur_texte','couleur_fond']){if(m[k]==null||m[k]==='')continue;if(!HEX_RE.test(String(m[k])))return{error:'Couleur invalide (format #RRGGBB attendu).'};out[k]=String(m[k]).toLowerCase();}
+  if(m.logo){const l=String(m.logo);if(!LOGO_RE.test(l))return{error:'Logo invalide : PNG, JPEG ou WebP uniquement.'};if(l.length>300000)return{error:'Logo trop lourd (300 Ko maximum).'};out.logo=l;}
+  return{value:out};
+}
+const PARAM_KEYS={commission_sgi_pct:'n',commission_sgi_libelle:'s',taf_pct:'n',taf_sur_apporteur:'b',apporteur_par_titre:'n',apporteur_actif:'b',brvm_dcbr_pct:'n',brvm_dcbr_base:'base',brvm_dcbr_actif:'b',delai_reglement_jours:'n',masquer:'list'};
+function cleanParams(p){
+  const out={};if(!p||typeof p!=='object')return out;
+  for(const [k,t] of Object.entries(PARAM_KEYS)){
+    if(p[k]==null)continue;const v=p[k];
+    if(t==='n'){const n=Number(v);if(Number.isFinite(n)&&n>=0&&n<=100000)out[k]=n;}
+    else if(t==='s')out[k]=txt(v,60);
+    else if(t==='b')out[k]=v===true;
+    else if(t==='base')out[k]=v==='montant'?'montant':'nominal';
+    else if(t==='list'&&Array.isArray(v))out[k]=v.slice(0,40).map(x=>txt(x,40)).filter(x=>/^[a-z_]+$/.test(x));
+  }
+  return out;
+}
 
 export default async function handler(req,res){
   if(handlePreflight(req,res,{methods:'GET,POST,PUT,DELETE,OPTIONS'}))return;if(rateLimited(req,res,'user-data'))return;if(!isSupabaseReady()||!supabaseAdmin)return fail(res,503,'Service temporairement indisponible.','SERVICE_UNAVAILABLE');
@@ -86,6 +114,23 @@ export default async function handler(req,res){
     const m=MAILS.paymentSubmittedToAdmin(u.nom,u.email,planName,o.billing_period,o.amount,p.claimed_amount,p.transaction_reference,o.id,p.id,mismatch);
     const sent=await sendMail({to:MASTER,name:'The Capital — Administration',subject:m.subject,content:m.content});
     return ok(res,{sent:sent.sent});
+  }
+  if(mode==='simulateur-profil'){
+    try{
+      if(req.method==='GET'){
+        const {data,error}=await supabaseAdmin.from('simulateur_profils').select('marque,parametres,updated_at').eq('user_id',userId).maybeSingle();
+        if(error)throw error;return ok(res,{profil:data||null});
+      }
+      if(req.method!=='PUT')return fail(res,405,'Méthode non autorisée.','METHOD_NOT_ALLOWED');
+      const ent=await resolveEntitlements(req);
+      if(!meets(ent.effective,MARCHE_TIER.simulateur_obligataire||'pro'))return fail(res,403,'Personnalisation réservée à la formule Pro.','PLAN_REQUIRED');
+      let body;try{body=await readBody(req,{limit:600000})}catch(e){return fail(res,e instanceof BodyError?400:500,'Requête illisible.','INVALID_BODY')}
+      const row={user_id:userId,updated_at:new Date().toISOString()};
+      if(body&&Object.prototype.hasOwnProperty.call(body,'marque')){const m=cleanMarque(body.marque);if(m.error)return fail(res,400,m.error,'INVALID_BRAND');row.marque=m.value;}
+      if(body&&Object.prototype.hasOwnProperty.call(body,'parametres')){row.parametres=cleanParams(body.parametres);}
+      const {data,error}=await supabaseAdmin.from('simulateur_profils').upsert(row,{onConflict:'user_id'}).select('marque,parametres,updated_at').single();
+      if(error)throw error;return ok(res,{profil:data});
+    }catch(error){return fail(res,500,'Impossible de charger ou d\'enregistrer la personnalisation.','PROFILE_ERROR',error);}
   }
   const table=TABLES[mode];if(!table)return fail(res,400,'Mode invalide (attendu : alerts ou watchlist).','INVALID_MODE');
   try{
