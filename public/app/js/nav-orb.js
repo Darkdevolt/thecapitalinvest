@@ -181,8 +181,52 @@
       .replace(/(^|[^\w*])\*(?!\s)([^*]+?)\*(?!\w)/g, '$1<em>$2</em>')
       .replace(/\*+/g, '');
   }
+  /* Formules LaTeX ($\frac{a}{b}$, \times…) que le modèle écrit parfois malgré
+     la consigne : converties en écriture lisible, le widget n'ayant pas de
+     moteur mathématique. « 1 933 / 45 000 × 100 ≈ 4,3 % » plutôt que du code. */
+  var TEX_SYMBOLS = { times: '×', cdot: '·', div: '÷', approx: '≈', simeq: '≈', sim: '~', leq: '≤', le: '≤', geq: '≥', ge: '≥',
+    neq: '≠', ne: '≠', pm: '±', infty: '∞', rightarrow: '→', to: '→', Rightarrow: '⇒', Delta: 'Δ', sum: 'Σ', alpha: 'α', beta: 'β', sigma: 'σ', mu: 'μ' };
+  var SUPERSCRIPT = { '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴', '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹', '-': '⁻', 'n': 'ⁿ' };
+  function texGroup(str, i) {
+    if (str[i] !== '{') { var m = /^\\?[A-Za-z0-9.,]+|^./.exec(str.slice(i)); return { body: m ? m[0] : '', end: i + (m ? m[0].length : 0) }; }
+    var depth = 0;
+    for (var j = i; j < str.length; j++) {
+      if (str[j] === '{') depth++;
+      else if (str[j] === '}' && --depth === 0) return { body: str.slice(i + 1, j), end: j + 1 };
+    }
+    return { body: str.slice(i + 1), end: str.length };
+  }
+  function texToText(tex) {
+    var t = String(tex), guard = 0;
+    while (/\\[dt]?frac/.test(t) && guard++ < 20) {
+      var k = t.search(/\\[dt]?frac/), start = k + t.slice(k).match(/^\\[dt]?frac/)[0].length;
+      var num = texGroup(t, start), den = texGroup(t, num.end);
+      var wrap = function (x) { x = texToText(x).trim(); return /[\s+\-×÷\/]/.test(x) && !/^\(.*\)$/.test(x) && !/^[\d\s\u202f.,%]+$/.test(x) ? '(' + x + ')' : x; };
+      t = t.slice(0, k) + wrap(num.body) + ' / ' + wrap(den.body) + t.slice(den.end);
+    }
+    t = t.replace(/\\(?:text|mathrm|mathbf|textbf|operatorname|mbox)\s*\{([^{}]*)\}/g, '$1')
+      .replace(/\\sqrt\s*\{([^{}]*)\}/g, '√($1)')
+      .replace(/\^\{([^{}]*)\}|\^(\w)/g, function (_, a, b) { var x = a != null ? a : b; return /^[0-9n-]+$/.test(x) ? x.split('').map(function (c) { return SUPERSCRIPT[c]; }).join('') : '^(' + x + ')'; })
+      .replace(/_\{([^{}]*)\}/g, '$1')
+      .replace(/\\left|\\right/g, '')
+      .replace(/\\([%$&#_{}])/g, '$1')
+      .replace(/\\[,;:!]|\\quad|\\qquad|~/g, ' ')
+      .replace(/\\([A-Za-z]+)/g, function (_, w) { return TEX_SYMBOLS[w] != null ? TEX_SYMBOLS[w] : w; })
+      .replace(/[{}]/g, '')
+      .replace(/(\d) (?=\d{3}\b)/g, '$1\u202f')
+      .replace(/\s{2,}/g, ' ');
+    return t.trim();
+  }
+  function stripTex(src) {
+    return String(src || '')
+      .replace(/\$\$([\s\S]+?)\$\$/g, function (_, x) { return texToText(x); })
+      .replace(/\\\[([\s\S]+?)\\\]/g, function (_, x) { return texToText(x); })
+      .replace(/\\\(([\s\S]+?)\\\)/g, function (_, x) { return texToText(x); })
+      .replace(/\$([^$\n]*(?:\\[A-Za-z]|[\^_{}])[^$\n]*)\$/g, function (_, x) { return texToText(x); });
+  }
+
   function renderMarkdown(src) {
-    var lines = String(src || '').replace(/\r\n?/g, '\n').split('\n');
+    var lines = stripTex(src).replace(/\r\n?/g, '\n').split('\n');
     var out = [], list = null, para = [];
     function flushPara() { if (para.length) { out.push('<p>' + para.map(inline).join('<br>') + '</p>'); para = []; } }
     function closeList() { if (list) { out.push('</' + list + '>'); list = null; } }
