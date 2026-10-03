@@ -592,7 +592,7 @@
     try {
       const before = more && entries.length ? '&before=' + encodeURIComponent(entries[entries.length - 1].created_at) : '';
       const r = await TC.api(API + '&journal=1&limit=300' + before, { timeout: 20000 });
-      const got = r.data?.entries || [];
+      const got = Array.isArray(r.data?.entries) ? r.data.entries : [];
       entries = more ? entries.concat(got) : got;
       const btn = TC.el('jr-more'); if (btn) btn.hidden = got.length < 300;
       journalPaint();

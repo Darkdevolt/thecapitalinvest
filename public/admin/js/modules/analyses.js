@@ -281,8 +281,8 @@
         try {
             if (editing) {
                 await TC.patch('analyses', 'id=eq.' + editing, body);
-                TC.say('an-msg', 'Note modifiée.', 'ok');
                 resetForm();
+                TC.say('an-msg', 'Note modifiée.', 'ok');
             } else {
                 await TC.post('analyses', body, null);
                 TC.say('an-msg', 'Note publiée pour ' + ticker + '.', 'ok');

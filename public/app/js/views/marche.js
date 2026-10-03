@@ -303,9 +303,10 @@
       if (p) events.push({ date: p, ticker: ticker, label: 'Paiement dividende', amount: r.dpa || r.dividende });
     });
     (Array.isArray(window.allCoupons) ? window.allCoupons : []).forEach(function (r) {
-      var ticker = String(r.ticker || r.symbol || '').toUpperCase();
-      var d = r.date_detachement || r.date_detachement_coupon || r.ex_date;
-      if (d) events.push({ date: d, ticker: ticker, label: 'Détachement coupon', amount: r.coupon || r.montant });
+      var ticker = String(r.code || r.isin || r.ticker || '').toUpperCase();
+      var d = r.date_detachement || r.ex_date;
+      var amount = r.montant_net != null ? r.montant_net : r.montant_brut;
+      if (d) events.push({ date: d, ticker: ticker, label: 'Détachement coupon', amount: amount });
     });
     events = events.filter(function (e) { return e.date; }).sort(function (a, b) { return String(a.date).localeCompare(String(b.date)); }).slice(0, 12);
     list.innerHTML = events.length ? events.map(function (e) {
