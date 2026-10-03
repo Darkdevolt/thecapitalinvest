@@ -113,8 +113,8 @@ page d'accueil, avant l'offre — voir `#nouveautes` sur
 
 ## Notes d'usage
 
-- Remplacer `{{lien_nouveautes}}` par `https://thecapitalinvest.com/nouveautes.html`
-  et `{{lien_offres}}` par `https://thecapitalinvest.com/#offres` avant diffusion.
+- Remplacer `{{lien_nouveautes}}` par `https://thecapitalinvest.app/nouveautes.html`
+  et `{{lien_offres}}` par `https://thecapitalinvest.app/#offres` avant diffusion.
 - Le contenu de `/nouveautes.html` doit rester la source de vérité : si une
   fonctionnalité y est ajoutée ou retirée, mettre à jour les emails/posts en
   conséquence avant l'envoi.

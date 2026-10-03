@@ -925,7 +925,7 @@
         parts.push(line(pad, footTop - 10, W - pad, 1.2));
         parts.push(text('Source : BRVM · calculs The Capital', pad, footTop + 14, { size: 12, fill: C.ink2 }));
         parts.push(text('Information à caractère informatif — ne constitue pas un conseil en investissement.', pad, footTop + 34, { size: 11, fill: C.muted, family: F.serif, style: 'italic' }));
-        parts.push(text('thecapitalinvest.com', W - pad, footTop + 14, { size: 13, fill: C.gold, anchor: 'end', family: F.mono, weight: 600 }));
+        parts.push(text('thecapitalinvest.app', W - pad, footTop + 14, { size: 13, fill: C.gold, anchor: 'end', family: F.mono, weight: 600 }));
         parts.push(text('© ' + data.window.to.slice(0, 4) + ' The Capital', W - pad, footTop + 34, { size: 11, fill: C.muted, anchor: 'end' }));
 
         const overflow = y > (footTop - 44);
@@ -1162,7 +1162,7 @@
                     payload
                 }), timeout: 20000
             });
-            TC.say('rep-msg', 'Publié sur thecapitalinvest.com/reporting.html' +
+            TC.say('rep-msg', 'Publié sur thecapitalinvest.app/reporting.html' +
                 (r && r.data && r.data.published_at ? ' (' + TC.fmtDateLong(r.data.published_at.slice(0, 10)) + ')' : '') + '.', 'ok');
         } catch (e) {
             TC.say('rep-msg', 'Publication impossible : ' + e.message, 'err');
