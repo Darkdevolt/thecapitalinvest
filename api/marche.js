@@ -334,6 +334,38 @@ export default async function handler(req, res) {
       case 'analyses': result = await db.from('analyses').select('*').order('date_analyse', { ascending: false }).limit(500); break;
       case 'dividendes': result = await readAll(() => db.from('dividendes_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
       case 'coupons': result = await readAll(() => db.from('coupons_calendrier').select('*').order('date_detachement', { ascending: true, nullsLast: true }).order('date_paiement', { ascending: true, nullsLast: true }).order('id', { ascending: true })); break;
+      // Export Excel / PDF (formule Professional, voir MARCHE_TIER) : toutes
+      // les données financières disponibles, en une lecture. Jamais mis en
+      // cache partagé : la réponse dépend de la formule de l'appelant.
+      case 'export_financier': {
+        const wanted = String(url.searchParams.get('tickers') || '').toUpperCase().split(',')
+          .map(t => t.trim()).filter(t => /^[A-Z0-9.]{2,12}$/.test(t)).slice(0, 100);
+        const withHistory = url.searchParams.get('historique') === '1';
+        const byTicker = q => (wanted.length ? q.in('ticker', wanted) : q);
+        const since = new Date(Date.now() - 366 * 86400e3).toISOString().slice(0, 10);
+        const [ents, fins, divs, cours, hist] = await Promise.all([
+          readAll(() => byTicker(db.from('entreprises').select('*').eq('actif', true)).order('ticker', { ascending: true })),
+          readAll(() => byTicker(db.from('financials').select('*').neq('validation_status', 'rejected'))
+            .order('ticker', { ascending: true }).order('annee', { ascending: false }).order('id', { ascending: true }), 20000),
+          readAll(() => byTicker(db.from('dividendes_calendrier').select('*')).order('ticker', { ascending: true }).order('exercice', { ascending: false })),
+          latestCours(),
+          withHistory
+            ? readAll(() => byTicker(db.from('historique').select('ticker,date_seance,cours_ouverture,plus_haut,plus_bas,cours_cloture,cloture,volume,valeur_totale,variation'))
+              .gte('date_seance', since).order('ticker', { ascending: true }).order('date_seance', { ascending: true }), 40000)
+            : Promise.resolve({ data: [] })
+        ]);
+        const err = [ents, fins, divs, cours, hist].find(r => r && r.error);
+        if (err) throw err.error;
+        const coursRows = (cours?.data || []).filter(r => !wanted.length || wanted.includes(String(r.ticker || '').toUpperCase()));
+        return json(res, 200, {
+          success: true,
+          data: {
+            generatedAt: new Date().toISOString(),
+            entreprises: ents.data || [], financials: fins.data || [], dividendes: divs.data || [],
+            cours: coursRows, historique: hist.data || []
+          }
+        }, { cache: 'private, no-store' });
+      }
       // Composition en vigueur des indices (BRVM 30, Prestige, sectoriels…),
       // saisie dans l'admin (table indices_composition).
       case 'indices_composition': {
