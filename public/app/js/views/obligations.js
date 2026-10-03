@@ -408,7 +408,7 @@
     var go = function () { if (window.TCOrdreObligataire && g('obOrdre')) window.TCOrdreObligataire.mount(g('obOrdre'), ctx); };
     if (window.TCOrdreObligataire) return go();
     var s = document.createElement('script');
-    s.src = '/app/js/views/obligations-ordre.js?v=20261003.1';
+    s.src = '/app/js/views/obligations-ordre.js?v=20261003.2';
     s.onload = go;
     s.onerror = function () { var h = g('obOrdre'); if (h) h.innerHTML = '<div class="ob-note">Simulateur indisponible : rechargez la page.</div>'; };
     document.head.appendChild(s);

@@ -22,7 +22,7 @@
         if (window.TCOrdreObligataire) return Promise.resolve(window.TCOrdreObligataire);
         return new Promise(function (resolve, reject) {
             const s = document.createElement('script');
-            s.src = '/app/js/views/obligations-ordre.js?v=20261003.1';
+            s.src = '/app/js/views/obligations-ordre.js?v=20261003.2';
             s.onload = () => window.TCOrdreObligataire ? resolve(window.TCOrdreObligataire) : reject(new Error('Module de calcul introuvable.'));
             s.onerror = () => reject(new Error('Module de calcul introuvable.'));
             document.head.appendChild(s);
@@ -52,7 +52,7 @@
             '<div class="page-actions"><button class="btn btn-outline btn-sm" id="so-reload">↺</button></div></div>' +
 
             '<div class="card accent"><div class="card-head"><span class="card-title">Importer une fiche « SIMULATION »</span></div>' +
-            '<div class="card-body"><div class="note">Téléchargez le modèle, ajustez les taux (section <strong>PARAMÈTRES</strong>) ou déposez directement une fiche de simulation de votre SGI : les taux sont alors déduits des libellés (« Commission ICF (0,4%) », « TAF (17%) », « Apporteur d\'affaires (100 FCFA par titre) »), de la ligne Commissions BRVM/DCBR rapportée au nominal, et le délai de règlement des dates de transaction et de valeur.</div>' +
+            '<div class="card-body"><div class="note">Téléchargez le modèle, ajustez les taux (section <strong>PARAMÈTRES</strong>) ou déposez directement une fiche de simulation de votre SGI : les taux sont alors déduits des libellés (« Commission SGI (0,4%) », « TAF (17%) », « Apporteur d\'affaires (100 FCFA par titre) »), de la ligne Commissions BRVM/DCBR rapportée au nominal, et le délai de règlement des dates de transaction et de valeur.</div>' +
             '<div class="actions"><button class="btn btn-outline" id="so-template">Télécharger le modèle Excel</button>' +
             '<label class="btn btn-primary" for="so-file">Choisir un fichier Excel</label><input id="so-file" type="file" accept=".xlsx,.xls,.csv" hidden></div>' +
             '<div id="so-preview"></div>' +

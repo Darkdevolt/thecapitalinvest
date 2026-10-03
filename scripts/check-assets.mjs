@@ -164,8 +164,10 @@ for (const file of files) {
 // propriétaire). Changement délibéré et revu.
 // Bump 2026-10-03 (3) : modules « Jours fériés » et « Simulateur obligataire »,
 // cache-busters de config.js et seances-excel.js. Changement délibéré et revu.
+// Bump 2026-10-03 (4) : cache-buster du module Simulateur obligataire
+// (libellé neutre « Commission SGI »). Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '95d0109cb8ef38bf5bd86abff22d2f1d4d4d5771';
+const expectedAdminBlobSha = '26bdbcab1d2a96cb4426c8da191f00e2241f61f6';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');
