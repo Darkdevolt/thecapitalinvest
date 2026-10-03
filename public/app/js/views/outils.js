@@ -5,6 +5,7 @@
 //   2. Rendement obligataire (coupon, rendement courant, rendement à l'échéance)
 //   3. Fourchette de fluctuation BRVM (plancher / plafond du jour)
 //   4. Score maison The Capital (note /100 depuis les ratios réels de la base)
+//   5. Simulateur d'ordre obligataire (Professional, module obligations-ordre.js)
 // Les trois premiers sont des calculs purs. Le 4e lit allCours / allFinancials /
 // allEntreprises. Aucune donnée inventée : ratio absent = non noté.
 // ============================================================================
@@ -251,12 +252,27 @@
     { id: 'compose', label: 'Intérêts composés', form: composeForm, run: runCompose, formId: 'ouComposeForm' },
     { id: 'bond', label: 'Rendement obligataire', form: bondForm, run: runBond, formId: 'ouBondForm' },
     { id: 'band', label: 'Fourchette BRVM', form: bandForm, run: runBand, formId: 'ouBandForm' },
-    { id: 'score', label: 'Score maison', form: scoreForm, run: runScore, formId: 'ouScoreForm' }
+    { id: 'score', label: 'Score maison', form: scoreForm, run: runScore, formId: 'ouScoreForm' },
+    { id: 'ordre', label: 'Simulateur d\'ordre obligataire · Pro', mount: mountOrdre }
   ];
+
+  /* Simulateur d'ordre obligataire (Professional) : frais SGI, TAF, BRVM/DC-BR,
+     prix TTC et rendement frais inclus. Module partagé avec la fiche obligation. */
+  function mountOrdre(host) {
+    var go = function () { if (window.TCOrdreObligataire && host.isConnected) window.TCOrdreObligataire.mountStandalone(host); };
+    if (window.TCOrdreObligataire) return go();
+    host.innerHTML = '<p class="ou-note">Chargement du simulateur…</p>';
+    var s = document.createElement('script');
+    s.src = '/app/js/views/obligations-ordre.js?v=20261003.2';
+    s.onload = go;
+    s.onerror = function () { host.innerHTML = '<p class="ou-note">Simulateur indisponible : rechargez la page.</p>'; };
+    document.head.appendChild(s);
+  }
 
   function mountTool() {
     var host = g('ouBody');
     var tool = TOOLS.find(function (t) { return t.id === TAB; }) || TOOLS[0];
+    if (tool.mount) { host.innerHTML = '<div id="ouOrdre"></div>'; tool.mount(g('ouOrdre')); return; }
     host.innerHTML = '<div class="card"><div class="card-body">' + tool.form() + '</div></div>';
     var form = g(tool.formId);
     if (form) form.addEventListener('submit', function (e) { e.preventDefault(); try { tool.run(); } catch (err) { console.error('[OUTILS]', err); } });
@@ -275,7 +291,7 @@
     injectCss();
     view.innerHTML = ''
       + '<div class="page-header"><h1>Outils <span style="color:var(--gold)">&amp; Simulateurs</span></h1>'
-      + '<p>Calculateurs d\'épargne et d\'obligations, fourchette de cotation BRVM, et note maison The Capital à partir des données de la base.</p></div>'
+      + '<p>Calculateurs d\'épargne et d\'obligations, fourchette de cotation BRVM, note maison The Capital et simulateur d\'ordre obligataire (frais, prix TTC, rendement frais inclus).</p></div>'
       + '<div class="ou-tabs">' + TOOLS.map(function (t) {
         return '<button type="button" class="ou-tab' + (t.id === TAB ? ' active' : '') + '" data-ou="' + t.id + '">' + esc(t.label) + '</button>';
       }).join('') + '</div>'

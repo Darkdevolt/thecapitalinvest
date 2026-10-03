@@ -15,7 +15,7 @@
   if (w.TCOrdreObligataire) return;
 
   var DEFAULTS = {
-    commission_sgi_pct: 0.4, commission_sgi_libelle: 'Commission ICF',
+    commission_sgi_pct: 0.4, commission_sgi_libelle: 'Commission SGI',
     taf_pct: 17, taf_sur_apporteur: false,
     apporteur_par_titre: 100, apporteur_actif: true,
     brvm_dcbr_pct: 0.11742, brvm_dcbr_base: 'nominal', brvm_dcbr_actif: true,
@@ -254,7 +254,7 @@
       ['Mode d\'emploi'],
       ['Ce fichier suit la fiche « SIMULATION » : une ligne par libellé, valeur en colonne B.'],
       ['Admin The Capital → Simulateur obligataire → Importer : les taux de la section PARAMÈTRES deviennent les valeurs par défaut des abonnés Professional.'],
-      ['À défaut de section PARAMÈTRES, les taux sont déduits des libellés (« Commission ICF (0,4%) », « TAF (17%) », « Apporteur d\'affaires (100 FCFA par titre) ») et de la ligne Commissions BRVM/DCBR rapportée au nominal.'],
+      ['À défaut de section PARAMÈTRES, les taux sont déduits des libellés (« Commission SGI (0,4%) », « TAF (17%) », « Apporteur d\'affaires (100 FCFA par titre) ») et de la ligne Commissions BRVM/DCBR rapportée au nominal.'],
       ['Codes de lignes masquables : ' + LINES.filter(function (l) { return l.k !== 'montant'; }).map(function (l) { return l.k; }).join(', ')]
     ]), 'Mode_emploi');
     X.writeFile(wb, filename);
@@ -337,28 +337,54 @@
 
   // ── interface (fiche obligation de l'application) ────────────────────
   var CSS = ''
-    + '.oo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:12px}'
-    + '.oo-grid label{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim,rgba(245,240,232,.5));margin-bottom:4px}'
-    + '.oo-grid input,.oo-grid select{width:100%;box-sizing:border-box;background:rgba(245,240,232,.04);border:1px solid rgba(245,240,232,.12);color:inherit;border-radius:6px;padding:7px 9px;font:inherit}'
-    + '.oo-sheet{max-width:760px;border:1px solid rgba(245,240,232,.12);border-radius:8px;overflow:hidden}'
-    + '.oo-sheet .hd{background:#E3CC1E;color:#111;text-align:center;font-weight:600;padding:6px;letter-spacing:.04em}'
-    + '.oo-sheet table{width:100%;border-collapse:collapse}.oo-sheet td{padding:6px 10px;border-bottom:1px solid rgba(245,240,232,.07)}'
-    + '.oo-sheet td.v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.oo-sheet tr.gap td{padding:4px;border:0}'
-    + '.oo-sheet tr.strong td{font-weight:600;border-top:1px solid rgba(245,240,232,.25)}'
-    + '.oo-sheet tr.total td{background:#000;color:#fff;font-weight:700;font-size:15px}'
+    + '.oo{--oo-line:rgba(245,240,232,.09);--oo-soft:rgba(245,240,232,.04);--oo-gold:var(--gold,#B8964E)}'
+    + '.oo-wrap{display:grid;grid-template-columns:minmax(280px,380px) minmax(0,1fr);gap:18px;align-items:start}'
+    + '@media (max-width:900px){.oo-wrap{grid-template-columns:1fr}}'
+    + '.oo-panel{background:var(--card,rgba(245,240,232,.03));border:1px solid var(--oo-line);border-radius:12px;padding:16px}'
+    + '.oo-panel h3{margin:0 0 12px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--oo-gold);font-weight:600}'
+    + '.oo-wrap>*,.oo-grid>*{min-width:0}.oo input,.oo select{min-width:0;max-width:100%}'
+    + '.oo-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}'
+    + '.oo-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}'
+    + '@media (max-width:520px){.oo-grid,.oo-checks.cols{grid-template-columns:1fr}.oo-sheet td{padding:7px 10px}.oo-sheet .hd span{display:none}.oo-kpi .v{font-size:16px}}'
+    + '.oo-grid .full{grid-column:1/-1}'
+    + '.oo label.l{display:block;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim,rgba(245,240,232,.5));margin-bottom:5px}'
+    + '.oo input[type=number],.oo input[type=date],.oo input[type=text],.oo select{width:100%;box-sizing:border-box;background:var(--oo-soft);border:1px solid rgba(245,240,232,.14);color:inherit;border-radius:8px;padding:9px 10px;font:inherit;font-variant-numeric:tabular-nums}'
+    + '.oo input:focus,.oo select:focus{outline:none;border-color:var(--oo-gold);box-shadow:0 0 0 3px rgba(184,150,78,.15)}'
+    + '.oo-kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}'
+    + '.oo-kpi{background:var(--oo-soft);border:1px solid var(--oo-line);border-radius:10px;padding:11px 12px}'
+    + '.oo-kpi .k{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim,rgba(245,240,232,.5))}'
+    + '.oo-kpi .v{margin-top:4px;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums}'
+    + '.oo-kpi.oo-kmain{grid-column:1/-1;background:linear-gradient(135deg,rgba(184,150,78,.18),rgba(184,150,78,.05));border-color:rgba(184,150,78,.45)}'
+    + '.oo-kpi.oo-kmain .v{font-size:24px;color:var(--oo-gold)}'
+    + '.oo-sheet{border:1px solid var(--oo-line);border-radius:12px;overflow:hidden;background:var(--card,rgba(245,240,232,.02))}'
+    + '.oo-sheet .hd{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid rgba(184,150,78,.35);background:rgba(184,150,78,.08)}'
+    + '.oo-sheet .hd b{font-size:12px;letter-spacing:.14em;color:var(--oo-gold)}.oo-sheet .hd span{font-size:12px;color:var(--dim,rgba(245,240,232,.55));text-align:right}'
+    + '.oo-sheet table{width:100%;border-collapse:collapse;font-size:13.5px}.oo-sheet td{padding:7px 16px;border-bottom:1px solid var(--oo-line)}'
+    + '.oo-sheet td.v{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.oo-sheet tr.gap td{padding:3px;border:0;background:var(--oo-soft)}'
+    + '.oo-sheet tr.sec td{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--oo-gold);padding-top:12px;border-bottom:0}'
+    + '.oo-sheet tr.strong td{font-weight:600;border-top:1px solid rgba(245,240,232,.22)}'
+    + '.oo-sheet tr.total td{background:var(--oo-gold);color:#17120a;font-weight:700;font-size:16px;border:0;padding:12px 16px}'
     + '.oo-sheet .h{font-size:11px;color:var(--dim,rgba(245,240,232,.5));margin-left:6px}'
-    + '.oo-bar{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}'
-    + '.oo-set{margin-top:12px;border:1px dashed rgba(245,240,232,.18);border-radius:8px;padding:12px}'
-    + '.oo-set h4{margin:0 0 10px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold,#B8964E)}'
-    + '.oo-checks{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 14px;font-size:13px}'
-    + '.oo-checks label{display:flex;gap:6px;align-items:center;cursor:pointer}'
-    + '.oo-err{color:#f87171;margin:8px 0}.oo-lock{padding:14px;border:1px solid rgba(184,150,78,.4);border-radius:8px;background:rgba(184,150,78,.06)}'
-    + '.oo-lock a{color:var(--gold,#B8964E);font-weight:600}';
+    + '.oo-bar{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}'
+    + '.oo-btn{background:var(--oo-soft);border:1px solid rgba(245,240,232,.16);color:inherit;border-radius:8px;padding:8px 13px;font:inherit;font-size:13px;cursor:pointer}'
+    + '.oo-btn:hover{border-color:var(--oo-gold)}.oo-btn.gold{background:var(--oo-gold);border-color:var(--oo-gold);color:#17120a;font-weight:600}'
+    + '.oo-set{margin-top:14px;border-top:1px solid var(--oo-line);padding-top:14px}'
+    + '.oo-set h4{margin:14px 0 10px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--oo-gold)}.oo-set h4:first-child{margin-top:0}'
+    + '.oo-checks{display:grid;grid-template-columns:1fr;gap:6px;font-size:13px}.oo-checks.cols{grid-template-columns:1fr 1fr;gap:6px 12px;font-size:12px}'
+    + '.oo-checks label{display:flex;gap:8px;align-items:center;cursor:pointer}'
+    + '.oo-checks input{accent-color:var(--oo-gold)}'
+    + '.oo-note{font-size:12px;color:var(--dim,rgba(245,240,232,.55));line-height:1.55;margin-top:12px}'
+    + '.oo-err{color:#f87171;padding:14px 16px}'
+    + '.oo-lock{padding:18px;border:1px solid rgba(184,150,78,.45);border-radius:12px;background:linear-gradient(135deg,rgba(184,150,78,.12),rgba(184,150,78,.03))}'
+    + '.oo-lock a{display:inline-block;margin-top:10px;background:var(--oo-gold);color:#17120a;font-weight:600;padding:8px 14px;border-radius:8px;text-decoration:none}'
+    + '.oo-pick{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:16px}'
+    + '.oo-pick .meta{font-size:12px;color:var(--dim,rgba(245,240,232,.55));margin-top:6px}';
   function injectCss() {
     if (document.getElementById('oo-css')) return;
     var s = document.createElement('style'); s.id = 'oo-css'; s.textContent = CSS; document.head.appendChild(s);
   }
 
+  var SESSION = {};   // saisie en cours par code obligataire
   var server = null;  // promesse de { parametres, jours_feries } ou { error }
   function loadServer() {
     if (server) return server;
@@ -384,18 +410,23 @@
   function mount(host, ctx) {
     if (!host) return;
     injectCss();
+    host.classList.add('oo');
     if (!allowed()) { host.innerHTML = lockedHtml(); return; }
-    host.innerHTML = '<div class="ob-note">Chargement des paramètres…</div>';
+    var token = {}; host.__ooToken = token;  // un seul simulateur actif par conteneur
+    host.innerHTML = '<div class="oo-note">Chargement des paramètres…</div>';
     loadServer().then(function (srv) {
-      if (!host.isConnected) return;  // fiche redessinée entre-temps
+      if (!host.isConnected || host.__ooToken !== token) return;  // fiche redessinée ou autre obligation choisie
       if (srv.error === 'plan') { host.innerHTML = lockedHtml(); return; }
       var user = readUser();
-      var st = {
+      /* État conservé par ligne pendant la session : l'application redessine la
+         page à chaque rafraîchissement des données (tc:dataready), la saisie
+         ne doit pas être perdue. */
+      var st = SESSION[ctx.o.code] || (SESSION[ctx.o.code] = {
         quantite: user.last_quantite || 1000,
         prix: ctx.a && ctx.a.clean != null ? Math.round(ctx.a.clean) : Math.round((ctx.a && ctx.a.crd) || 10000),
         dateTransaction: todayIso(), dateValeur: '', valeurManuelle: false, echeance: '',
         settingsOpen: false
-      };
+      });
       function params() { return mergeParams(srv.parametres, user.params); }
 
       function paint() {
@@ -403,31 +434,49 @@
         var res = compute({ o: ctx.o, f: ctx.f, b: ctx.b, quantite: st.quantite, prix: st.prix, dateTransaction: st.dateTransaction, dateValeur: st.valeurManuelle ? st.dateValeur : '', echeance: st.echeance, joursFeries: srv.jours_feries }, p);
         if (!st.valeurManuelle && res.values) st.dateValeur = res.values.date_valeur;
         var crd = res.analysis ? res.analysis.crd : (ctx.a && ctx.a.crd) || 10000;
-        var html = '<div class="oo-grid">'
-          + '<div><label for="ooQty">Quantité (titres)</label><input type="number" id="ooQty" min="1" step="1" value="' + esc(st.quantite) + '"></div>'
-          + '<div><label for="ooPx">Prix pied de coupon (FCFA)</label><input type="number" id="ooPx" step="any" value="' + esc(st.prix) + '"></div>'
-          + '<div><label for="ooPct">Prix pied de coupon (%)</label><input type="number" id="ooPct" step="any" value="' + esc(Math.round(st.prix / crd * 10000) / 100) + '"></div>'
-          + '<div><label for="ooT">Date de transaction</label><input type="date" id="ooT" value="' + esc(st.dateTransaction) + '"></div>'
-          + '<div><label for="ooV">Date de valeur (T+' + esc(p.delai_reglement_jours) + ' ouvrés)</label><input type="date" id="ooV" value="' + esc(st.dateValeur || '') + '"></div>'
-          + '<div><label for="ooE">Date d\'échéance' + (st.echeance ? ' (saisie)' : '') + '</label><input type="date" id="ooE" value="' + esc(st.echeance || (res.values ? res.values.echeance : '')) + '"></div>'
+        var v = res.values;
+        var inp = function (id, label, type, val, extra, cls) {
+          return '<div class="' + (cls || '') + '"><label class="l" for="' + id + '">' + label + '</label><input type="' + type + '" id="' + id + '"' + (type === 'number' ? ' step="any"' : '') + ' value="' + esc(val == null ? '' : val) + '"' + (extra || '') + '></div>';
+        };
+        var panel = '<div class="oo-panel"><h3>Votre ordre</h3><div class="oo-grid">'
+          + inp('ooQty', 'Quantité (titres)', 'number', st.quantite, ' min="1" step="1"', 'full')
+          + inp('ooPx', 'Prix pied de coupon (FCFA)', 'number', st.prix)
+          + inp('ooPct', 'Prix (% du nominal)', 'number', Math.round(st.prix / crd * 10000) / 100)
+          + inp('ooT', 'Date de transaction', 'date', st.dateTransaction)
+          + inp('ooV', 'Date de valeur · T+' + esc(p.delai_reglement_jours), 'date', st.dateValeur || '')
+          + inp('ooE', 'Échéance' + (st.echeance ? ' (saisie)' : ''), 'date', st.echeance || (v ? v.echeance : ''), '', 'full')
           + '</div>';
-        if (res.error) html += '<div class="oo-err">' + esc(res.error) + '</div>';
+        if (v) {
+          var tile = function (k, val, cls) { return '<div class="oo-kpi ' + (cls || '') + '"><div class="k">' + esc(k) + '</div><div class="v">' + esc(val) + '</div></div>'; };
+          panel += '<div class="oo-kpis">'
+            + tile('Montant à régler', nf(Math.round(v.montant)) + ' FCFA', 'oo-kmain')
+            + tile('Prix TTC', nf(v.prix_ttc, 2) + ' %')
+            + tile('Rendement frais inclus', v.ytm != null ? nf(v.ytm, 2) + ' %' : '—')
+            + tile('Total des frais', nf(Math.round(v.total_commissions)) + ' F')
+            + tile('Intérêts courus', nf(Math.round(v.interets_courus)) + ' F')
+            + '</div>';
+        }
+        panel += '<div class="oo-bar"><button type="button" class="oo-btn gold" id="ooXlsx">Exporter Excel</button><button type="button" class="oo-btn" id="ooPrint">Imprimer / PDF</button>'
+          + '<button type="button" class="oo-btn" id="ooSet">' + (st.settingsOpen ? 'Masquer mes réglages' : 'Mes taux et lignes') + '</button></div>';
+        if (st.settingsOpen) panel += settingsHtml(p);
+        panel += '</div>';
+        var sheet;
+        if (res.error) sheet = '<div class="oo-sheet"><div class="hd"><b>SIMULATION</b></div><div class="oo-err">' + esc(res.error) + '</div></div>';
         else {
-          var v = res.values, lines = visibleLines(v, p), prev = null, body = '';
+          var lines = visibleLines(v, p), prev = null, body = '';
+          var SEC = { titre: 'Titre et opération', frais: 'Frais et commissions', synthese: 'Synthèse' };
           lines.forEach(function (l) {
             if (l.sec === 'total') return;
-            if (prev && prev !== l.sec) body += '<tr class="gap"><td colspan="2"></td></tr>';
+            if (prev !== l.sec) body += (prev ? '<tr class="gap"><td colspan="2"></td></tr>' : '') + '<tr class="sec"><td colspan="2">' + esc(SEC[l.sec] || '') + '</td></tr>';
             prev = l.sec;
             body += '<tr class="' + (l.strong ? 'strong' : '') + '"><td>' + esc(labelOf(l, p)) + (l.hint ? '<span class="h">' + esc(l.hint) + '</span>' : '') + '</td><td class="v">' + esc(fmt(l, v[l.k])) + '</td></tr>';
           });
-          body += '<tr class="gap"><td colspan="2"></td></tr><tr class="total"><td>Montant</td><td class="v">' + esc(fmt(LINES[LINES.length - 1], v.montant)) + '</td></tr>';
-          html += '<div class="oo-sheet" id="ooSheet"><div class="hd">SIMULATION</div><table><tbody>' + body + '</tbody></table></div>';
+          body += '<tr class="total"><td>Montant</td><td class="v">' + esc(fmt(LINES[LINES.length - 1], v.montant)) + ' FCFA</td></tr>';
+          sheet = '<div class="oo-sheet" id="ooSheet"><div class="hd"><b>SIMULATION</b><span>' + esc(v.code) + ' · ' + esc(v.designation) + '</span></div><table><tbody>' + body + '</tbody></table></div>';
         }
-        html += '<div class="oo-bar"><button type="button" class="ob-btn" id="ooXlsx">Excel</button><button type="button" class="ob-btn" id="ooPrint">Imprimer / PDF</button>'
-          + '<button type="button" class="ob-btn" id="ooSet">' + (st.settingsOpen ? 'Fermer les réglages' : 'Mes taux et lignes affichées') + '</button></div>';
-        if (st.settingsOpen) html += settingsHtml(p);
-        html += '<p class="ob-note">Intérêts courus en base exacte (ACT/ACT) sur la période de coupon en cours ; date de valeur estimée en jours ouvrés BRVM, fériés exclus. '
-          + 'Rendement actuariel calculé sur l\'échéancier réel (amortissements compris), prix payé frais inclus. Simulation indicative : les frais réels sont ceux de votre SGI.</p>';
+        var html = '<div class="oo-wrap">' + panel + '<div>' + sheet
+          + '<p class="oo-note">Intérêts courus en base exacte (ACT/ACT) sur la période de coupon en cours. Date de valeur estimée en jours ouvrés BRVM, fériés exclus. '
+          + 'Rendement actuariel calculé sur l\'échéancier réel (amortissements compris), prix payé frais inclus. Simulation indicative : les frais réels sont ceux de votre SGI.</p></div></div>';
         host.innerHTML = html;
         wire(res, p);
       }
@@ -440,20 +489,20 @@
           + field('apporteur_par_titre', 'Apporteur (FCFA / titre)', 'number', p.apporteur_par_titre)
           + field('taf_pct', 'TAF (%)', 'number', p.taf_pct)
           + field('brvm_dcbr_pct', 'BRVM / DC-BR (%)', 'number', p.brvm_dcbr_pct)
-          + '<div><label for="oo_brvm_dcbr_base">Base BRVM / DC-BR</label><select id="oo_brvm_dcbr_base" data-p="brvm_dcbr_base"><option value="nominal"' + (p.brvm_dcbr_base !== 'montant' ? ' selected' : '') + '>Nominal</option><option value="montant"' + (p.brvm_dcbr_base === 'montant' ? ' selected' : '') + '>Montant de l\'opération</option></select></div>'
+          + '<div class="full"><label class="l" for="oo_brvm_dcbr_base">Base BRVM / DC-BR</label><select id="oo_brvm_dcbr_base" data-p="brvm_dcbr_base"><option value="nominal"' + (p.brvm_dcbr_base !== 'montant' ? ' selected' : '') + '>Nominal</option><option value="montant"' + (p.brvm_dcbr_base === 'montant' ? ' selected' : '') + '>Montant de l\'opération</option></select></div>'
           + field('delai_reglement_jours', 'Délai de règlement (jours ouvrés)', 'number', p.delai_reglement_jours)
-          + '</div><div class="oo-checks" style="margin-bottom:12px">'
+          + '</div><div class="oo-checks" style="margin-top:12px">'
           + check('apporteur_actif', "Inclure l'apporteur d'affaires", p.apporteur_actif)
           + check('brvm_dcbr_actif', 'Inclure les commissions BRVM / DC-BR', p.brvm_dcbr_actif)
           + check('taf_sur_apporteur', "Appliquer la TAF à l'apporteur", p.taf_sur_apporteur)
-          + '</div><h4>Lignes affichées</h4><div class="oo-checks">'
+          + '</div><h4>Lignes affichées</h4><div class="oo-checks cols">'
           + LINES.filter(function (l) { return l.k !== 'montant'; }).map(function (l) {
             return '<label><input type="checkbox" data-show="' + l.k + '"' + (hide[l.k] ? '' : ' checked') + '> ' + esc(labelOf(l, p)) + '</label>';
           }).join('')
-          + '</div><div class="oo-bar"><button type="button" class="ob-btn" id="ooReset">Revenir aux taux The Capital</button></div></div>';
+          + '</div><div class="oo-bar"><button type="button" class="oo-btn" id="ooReset">Revenir aux taux par défaut</button></div></div>';
       }
       function field(k, l, type, v) {
-        return '<div><label for="oo_' + k + '">' + esc(l) + '</label><input type="' + type + '" id="oo_' + k + '" data-p="' + k + '"' + (type === 'number' ? ' step="any"' : '') + ' value="' + esc(v == null ? '' : v) + '"></div>';
+        return '<div' + (type === 'text' ? ' class="full"' : '') + '><label class="l" for="oo_' + k + '">' + esc(l) + '</label><input type="' + type + '" id="oo_' + k + '" data-p="' + k + '"' + (type === 'number' ? ' step="any"' : '') + ' value="' + esc(v == null ? '' : v) + '"></div>';
       }
       function check(k, l, v) { return '<label><input type="checkbox" data-pb="' + k + '"' + (v ? ' checked' : '') + '> ' + esc(l) + '</label>'; }
 
@@ -524,11 +573,72 @@
     win.document.open(); win.document.write(html); win.document.close();
   }
 
+  // ── page autonome (Outils & Simulateurs) ─────────────────────────────
+  function loadScript(src) {
+    return new Promise(function (resolve) {
+      var s = document.createElement('script'); s.src = src; s.onload = resolve; s.onerror = resolve; document.head.appendChild(s);
+    });
+  }
+  function keyOf(s) { return String(s || '').toUpperCase().replace(/^TNC_/, '').trim(); }
+  var market = null;
+  function loadMarket() {
+    if (market) return market;
+    var get = function (q) { return w.apiGet('/marche?type=' + q).then(function (r) { return Array.isArray(r) ? r : (r && r.data) || []; }).catch(function () { return []; }); };
+    market = Promise.all([
+      w.OBMath ? Promise.resolve() : loadScript('/app/js/views/obligations-math.js?v=3'),
+      get('obligations'), get('obligations_caracteristiques&limit=1000'), get('obligations_boc')
+    ]).then(function (r) {
+      var fiches = {}, boc = {};
+      r[2].forEach(function (f) { [f.symbole, f.code_obligation].forEach(function (k) { if (k) fiches[keyOf(k)] = f; }); });
+      r[3].forEach(function (b) { if (b && b.symbole) boc[keyOf(b.symbole)] = b; });
+      var today = todayIso();
+      var list = r[1].filter(function (o) {
+        if (!o || !o.code || /^TNC_/i.test(o.code)) return false;
+        var an = w.OBMath && w.OBMath.analyze(o, fiches[keyOf(o.code)] || null, today, null, boc[keyOf(o.code)] || null);
+        return an && an.schedule && !an.matured;  // lignes vivantes uniquement
+      })
+        .sort(function (a, b) { return String(a.nom || a.code).localeCompare(String(b.nom || b.code)); });
+      return { list: list, fiches: fiches, boc: boc };
+    });
+    market.catch(function () { market = null; });
+    return market;
+  }
+  function mountStandalone(host) {
+    if (!host) return;
+    injectCss();
+    host.classList.add('oo');
+    if (!allowed()) { host.innerHTML = lockedHtml(); return; }
+    host.innerHTML = '<div class="oo-note">Chargement du marché obligataire…</div>';
+    loadMarket().then(function (m) {
+      if (!host.isConnected) return;
+      if (!m.list.length || !w.OBMath) { host.innerHTML = '<div class="oo-err">Marché obligataire indisponible pour le moment.</div>'; return; }
+      var user = readUser();
+      var sel = user.last_code && m.list.some(function (o) { return o.code === user.last_code; }) ? user.last_code
+        : (m.list.find(function (o) { return Number(o.cours) > 0; }) || m.list[0]).code;
+      host.innerHTML = '<div class="oo-pick"><div><label class="l" for="ooBond">Obligation</label><select id="ooBond">'
+        + m.list.map(function (o) { return '<option value="' + esc(o.code) + '"' + (o.code === sel ? ' selected' : '') + '>' + esc(o.code + ' — ' + (o.nom || '')) + '</option>'; }).join('')
+        + '</select><div class="meta" id="ooMeta"></div></div></div><div id="ooSim"></div>';
+      function show(code) {
+        var o = m.list.find(function (x) { return x.code === code; }); if (!o) return;
+        var f = m.fiches[keyOf(o.code)] || null, b = m.boc[keyOf(o.code)] || null;
+        var a = w.OBMath.analyze(o, f, todayIso(), null, b);
+        var meta = host.querySelector('#ooMeta');
+        if (meta) meta.textContent = 'Taux ' + (o.taux_facial != null ? String(o.taux_facial).replace('.', ',') + ' %' : '—')
+          + ' · cours ' + (Number(o.cours) > 0 ? nf(o.cours) + ' FCFA' : 'non coté')
+          + (a && a.schedule ? ' · échéance ' + dLabel(isoOf(a.schedule.maturity)) + ' · ' + (a.schedule.mode && a.schedule.mode.label || '') : '');
+        user = readUser(); user.last_code = code; writeUser(user);
+        mount(host.querySelector('#ooSim'), { o: o, f: f, b: b, a: a || {} });
+      }
+      host.querySelector('#ooBond').addEventListener('change', function () { show(this.value); });
+      show(sel);
+    });
+  }
+
   w.TCOrdreObligataire = {
     DEFAULTS: DEFAULTS, LINES: LINES, PARAM_ROWS: PARAM_ROWS, SAMPLE: SAMPLE,
     compute: compute, mergeParams: mergeParams, labelOf: labelOf, visibleLines: visibleLines,
     addBusinessDays: addBusinessDays, businessDaysBetween: businessDaysBetween,
     sheetRows: sheetRows, writeWorkbook: writeWorkbook, parseRows: parseRows, loadXlsx: loadXlsx,
-    mount: mount
+    mount: mount, mountStandalone: mountStandalone
   };
 })(window);
