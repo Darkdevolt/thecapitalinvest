@@ -1040,8 +1040,8 @@
 
     html += '<div class="atx-group">Dimensionnement</div>' +
       '<div class="atx-sizer">' +
-      '<label>Capital <input type="number" id="atxCapital" value="5000000" min="0" step="100000"></label>' +
-      '<label>Risque <input type="number" id="atxRisk" value="2" min="0.1" max="20" step="0.1"><span>%</span></label>' +
+      '<label>Capital <input type="number" id="atxCapital" value="5000000" min="0" step="any"></label>' +
+      '<label>Risque <input type="number" id="atxRisk" value="2" min="0.1" max="20" step="any"><span>%</span></label>' +
       '</div><div id="atxSizeOut" class="atx-size-out"></div>' +
       '<p class="atx-note">Le nombre de titres est calculé pour que la perte, en cas de retour au niveau d\'invalidation, ' +
       'reste égale au pourcentage de capital indiqué. Il ne tient compte ni des frais de courtage ni de la profondeur du carnet d\'ordres.</p>';
