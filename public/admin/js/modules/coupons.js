@@ -1,7 +1,10 @@
 /* ============================================================
    THE CAPITAL — CALENDRIER DES COUPONS OBLIGATAIRES
-   Table coupons_calendrier, lue par l'application (marche.js, calendrier
-   des évènements : ticker, date_detachement, coupon) mais qui n'avait
+   Table coupons_calendrier (code, emetteur, isin, montant_brut,
+   montant_net, numero_coupon, periodicite, dates, statut), lue par
+   l'application (marche.js, calendrier du tableau de bord). Le module
+   écrivait autrefois des colonnes `ticker` et `coupon` qui n'existent
+   pas : toute saisie était refusée. Elle n'avait
    jusqu'ici AUCUN chemin d'écriture nulle part dans le code — ni admin,
    ni scraper : elle restait vide quoi qu'il arrive. Ce module lui donne
    une saisie manuelle, sur le même principe que le Calendrier des
@@ -14,6 +17,13 @@
     let rows = [];
     let editing = null;
     let calDate = new Date();
+
+    const PERIODICITES = [
+        { v: 'annuel', l: 'Annuel' }, { v: 'semestriel', l: 'Semestriel' },
+        { v: 'trimestriel', l: 'Trimestriel' }, { v: 'mensuel', l: 'Mensuel' }, { v: 'in fine', l: 'In fine' }
+    ];
+    const FORM_IDS = ['cpn-ticker', 'cpn-emetteur', 'cpn-isin', 'cpn-numero', 'cpn-brut', 'cpn-montant',
+        'cpn-detach', 'cpn-paiement', 'cpn-notes'];
 
     const STATUTS = [
         { v: 'prévisionnel', l: 'Prévisionnel' },
@@ -46,8 +56,13 @@
             '<div class="card accent"><div class="card-head"><span class="card-title" id="cpn-form-title">Enregistrer un coupon</span>' +
             '<span class="card-tools"><button class="btn btn-outline btn-sm" id="cpn-cancel-edit" hidden>Annuler la modification</button></span></div>' +
             '<div class="form-grid">' + TC.fields([
-                { id: 'cpn-ticker', label: 'Code obligation', upper: true, placeholder: 'CI.O17' },
-                { id: 'cpn-montant', label: 'Coupon par titre', type: 'number', col: 'coupon', placeholder: '680' },
+                { id: 'cpn-ticker', label: 'Code obligation', upper: true, col: 'code', placeholder: 'EOS.O8', hint: 'Les champs vides sont repris de la fiche DC/BR si elle existe.' },
+                { id: 'cpn-emetteur', label: 'Émetteur', col: 'emetteur', placeholder: 'État du Sénégal' },
+                { id: 'cpn-isin', label: 'ISIN', upper: true, col: 'isin' },
+                { id: 'cpn-periodicite', label: 'Périodicité', type: 'select', options: PERIODICITES },
+                { id: 'cpn-numero', label: 'N° du coupon', type: 'number', col: 'numero_coupon' },
+                { id: 'cpn-brut', label: 'Coupon brut par titre', type: 'number', col: 'montant_brut' },
+                { id: 'cpn-montant', label: 'Coupon net par titre', type: 'number', col: 'montant_net', placeholder: '680' },
                 { id: 'cpn-detach', label: 'Date de détachement', type: 'date', col: 'date_detachement' },
                 { id: 'cpn-paiement', label: 'Date de paiement', type: 'date', col: 'date_paiement' },
                 { id: 'cpn-statut', label: 'Statut', type: 'select', options: STATUTS },
@@ -61,8 +76,8 @@
             '<span class="card-tools"><span class="card-count" id="cpn-count"></span>' +
             '<button class="btn btn-outline btn-sm" id="cpn-reload">↺</button></span></div>' +
             '<div class="tw capped" id="cpn-scope"><table><thead><tr>' +
-            '<th>Code</th><th class="r">Coupon</th><th>Détachement</th><th>Paiement</th><th>Statut</th><th></th>' +
-            '</tr></thead><tbody id="cpn-tbody">' + TC.rowsLoading(6) + '</tbody></table></div></div>';
+            '<th>Code</th><th>Émetteur</th><th class="r">N°</th><th class="r">Brut</th><th class="r">Net</th><th>Détachement</th><th>Paiement</th><th>Statut</th><th></th>' +
+            '</tr></thead><tbody id="cpn-tbody">' + TC.rowsLoading(9) + '</tbody></table></div></div>';
     }
 
     function box(label, value, tone) {
@@ -73,7 +88,7 @@
     function paintKpis() {
         const today = TC.today();
         const upcoming = rows.filter(r => r.date_detachement && r.date_detachement >= today).length;
-        const sansMontant = rows.filter(r => TC.toNumber(r.coupon) === null).length;
+        const sansMontant = rows.filter(r => TC.toNumber(r.montant_net) === null && TC.toNumber(r.montant_brut) === null).length;
         TC.el('cpn-kpis').innerHTML =
             box('Coupons enregistrés', rows.length) +
             box('Détachements à venir', upcoming) +
@@ -84,14 +99,17 @@
         const tbody = TC.el('cpn-tbody');
         TC.el('cpn-count').textContent = list.length + ' ligne(s)';
         if (!list.length) {
-            tbody.innerHTML = TC.rowsEmpty(6, 'Aucun coupon enregistré', 'Saisissez une échéance ci-dessus pour qu\'elle apparaisse dans le calendrier de l\'application.');
+            tbody.innerHTML = TC.rowsEmpty(9, 'Aucun coupon enregistré', 'Saisissez une échéance ci-dessus pour qu\'elle apparaisse dans le calendrier de l\'application.');
             return;
         }
         tbody.innerHTML = list.map(function (r) {
             const statut = r.statut || 'prévisionnel';
             const tone = statut === 'payé' ? 'badge-green' : statut === 'confirmé' ? 'badge-gold' : 'badge-orange';
-            return '<tr><td class="td-key">' + TC.esc(r.ticker) + '</td>' +
-                '<td class="r td-mono">' + TC.fmt(r.coupon) + '</td>' +
+            return '<tr><td class="td-key">' + TC.esc(r.code) + '</td>' +
+                '<td class="td-muted">' + TC.esc(r.emetteur || '') + '</td>' +
+                '<td class="r td-mono">' + (r.numero_coupon != null ? TC.esc(String(r.numero_coupon)) : '—') + '</td>' +
+                '<td class="r td-mono">' + TC.fmt(r.montant_brut) + '</td>' +
+                '<td class="r td-mono">' + TC.fmt(r.montant_net) + '</td>' +
                 '<td class="td-muted">' + TC.fmtDate(r.date_detachement) + '</td>' +
                 '<td class="td-muted">' + TC.fmtDate(r.date_paiement) + '</td>' +
                 '<td><span class="badge ' + tone + '">' + TC.esc(statut) + '</span></td>' +
@@ -102,7 +120,7 @@
     }
 
     async function load() {
-        TC.el('cpn-tbody').innerHTML = TC.rowsLoading(6);
+        TC.el('cpn-tbody').innerHTML = TC.rowsLoading(9);
         rows = await TC.getAll('coupons_calendrier', 'select=*&order=date_detachement.desc');
         paintKpis();
         paint(rows);
@@ -111,8 +129,9 @@
 
     function resetForm() {
         editing = null;
-        TC.clear(['cpn-ticker', 'cpn-montant', 'cpn-detach', 'cpn-paiement', 'cpn-notes']);
+        TC.clear(FORM_IDS);
         TC.setVal('cpn-statut', 'prévisionnel');
+        TC.setVal('cpn-periodicite', 'annuel');
         TC.el('cpn-form-title').textContent = 'Enregistrer un coupon';
         TC.el('cpn-save').textContent = 'Enregistrer';
         TC.el('cpn-cancel-edit').hidden = true;
@@ -121,33 +140,77 @@
 
     function edit(row) {
         editing = row.id;
-        TC.setVal('cpn-ticker', row.ticker);
-        TC.setVal('cpn-montant', row.coupon);
+        TC.setVal('cpn-ticker', row.code);
+        TC.setVal('cpn-emetteur', row.emetteur);
+        TC.setVal('cpn-isin', row.isin);
+        TC.setVal('cpn-periodicite', row.periodicite || 'annuel');
+        TC.setVal('cpn-numero', row.numero_coupon);
+        TC.setVal('cpn-brut', row.montant_brut);
+        TC.setVal('cpn-montant', row.montant_net);
         TC.setVal('cpn-detach', TC.toISODate(row.date_detachement) || '');
         TC.setVal('cpn-paiement', TC.toISODate(row.date_paiement) || '');
         TC.setVal('cpn-statut', row.statut || 'prévisionnel');
         TC.setVal('cpn-notes', row.notes);
-        TC.el('cpn-form-title').textContent = 'Modifier ' + row.ticker;
+        TC.el('cpn-form-title').textContent = 'Modifier ' + row.code;
         TC.el('cpn-save').textContent = 'Enregistrer la modification';
         TC.el('cpn-cancel-edit').hidden = false;
         TC.say('cpn-msg', 'Modification en cours.', 'info');
         document.getElementById('cpn-form-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
+    /** Fiche DC/BR de l'obligation (émetteur, ISIN, coupon net) pour compléter la saisie. */
+    async function fiche(code) {
+        if (!code) return null;
+        const q = encodeURIComponent('"' + code.replace(/"/g, '') + '"');
+        const data = await TC.get('obligations_caracteristiques',
+            'select=symbole,isin,raison_sociale_emetteur,montant_coupon_brut,montant_coupon_net,modalite_paiement&or=(symbole.eq.' + q + ',code_obligation.eq.' + q + ')&limit=1');
+        return data && data[0] ? data[0] : null;
+    }
+
+    function periodiciteDepuis(texte) {
+        const t = String(texte || '').toLowerCase();
+        if (/semest/.test(t)) return 'semestriel';
+        if (/trimest/.test(t)) return 'trimestriel';
+        if (/mensu/.test(t)) return 'mensuel';
+        if (/in fine/.test(t)) return 'in fine';
+        if (/annu/.test(t)) return 'annuel';
+        return null;
+    }
+
+    async function completerDepuisFiche() {
+        const code = String(TC.val('cpn-ticker') || '').toUpperCase().trim();
+        const f = await fiche(code);
+        if (!f) return;
+        if (!TC.val('cpn-emetteur') && f.raison_sociale_emetteur) TC.setVal('cpn-emetteur', f.raison_sociale_emetteur);
+        if (!TC.val('cpn-isin') && f.isin) TC.setVal('cpn-isin', f.isin);
+        if (!TC.val('cpn-brut') && f.montant_coupon_brut != null) TC.setVal('cpn-brut', f.montant_coupon_brut);
+        if (!TC.val('cpn-montant') && f.montant_coupon_net != null) TC.setVal('cpn-montant', f.montant_coupon_net);
+        const p = periodiciteDepuis(f.modalite_paiement);
+        if (p && !editing) TC.setVal('cpn-periodicite', p);
+        TC.say('cpn-msg', 'Champs complétés depuis la fiche DC/BR de ' + code + '.', 'info');
+    }
+
     async function save() {
-        const ticker = String(TC.val('cpn-ticker') || '').toUpperCase();
+        const ticker = String(TC.val('cpn-ticker') || '').toUpperCase().trim();
         const detach = TC.toISODate(TC.val('cpn-detach'));
         if (!ticker || !detach) { TC.say('cpn-msg', 'Le code et la date de détachement sont obligatoires.', 'err'); return; }
+        if (!TC.val('cpn-emetteur')) await completerDepuisFiche();
+        const emetteur = String(TC.val('cpn-emetteur') || '').trim();
+        if (!emetteur) { TC.say('cpn-msg', 'L\'émetteur est obligatoire (aucune fiche DC/BR trouvée pour ' + ticker + ').', 'err'); return; }
+        const paiement = TC.toISODate(TC.val('cpn-paiement')) || null;
+        if (paiement && paiement < detach) { TC.say('cpn-msg', 'Le paiement ne peut pas précéder le détachement.', 'err'); return; }
         const body = {
-            ticker, coupon: TC.num('cpn-montant'), date_detachement: detach,
-            date_paiement: TC.toISODate(TC.val('cpn-paiement')) || null,
+            code: ticker, emetteur, isin: TC.val('cpn-isin') || null,
+            periodicite: TC.val('cpn-periodicite') || 'annuel',
+            numero_coupon: TC.num('cpn-numero'), montant_brut: TC.num('cpn-brut'), montant_net: TC.num('cpn-montant'),
+            date_detachement: detach, date_paiement: paiement,
             statut: TC.val('cpn-statut') || 'prévisionnel', notes: TC.val('cpn-notes') || null
         };
         try {
             if (editing) await TC.patch('coupons_calendrier', 'id=eq.' + editing, body);
             else await TC.post('coupons_calendrier', body);
-            TC.say('cpn-msg', ticker + ' enregistré.', 'ok');
             resetForm();
+            TC.say('cpn-msg', ticker + ' enregistré.', 'ok');
             load();
         } catch (e) { TC.say('cpn-msg', e.message, 'err'); }
     }
@@ -178,7 +241,7 @@
             html += '<div class="tc-cal-day' + (TC.isWeekend(iso) ? ' weekend' : '') + (iso === today ? ' today' : '') + '">' +
                 '<span class="n">' + d + '</span>' +
                 ev.map(r => '<span class="tc-cal-event" data-cal-edit="' + r.id + '" style="cursor:pointer" title="' +
-                    TC.esc(r.ticker + ' · ' + TC.fmt(r.coupon)) + '">' + TC.esc(r.ticker) + '</span>').join('') +
+                    TC.esc(r.code + ' · ' + TC.fmt(r.montant_net != null ? r.montant_net : r.montant_brut)) + '">' + TC.esc(r.code) + '</span>').join('') +
                 '</div>';
         }
         grid.innerHTML = html;
@@ -195,6 +258,7 @@
         refresh: load,
         mount() {
             TC.on('cpn-save', 'click', save);
+            TC.on('cpn-ticker', 'change', completerDepuisFiche);
             TC.on('cpn-clear', 'click', resetForm);
             TC.on('cpn-cancel-edit', 'click', resetForm);
             TC.on('cpn-reload', 'click', load);
@@ -209,14 +273,14 @@
             });
             TC.delegate('cpn-tbody', '[data-del]', 'click', async function (n) {
                 const row = rows.find(r => String(r.id) === n.dataset.del);
-                if (!row || !TC.confirmTwice('Supprimer le coupon ' + row.ticker + ' ?')) return;
+                if (!row || !TC.confirmTwice('Supprimer le coupon ' + row.code + ' ?')) return;
                 try { await TC.del('coupons_calendrier', 'id=eq.' + row.id); TC.toast('Supprimé', 'ok'); load(); }
                 catch (e) { TC.toast(e.message, 'err'); }
             });
             TC.on('cpn-export', 'click', function () {
                 if (!rows.length) return;
                 TC.download('coupons-' + TC.today() + '.csv',
-                    TC.toCSV(rows, ['ticker', 'coupon', 'date_detachement', 'date_paiement', 'statut', 'notes']),
+                    TC.toCSV(rows, ['code', 'emetteur', 'isin', 'periodicite', 'numero_coupon', 'montant_brut', 'montant_net', 'date_detachement', 'date_paiement', 'statut', 'notes']),
                     'text/csv;charset=utf-8');
             });
             load();

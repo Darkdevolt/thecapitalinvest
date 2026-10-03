@@ -154,8 +154,13 @@ for (const file of files) {
 // (table indices_composition) ; cache-buster de core/config.js pour les
 // colonnes déclarées de la nouvelle table. Demandé par le propriétaire.
 // Changement délibéré et revu.
+// Bump 2026-10-03 : cache-busters de coupons.js (module réaligné sur le vrai
+// schéma de coupons_calendrier : code, emetteur, montants brut/net) et de
+// utilisateurs.js (lecture robuste du journal), analyses.js et dividendes.js
+// (message de confirmation qui était effacé aussitôt). Demandé par le propriétaire
+// (« tout doit être corrigé »). Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '3104511aa7034eee28db4e7986d6aa435c3b105a';
+const expectedAdminBlobSha = 'aa5e8c7167330e4c645d6b4aa26c44330b76acb9';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');

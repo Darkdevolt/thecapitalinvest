@@ -457,8 +457,8 @@
         try {
             if (editing) {
                 await TC.patch('dividendes_calendrier', 'id=eq.' + editing, body);
-                TC.say('div-msg', 'Dividende modifié.', 'ok');
                 resetForm();
+                TC.say('div-msg', 'Dividende modifié.', 'ok');
             } else {
                 await TC.post('dividendes_calendrier', body);
                 TC.say('div-msg', ticker + ' — exercice ' + annee + ' enregistré.', 'ok');

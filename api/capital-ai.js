@@ -18,6 +18,18 @@ const MAX_CONTEXT = 12000;
 const PROVIDER_TIMEOUT_MS = 55000;
 /* Délai accordé à chaque modèle pour commencer à répondre avant de passer au suivant. */
 const FIRST_BYTE_TIMEOUT_MS = 15000;
+/* Jetons de sortie, réflexion comprise pour les modèles qui réfléchissent. */
+const MAX_OUTPUT_TOKENS = 8192;
+/* Au-delà, plus assez de temps pour relancer la suite avant la coupure Vercel (60 s). */
+const CONTINUE_BEFORE_MS = 35000;
+
+/** Message affiché quand Gemini s'arrête pour une autre raison que la fin normale. */
+function finishNote(reason) {
+  if (reason === 'MAX_TOKENS') return '_Réponse tronquée par la limite de longueur : écrivez « continue » pour la suite._';
+  if (/SAFETY|BLOCKLIST|PROHIBITED|SPII/.test(reason)) return '_Réponse interrompue par le filtre de sécurité du moteur IA : reformulez la question._';
+  if (reason === 'RECITATION') return '_Réponse interrompue par le moteur IA (contenu trop proche d’une source protégée) : reformulez la question._';
+  return '_Réponse interrompue par le moteur IA (' + reason + ') : reposez la question._';
+}
 
 const SYSTEM_PROMPT = (contexte, donnees) => [
   "Tu es The Capital AI, assistant d'intelligence financière spécialisé sur la BRVM et l'UEMOA.",
@@ -106,39 +118,50 @@ export default async function handler(req, res) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PROVIDER_TIMEOUT_MS);
   const wantStream = body?.stream === true;
+  const started = Date.now();
 
   try {
     if (useGemini) {
       /* Réflexion interne (« thinking ») désactivée : les chiffres et ratios sont déjà
          calculés côté serveur, le modèle n'a qu'à rédiger. Elle faisait dépasser le délai
          sur les questions ouvertes. Si un modèle refuse ce réglage (400), on réessaie sans. */
-      const payload = thinking => JSON.stringify({
+      /* Réglage de la réflexion selon ce que le modèle accepte : désactivée
+         (Gemini 2.5), niveau bas (Gemini 3, qui refuse thinkingBudget 0), ou
+         réglage par défaut du modèle. Les jetons de réflexion sont décomptés de
+         maxOutputTokens : avec 4 096 jetons, un modèle qui réfléchit ne laissait
+         parfois qu'une phrase de réponse, coupée net. */
+      const THINKING = [{ thinkingBudget: 0 }, { thinkingLevel: 'low' }, null];
+      const baseContents = [{ role: 'user', parts: [{ text: question }] }];
+      const payload = (level, contents = baseContents) => JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM_PROMPT(contexte, donnees.text) }] },
-        contents: [{ role: 'user', parts: [{ text: question }] }],
-        generationConfig: { temperature: 0.3, maxOutputTokens: 4096, ...(thinking ? {} : { thinkingConfig: { thinkingBudget: 0 } }) }
+        contents,
+        generationConfig: { temperature: 0.3, maxOutputTokens: MAX_OUTPUT_TOKENS, ...(THINKING[level] ? { thinkingConfig: THINKING[level] } : {}) }
       });
+      let thinkingLevel = 0;
       /* Chaque modèle a son propre délai pour commencer à répondre : un modèle
          saturé ne consomme plus tout le temps des secours. */
-      const ask = async m => {
-        const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + (wantStream ? ':streamGenerateContent?alt=sse' : ':generateContent');
-        const attempt = async thinking => {
+      const ask = async (m, opts = {}) => {
+        const streaming = opts.stream ?? wantStream;
+        const url = 'https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(m) + (streaming ? ':streamGenerateContent?alt=sse' : ':generateContent');
+        const attempt = async level => {
           const ctl = new AbortController();
-          const t = setTimeout(() => ctl.abort(), FIRST_BYTE_TIMEOUT_MS);
+          const t = setTimeout(() => ctl.abort(), opts.timeout || FIRST_BYTE_TIMEOUT_MS);
           const onAbort = () => ctl.abort();
           controller.signal.addEventListener('abort', onAbort);
           try {
-            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: payload(thinking), signal: ctl.signal });
+            const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-goog-api-key': geminiKey }, body: payload(level, opts.contents), signal: ctl.signal });
             return { r, ctl };
           } catch (e) {
             if (controller.signal.aborted) throw e;
             return { r: { status: 504, ok: false, json: async () => ({ error: { message: 'délai de réponse dépassé' } }) }, ctl };
           } finally { clearTimeout(t); /* l'écoute reste active : le délai global coupe aussi la lecture du flux */ }
         };
-        let out = await attempt(false);
-        if (out.r.status === 400) {
+        let out = await attempt(thinkingLevel);
+        while (out.r.status === 400 && thinkingLevel < THINKING.length - 1) {
           const detail = await out.r.json().catch(() => null);
-          if (/thinking/i.test(detail?.error?.message || '')) out = await attempt(true);
-          else out.r = { status: 400, ok: false, json: async () => detail };
+          if (!/thinking/i.test(detail?.error?.message || '')) { out.r = { status: 400, ok: false, json: async () => detail }; break; }
+          thinkingLevel++;
+          out = await attempt(thinkingLevel);
         }
         return out.r;
       };
@@ -161,6 +184,21 @@ export default async function handler(req, res) {
         return fail(res, 502, 'Le moteur IA est temporairement indisponible.', 'AI_PROVIDER_ERROR');
       }
 
+      /* Suite d'une réponse coupée par la limite de longueur : le modèle reprend
+         exactement là où il s'est arrêté (requête non diffusée, une seule fois). */
+      const continuation = async (m, partial) => {
+        try {
+          const r = await ask(m, { stream: false, timeout: Math.max(5000, PROVIDER_TIMEOUT_MS - (Date.now() - started) - 2000), contents: [
+            ...baseContents,
+            { role: 'model', parts: [{ text: partial }] },
+            { role: 'user', parts: [{ text: 'Continue exactement là où ta réponse s’est arrêtée, sans rien répéter ni ajouter d’introduction.' }] }
+          ] });
+          if (!r.ok) return '';
+          const d = await r.json().catch(() => null);
+          return (d?.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+        } catch { return ''; }
+      };
+
       if (wantStream) {
         /* Texte envoyé au fur et à mesure (flux SSE de Gemini relayé en texte brut). */
         res.statusCode = 200;
@@ -171,7 +209,7 @@ export default async function handler(req, res) {
         if (typeof res.flushHeaders === 'function') res.flushHeaders();
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buf = '', wrote = 0;
+        let buf = '', wrote = 0, full = '', finish = '', usage = null;
         try {
           for (;;) {
             const { value, done } = await reader.read();
@@ -182,9 +220,22 @@ export default async function handler(req, res) {
               const line = buf.slice(0, nl).trim(); buf = buf.slice(nl + 1);
               if (!line.startsWith('data:')) continue;
               let evt; try { evt = JSON.parse(line.slice(5)); } catch { continue; }
-              const piece = (evt?.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
-              if (piece) { res.write(piece); wrote += piece.length; }
+              const cand = evt?.candidates?.[0];
+              if (cand?.finishReason) finish = cand.finishReason;
+              if (evt?.usageMetadata) usage = evt.usageMetadata;
+              const piece = (cand?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('');
+              if (piece) { res.write(piece); wrote += piece.length; full += piece; }
             }
+          }
+          if (finish && finish !== 'STOP') {
+            console.warn('[CAPITAL-AI] fin anormale', used, finish, JSON.stringify(usage || {}));
+            /* Limite de longueur atteinte : une relance demande la suite, une fois. */
+            if (finish === 'MAX_TOKENS' && wrote && Date.now() - started < CONTINUE_BEFORE_MS) {
+              const more = await continuation(used, full);
+              if (more) { res.write(more); wrote += more.length; finish = 'STOP'; }
+            }
+            if (finish !== 'STOP') res.write(wrote ? '\n\n' + finishNote(finish) : finishNote(finish));
+            wrote = wrote || 1;
           }
           if (!wrote) res.write('Réponse indisponible pour le moment : réessayez.');
         } catch (e) {
@@ -195,7 +246,13 @@ export default async function handler(req, res) {
       }
 
       const data = await response.json().catch(() => null);
-      const text = (data?.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
+      let text = (data?.candidates?.[0]?.content?.parts || []).filter(p => !p.thought).map(p => p.text || '').join('').trim();
+      const finish = data?.candidates?.[0]?.finishReason || '';
+      if (finish && finish !== 'STOP') {
+        console.warn('[CAPITAL-AI] fin anormale', used, finish, JSON.stringify(data?.usageMetadata || {}));
+        const more = finish === 'MAX_TOKENS' && text ? await continuation(used, text) : '';
+        text = more ? text + more : (text ? text + '\n\n' : '') + finishNote(finish);
+      }
       if (!text) return fail(res, 502, 'Réponse IA vide.', 'AI_EMPTY_RESPONSE');
       return ok(res, { answer: text, model: used, tickers: donnees.tickers, generatedAt: new Date().toISOString() });
     }
