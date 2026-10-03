@@ -48,7 +48,7 @@
     { k: 'total_commissions', l: 'Total commissions', f: 'int', sec: 'frais', strong: true },
     { k: 'taux_commissions', l: 'Taux commissions', f: 'pct', sec: 'synthese' },
     { k: 'prix_ttc', l: "Prix de l'obligation TTC", f: 'pct', sec: 'synthese' },
-    { k: 'ytm', l: 'Yield to maturity (YTM)', f: 'pct', sec: 'synthese', hint: 'actuariel, frais inclus' },
+    { k: 'ytm', l: 'Yield to maturity (YTM)', f: 'pct', sec: 'synthese', hint: 'TRI des flux, frais inclus' },
     { k: 'ytm_brut', l: 'Rendement actuariel hors frais', f: 'pct', sec: 'synthese' },
     { k: 'ytm_net', l: "Rendement actuariel net d'impôt (hors frais)", f: 'pct', sec: 'synthese', optional: true },
     { k: 'montant', l: 'Montant', f: 'int', sec: 'total' }
@@ -115,6 +115,21 @@
     return n;
   }
 
+  /* TRI.PAIEMENTS (XIRR) : Σ Fi / (1 + r)^((di − d0) / 365) = 0. */
+  function xirr(list) {
+    var d0 = dOf(list[0].date);
+    var pts = list.map(function (x) { return { t: (dOf(x.date) - d0) / (365 * DAY), v: x.total }; });
+    function npv(r) { return pts.reduce(function (s, x) { return s + x.v / Math.pow(1 + r, x.t); }, 0); }
+    var lo = -0.99, hi = 5, flo = npv(lo);
+    if (pts.length < 2 || flo * npv(hi) > 0) return null;
+    for (var i = 0; i < 200; i++) {
+      var mid = (lo + hi) / 2, fm = npv(mid);
+      if (Math.abs(fm) < 1e-6) return mid;
+      if (flo * fm < 0) hi = mid; else { lo = mid; flo = fm; }
+    }
+    return (lo + hi) / 2;
+  }
+
   function mergeParams(base, over) {
     var out = {}, k;
     for (k in DEFAULTS) out[k] = DEFAULTS[k];
@@ -165,9 +180,15 @@
     var taf = R((num(p.taf_pct) || 0) / 100 * (sgi + (p.taf_sur_apporteur ? apporteur : 0)));
     var dcbr = p.brvm_dcbr_actif ? R((num(p.brvm_dcbr_pct) || 0) / 100 * (p.brvm_dcbr_base === 'montant' ? montantOp : nominalTotal)) : 0;
     var total = sgi + apporteur + taf + dcbr;
-    var flows = sc.rows.filter(function (r) { return r.date > settle; })
-      .map(function (r) { return { t: (r.date - settle) / (365 * DAY), cf: r.flux }; });
-    var yFees = M.irr(flows, clean + accrued + total / qty);
+    /* Rendement = TRI des paiements (TRI.PAIEMENTS / XIRR d'Excel) sur les
+       flux datés de l'ordre : décaissement du montant total à la date de
+       valeur, puis coupons et amortissements perçus sur la quantité. */
+    var flux = [{ date: vdate, libelle: 'Règlement (frais inclus)', coupon: 0, amort: 0, crd: R(nominalTotal), total: -(montantOp + total) }];
+    sc.rows.filter(function (r) { return r.date > settle; }).forEach(function (r) {
+      var c = R(qty * r.interet), a = R(qty * r.amort);
+      flux.push({ date: isoOf(r.date), libelle: a > 0 ? 'Coupon + amortissement' : 'Coupon', coupon: c, amort: a, crd: R(qty * r.crd1), total: c + a });
+    });
+    var yFees = xirr(flux);
     var v = {
       designation: ctx.o.nom || (ctx.f && ctx.f.emetteur) || ctx.o.code,
       code: ctx.o.code, quantite: qty, vn: sc.vn, crd: crd < sc.vn - 0.5 ? crd : null,
@@ -182,6 +203,7 @@
       ytm: yFees != null ? yFees * 100 : null, ytm_brut: an.ytm, ytm_net: sc.rateNet != null && an.ytmNet != null && Math.abs(an.ytmNet - an.ytm) > 0.005 ? an.ytmNet : null,
       montant: montantOp + total
     };
+    Object.defineProperty(v, 'flux', { value: flux, enumerable: false });
     return { values: v, analysis: an, params: p, businessDays: businessDaysBetween(tdate, vdate, hol) };
   }
 
@@ -256,6 +278,21 @@
     });
     var wb = X.utils.book_new();
     X.utils.book_append_sheet(wb, ws, 'Simulation');
+    if (values.flux && values.flux.length > 1) {
+      var fr = [['Date', 'Opération', 'Coupon', 'Amortissement', 'Capital restant dû', 'Flux']];
+      values.flux.forEach(function (x) { fr.push([dOf(x.date), x.libelle, x.coupon, x.amort, x.crd, x.total]); });
+      var n = fr.length;
+      fr.push(['', '', '', '', '', ''], ['TRI des paiements (TRI.PAIEMENTS)', '', '', '', '', values.ytm != null ? values.ytm / 100 : '']);
+      var wf = X.utils.aoa_to_sheet(fr, { cellDates: true });
+      for (var i = 1; i < n; i++) {
+        var dc = wf[X.utils.encode_cell({ r: i, c: 0 })]; if (dc) dc.z = 'dd/mm/yyyy';
+        for (var c = 2; c <= 5; c++) { var nc = wf[X.utils.encode_cell({ r: i, c: c })]; if (nc) nc.z = '#,##0'; }
+      }
+      var tri = wf[X.utils.encode_cell({ r: n + 1, c: 5 })];
+      if (tri) { tri.f = 'XIRR(F2:F' + n + ',A2:A' + n + ')'; tri.z = '0.00%'; }
+      wf['!cols'] = [{ wch: 12 }, { wch: 34 }, { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 18 }];
+      X.utils.book_append_sheet(wb, wf, 'Flux');
+    }
     if (full && full.notes) X.utils.book_append_sheet(wb, X.utils.aoa_to_sheet(full.notes.map(function (t) { return [t]; })), 'Mode_emploi');
     X.writeFile(wb, filename);
   }
@@ -365,6 +402,9 @@
     + '.oo-sheet tr.strong td{font-weight:600;border-top:1px solid rgba(245,240,232,.22)}'
     + '.oo-sheet tr.total td{background:var(--oo-gold);color:#17120a;font-weight:700;font-size:16px;border:0;padding:12px 16px}'
     + '.oo-sheet .h{font-size:11px;color:var(--dim,rgba(245,240,232,.5));margin-left:6px}'
+    + '.oo-flux{margin-top:12px;border:1px solid var(--oo-line);border-radius:12px;overflow:hidden}.oo-flux summary{cursor:pointer;padding:11px 16px;font-size:12.5px;font-weight:600;color:var(--oo-gold);background:rgba(184,150,78,.06)}'
+    + '.oo-fluxw{overflow-x:auto}.oo-flux table{width:100%;border-collapse:collapse;font-size:12.5px}.oo-flux th{text-align:right;font-weight:500;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim,rgba(245,240,232,.55));padding:8px 12px;border-bottom:1px solid var(--oo-line)}'
+    + '.oo-flux th:nth-child(-n+2){text-align:left}.oo-flux td{padding:6px 12px;border-bottom:1px solid var(--oo-line);white-space:nowrap}.oo-flux td.v{text-align:right;font-variant-numeric:tabular-nums}.oo-flux td.neg{color:#e07a6a}'
     + '.oo-bar{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}'
     + '.oo-btn{background:var(--oo-soft);border:1px solid rgba(245,240,232,.16);color:inherit;border-radius:8px;padding:8px 13px;font:inherit;font-size:13px;cursor:pointer}'
     + '.oo-btn:hover{border-color:var(--oo-gold)}.oo-btn.gold{background:var(--oo-gold);border-color:var(--oo-gold);color:#17120a;font-weight:600}'
@@ -378,7 +418,8 @@
     + '.oo-lock{padding:18px;border:1px solid rgba(184,150,78,.45);border-radius:12px;background:linear-gradient(135deg,rgba(184,150,78,.12),rgba(184,150,78,.03))}'
     + '.oo-lock a{display:inline-block;margin-top:10px;background:var(--oo-gold);color:#17120a;font-weight:600;padding:8px 14px;border-radius:8px;text-decoration:none}'
     + '.oo-pick{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end;margin-bottom:16px}'
-    + '.oo-pick .meta{font-size:12px;color:var(--dim,rgba(245,240,232,.55));margin-top:6px}';
+    + '.oo-pick .meta{font-size:12px;color:var(--dim,rgba(245,240,232,.55));margin-top:6px}'
+    + '.oo select,#ooBond{color-scheme:dark}.oo select option,#ooBond option,#ooBond optgroup{background:#15120d;color:#f5f0e8}.oo select option:checked,#ooBond option:checked{background:#b8964e;color:#17120a}';
   function injectCss() {
     if (document.getElementById('oo-css')) return;
     var s = document.createElement('style'); s.id = 'oo-css'; s.textContent = CSS; document.head.appendChild(s);
@@ -482,11 +523,20 @@
           });
           body += '<tr class="total"><td>Montant</td><td class="v">' + esc(fmt(LINES[LINES.length - 1], v.montant)) + ' FCFA</td></tr>';
           sheet = '<div class="oo-sheet" id="ooSheet"><div class="hd"><b>SIMULATION</b><span>' + esc(v.code) + ' · ' + esc(v.designation) + '</span></div><table><tbody>' + body + '</tbody></table></div>';
+          if (v.flux && v.flux.length > 1) {
+            sheet += '<details class="oo-flux"' + (st.fluxOpen ? ' open' : '') + ' id="ooFlux"><summary>Échéancier des flux · TRI des paiements ' + esc(fmt(LINES.find(function (l) { return l.k === 'ytm'; }), v.ytm)) + '</summary>'
+              + '<div class="oo-fluxw"><table><thead><tr><th>Date</th><th>Opération</th><th>Coupon</th><th>Amortissement</th><th>Flux</th></tr></thead><tbody>'
+              + v.flux.map(function (x) {
+                return '<tr><td>' + dLabel(x.date) + '</td><td>' + esc(x.libelle) + '</td><td class="v">' + (x.coupon ? nf(x.coupon) : '—') + '</td><td class="v">' + (x.amort ? nf(x.amort) : '—') + '</td><td class="v' + (x.total < 0 ? ' neg' : '') + '">' + nf(x.total) + '</td></tr>';
+              }).join('') + '</tbody></table></div></details>';
+          }
         }
         var html = '<div class="oo-wrap">' + panel + '<div>' + sheet
           + '<p class="oo-note">Intérêts courus en base exacte (ACT/ACT) sur la période de coupon en cours. Date de valeur estimée en jours ouvrés BRVM, fériés exclus. '
-          + 'Rendement actuariel calculé sur l\'échéancier réel (amortissements compris), prix payé frais inclus. Simulation indicative : les frais réels sont ceux de votre SGI.</p></div></div>';
+          + 'Rendement = TRI des paiements (TRI.PAIEMENTS) sur les flux datés de l\'ordre : montant total réglé à la date de valeur, puis coupons et amortissements de l\'échéancier réel. Simulation indicative : les frais réels sont ceux de votre SGI.</p></div></div>';
         host.innerHTML = html;
+        var fx = host.querySelector('#ooFlux');
+        if (fx) fx.addEventListener('toggle', function () { st.fluxOpen = fx.open; });
         wire(res, p);
       }
 
