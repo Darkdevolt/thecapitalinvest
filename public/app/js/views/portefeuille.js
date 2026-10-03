@@ -173,7 +173,7 @@
   }
 
   const modules = [
-    '/app/js/views/portefeuille/portefeuille-utils.js?v=6',
+    '/app/js/views/portefeuille/portefeuille-utils.js?v=7',
     '/app/js/views/portefeuille/portefeuille-prices.js?v=5',
     '/app/js/views/portefeuille/portefeuille-history.js?v=5',
     '/app/js/views/portefeuille/portefeuille-charts.js?v=5',
@@ -181,7 +181,8 @@
     '/app/js/views/portefeuille/portfolio-crud-patch.js?v=3',
     '/app/js/views/portefeuille/portefeuille-main.js?v=8',
     '/app/js/views/portefeuille/portefeuille-diagnostic.js?v=1',
-    '/app/js/views/portefeuille/portefeuille-account-layer.js?v=1'
+    '/app/js/views/portefeuille/portefeuille-account-layer.js?v=2',
+    '/app/js/views/portefeuille/gestion-pro.js?v=1'
   ];
 
   function render() {
