@@ -22,7 +22,7 @@
         if (window.TCOrdreObligataire) return Promise.resolve(window.TCOrdreObligataire);
         return new Promise(function (resolve, reject) {
             const s = document.createElement('script');
-            s.src = '/app/js/views/obligations-ordre.js?v=20261003.2';
+            s.src = '/app/js/views/obligations-ordre.js?v=20261003.3';
             s.onload = () => window.TCOrdreObligataire ? resolve(window.TCOrdreObligataire) : reject(new Error('Module de calcul introuvable.'));
             s.onerror = () => reject(new Error('Module de calcul introuvable.'));
             document.head.appendChild(s);
@@ -66,8 +66,8 @@
             '<div class="card-body"><div id="so-lines" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:4px 16px;"></div></div>' +
             '<div class="actions"><button class="btn btn-primary" id="so-save">Enregistrer</button><span class="msg" id="so-msg"></span></div></div>' +
 
-            '<div class="card"><div class="card-head"><span class="card-title">Contrôle — fiche d\'exemple EOS.O19</span></div>' +
-            '<div class="card-body"><div class="hint" style="margin-bottom:8px;">200 000 titres à 9 600 FCFA, transaction le 28/08/2026, valeur le 01/09/2026, intérêts courus 49 770 492 FCFA : frais recalculés avec les taux ci-dessus.</div>' +
+            '<div class="card"><div class="card-head"><span class="card-title">Contrôle — fiche SGI de référence EOS.O19</span></div>' +
+            '<div class="card-body"><div class="hint" style="margin-bottom:8px;">200 000 titres à 9 600 FCFA, transaction le 29/07/2026, valeur le 31/07/2026, intérêts courus 38 229 508 FCFA : frais recalculés avec les taux ci-dessus.</div>' +
             '<div class="tw"><table><tbody id="so-check"></tbody></table></div></div></div>';
     }
 
@@ -116,13 +116,13 @@
         const total = sgi + app + taf + dcbr;
         const fmt = v => Math.round(v).toLocaleString('fr-FR');
         const rows = [
-            [L.labelOf({ k: 'commission_sgi' }, p), fmt(sgi), '7 879 082'],
-            [L.labelOf({ k: 'apporteur' }, p), fmt(app), '20 000 000'],
-            [L.labelOf({ k: 'taf' }, p), fmt(taf), '1 339 444'],
-            ['Commissions BRVM/DCBR', fmt(dcbr), '2 348 400'],
-            ['Total commissions', fmt(total), '31 566 926'],
-            ['Taux commissions', (total / nominal * 100).toFixed(2).replace('.', ',') + ' %', '1,58 %'],
-            ['Montant', fmt(montantOp + total), '2 001 337 418']
+            [L.labelOf({ k: 'commission_sgi' }, p), fmt(sgi), '17 624 066'],
+            [L.labelOf({ k: 'apporteur' }, p), fmt(app), '40 000 000'],
+            [L.labelOf({ k: 'taf' }, p), fmt(taf), '2 996 091'],
+            ['Commissions BRVM/DCBR', fmt(dcbr), '2 338 425'],
+            ['Total commissions', fmt(total), '62 958 582'],
+            ['Taux commissions', (total / nominal * 100).toFixed(2).replace('.', ',') + ' %', '3,15 %'],
+            ['Montant', fmt(montantOp + total), '2 021 188 090']
         ];
         TC.el('so-check').innerHTML = '<tr><th>Ligne</th><th class="r">Avec ces taux</th><th class="r">Fiche d\'origine</th></tr>' +
             rows.map(r => '<tr><td>' + TC.esc(r[0]) + '</td><td class="r mono">' + r[1] + '</td><td class="r mono" style="color:var(--muted)">' + r[2] + '</td></tr>').join('');
@@ -190,7 +190,13 @@
             try {
                 if (!window.XLSX) throw new Error('Le moteur Excel n’est pas chargé. Rechargez la page.');
                 const L = await lib();
-                L.writeWorkbook(window.XLSX, L.SAMPLE, current, 'The-Capital-Simulation-obligataire.xlsx');
+                L.writeWorkbook(window.XLSX, L.SAMPLE, current, 'The-Capital-Simulation-obligataire.xlsx', { notes: [
+                    'Mode d\'emploi',
+                    'Ce fichier suit la fiche « SIMULATION » : une ligne par libellé, valeur en colonne B.',
+                    'Admin The Capital → Simulateur obligataire → Importer : les taux de la section PARAMÈTRES deviennent les valeurs par défaut des abonnés Professional.',
+                    'À défaut de section PARAMÈTRES, les taux sont déduits des libellés (« Commission SGI (0,9%) », « TAF (17%) », « Apporteur d\'affaires (200 FCFA par titre) ») et de la ligne Commissions BRVM/DCBR rapportée au nominal.',
+                    'Codes de lignes masquables : ' + L.LINES.filter(l => l.k !== 'montant').map(l => l.k).join(', ')
+                ] });
                 TC.toast('Modèle Excel téléchargé', 'ok');
             } catch (e) { TC.toast(e.message, 'err'); }
         };

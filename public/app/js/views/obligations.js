@@ -278,7 +278,7 @@
           + '</tr></thead><tbody>'
           + sortRows(rows).map(function (r) { return '<tr data-code="' + esc(r.o.code) + '">' + COLS.map(function (c) { return '<td class="' + (c.cls || '') + '">' + c.v(r) + '</td>'; }).join('') + '</tr>'; }).join('')
           + '</tbody></table></div>'
-        : '<div class="ob-empty">' + (LIST && LIST.length ? 'Aucune ligne ne correspond à ce filtre.' : 'Aucune obligation en base. Lancez la récupération dans Admin → Récupération BRVM.') + '</div>')
+        : '<div class="ob-empty">' + (LIST && LIST.length ? 'Aucune ligne ne correspond à ce filtre.' : 'Données obligataires momentanément indisponibles. Réessayez dans quelques instants.') + '</div>')
       + '<p class="ob-note"><b>Rendement actuariel</b> : taux qui égalise le prix payé (cours + coupon couru) et les flux futurs (coupons et remboursements), date à date, base exact/365. <b>Net</b> : coupons nets d\'impôt (montant net publié au BOC, sinon taux net de la fiche). '
       + '<b>Échéancier</b> : <span class="ob-tag fiche">BOC</span> capital restant, périodicité, prochain coupon et type d\'amortissement (IF in fine, AC constant, AD dégressif, ACD constant après différé) lus dans le Bulletin Officiel de la Cote ; <span class="ob-tag fiche">fiche</span> mode de remboursement lu dans la fiche technique DC/BR ; <span class="ob-tag hyp">hypothèse</span> mode déduit du capital restant cohérent avec le cours. '
       + '« n.s. » : cours coté manifestement ancien, rendement non significatif (survolez pour le détail). Ceci n\'est pas un conseil d\'investissement.</p>';
@@ -360,12 +360,7 @@
       + kpi('Prochain flux', next ? nf(next.flux, 2) + ' F' : '—', next ? dLabel(next.date) + (next.amort > 0 ? ' · dont ' + nf(next.amort) + ' F de capital' : ' · coupon') : '')
       + '</div>'
 
-      + '<div class="ob-card"><div class="ob-h"><span>Simulateur</span></div><div class="ob-sim">'
-      + '<div><label for="obSimP">Prix pied de coupon (FCFA par titre)</label><input type="number" id="obSimP" step="any" value="' + (a.clean != null ? Math.round(a.clean) : Math.round(a.crd)) + '"><div class="out" id="obSimPOut"></div></div>'
-      + '<div><label for="obSimY">Rendement souhaité (%)</label><input type="number" id="obSimY" step="any" value="' + (a.ytm != null ? a.ytm.toFixed(2) : sc.rate) + '"><div class="out" id="obSimYOut"></div></div>'
-      + '</div><p class="ob-note" style="margin-top:8px">Saisissez un prix pour obtenir le rendement, ou un rendement pour obtenir le prix à payer (hors frais de courtage).</p></div>'
-
-      + '<div class="ob-card"><div class="ob-h"><span>Simulateur d\'ordre · frais et prix TTC</span><span class="ob-note" style="margin:0">Professional</span></div><div id="obOrdre"></div></div>'
+      + '<div class="ob-card"><div class="ob-h"><span>Simulateur d\'ordre · prix, frais et rendement</span><span class="ob-note" style="margin:0">Professional</span></div><div id="obOrdre"></div></div>'
 
       + '<div class="ob-card"><div class="ob-h"><span>Tableau d\'amortissement · ' + esc(freqL) + ' · ' + esc((sc.mode && sc.mode.label) || '') + '</span>'
       + '<span class="ob-bar" style="margin:0"><label for="obQty" style="font-size:10px;letter-spacing:.08em;color:var(--dim)">NOMBRE DE TITRES</label><input type="number" id="obQty" min="1" step="1" value="' + QTY + '" style="width:90px"><button type="button" class="ob-btn" id="obCsv">Export CSV</button></span></div>'
@@ -385,20 +380,6 @@
     g('obBack').addEventListener('click', function () { SEL = null; render(); });
     g('obQty').addEventListener('change', function () { QTY = Math.max(1, Math.round(num(this.value) || 1)); renderDetail(); });
     g('obCsv').addEventListener('click', function () { exportCsv(o, sc); });
-    var simP = function () {
-      var p = num(g('obSimP').value), out = g('obSimPOut');
-      if (!(p > 0)) { out.textContent = ''; return; }
-      var s = M().analyze(o, f, a.settle, p, b);
-      out.textContent = s && s.ytmRaw == null && s.ytm != null ? 'Rendement : ' + pc(s.ytm) + ' brut · ' + pc(s.ytmNet) + ' net' : (s && s.ytmRaw != null ? 'Rendement : ' + pc(s.ytmRaw) + ' (hors norme)' : 'Rendement incalculable pour ce prix');
-    };
-    var simY = function () {
-      var y = num(g('obSimY').value), out = g('obSimYOut');
-      if (y == null) { out.textContent = ''; return; }
-      var p = M().priceForYield(a, y);
-      out.textContent = p != null ? 'Prix : ' + nf(p) + ' F par titre (' + nf(p / a.crd * 100, 2) + ' % du capital restant)' : '';
-    };
-    g('obSimP').addEventListener('input', simP); g('obSimY').addEventListener('input', simY);
-    simP(); simY();
     mountOrdre({ o: o, f: f, b: b, a: a });
     drawFlux(sc, settle);
   }
@@ -408,7 +389,7 @@
     var go = function () { if (window.TCOrdreObligataire && g('obOrdre')) window.TCOrdreObligataire.mount(g('obOrdre'), ctx); };
     if (window.TCOrdreObligataire) return go();
     var s = document.createElement('script');
-    s.src = '/app/js/views/obligations-ordre.js?v=20261003.2';
+    s.src = '/app/js/views/obligations-ordre.js?v=20261003.3';
     s.onload = go;
     s.onerror = function () { var h = g('obOrdre'); if (h) h.innerHTML = '<div class="ob-note">Simulateur indisponible : rechargez la page.</div>'; };
     document.head.appendChild(s);

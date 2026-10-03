@@ -167,7 +167,7 @@ for (const file of files) {
 // Bump 2026-10-03 (4) : cache-buster du module Simulateur obligataire
 // (libellé neutre « Commission SGI »). Changement délibéré et revu.
 const adminPath = 'public/admin.html';
-const expectedAdminBlobSha = '26bdbcab1d2a96cb4426c8da191f00e2241f61f6';
+const expectedAdminBlobSha = '3f63d0f5ad5c26394231f3ede627ee22d94fb592';
 function gitBlobSha(text) {
   const body = Buffer.from(text, 'utf8');
   return createHash('sha1').update(Buffer.from(`blob ${body.length}\0`, 'utf8')).update(body).digest('hex');

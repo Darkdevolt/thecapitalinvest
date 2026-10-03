@@ -60,7 +60,7 @@
             : '<span class="tc-boc-none">PDF indisponible</span>') + '</td>'
           + '</tr>';
       }).join('')
-      : '<tr><td colspan="3" class="tc-boc-empty">Aucun bulletin officiel en base pour le moment. Les BOC sont déposés depuis l\'administration.</td></tr>';
+      : '<tr><td colspan="3" class="tc-boc-empty">Aucun bulletin officiel disponible pour le moment.</td></tr>';
 
     view.innerHTML = ''
       + '<div class="page-header"><h1>BOC <span style="color:var(--gold)">/ Bulletin Officiel de la Cote</span></h1>'
