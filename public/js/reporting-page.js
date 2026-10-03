@@ -262,7 +262,7 @@
 
     html += '<div class="rep-wrap rep-foot-note">' +
       '<span>Données de séance The Capital · sources BRVM. Information à caractère informatif — ne constitue pas un conseil en investissement.</span>' +
-      '<span><a href="/">thecapitalinvest.com</a> · © ' + (w.to ? w.to.slice(0, 4) : new Date().getFullYear()) + ' The Capital</span></div>';
+      '<span><a href="/">thecapitalinvest.app</a> · © ' + (w.to ? w.to.slice(0, 4) : new Date().getFullYear()) + ' The Capital</span></div>';
 
     root.innerHTML = html;
   }
